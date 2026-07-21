@@ -2,7 +2,7 @@
 
 ## Status
 
-`STAGE_0 / LOCAL_PDF_RAG_COMPLETE / MEMBER_B_REMOTE_PENDING`
+`M0_COMPLETE / LOCAL_PDF_RAG_COMPLETE / MEMBER_B_REMOTE_PENDING`
 
 ## Completed
 
@@ -29,18 +29,21 @@
 - TRACER PDF 的 SHA-256 与样本清单一致，生成 63 个稳定 Chunk，覆盖第 1～10 页，12 个 Chunk 跨页；
 - 真实 PDF 重复入库输出字节一致，63 条合同和相邻链接校验通过；
 - 真实 PDF Chunk 已通过 HTTP 验证 `COMPLETED`、`NO_EVIDENCE` 和 403 越权阻断。
+- [PR #10](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/10) 已在 CI 通过后直接合并；
+- [Issue #4](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/4) 和 [Issue #5](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/5) 已关闭；
+- M0 里程碑已关闭，5 个任务全部完成，无开放任务。
 
 ## Current boundary
 
-当前本地 M0 没有外部阻塞。远程主机、数据库、向量库和真实模型都不是本地链路的前置条件。样本文献只能用于本地工程验证，PDF 和生成的真实 Chunk 本体不得提交。
+当前本地 M0 已完成。远程主机、数据库、向量库和真实模型不是已完成链路的前置条件。样本文献只能用于本地工程验证，PDF 和生成的真实 Chunk 本体不得提交。
 
 ## Next gate
 
-1. 合并成员 A 的本地 PDF 入库与真实论文联调；
-2. 关闭 [Issue #4](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/4) 和 [Issue #5](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/5)；
-3. 关闭 M0，并为真实索引、模型接入和评测分别建立下一阶段任务；
-4. 成员 B 按 [Issue #9](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/9) 完成远程准备；
-5. 远程拉取同一 `main` 提交运行测试和 Fixture API，不能反向阻塞本地开发。
+1. 成员 B 按 [Issue #9](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/9) 完成远程准备；
+2. 远程拉取同一 `main` 提交运行 43 项测试和 Fixture API；
+3. 成员 A 保持本地链路稳定，不在远程结果返回前引入真实基础设施；
+4. 远程基线通过后，为真实索引、模型接入和评测分别建立下一阶段任务；
+5. 数据库、向量库和模型接入分别验收，避免一次 PR 同时改变多个边界。
 
 ## Prohibited shortcuts
 

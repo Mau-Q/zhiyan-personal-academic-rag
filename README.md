@@ -19,7 +19,7 @@
 
 ## 当前状态
 
-当前阶段为 `STAGE_0 / LOCAL_PDF_RAG_COMPLETE / MEMBER_B_REMOTE_PENDING`：本地 PDF 解析、`ChunkRecordV1`、授权检索、拒答、引用和非流式 Answer API 已形成完整链路；成员 B 并行负责远程主机准备与部署验证。
+当前阶段为 `M0_COMPLETE / LOCAL_PDF_RAG_COMPLETE / MEMBER_B_REMOTE_PENDING`：本地 PDF 解析、`ChunkRecordV1`、授权检索、拒答、引用和非流式 Answer API 已形成完整链路并合并到 `main`；成员 B 并行负责远程主机准备与部署验证。
 
 - GitHub：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 - 下一门禁：[`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)

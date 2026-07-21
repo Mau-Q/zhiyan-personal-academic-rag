@@ -55,7 +55,9 @@
 - [x] 成员 A 的非流式 Answer API 通过 33 项测试并合并 PR #8；
 - [x] 成员 A 的本地 PDF 消费者输出符合合同的 Chunk；
 - [x] 同一份真实 PDF 输出已完成回答、拒答、越权和页码联调；
-- [ ] 成员 B 在远程拉取同一 `main` 提交完成部署基线验证。
+- [x] PR #10 通过 CI 并合并，Issue #4/#5 和 M0 已关闭。
+
+成员 B 的远程部署基线验证由 Issue #9 独立跟踪，不是 M0 的阻塞条件。
 
 两名成员现在可以按同一基线并行实现。普通模块 PR 不强制互审；只有 `contracts/` 的破坏性变更或跨成员边界变化需要另一方确认。
 
@@ -70,3 +72,4 @@
 - [Issue #7：成员 A 非流式 RAG Answer API](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/7)
 - [Merged PR #8：实现非流式 RAG Answer API](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/8)
 - [Issue #9：成员 B 远程主机准备与部署验证](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/9)
+- [Merged PR #10：完成本地 PDF 到 RAG Answer 闭环](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/10)
