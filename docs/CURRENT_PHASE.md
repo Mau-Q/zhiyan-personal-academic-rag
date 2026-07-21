@@ -2,7 +2,9 @@
 
 ## Status
 
-`M0_COMPLETE / M1_EVALUATION_HARNESS_READY / MEMBER_B_REMOTE_PENDING`
+`M0_COMPLETE / REPOSITORY_HARNESS_READY / M1_EVALUATION_HARNESS_READY / MEMBER_B_REMOTE_PENDING`
+
+Phase ID：`m1-repository-harness-ready`
 
 ## Completed
 
@@ -36,10 +38,35 @@
 - 建立 6 个版本化 Fixture 基线，覆盖可回答、无证据和越权三类结果；
 - Harness 输出机器可读报告和严格退出码，并显式保留 `LOCAL_API_FAKE_LLM` 边界。
 - 加入评测测试后，合同、入库、检索、RAG、API 和评测共 48 项测试通过。
+- 建立仓库级 Harness：入口、长期护栏、产品决策、执行合同、机器状态和只读校验器；
+- 明确仓库 Harness 与 RAG 评测 Harness 的职责边界。
+- 加入仓库 Harness 测试后，全仓共 53 项测试通过。
+
+## 输入
+
+- 基线：已合并 PR #11 的 `main`；
+- 已实现能力：本地 PDF 到 Answer API、Fixture 评测基线；
+- 未完成能力：成员 B 远程准备、真实 Elasticsearch、Milvus 和模型接入；
+- 本阶段只修改仓库治理、状态、校验和相应测试，不修改业务合同或 RAG 算法。
+
+## 验收
+
+- `python3 scripts/validate_harness_contract.py` 必须通过；
+- `make test` 必须覆盖合同、入库、检索、RAG、API、评测和仓库 Harness；
+- `git diff --check` 必须通过；
+- 不得出现被跟踪的 `runtime/`、PDF、`.env`、数据或存储目录；
+- 仓库状态、能力清单和本文件必须一致。
+
+## Git
+
+- 默认分支：`main`；
+- 本阶段分支：`agent/add-repository-harness`；
+- 通过独立 PR 交付；普通成员 A 任务在测试和 CI 通过后直接合并；
+- 合并后本地 `main` 必须与 `origin/main` 指向同一提交。
 
 ## Current boundary
 
-当前本地 M0 已完成，M1 先建立不依赖远程基础设施的评测基线。远程主机、数据库、向量库和真实模型不是薄 Harness 的前置条件。样本文献只能用于本地工程验证，PDF、生成的真实 Chunk、私有问题集和本地报告不得提交。
+当前仓库 Harness 已建立，负责约束阶段、范围、验证和交付；RAG 评测 Harness 只负责用例运行。远程主机、数据库、向量库和真实模型不是当前仓库 Harness 或本地评测基线的前置条件。PDF、真实 Chunk、私有问题集和运行报告不得提交。
 
 ## Next gate
 

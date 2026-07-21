@@ -1,0 +1,26 @@
+{
+  "schema_version": "project_state_v1",
+  "project_id": "zhiyan-personal-academic-rag",
+  "repository": "Mau-Q/zhiyan-personal-academic-rag",
+  "default_branch": "main",
+  "visibility": "PRIVATE",
+  "current_phase": {
+    "id": "m1-repository-harness-ready",
+    "status": "READY",
+    "authority_doc": "docs/CURRENT_PHASE.md"
+  },
+  "repository_harness": {
+    "status": "READY",
+    "entrypoint": "AGENTS.md",
+    "validator": "scripts/validate_harness_contract.py",
+    "feature_list": "machine/feature_list.json"
+  },
+  "execution_boundaries": {
+    "local_rag": "COMPLETE_WITH_FAKE_LLM",
+    "evaluation": "FIXTURE_BASELINE_READY",
+    "remote_host": "PENDING_MEMBER_B",
+    "real_elasticsearch": "NOT_STARTED",
+    "real_milvus": "NOT_STARTED",
+    "real_model": "NOT_STARTED"
+  }
+}

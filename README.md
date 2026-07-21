@@ -26,6 +26,7 @@
 - 阶段 0 范围：[`docs/STAGE_0_SCOPE.md`](docs/STAGE_0_SCOPE.md)
 - 双人分工：[`docs/TEAM_WORK_SPLIT.md`](docs/TEAM_WORK_SPLIT.md)
 - 合同入口：[`contracts/README.md`](contracts/README.md)
+- 仓库 Harness 入口：[`AGENTS.md`](AGENTS.md)
 - 薄评测 Harness：[`docs/EVALUATION_HARNESS.md`](docs/EVALUATION_HARNESS.md)
 
 ## 双人开发边界
@@ -82,6 +83,14 @@ python3 -m backend.ingestion.cli \
 该命令只处理有文本层的本地 PDF，不调用网络、OCR、远程模型、数据库或向量库。完整边界见 [`docs/LOCAL_PDF_INGESTION.md`](docs/LOCAL_PDF_INGESTION.md)。
 
 真实 TRACER PDF 的本地解析与 Answer API 结果见 [`docs/LOCAL_PDF_CANARY.md`](docs/LOCAL_PDF_CANARY.md)。仓库只记录身份、命令和验收结论，不保存 PDF 或真实 Chunk 输出。
+
+## 仓库 Harness
+
+```bash
+python3 scripts/validate_harness_contract.py
+```
+
+仓库 Harness 固化当前阶段、产品决策、执行边界和完成门禁。`AGENTS.md` 是成员与自动化工具的入口，`machine/` 保存机器可读状态，具体阶段运行结果只写入被忽略的 `runtime/phases/`。架构说明见 [`docs/HARNESS_ARCHITECTURE.md`](docs/HARNESS_ARCHITECTURE.md)。
 
 ## M1 薄评测 Harness
 
