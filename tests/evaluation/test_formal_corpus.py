@@ -190,10 +190,13 @@ class FormalCorpusTests(unittest.TestCase):
                 .splitlines()
             ]
             annotations = (FIXTURE_DIR / "fixture-annotations-v1.jsonl").read_bytes()
-            (temporary / "annotations.jsonl").write_bytes(annotations)
+            annotations_path = temporary / "annotations.jsonl"
+            annotations_path.write_bytes(annotations)
             manifest["items_path"] = "items.jsonl"
             manifest["annotation_records_path"] = "annotations.jsonl"
-            manifest["annotation_records_sha256"] = hashlib.sha256(annotations).hexdigest()
+            manifest["annotation_records_sha256"] = sha256_evaluation_text(
+                annotations_path
+            )
             write_jsonl(temporary / "items.jsonl", items)
             manifest["items_sha256"] = "0" * 64
             manifest_path = temporary / "manifest.json"
