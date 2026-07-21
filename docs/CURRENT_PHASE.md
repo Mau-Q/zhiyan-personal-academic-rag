@@ -2,7 +2,7 @@
 
 ## Status
 
-`M0_COMPLETE / LOCAL_PDF_RAG_COMPLETE / MEMBER_B_REMOTE_PENDING`
+`M0_COMPLETE / M1_EVALUATION_HARNESS_READY / MEMBER_B_REMOTE_PENDING`
 
 ## Completed
 
@@ -32,18 +32,22 @@
 - [PR #10](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/10) 已在 CI 通过后直接合并；
 - [Issue #4](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/4) 和 [Issue #5](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/5) 已关闭；
 - M0 里程碑已关闭，5 个任务全部完成，无开放任务。
+- 建立 M1 薄评测 Harness，直接调用现有 Answer API，不复制检索或回答逻辑；
+- 建立 6 个版本化 Fixture 基线，覆盖可回答、无证据和越权三类结果；
+- Harness 输出机器可读报告和严格退出码，并显式保留 `LOCAL_API_FAKE_LLM` 边界。
+- 加入评测测试后，合同、入库、检索、RAG、API 和评测共 48 项测试通过。
 
 ## Current boundary
 
-当前本地 M0 已完成。远程主机、数据库、向量库和真实模型不是已完成链路的前置条件。样本文献只能用于本地工程验证，PDF 和生成的真实 Chunk 本体不得提交。
+当前本地 M0 已完成，M1 先建立不依赖远程基础设施的评测基线。远程主机、数据库、向量库和真实模型不是薄 Harness 的前置条件。样本文献只能用于本地工程验证，PDF、生成的真实 Chunk、私有问题集和本地报告不得提交。
 
 ## Next gate
 
-1. 成员 B 按 [Issue #9](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/9) 完成远程准备；
-2. 远程拉取同一 `main` 提交运行 43 项测试和 Fixture API；
-3. 成员 A 保持本地链路稳定，不在远程结果返回前引入真实基础设施；
-4. 远程基线通过后，为真实索引、模型接入和评测分别建立下一阶段任务；
-5. 数据库、向量库和模型接入分别验收，避免一次 PR 同时改变多个边界。
+1. 成员 A 在本地扩展为 3 篇论文、约 15 题的人工页码标注集，真实输入只进入 `runtime/`；
+2. 成员 B 按 [Issue #9](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/9) 完成远程准备；
+3. 远程拉取同一 `main` 提交运行全量测试、Fixture API 和 Fixture Harness；
+4. 在远程结果返回前不引入真实 Elasticsearch、Milvus 或模型服务；
+5. 后续用同一题集分别比较词项、向量、混合检索和重排，不一次改变多个变量。
 
 ## Prohibited shortcuts
 

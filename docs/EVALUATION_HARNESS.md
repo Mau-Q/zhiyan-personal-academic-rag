@@ -1,0 +1,54 @@
+# M1 薄评测 Harness
+
+## 目标
+
+该 Harness 用同一组版本化问题调用现有 `POST /api/v1/rag/answers`，记录状态、证据文档、页码和错误码。它用于比较后续词项、向量、混合检索和重排方案，不实现新的检索器、模型服务或评测平台。
+
+当前执行边界固定为 `LOCAL_API_FAKE_LLM`。通过只说明本地 API 的状态、权限和证据定位符合用例预期，不代表真实模型回答质量已经通过。
+
+## 已提交基线
+
+`evaluation/suites/fixture-smoke-v1.jsonl` 包含 6 个公开 Fixture 用例：
+
+- 2 个 `ANSWERABLE`：检查 `COMPLETED`、目标文档和目标页；
+- 3 个 `NO_EVIDENCE`：检查无关问题、越权内容和失效版本不会成为证据；
+- 1 个 `FORBIDDEN`：检查客户端不能扩大服务端授权范围。
+
+运行：
+
+```bash
+make evaluation-smoke
+```
+
+报告默认写入被 Git 忽略的 `runtime/evaluation/fixture-smoke-v1-report.json`。任一用例失败时进程返回 `1`，输入或 JSONL 结构错误时返回 `2`。Harness 还会拒绝类别和期望不一致的用例，例如把 `ANSWERABLE` 标成 `NO_EVIDENCE`，避免错误标注制造虚假通过。
+
+也可以显式指定输入：
+
+```bash
+python3 -m backend.evaluation.harness \
+  --cases evaluation/suites/fixture-smoke-v1.jsonl \
+  --chunks fixtures/chunks-v1.json \
+  --scope fixtures/authorized-scope-v1.json \
+  --output runtime/evaluation/report.json
+```
+
+## 本地三篇论文扩展
+
+真实 PDF、生成的 Chunk 和真实问题集不提交。成员 A 在本地 `runtime/evaluation/` 建立 `local-3-paper-v1.jsonl`，沿用同一 JSONL 结构：
+
+```json
+{"case_id":"local.paper1.answerable.01","category":"ANSWERABLE","question":"问题文本","document_ids":["doc_local_001"],"expected":{"http_status":200,"answer_status":"COMPLETED","min_evidence_count":1,"required_evidence":[{"document_id":"doc_local_001","page_start":3,"page_end":4}],"required_warnings":["FIXTURE_ONLY_FAKE_LLM"]}}
+```
+
+第一批目标为 3 篇论文、约 15 题：每篇至少 3 个可回答问题，另外统一加入至少 3 个无证据问题和 3 个越权请求。题目必须由人工根据 PDF 页码编写，不能仅依据检索结果反向生成答案。
+
+本地运行时把 `--chunks` 指向三篇论文合并后的 `ChunkRecordV1` JSON，把 `--scope` 指向本地授权范围。报告只进入 `runtime/`，不得提交问题对应的私有正文、Chunk 或绝对路径。
+
+## 通过标准
+
+- 公开 Fixture：6/6；
+- 三类用例分别统计，不允许用总平均掩盖权限失败；
+- 可回答题至少命中一个人工标注的目标文档与页码区间；
+- 无证据题必须是 `NO_EVIDENCE` 且 Evidence 数量为 0；
+- 越权请求必须是 HTTP 403 和 `RAG_FORBIDDEN_SCOPE`；
+- 报告保留 `execution_boundary`，Fixture/Fake 结果不能表述为真实模型通过。
