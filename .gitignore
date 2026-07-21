@@ -1,0 +1,65 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node.js
+node_modules/
+dist/
+.vite/
+coverage/
+
+# Runtime and generated state
+data/
+storage/
+runtime/
+logs/
+cache/
+caches/
+tmp/
+uploads/
+downloads/
+esdata/
+eslogs/
+pgdata*/
+pgsql*/
+milvus_data/
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+
+# Private or large artifacts
+*.pdf
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.tgz
+*.safetensors
+*.bin
+*.pt
+*.pth
+models/
+checkpoints/
+
+# IDE and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
