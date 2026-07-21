@@ -33,7 +33,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - name: Install contract-test dependency
-        run: python -m pip install 'jsonschema>=4.23,<5'
-      - name: Validate contracts and fixture consumer
+      - name: Install runtime and test dependencies
+        run: python -m pip install '.[dev]'
+      - name: Validate contracts, fixture consumer, and API
         run: make test
