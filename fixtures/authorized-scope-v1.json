@@ -1,0 +1,9 @@
+{
+  "user_id": "user_fixture",
+  "tenant_id": "tenant_fixture",
+  "library_ids": ["lib_fixture"],
+  "folder_ids": [],
+  "document_ids": [],
+  "include_public": false,
+  "acl_version": "acl_fixture_v1"
+}

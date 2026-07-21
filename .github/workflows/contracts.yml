@@ -1,11 +1,12 @@
-name: Contract tests
+name: Core tests
 
 on:
   pull_request:
     paths:
       - "contracts/**"
+      - "backend/**"
       - "fixtures/**"
-      - "tests/contracts/**"
+      - "tests/**"
       - "pyproject.toml"
       - "Makefile"
       - ".github/workflows/contracts.yml"
@@ -13,8 +14,9 @@ on:
     branches: [main]
     paths:
       - "contracts/**"
+      - "backend/**"
       - "fixtures/**"
-      - "tests/contracts/**"
+      - "tests/**"
       - "pyproject.toml"
       - "Makefile"
       - ".github/workflows/contracts.yml"
@@ -33,5 +35,5 @@ jobs:
           cache: pip
       - name: Install contract-test dependency
         run: python -m pip install 'jsonschema>=4.23,<5'
-      - name: Validate contracts and fixtures
-        run: make contract-test
+      - name: Validate contracts and fixture consumer
+        run: make test

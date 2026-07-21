@@ -55,6 +55,15 @@ make contract-test
 
 验证只读取仓库内的 Schema、示例和人工 Fixture，不访问远程模型或生产数据。
 
+## 成员 A 在线 Fixture 消费者
+
+```bash
+python3 -m backend.rag.fixture_consumer \
+  --question "How are candidates combined before reranking?"
+```
+
+该命令只运行授权过滤、确定性词项检索和 Fake LLM 证据拼装。输出明确包含 `FIXTURE_ONLY_FAKE_LLM`，不能作为真实模型或真实索引效果。完整说明见 [`docs/ONLINE_FIXTURE_CONSUMER.md`](docs/ONLINE_FIXTURE_CONSUMER.md)。
+
 ## 计划目录
 
 ```text
