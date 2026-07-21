@@ -20,9 +20,11 @@ from pydantic import (
 )
 
 from backend.api.app import DEFAULT_CHUNKS_PATH, DEFAULT_SCOPE_PATH, create_app
+from backend.rag.elasticsearch_consumer import ELASTICSEARCH_EXECUTION_BOUNDARY
 from backend.rag.sqlite_fts_consumer import SQLITE_FTS_EXECUTION_BOUNDARY
 from backend.rag.vector_consumer import RRF_EXECUTION_BOUNDARY, VECTOR_EXECUTION_BOUNDARY
 from backend.retrieval.embedding import EmbeddingProvider
+from backend.retrieval.elasticsearch import ElasticsearchTransport
 from backend.retrieval.hybrid import DEFAULT_CANDIDATE_K, DEFAULT_RRF_K
 from backend.retrieval.vector import DEFAULT_VECTOR_MIN_SCORE
 
@@ -31,7 +33,13 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CASES_PATH = ROOT / "evaluation" / "suites" / "fixture-smoke-v1.jsonl"
 HARNESS_VERSION = "thin_eval_harness_v1"
 EXECUTION_BOUNDARY = "LOCAL_API_FAKE_LLM"
-RetrievalBackend = Literal["lexical_overlap", "sqlite_fts5", "local_vector", "local_rrf"]
+RetrievalBackend = Literal[
+    "lexical_overlap",
+    "sqlite_fts5",
+    "local_vector",
+    "local_rrf",
+    "elasticsearch_bm25",
+]
 
 CaseId = Annotated[
     str,
@@ -247,6 +255,9 @@ def run_suite(
     vector_min_score: float = DEFAULT_VECTOR_MIN_SCORE,
     candidate_k: int = DEFAULT_CANDIDATE_K,
     rrf_k: int = DEFAULT_RRF_K,
+    elasticsearch_url: str = "http://127.0.0.1:9200",
+    elasticsearch_index: str | None = None,
+    elasticsearch_transport: ElasticsearchTransport | None = None,
 ) -> dict[str, Any]:
     """Run cases through the production-shaped local API adapter."""
 
@@ -262,6 +273,9 @@ def run_suite(
         vector_min_score=vector_min_score,
         candidate_k=candidate_k,
         rrf_k=rrf_k,
+        elasticsearch_url=elasticsearch_url,
+        elasticsearch_index=elasticsearch_index,
+        elasticsearch_transport=elasticsearch_transport,
     )
     client = TestClient(application)
     vector_metadata = (
@@ -287,6 +301,7 @@ def run_suite(
             "sqlite_fts5": SQLITE_FTS_EXECUTION_BOUNDARY,
             "local_vector": VECTOR_EXECUTION_BOUNDARY,
             "local_rrf": RRF_EXECUTION_BOUNDARY,
+            "elasticsearch_bm25": ELASTICSEARCH_EXECUTION_BOUNDARY,
         }[retrieval_backend],
         "retrieval_backend": retrieval_backend,
         "retrieval_configuration": {
@@ -326,7 +341,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument(
         "--retrieval-backend",
-        choices=("lexical_overlap", "sqlite_fts5", "local_vector", "local_rrf"),
+        choices=(
+            "lexical_overlap",
+            "sqlite_fts5",
+            "local_vector",
+            "local_rrf",
+            "elasticsearch_bm25",
+        ),
         default="lexical_overlap",
     )
     parser.add_argument("--index", type=Path, default=None)
@@ -338,6 +359,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--candidate-k", type=int, default=DEFAULT_CANDIDATE_K)
     parser.add_argument("--rrf-k", type=int, default=DEFAULT_RRF_K)
+    parser.add_argument("--elasticsearch-url", default="http://127.0.0.1:9200")
+    parser.add_argument("--elasticsearch-index", default=None)
     return parser
 
 
@@ -358,6 +381,8 @@ def main() -> int:
             vector_min_score=args.vector_min_score,
             candidate_k=args.candidate_k,
             rrf_k=args.rrf_k,
+            elasticsearch_url=args.elasticsearch_url,
+            elasticsearch_index=args.elasticsearch_index,
         )
     except (OSError, ValueError, ValidationError, json.JSONDecodeError) as exc:
         print(f"evaluation harness input error: {exc}", file=sys.stderr)

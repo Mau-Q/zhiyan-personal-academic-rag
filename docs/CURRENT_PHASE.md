@@ -97,8 +97,8 @@ Phase ID：`source-phase0-foundation-in-progress`
 - Elasticsearch `9.4.3` 单节点工程基线通过中文 BM25、ACL 过滤和重启恢复；
 - Milvus `2.6.18` standalone 工程基线通过 BGE-M3 写入、COSINE 搜索、ACL 过滤和完整重启恢复；
 - Elasticsearch、Milvus、MinIO、Ollama 的宿主机端口均限制为回环监听，持久化数据放在容量充足的数据盘；
-- 已固化脱敏 Compose 配置和远程检索基线文档，但真实应用适配器、正式 Schema/Mapping、316 Chunk 重跑和性能验收尚未开始。
-- Elasticsearch BM25 适配器已在本地实现：严格 Mapping、源身份、服务端 ACL、Bulk UTF-8、漂移失败关闭和 Answer API 边界测试通过；远程 Fixture 尚待执行。
+- 已固化脱敏 Compose 配置和远程检索基线文档，但 316 Chunk 重跑和性能验收尚未开始。
+- Elasticsearch BM25 适配器已实现：严格 Mapping、源身份、服务端 ACL、Bulk UTF-8、漂移失败关闭和 Answer API 边界测试通过；远程 Fixture 的建索引、inspect 和授权查询已通过，固定 15 题 Canary 待执行。
 
 ## 输入
 

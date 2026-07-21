@@ -36,7 +36,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | SR-01 | 冻结首期知识源、用户、语料量、并发、SLO 和授权 | `PARTIAL` | `docs/STAGE_0_SCOPE.md`、本地 3 论文 Canary | 正式语料量、峰值并发、硬件预算和 SLO 未冻结 |
 | SR-02 | PostgreSQL 作为元数据、ACL 和生命周期唯一事实源 | `NOT_STARTED` | 合同与 Fixture 权限规则 | 真实 Schema、ACL 计算、时间戳和软删除未接入 |
 | SR-03 | PDF/OCR、章节页码、父子 Chunk、版本和幂等入库 | `PARTIAL` | 本地文本层 PDF、`ChunkRecordV1`、稳定 ID 和页码 | OCR、MinIO、Outbox、死信、完整版本/删除链路未实现 |
-| SR-04 | Elasticsearch 论文级和 Chunk 级 BM25 | `PARTIAL` | SQLite 基线；远程 ES 9.4.3 冒烟；本地严格 Mapping、ACL 和 BM25 适配器测试 | 远程适配器 Fixture、中文分词选型、别名、316 Chunk 和性能基线未实现 |
+| SR-04 | Elasticsearch 论文级和 Chunk 级 BM25 | `PARTIAL` | SQLite 基线；远程 ES 9.4.3；严格 Mapping、ACL、BM25 适配器及远程 Fixture 通过 | 中文分词选型、别名、316 Chunk Canary 和性能基线未实现 |
 | SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `PARTIAL` | 本地精确向量基线；远程 Milvus 2.6.18 + Ollama BGE-M3 1024 维 GPU/ACL/重启冒烟 | 正式 Collection、应用适配器、ANN 参数、316 Chunk 和性能基线未实现 |
 | SR-06 | 规范化、指代消解、意图路由、查询改写和拆解 | `NOT_STARTED` | API 问题输入合同 | 结构化路由、回退、实体保持和多轮未实现 |
 | SR-07 | ES/Milvus 并行、RRF、去重、多样性、Cross-Encoder 重排 | `PARTIAL` | 本地 SQLite BM25 + BGE-M3 RRF 15/15 | 真实 ES/Milvus 并行、去重/多样性、重排和扩展消融未实现 |

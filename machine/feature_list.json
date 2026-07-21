@@ -84,8 +84,10 @@
       "evidence": [
         "backend/retrieval/elasticsearch.py",
         "backend/rag/elasticsearch_consumer.py",
+        "backend/evaluation/harness.py",
         "tests/retrieval/test_elasticsearch_retrieval.py",
         "tests/api/test_elasticsearch_rag_answers_api.py",
+        "tests/evaluation/test_harness.py",
         "docs/ELASTICSEARCH_RETRIEVAL.md"
       ]
     },

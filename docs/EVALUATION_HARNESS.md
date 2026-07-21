@@ -14,6 +14,8 @@ Harness 也支持 `--retrieval-backend sqlite_fts5 --index <path>`。此时报�
 - `--retrieval-backend local_rrf --index <fts-path> --vector-index <vector-path>`；
 - `--embedding-model`、`--vector-min-score`、`--candidate-k` 和 `--rrf-k` 显式进入报告配置。
 
+远程 Elasticsearch BM25 使用 `--retrieval-backend elasticsearch_bm25`，并显式提供 `--elasticsearch-url` 与 `--elasticsearch-index`。报告边界为 `REMOTE_API_ELASTICSEARCH_BM25_FAKE_LLM`；它验证真实远程检索与 ACL，不代表真实生成模型质量。
+
 本地 BGE-M3 与 RRF 的固定三论文结果、模型 digest 和阈值依据见 [本地真实向量与 RRF 混合检索基线](LOCAL_VECTOR_RRF_RETRIEVAL.md)。
 
 本文件描述的薄 Harness 继续服务于 6 条公开 Fixture 和 15 题工程 Canary。正式 500 条检索评测使用独立的版本化 Manifest、双标注谱系、泄漏检查和 Recall/MRR/nDCG 指标，见 [正式检索评测体系 V1](FORMAL_RETRIEVAL_EVALUATION_V1.md)。两者不能互相替代。

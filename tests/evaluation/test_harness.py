@@ -6,9 +6,11 @@ import unittest
 from pathlib import Path
 
 from backend.evaluation.harness import DEFAULT_CASES_PATH, load_cases, run_suite
+from backend.rag.elasticsearch_consumer import ELASTICSEARCH_EXECUTION_BOUNDARY
 from backend.rag.sqlite_fts_consumer import SQLITE_FTS_EXECUTION_BOUNDARY
 from backend.rag.vector_consumer import RRF_EXECUTION_BOUNDARY, VECTOR_EXECUTION_BOUNDARY
 from backend.retrieval.fixture import load_chunks
+from backend.retrieval.sqlite_fts import chunks_fingerprint
 from backend.retrieval.sqlite_fts import SQLiteFtsIndex
 from backend.retrieval.vector import LocalVectorIndex
 from tests.retrieval.fake_embedding import FakeEmbeddingProvider
@@ -19,6 +21,45 @@ SQLITE_CASES_PATH = ROOT / "evaluation" / "suites" / "fixture-sqlite-fts-v1.json
 
 
 class EvaluationHarnessTests(unittest.TestCase):
+    def test_answerable_case_runs_through_elasticsearch_backend(self):
+        chunks = load_chunks(ROOT / "fixtures" / "chunks-v1.json")
+
+        class FakeElasticsearchTransport:
+            def request(self, method, path, *, body=None, content_type="application/json"):
+                del method, body, content_type
+                if path.endswith("/_mapping"):
+                    return {
+                        "fixture-chunks-v1": {
+                            "mappings": {
+                                "_meta": {
+                                    "schema_version": "elasticsearch_bm25_index_v1",
+                                    "retrieval_backend": "elasticsearch_bm25",
+                                    "text_analyzer": "standard",
+                                    "query_mode": "multi_match_or",
+                                    "section_path_boost": "2.0",
+                                    "source_chunks_sha256": chunks_fingerprint(chunks),
+                                    "chunk_count": str(len(chunks)),
+                                }
+                            }
+                        }
+                    }
+                if path.endswith("/_count"):
+                    return {"count": len(chunks)}
+                return {"hits": {"hits": [{"_source": chunks[0]}]}}
+
+        case = load_cases(SQLITE_CASES_PATH)[0].model_copy(deep=True)
+        case.expected.required_warnings = ["REMOTE_ELASTICSEARCH_BM25_FAKE_LLM"]
+        report = run_suite(
+            [case],
+            suite_id="fixture-elasticsearch-v1",
+            retrieval_backend="elasticsearch_bm25",
+            elasticsearch_index="fixture-chunks-v1",
+            elasticsearch_transport=FakeElasticsearchTransport(),
+        )
+
+        self.assertEqual(report["summary"]["passed"], 1)
+        self.assertEqual(report["execution_boundary"], ELASTICSEARCH_EXECUTION_BOUNDARY)
+
     def test_checked_in_fixture_suite_passes_all_three_categories(self):
         report = run_suite(load_cases(DEFAULT_CASES_PATH), suite_id="fixture-smoke-v1")
 

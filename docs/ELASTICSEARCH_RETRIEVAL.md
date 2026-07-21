@@ -38,10 +38,12 @@ $py = ".\.venv\Scripts\python.exe"
 
 预期首条结果为 `chunk_fixture_001`。重复执行 `build` 会因 Index 已存在而失败关闭，不得为了重跑静默覆盖已有索引。
 
+## 远程验证状态
+
+公开 Fixture 的建索引、inspect 和授权查询已在 Windows 远程主机通过。薄 Harness 已支持 `elasticsearch_bm25`，并要求显式提供 URL 和 Index 名称。
+
 ## 下一门禁
 
-1. 远程公开 Fixture 建索引、inspect 和授权查询通过；
-2. 再用私有 316 Chunk 建立独立版本 Index；
-3. 固定 15 题 Canary 与 SQLite 结果对比；
-4. Elasticsearch 单路通过后才开始 Milvus 适配器。
-
+1. 用私有 316 Chunk 建立独立版本 Index；
+2. 固定 15 题 Canary 与 SQLite 结果对比；
+3. Elasticsearch 单路通过后才开始 Milvus 适配器。
