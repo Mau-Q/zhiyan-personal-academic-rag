@@ -9,6 +9,7 @@ from scripts.run_assisted_generation_qwen import (
     build_api_payload,
     build_https_opener,
     load_env_file,
+    load_requests,
     parse_api_response,
 )
 
@@ -84,6 +85,18 @@ class QwenAssistedGenerationTests(unittest.TestCase):
                 load_env_file(path),
                 {"API_KEY": "secret-value", "MODEL": "qwen3.7-plus"},
             )
+
+    def test_loads_targeted_request_count(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            batch_dir = Path(temporary)
+            request = {
+                "schema_version": "assisted_question_generation_request_v1",
+                "slot": {"slot_id": "slot.1"},
+            }
+            (batch_dir / "batch-001.jsonl").write_text(
+                json.dumps(request) + "\n", encoding="utf-8"
+            )
+            self.assertEqual(load_requests(batch_dir, expected_count=1), [request])
 
 
 if __name__ == "__main__":

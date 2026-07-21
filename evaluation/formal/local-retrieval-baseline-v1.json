@@ -1,0 +1,16 @@
+{
+  "schema_version": "formal_local_retrieval_config_v1",
+  "backends": [
+    "lexical_overlap",
+    "sqlite_fts5",
+    "local_vector",
+    "local_rrf"
+  ],
+  "top_k": 50,
+  "metric_k_values": [3, 5, 10, 20, 50],
+  "embedding_model": "bge-m3:latest",
+  "embedding_model_digest": "7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab",
+  "vector_min_score": 0.5,
+  "rrf_candidate_k": 20,
+  "rrf_k": 60
+}

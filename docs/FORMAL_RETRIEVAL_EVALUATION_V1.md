@@ -219,11 +219,13 @@ python3 -m backend.evaluation.retrieval_metrics \
   --output runtime/evaluation/formal-retrieval-v1/test-metrics.json
 ```
 
+本地四路排名由 `scripts/run_formal_retrieval_rankings.py` 一次生成，参数由 `evaluation/formal/local-retrieval-baseline-v1.json` 固定。该工具批量预计算查询向量，但仍使用已锁定的 SQLite FTS5、BGE-M3 精确余弦和 RRF 参数。实跑为每路 `500/500`；dev/test 上向量与 RRF 的排序优势不一致，因此重排仍为 `DEFER_RERANK`。
+
 ## 下一门禁
 
 1. 三论文 316 Chunk、500 个题目与 GPT 初标、443 个泄漏组、300/100/100 拆分和 213 题单一风险复核包已经建立；
-2. 只填写一个决策文件，完成人工 Acceptance、冲突、无证据/越权/安全题和专业高难复核；已覆盖的低风险 `dev/test` 复核计入 10%～20% 分层抽检；
-3. 实现严格导入器：拒绝 `PENDING`、标签哈希漂移、缺失身份/时区、普通 reviewer 冒充专家和未解释的标签修改；
-4. 风险驱动人工门禁通过后运行词项、BM25、向量和 RRF 的工程对比；
-5. 只有 500 题证明稳定排序缺口后，才打开重排实现门禁；
+2. 外部 AI 决策文件已用于工程对比；Acceptance、人工和专家口径仍独立记为未完成；
+3. 外部 AI 复核已单独导入为检索工程集，不冒充人工、仲裁或专家谱系；
+4. 500 题词项、BM25、向量和 RRF 已完成；下一步固化配置/结果接口并等待远程合流；
+5. 本轮未证明稳定的重排增益，不打开重排实现门禁；
 6. 只有准备按最高方案正式验收时，才把同规模题集升级为双人工标注并进入 `LOCKED`。

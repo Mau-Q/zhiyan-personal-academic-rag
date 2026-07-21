@@ -71,7 +71,7 @@ def load_env_file(path: Path) -> dict[str, str]:
     return values
 
 
-def load_requests(batch_dir: Path) -> list[dict[str, Any]]:
+def load_requests(batch_dir: Path, expected_count: int = 500) -> list[dict[str, Any]]:
     requests: list[dict[str, Any]] = []
     for path in sorted(batch_dir.glob("batch-*.jsonl")):
         for line_number, line in enumerate(
@@ -86,8 +86,10 @@ def load_requests(batch_dir: Path) -> list[dict[str, Any]]:
             if payload.get("schema_version") != "assisted_question_generation_request_v1":
                 raise ValueError(f"unsupported request at {path}:{line_number}")
             requests.append(payload)
-    if len(requests) != 500:
-        raise ValueError(f"expected exactly 500 requests, found {len(requests)}")
+    if len(requests) != expected_count:
+        raise ValueError(
+            f"expected exactly {expected_count} requests, found {len(requests)}"
+        )
     slot_ids = [request["slot"]["slot_id"] for request in requests]
     if len(slot_ids) != len(set(slot_ids)):
         raise ValueError("request slot ids must be unique")
@@ -229,6 +231,7 @@ def _atomic_json(path: Path, payload: dict[str, Any]) -> None:
 def run_generation(
     requests: list[dict[str, Any]], output_dir: Path, settings: Settings
 ) -> dict[str, Any]:
+    target_count = len(requests)
     result_dir = output_dir / "items"
     result_dir.mkdir(parents=True, exist_ok=True)
     completed: dict[str, dict[str, Any]] = {}
@@ -268,7 +271,9 @@ def run_generation(
                 }
                 _atomic_json(result_dir / f"{slot_id}.json", saved)
                 completed[slot_id] = saved
-                print(f"completed {len(completed)}/500 {slot_id}", flush=True)
+                print(
+                    f"completed {len(completed)}/{target_count} {slot_id}", flush=True
+                )
             except Exception as exc:  # noqa: BLE001 - recorded per item for resume
                 failures.append({"slot_id": slot_id, "error": str(exc)})
                 print(f"failed {slot_id}: {exc}", flush=True)
@@ -297,12 +302,16 @@ def run_generation(
         "schema_version": "assisted_question_generation_run_report_v1",
         "requested_model": settings.model,
         "enable_thinking": False,
-        "target_count": 500,
+        "target_count": target_count,
         "completed_count": len(completed),
         "failed_count": len(failures),
         "workers": settings.workers,
         "token_totals": token_totals,
-        "status": "COMPLETE" if len(completed) == 500 else "INCOMPLETE_RETRY_REQUIRED",
+        "status": (
+            "COMPLETE"
+            if len(completed) == target_count
+            else "INCOMPLETE_RETRY_REQUIRED"
+        ),
     }
     _atomic_json(output_dir / "run-report.json", report)
     return report
@@ -316,6 +325,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--model", default="qwen3.7-plus")
     parser.add_argument("--workers", type=int, default=20)
     parser.add_argument("--retries", type=int, default=3)
+    parser.add_argument("--expected-count", type=int, default=500)
     return parser
 
 
@@ -330,6 +340,8 @@ def main() -> int:
             raise ValueError("workers must be between 1 and 32")
         if args.retries < 0 or args.retries > 10:
             raise ValueError("retries must be between 0 and 10")
+        if args.expected_count < 1:
+            raise ValueError("expected count must be positive")
         settings = Settings(
             base_url=base_url,
             api_key=api_key,
@@ -338,7 +350,7 @@ def main() -> int:
             workers=args.workers,
             retries=args.retries,
         )
-        requests = load_requests(args.batch_dir)
+        requests = load_requests(args.batch_dir, args.expected_count)
         args.output_dir.mkdir(parents=True, exist_ok=True)
         report = run_generation(requests, args.output_dir, settings)
     except (OSError, KeyError, ValueError, RuntimeError) as exc:

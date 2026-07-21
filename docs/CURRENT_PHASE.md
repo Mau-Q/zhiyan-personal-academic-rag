@@ -85,6 +85,9 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 当前正式校验结构、题量、配额和泄漏均通过，但 `engineering_ready=false / lock_ready=false`：100 条 Acceptance、25 条冲突、50 条 hard/standards、75 条无证据/越权/安全题尚未完成人工确认；四类合并去重为 213 题，其中 75 题同时覆盖 362 条低风险 `dev/test` 的 20.7%，无需再单独增加抽检题量。
 - 已生成一个去重风险复核包，不拆成人工批次：213 条只读证据队列和 213 条预填但保持 `PENDING` 的决策模板；ZIP 含 README、SHA-256 清单和汇总，压缩包完整性与成员边界已验证；
 - 复核包按 `P0/P1/P2=50/126/37` 排序，50 条要求领域专家、163 条要求普通人工复核；当前真实进度保持 `0/213`，未把空模板计作人工结果。
+- 收到 213 条外部 AI 独立复核：`155 APPROVE_AS_IS / 40 EDIT_LABELS / 18 REJECT_ITEM`；已构建保持 500 题的检索专用工程集，40 项精确更正，18 项最小修复标记为 `DRAFT`；人工复核仍为 `0/213`。
+- 已对 500 题完成词项、SQLite BM25、本地 BGE-M3 向量和 RRF 四路检索，每路 `500/500`；test 的 `nDCG@10` 依次为 `0.457569 / 0.502652 / 0.631910 / 0.647269`。
+- dev 上向量 `nDCG@10=0.614514` 高于 RRF `0.607016`，test 上 RRF 反超约 `0.015359`；优势不稳定，暂不增加重排复杂度。
 
 ## 输入
 
@@ -92,7 +95,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
 - 未完成能力：风险驱动人工确认、原方案双人工标注、正式范围/SLO、成员 B 远程准备、PostgreSQL、真实 Elasticsearch、Milvus、真实生成模型和远程模型服务；
-- 下一工作是只填写复核包内一个 `risk-review-decisions-v1.jsonl`，再通过导入校验器回填人工谱系；人工门禁通过后运行 500 题词项、BM25、向量和 RRF 对比。重排、原方案人工升级、远程模型与生产索引参数保持证据驱动。
+- 500 题四路检索已完成，下一工作是固化运行配置与结果接口，然后等待 B 的远程盘点进入第一次合流；重排继续暂缓。
 
 ## 验收
 
@@ -122,12 +125,12 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 ## Current boundary
 
-当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0，仓库 M0、本地 RRF M1 和评测工具只是已验证的子基线。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；近期评测执行边界为 `GPT_ASSISTED_ITEMS_500 / LEAKAGE_GROUPS_443 / SPLITS_300_100_100 / RISK_REVIEW_PACKAGE_213_READY / HUMAN_DECISIONS_0_OF_213`，原方案执行边界为 `SOURCE_FORMAL_DOUBLE_HUMAN_PENDING`。它们不证明风险人工门禁、原方案双人工口径、PostgreSQL、Elasticsearch、Milvus、远程部署、真实 RAG 生成模型或生产参数已完成。PDF、真实 Chunk、私有问题集、标注记录、索引和运行报告不得提交。
+当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；近期评测执行边界为 `AI_AUDITED_ENGINEERING_ITEMS_500 / FOUR_BACKENDS_500_COMPLETE / HUMAN_DECISIONS_0_OF_213`，原方案执行边界为 `SOURCE_FORMAL_DOUBLE_HUMAN_PENDING`。AI 复核和本地实跑不证明人工验收、真实 ES/Milvus、远程部署或生产参数已完成。运行时私有数据继续不进入 Git。
 
 ## Next gate
 
-1. **共享范围与评测线：** 500 条 GPT 辅助 items、标注、泄漏拆分和 213 题单一复核包已完成；下一步填写一个决策文件并复用风险复核覆盖低风险抽检，不恢复全量双人工；
-2. **A 本地工程线：** 本地真实向量、RRF 和指标工具已完成；风险人工门禁通过后运行 500 题四路工程对比，不在没有证据增益时接入重排；
+1. **共享范围与评测线：** 保留 AI 工程集与人工验收的独立记账；不恢复日常全量双人工；
+2. **A 本地工程线：** 500 题四路对比已完成，暂缓重排；下一步固化配置和结果接口；
 3. **B 远程基础设施线：** 按 Issue #9 完成主机盘点，拉取同一 `main` 运行全量测试和 Fixture 冒烟；
 4. B 的基线通过后，按 PostgreSQL、Elasticsearch、Milvus、模型服务逐项建立真实状态，不同时切换多个基础设施变量；
 5. A 已完成同一 Canary 的词项、SQLite BM25、向量和混合检索比较；真实 LLM 仍放在扩展评测和远程检索证据链稳定后单独接入；

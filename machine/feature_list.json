@@ -158,6 +158,17 @@
       ]
     },
     {
+      "id": "formal_local_retrieval_runner",
+      "status": "READY",
+      "owner": "A",
+      "evidence": [
+        "scripts/run_formal_retrieval_rankings.py",
+        "evaluation/formal/local-retrieval-baseline-v1.json",
+        "tests/evaluation/test_formal_retrieval_rankings.py",
+        "docs/FORMAL_RETRIEVAL_EVALUATION_V1.md"
+      ]
+    },
+    {
       "id": "formal_evaluation_corpus",
       "status": "PARTIAL",
       "owner": "SHARED",
