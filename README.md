@@ -19,7 +19,10 @@
 
 ## 当前状态
 
-当前阶段为 `REPOSITORY_BOOTSTRAP`：源码仓库和安全边界已建立，业务实现尚未开始。下一门禁见 [`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)。
+当前阶段为 `REPOSITORY_BOOTSTRAP / REMOTE_READY`：Private GitHub 仓库、源码边界和首个 `main` 基线已经建立，业务实现尚未开始。
+
+- GitHub：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
+- 下一门禁：[`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)
 
 ## 双人开发边界
 

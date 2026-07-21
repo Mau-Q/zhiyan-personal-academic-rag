@@ -3,6 +3,7 @@
 ## 1. 仓库定位
 
 - 仓库名称：`zhiyan-personal-academic-rag`
+- 仓库地址：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 - 初始可见性：Private
 - 默认分支：`main`
 

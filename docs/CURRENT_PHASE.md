@@ -2,7 +2,7 @@
 
 ## Status
 
-`REPOSITORY_BOOTSTRAP / LOCAL_COMPLETE / REMOTE_CREATION_PENDING_AUTH`
+`REPOSITORY_BOOTSTRAP / REMOTE_READY`
 
 ## Completed
 
@@ -10,20 +10,20 @@
 - 建立源码、数据、密钥和运行时边界；
 - 建立私有优先、审查后公开的仓库策略；
 - 记录双人离线/在线并行开发边界；
-- 准备 Git 初始化所需基础文件。
+- 创建 Private GitHub 仓库：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>；
+- 推送并建立远程 `main` 基线。
 
-## Current blocker
+## Pending input
 
-GitHub CLI 账号 `Mau-Q` 的现有令牌无效。远程私有仓库创建和首次推送必须在重新认证后执行。
+邀请第二位成员前，需要取得对方的 GitHub 用户名。
 
 ## Next gate
 
-1. 完成 `gh auth login -h github.com`；
-2. 创建私有仓库 `zhiyan-personal-academic-rag`；
-3. 推送本地 `main`；
-4. 邀请第二位成员；
-5. 建立首批 Issue 与 Milestone；
-6. 冻结三个静态合同后进入阶段 0 实施。
+1. 邀请第二位成员；
+2. 建立首批 Issue 与 Milestone；
+3. 冻结 `ChunkRecordV1`、`AuthorizedScopeV1`、`IndexVersionV1`；
+4. 从功能分支和 Pull Request 开始阶段 0 实施；
+5. 在首个里程碑进行一次集中联调。
 
 ## Prohibited shortcuts
 
