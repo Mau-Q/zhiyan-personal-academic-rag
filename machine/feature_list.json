@@ -1,0 +1,53 @@
+{
+  "schema_version": "feature_list_v1",
+  "features": [
+    {
+      "id": "repository_harness",
+      "status": "READY",
+      "owner": "A",
+      "evidence": ["AGENTS.md", "scripts/validate_harness_contract.py"]
+    },
+    {
+      "id": "stage_zero_contracts",
+      "status": "COMPLETE",
+      "owner": "SHARED",
+      "evidence": ["contracts/README.md", "tests/contracts/test_contracts.py"]
+    },
+    {
+      "id": "local_pdf_ingestion",
+      "status": "COMPLETE",
+      "owner": "A",
+      "evidence": ["backend/ingestion/service.py", "docs/LOCAL_PDF_CANARY.md"]
+    },
+    {
+      "id": "authorized_lexical_rag_api",
+      "status": "COMPLETE_WITH_FAKE_LLM",
+      "owner": "A",
+      "evidence": ["backend/api/app.py", "tests/api/test_rag_answers_api.py"]
+    },
+    {
+      "id": "rag_evaluation_harness",
+      "status": "FIXTURE_BASELINE_READY",
+      "owner": "A",
+      "evidence": ["backend/evaluation/harness.py", "docs/EVALUATION_HARNESS.md"]
+    },
+    {
+      "id": "remote_host_readiness",
+      "status": "PENDING",
+      "owner": "B",
+      "evidence": ["docs/REMOTE_HOST_READINESS.md"]
+    },
+    {
+      "id": "real_retrieval_infrastructure",
+      "status": "NOT_STARTED",
+      "owner": "SHARED",
+      "evidence": ["docs/CURRENT_PHASE.md"]
+    },
+    {
+      "id": "real_model_integration",
+      "status": "NOT_STARTED",
+      "owner": "SHARED",
+      "evidence": ["docs/CURRENT_PHASE.md"]
+    }
+  ]
+}

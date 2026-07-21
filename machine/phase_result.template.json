@@ -1,0 +1,19 @@
+{
+  "schema_version": "phase_result_v1",
+  "phase_id": "replace-with-phase-id",
+  "template_only": true,
+  "result": "BLOCKED",
+  "execution_boundary": "replace with the actual verified boundary",
+  "base_commit": null,
+  "result_commit": null,
+  "workspace_clean": null,
+  "checks": [
+    {
+      "name": "replace-with-real-check",
+      "status": "NOT_RUN",
+      "evidence": "template only; replace with executed evidence"
+    }
+  ],
+  "artifacts": [],
+  "notes": ["Copy this file into runtime/phases/<phase-id>/phase_result.json before editing."]
+}
