@@ -119,6 +119,29 @@ python3 scripts/init_assisted_evaluation_workspace.py \
 
 初始化器验证 `ChunkRecordV1`、拒绝失效或重复 Chunk、拒绝覆盖非空工作区，并生成源快照、空 JSONL、Manifest 和初始化报告。空题集必须保持 `engineering_ready=false / lock_ready=false`。
 
+按固定配额生成 500 个槽位和 50 个内部容错分组：
+
+```bash
+python3 scripts/prepare_assisted_evaluation_batches.py \
+  --policy evaluation/assisted-500-policy-v1.json \
+  --chunks runtime/evaluation/local-3-paper-v1/chunks/all-three.json \
+  --prompt evaluation/prompts/assisted-question-generation-v1.md \
+  --output-dir runtime/evaluation/formal-retrieval-v1/generation-v1
+```
+
+50 个文件只是便于校验和失败重试，不代表需要手工调用 50 次。使用 DashScope 时，500 个逐题请求由一个命令并发执行；默认 20 路并发，强制 `qwen3.7-plus`、`temperature=0`、`enable_thinking=false` 和 JSON 输出：
+
+```bash
+python3 scripts/run_assisted_generation_qwen.py \
+  --env-file /path/to/private/.env \
+  --batch-dir runtime/evaluation/formal-retrieval-v1/generation-v1/batches \
+  --output-dir runtime/evaluation/formal-retrieval-v1/qwen3.7-plus-v1 \
+  --model qwen3.7-plus \
+  --workers 20
+```
+
+执行器不修改 `.env`，不打印密钥；逐题原子落盘，重复运行时跳过已完成题目，并对 408、409、429 和 5xx 自动重试。只有 `run-report.json` 达到 `completed_count=500 / failed_count=0` 后，才允许把生成阶段记为完成。
+
 验证公开设计 Fixture：
 
 ```bash
@@ -158,8 +181,8 @@ python3 -m backend.evaluation.retrieval_metrics \
 
 ## 下一门禁
 
-1. 三论文 316 Chunk 源快照已经冻结，下一步补充用户类型和实际语言分布；
-2. 从该真实语料快照建立 500 条工程问题和泄漏组；
+1. 三论文 316 Chunk 源快照已经冻结，500 个配额槽位和模型请求也已准备；
+2. 并发执行 Qwen3.7-Plus，校验、去重并回填 500 条工程问题和泄漏组；
 3. GPT 完成候选整理和低风险初标，人工确认 Acceptance、冲突与专业高难题；
 4. 运行词项、BM25、向量和 RRF 的工程对比；
 5. 只有 500 题证明稳定排序缺口后，才打开重排实现门禁；

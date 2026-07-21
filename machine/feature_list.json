@@ -108,6 +108,26 @@
       ]
     },
     {
+      "id": "assisted_evaluation_batch_preparer",
+      "status": "READY",
+      "owner": "A",
+      "evidence": [
+        "evaluation/assisted-500-policy-v1.json",
+        "scripts/prepare_assisted_evaluation_batches.py",
+        "tests/evaluation/test_assisted_batches.py"
+      ]
+    },
+    {
+      "id": "qwen_assisted_generation_runner",
+      "status": "READY",
+      "owner": "A",
+      "evidence": [
+        "scripts/run_assisted_generation_qwen.py",
+        "tests/evaluation/test_qwen_assisted_generation.py",
+        "docs/FORMAL_RETRIEVAL_EVALUATION_V1.md"
+      ]
+    },
+    {
       "id": "formal_evaluation_corpus",
       "status": "PARTIAL",
       "owner": "SHARED",

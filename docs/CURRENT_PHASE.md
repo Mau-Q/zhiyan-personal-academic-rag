@@ -73,6 +73,9 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 新增 500 题工作区初始化器，验证真实 `ChunkRecordV1`、拒绝失效/重复 Chunk 和非空目录覆盖；
 - 已冻结三论文 316 Chunk 源快照：Chunk SHA-256 为 `f7eb7e4a6c7820abde5523dca906df1d1a052e2e3b2174887781531295c7a282`；
 - 已在被忽略的 `runtime/evaluation/formal-retrieval-v1/` 初始化目标 500 的空工作区，当前如实为 `0/500 / SOURCE_FROZEN_DATA_COLLECTION_PENDING`。
+- 固定 500 题的拆分、题型、语言、查询形态、难度与可回答性配额，生成 500 个确定性槽位和 50 个内部容错分组；
+- 新增 Qwen3.7-Plus 并发执行器，默认 20 路并发，强制关闭思考、JSON 输出、自动重试和断点续跑；
+- 当前仅完成请求准备，外部模型结果尚未落盘，因此题集仍如实保持 `0/500`，不得把执行器就绪写成真实生成完成。
 
 ## 输入
 
@@ -80,7 +83,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
 - 未完成能力：500 条真实问题与 GPT 标注、用户/语言分布、原方案双人工标注、正式范围/SLO、成员 B 远程准备、PostgreSQL、真实 Elasticsearch、Milvus、真实生成模型和远程模型服务；
-- 下一工作是固定问题分布和 GPT 评审 Prompt，再分批生成、去重并标注 500 题；重排、原方案人工升级、远程模型与生产索引参数保持证据驱动。
+- 下一工作是执行已固定的 Qwen3.7-Plus 请求，随后校验、去重并回填 500 题；重排、原方案人工升级、远程模型与生产索引参数保持证据驱动。
 
 ## 验收
 
@@ -110,7 +113,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 ## Current boundary
 
-当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0，仓库 M0、本地 RRF M1 和评测工具只是已验证的子基线。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；近期评测执行边界为 `GPT_ASSISTED_500_PROFILE_READY / SOURCE_FROZEN_316_CHUNKS / ITEMS_0_OF_500`，原方案执行边界为 `SOURCE_FORMAL_DOUBLE_HUMAN_PENDING`。它们不证明真实 500 题、原方案双人工口径、PostgreSQL、Elasticsearch、Milvus、远程部署、真实生成模型或生产参数已完成。PDF、真实 Chunk、私有问题集、标注记录、索引和运行报告不得提交。
+当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0，仓库 M0、本地 RRF M1 和评测工具只是已验证的子基线。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；近期评测执行边界为 `GPT_ASSISTED_500_PROFILE_READY / SOURCE_FROZEN_316_CHUNKS / PROMPT_SLOTS_500_READY / ITEMS_0_OF_500`，原方案执行边界为 `SOURCE_FORMAL_DOUBLE_HUMAN_PENDING`。它们不证明真实 500 题、原方案双人工口径、PostgreSQL、Elasticsearch、Milvus、远程部署、真实生成模型或生产参数已完成。PDF、真实 Chunk、私有问题集、标注记录、索引和运行报告不得提交。
 
 ## Next gate
 

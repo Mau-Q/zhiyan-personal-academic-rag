@@ -1,0 +1,65 @@
+{
+  "schema_version": "assisted_evaluation_policy_v1",
+  "policy_id": "local-3-paper-assisted-500-v1",
+  "target_size": 500,
+  "seed": 20260721,
+  "batch_size": 10,
+  "split_quotas": {
+    "dev": 300,
+    "test": 100,
+    "acceptance": 100
+  },
+  "primary_question_type_quotas": {
+    "exact_lookup": 50,
+    "single_document_fact": 75,
+    "single_document_explanation": 50,
+    "cross_document_semantic": 75,
+    "comparison": 50,
+    "multi_hop": 50,
+    "teaching_explanation": 25,
+    "standards_freshness": 50,
+    "no_answer_evidence_insufficient": 50,
+    "adversarial_security": 25
+  },
+  "language_quotas": {
+    "zh": 300,
+    "en": 175,
+    "mixed": 25
+  },
+  "query_form_quotas": {
+    "short": 150,
+    "long": 200,
+    "typo": 25,
+    "abbreviation": 50,
+    "multi_turn": 75
+  },
+  "difficulty_quotas": {
+    "easy": 150,
+    "medium": 300,
+    "hard": 50
+  },
+  "answerability_quotas": {
+    "ANSWERABLE": 375,
+    "PARTIALLY_ANSWERABLE": 25,
+    "NO_EVIDENCE": 50,
+    "CONFLICTING_EVIDENCE": 25,
+    "FORBIDDEN": 25
+  },
+  "review_policy": {
+    "low_risk_dev_test_human_audit_min_ratio": 0.1,
+    "low_risk_dev_test_human_audit_target_ratio": 0.2,
+    "acceptance_single_human_confirmation": true,
+    "conflict_human_adjudication": true,
+    "expert_review_question_types": ["standards_freshness"],
+    "expert_review_difficulties": ["hard"],
+    "double_human_required_for_source_formal_lock_only": true
+  },
+  "generation_policy": {
+    "prompt_version": "assisted-question-generation-v1",
+    "temperature": 0.0,
+    "max_context_chunks_single_document": 2,
+    "max_context_chunks_cross_document": 4,
+    "require_structured_json": true,
+    "forbid_unprovided_citations": true
+  }
+}
