@@ -144,6 +144,19 @@ python3 scripts/run_assisted_generation_qwen.py \
 
 macOS Python 使用独立 CA 路径时，执行器显式加载 `certifi` 并保持主机名和证书链校验开启，不允许以关闭 TLS 校验作为修复。当前实跑已完成 500/500，失败 0。原始候选仍须经过题面去重、槽位约束、引用范围和正式合同校验，不能因模型调用完成就直接标记为正式题集。
 
+定向修复后，使用最终化工具合并原始结果与多轮修复，并在新目录输出清洗候选和正式草稿：
+
+```bash
+python3 scripts/finalize_assisted_candidates.py \
+  --batch-dir runtime/evaluation/formal-retrieval-v1/generation-v1/batches \
+  --raw-results runtime/evaluation/formal-retrieval-v1/qwen3.7-plus-v1/results.jsonl \
+  --repair-results runtime/evaluation/formal-retrieval-v1/qwen3.7-plus-repairs-v1/repair-results.jsonl \
+  --repair-results runtime/evaluation/formal-retrieval-v1/qwen3.7-plus-repairs-v2/repair-results.jsonl \
+  --output-dir runtime/evaluation/formal-retrieval-v1/qwen3.7-plus-finalized-v1
+```
+
+最终化工具从冻结 slot 恢复主题型、文档范围和 answerability，将自由文本路由固定为 `HYBRID_QA`，从相关性判断派生引用，并让无证据/越权题保持无支持证据。当前输出为 500 个唯一题面、500 个通过 `EvaluationItemV1` 的草稿。25 个冲突候选仍须定向人工复核；近似问题和共享答案模板的泄漏组完成前，不覆盖正式 `items-v1.jsonl`。
+
 验证公开设计 Fixture：
 
 ```bash

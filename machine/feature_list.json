@@ -128,6 +128,16 @@
       ]
     },
     {
+      "id": "assisted_candidate_finalizer",
+      "status": "READY",
+      "owner": "A",
+      "evidence": [
+        "scripts/finalize_assisted_candidates.py",
+        "tests/evaluation/test_finalize_assisted_candidates.py",
+        "docs/FORMAL_RETRIEVAL_EVALUATION_V1.md"
+      ]
+    },
+    {
       "id": "formal_evaluation_corpus",
       "status": "PARTIAL",
       "owner": "SHARED",
