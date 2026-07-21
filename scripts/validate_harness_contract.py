@@ -104,7 +104,7 @@ def check_project_state() -> None:
         "member_a_low_risk": "DIRECT_MAIN_AFTER_LOCAL_GATES",
         "member_b_remote": "PULL_REQUEST",
         "high_risk": "PULL_REQUEST_AND_CONFIRMATION",
-        "ci_mode": "POST_PUSH_VERIFICATION",
+        "ci_mode": "CONDITIONAL_ACTIONS_CHECK",
         "history_repair": "FIX_FORWARD_NO_FORCE_PUSH",
     }:
         raise ValueError("project_state git_policy is invalid")

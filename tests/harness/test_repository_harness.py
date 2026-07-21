@@ -57,7 +57,7 @@ class RepositoryHarnessTests(unittest.TestCase):
             "DIRECT_MAIN_AFTER_LOCAL_GATES",
         )
         self.assertEqual(state["git_policy"]["member_b_remote"], "PULL_REQUEST")
-        self.assertEqual(state["git_policy"]["ci_mode"], "POST_PUSH_VERIFICATION")
+        self.assertEqual(state["git_policy"]["ci_mode"], "CONDITIONAL_ACTIONS_CHECK")
 
     def test_validator_rejects_template_as_concrete_phase_result(self):
         template = json.loads(

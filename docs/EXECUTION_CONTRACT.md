@@ -17,15 +17,15 @@
 
 ## 3. 验证
 
-最低门禁：
+普通低风险任务的最低门禁：
 
 ```bash
 python3 scripts/validate_harness_contract.py
-make test
+# 运行受影响测试目标
 git diff --check
 ```
 
-按风险增加真实 PDF、HTTP、远程或安全验证。缺少某个工具时必须区分“环境未安装”和“源码失败”。
+阶段状态、合同、依赖、公共接口或跨模块代码变化时运行 `make test`；按风险增加真实 PDF、HTTP、远程或安全验证。缺少某个工具时必须区分“环境未安装”和“源码失败”。
 
 ## 4. 阶段结果
 
@@ -43,8 +43,9 @@ runtime/phases/<phase-id>/phase_result.json
 - 成员 B 远程任务和高风险变更：从最新 `main` 建分支，通过 PR 交付；
 - 高风险包括合同破坏、安全边界、真实数据、公网暴露和大型跨模块改动；
 - 直推或 PR 前都必须审查 diff 并重跑门禁；
-- 直推后的 GitHub Actions 是复验门禁，失败时新增修复提交，不 force push；
-- 收尾时确认本地 `main` 与 `origin/main` 一致。
+- 收尾时确认本地 `main` 与 `origin/main` 一致；
+- 普通低风险直推不要求打开浏览器检查 Actions；CI 配置、依赖、跨平台、高风险变更，或本地门禁/远程状态异常时必须检查 Actions；
+- Actions 失败时新增修复提交，不 force push。
 
 ## 6. 完成定义
 

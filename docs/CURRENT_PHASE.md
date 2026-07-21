@@ -46,6 +46,7 @@ Phase ID：`m1-local-3-paper-evaluation-ready`
 - 人工完成 15 题本地评测集，覆盖 9 个目标页可回答题、3 个无证据题和 3 个越权请求；
 - 词项检索基线首轮通过 15/15，分类结果为 `ANSWERABLE 9/9`、`NO_EVIDENCE 3/3`、`FORBIDDEN 3/3`；
 - 三论文题集、PDF、Chunk、页面渲染和报告只进入被忽略的 `runtime/`，仓库仅记录脱敏方法与汇总结果。
+- 再次简化成员 A 的普通低风险流程：本地 Harness、受影响测试和 diff 检查后直推，仅核对远程 SHA；Actions 改为条件检查。
 
 ## 输入
 
@@ -69,7 +70,7 @@ Phase ID：`m1-local-3-paper-evaluation-ready`
 - 当前 Repository Harness 提交从 `agent/add-repository-harness` 快进到 `main`；
 - 成员 A 普通低风险任务通过本地门禁后直接 push `main`；
 - 成员 B 远程任务和高风险变更继续通过 PR；
-- 推送后本地 `main` 必须与 `origin/main` 指向同一提交，并检查 GitHub Actions。
+- 推送后本地 `main` 必须与 `origin/main` 指向同一提交；仅在 CI 配置、依赖、跨平台、高风险变更或异常状态时检查 GitHub Actions。
 
 ## Current boundary
 
