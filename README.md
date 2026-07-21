@@ -19,7 +19,7 @@
 
 ## 当前状态
 
-当前阶段为 `STAGE_0 / CONTRACTS_DRAFTED / REVIEW_PENDING`：成员 A 已确定，协作者已邀请，首批合同、Fixture 和本地样本文献清单已进入评审。
+当前阶段为 `STAGE_0 / CONTRACT_BASELINE_MERGED / CONSUMER_IMPLEMENTATION`：V1 合同已经合并到 `main`，成员 A 与成员 B 可以分别实现在线、离线最小消费者。
 
 - GitHub：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 - 下一门禁：[`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)

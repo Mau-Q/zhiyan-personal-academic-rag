@@ -7,7 +7,7 @@
 ## 2. 已确定角色
 
 - 成员 A：仓库所有者，负责在线查询、RAG Answer、引用/拒答和后续前端集成；
-- 成员 B：已受邀加入 GitHub，负责 PDF 解析、Chunk、索引和一致性；
+- 成员 B：已加入 GitHub，负责 PDF 解析、Chunk、索引和一致性；
 - 双方共同维护 `contracts/` 和 `tests/contracts/`。
 
 ## 3. 首个 MVP
@@ -50,14 +50,14 @@
 - [x] 确定性 Chunk Fixture 已建立；
 - [x] 8 篇本地联调 PDF 已登记，不上传原文件；
 - [x] GitHub Actions 中契约测试通过；
-- [ ] 双方共同评审并接受合同；
+- [x] 成员 A 确认初始 V1 基线并合并 PR #1；
 - [ ] 成员 A 与成员 B 分别以自己的最小消费者验证同一 Fixture。
 
-合同评审完成后进入阶段 1，不提前扩展架构。
+两名成员现在可以按同一基线并行实现。普通模块 PR 不强制互审；只有 `contracts/` 的破坏性变更或跨成员边界变化需要另一方确认。
 
 ## 7. GitHub 协作入口
 
-- [Draft PR #1：阶段 0 合同评审](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/1)
+- [Merged PR #1：阶段 0 合同基线](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/1)
 - [Milestone M0：合同冻结与最小链路](https://github.com/Mau-Q/zhiyan-personal-academic-rag/milestone/1)
 - [Issue #2：共同合同评审](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/2)
 - [Issue #3：成员 A 在线 Fixture 消费者](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/3)

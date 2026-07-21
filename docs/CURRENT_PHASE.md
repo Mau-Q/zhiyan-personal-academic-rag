@@ -2,7 +2,7 @@
 
 ## Status
 
-`STAGE_0 / CONTRACTS_DRAFTED / REVIEW_PENDING`
+`STAGE_0 / CONTRACT_BASELINE_MERGED / CONSUMER_IMPLEMENTATION`
 
 ## Completed
 
@@ -13,23 +13,23 @@
 - 创建 Private GitHub 仓库：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>；
 - 推送并建立远程 `main` 基线；
 - 仓库所有者确定负责成员 A 的在线链路；
-- 第二位成员已由仓库所有者邀请；
+- 第二位成员 `chouyyds-blip` 已接受邀请；
 - 从本地语料筛选 8 篇 PDF，并只提交元数据、页数和 SHA-256；
 - 建立三个静态合同、RAG Answer、Trace、错误码、SSE 和契约测试草案；
-- 创建 [Draft PR #1](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/1)，GitHub Actions 契约检查已通过；
+- [PR #1](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/1) 已由成员 A 确认并 Squash Merge，GitHub Actions 契约检查通过；
 - 创建 [M0 里程碑](https://github.com/Mau-Q/zhiyan-personal-academic-rag/milestone/1)和 Issue #2～#5。
 
-## Pending input
+## Current boundary
 
-第二位成员 `chouyyds-blip` 需接受邀请，并与成员 A 共同评审 V1 合同。样本文献只能用于本地工程验证，PDF 本体不得提交。
+当前没有外部阻塞。V1 是成员 A 确认的初始基线；成员 B 可在实现中提出兼容性补充。样本文献只能用于本地工程验证，PDF 本体不得提交。
 
 ## Next gate
 
-1. 通过 Draft PR 评审 V1 合同；
-2. GitHub Actions 契约测试通过；
-3. 双方分别实现一个最小合同消费者并验证同一 Fixture；
-4. 合并合同后进入阶段 1 两条链路并行开发；
-5. 在首个里程碑进行一次集中联调。
+1. 成员 A 完成 [Issue #3](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/3) 的在线 Fixture 消费者；
+2. 成员 B 完成 [Issue #4](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/4) 的 PDF 到 `ChunkRecordV1`；
+3. 双方分别验证同一 Fixture；
+4. 通过 [Issue #5](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/5) 完成一次集中联调；
+5. 最小链路通过后关闭 M0 并进入下一阶段。
 
 ## Prohibited shortcuts
 
