@@ -19,7 +19,7 @@
 
 ## 当前状态
 
-当前阶段为 `STAGE_0 / MEMBER_A_CONSUMER_COMPLETE / MEMBER_B_PENDING`：V1 合同和成员 A 的在线 Fixture 消费者已经合并到 `main`，下一门禁是成员 B 的离线产物及首次集中联调。
+当前阶段为 `STAGE_0 / MEMBER_A_API_COMPLETE / MEMBER_B_PENDING`：V1 合同、成员 A 的在线 Fixture 消费者和非流式 Answer API 已合并到 `main`，下一门禁是成员 B 的离线产物及首次集中联调。
 
 - GitHub：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 - 下一门禁：[`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)

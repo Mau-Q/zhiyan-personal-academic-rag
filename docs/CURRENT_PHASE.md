@@ -2,7 +2,7 @@
 
 ## Status
 
-`STAGE_0 / MEMBER_A_CONSUMER_COMPLETE / MEMBER_B_PENDING`
+`STAGE_0 / MEMBER_A_API_COMPLETE / MEMBER_B_PENDING`
 
 ## Completed
 
@@ -19,7 +19,9 @@
 - [PR #1](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/1) 已由成员 A 确认并 Squash Merge，GitHub Actions 契约检查通过；
 - 创建 [M0 里程碑](https://github.com/Mau-Q/zhiyan-personal-academic-rag/milestone/1)和 Issue #2～#5；
 - [PR #6](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/6) 已由成员 A 直接合并，[Issue #3](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/3) 已关闭；
-- 成员 A 的授权过滤、确定性检索、Fake LLM、Evidence、Citation 和 `NO_EVIDENCE` 已通过 25 项测试。
+- [PR #8](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/8) 已由成员 A 在 CI 通过后直接合并，[Issue #7](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/7) 已关闭；
+- 成员 A 的授权过滤、确定性检索、Fake LLM、Evidence、Citation、`NO_EVIDENCE` 和非流式 Answer API 已通过 33 项测试；
+- 本地真实 HTTP 冒烟已覆盖 `200/COMPLETED`、`200/NO_EVIDENCE` 和 `403/RAG_FORBIDDEN_SCOPE`。
 
 ## Current boundary
 

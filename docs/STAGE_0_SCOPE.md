@@ -52,6 +52,7 @@
 - [x] GitHub Actions 中契约测试通过；
 - [x] 成员 A 确认初始 V1 基线并合并 PR #1；
 - [x] 成员 A 的在线最小消费者通过 Fixture 验证并合并 PR #6；
+- [x] 成员 A 的非流式 Answer API 通过 33 项测试并合并 PR #8；
 - [ ] 成员 B 的离线最小消费者输出符合合同的 Chunk；
 - [ ] 双方使用成员 B 的同一份输出完成集中联调。
 
@@ -65,3 +66,5 @@
 - [Issue #3：成员 A 在线 Fixture 消费者](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/3)
 - [Issue #4：成员 B PDF 到 ChunkRecordV1](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/4)
 - [Issue #5：首次单篇论文集中联调](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/5)
+- [Issue #7：成员 A 非流式 RAG Answer API](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/7)
+- [Merged PR #8：实现非流式 RAG Answer API](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/8)
