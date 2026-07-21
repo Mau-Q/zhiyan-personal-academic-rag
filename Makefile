@@ -1,7 +1,10 @@
-.PHONY: contract-test retrieval-test rag-test api-test test
+.PHONY: contract-test ingestion-test retrieval-test rag-test api-test test
 
 contract-test:
 	python3 -m unittest discover -s tests/contracts -p 'test_*.py' -v
+
+ingestion-test:
+	python3 -m unittest discover -s tests/ingestion -p 'test_*.py' -v
 
 retrieval-test:
 	python3 -m unittest discover -s tests/retrieval -p 'test_*.py' -v
@@ -12,4 +15,4 @@ rag-test:
 api-test:
 	python3 -m unittest discover -s tests/api -p 'test_*.py' -v
 
-test: contract-test retrieval-test rag-test api-test
+test: contract-test ingestion-test retrieval-test rag-test api-test
