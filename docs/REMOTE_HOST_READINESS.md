@@ -14,39 +14,39 @@
 
 | 项目 | 状态 | 脱敏结果 | 验证命令 |
 |---|---|---|---|
-| 操作系统和架构 | `NOT_CHECKED` |  | `uname -a` |
-| CPU | `NOT_CHECKED` |  | `lscpu` |
-| 内存 | `NOT_CHECKED` |  | `free -h` |
-| 磁盘 | `NOT_CHECKED` |  | `df -h` |
-| GPU | `NOT_CHECKED` |  | `nvidia-smi` |
-| CUDA | `NOT_CHECKED` |  | `nvcc --version` |
+| 操作系统和架构 | `CONFIRMED` | Windows 11 x64，WSL2/Linux Docker Engine | PowerShell、`wsl --status`、`docker info` |
+| CPU | `CONFIRMED` | Intel Core i7-12700K，12 核 20 线程 | `Get-CimInstance Win32_Processor` |
+| 内存 | `CONFIRMED` | 约 64 GB | PowerShell 主机盘点 |
+| 磁盘 | `CONFIRMED` | 数据盘约 927 GB，总余量约 400 GB；Docker/模型持久化不得新增到低余量盘 | `Get-Volume` |
+| GPU | `CONFIRMED` | NVIDIA GeForce RTX 4090，24564 MiB | `nvidia-smi` |
+| CUDA | `CONFIRMED` | 驱动兼容 13.1；`nvcc 11.3` | `nvidia-smi`、`nvcc --version` |
 
 ## 3. 基础工具
 
 | 项目 | 状态 | 版本或说明 |
 |---|---|---|
-| Git | `NOT_CHECKED` |  |
-| Python 3.11+ | `NOT_CHECKED` |  |
-| Docker | `NOT_CHECKED` |  |
-| Docker Compose | `NOT_CHECKED` |  |
-| NVIDIA Container Toolkit | `NOT_CHECKED` |  |
+| Git | `CONFIRMED` | 2.40.0.windows.1 |
+| Python 3.11+ | `CONFIRMED` | 3.11.15，仓库使用 `.venv` 的解释器 |
+| Docker | `CONFIRMED` | Docker Desktop 4.38.0，Engine 27.5.1，linux/amd64 |
+| Docker Compose | `CONFIRMED` | v2.32.4-desktop.1 |
+| NVIDIA Container Toolkit | `DEFERRED` | 原生 Windows Ollama 已验证 GPU；当前不引入 GPU 容器变量 |
 
 ## 4. 可选基础设施
 
 | 服务 | 状态 | 监听范围 | 当前动作 |
 |---|---|---|---|
-| PostgreSQL | `DEFERRED` | 未记录 | 仅检查，不部署 |
-| Elasticsearch | `DEFERRED` | 未记录 | 仅检查，不部署 |
-| Milvus | `DEFERRED` | 未记录 | 仅检查，不部署 |
-| 模型服务 | `DEFERRED` | 未记录 | 仅检查，不调用 |
+| PostgreSQL | `CONFIRMED` | 5432；HBA 仅允许回环认证 | 18.4 可连接，尚未接入应用 |
+| Elasticsearch | `CONFIRMED` | `127.0.0.1:9200` | 9.4.3 工程基线通过 |
+| Milvus | `CONFIRMED` | `127.0.0.1:19530/9091` | 2.6.18 standalone 工程基线通过 |
+| 模型服务 | `CONFIRMED` | `127.0.0.1:11434` | Ollama 0.30.10 + BGE-M3 GPU 冒烟通过 |
 
 ## 5. 仓库与部署目录
 
 - 仓库：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 - 部署目录：仅记录逻辑名称，不记录包含用户名的绝对路径；
 - 拉取方式：GitHub `git clone` / `git pull --ff-only`；
-- 当前验证提交：`NOT_CHECKED`；
-- 工作树状态：`NOT_CHECKED`。
+- 当前验证提交：`8b22e56`；
+- 工作树状态：验证时干净。
 
 ## 6. 远程验收
 
@@ -83,13 +83,21 @@
 - GNU Make：`NOT_INSTALLED`；Windows 主机使用 Makefile 对应的 Python unittest 命令执行测试。
 - NVIDIA Container Toolkit：`DEFERRED`；当前为原生 Windows 主机，未接入 Linux/WSL2 GPU 容器运行时。
 - PostgreSQL：`CONFIRMED`，已安装且运行；本阶段未连接或部署。
-- Elasticsearch：`NOT_INSTALLED`；未部署、未连接。
-- Milvus：`NOT_INSTALLED`；未部署、未连接。
-- 模型服务：`NOT_INSTALLED`；未部署、未连接。
+- Elasticsearch：`CONFIRMED`；9.4.3 单节点工程基线可用，尚未接入应用。
+- Milvus：`CONFIRMED`；2.6.18 standalone 工程基线可用，尚未接入应用。
+- 模型服务：`CONFIRMED`；Ollama `0.30.10` 已安装，BGE-M3 1024 维向量以 GPU 执行。
 - 仓库 Harness：`CONFIRMED`，`8/8` 检查通过。
-- Python 测试：`62` 项通过；`5` 项未通过。原因是 Windows 环境没有 `python3` 命令，部分测试子进程返回退出码 `9009`；该问题未通过修改核心代码或安全配置绕过。
+- Python 测试：Windows 子进程解释器问题已修复；最新提交的 evaluation 测试 `45/45` 通过。全仓最新 Windows 回归尚未重新执行，不用局部结果替代全量结论。
 - Fixture API：`CONFIRMED`，仅监听 `127.0.0.1:8000`。
 - HTTP 冒烟：`CONFIRMED`。
   - `COMPLETED`：HTTP `200`，返回 Evidence、Citation 和 `FIXTURE_ONLY_FAKE_LLM` 边界标识。
   - `NO_EVIDENCE`：HTTP `200`，`evidence=[]`。
   - 越权请求：HTTP `403`，`code=RAG_FORBIDDEN_SCOPE`，`retryable=false`。
+
+## 9. 检索基础设施基线
+
+- Elasticsearch `9.4.3`：单节点 `green`，中文 BM25、租户/用户过滤和重启持久化通过；
+- Milvus `2.6.18`：1024 维 COSINE Collection、BGE-M3 写入、授权过滤搜索和完整重启恢复通过；
+- 所有宿主机发布端口均限制为 `127.0.0.1`；
+- Elasticsearch/Milvus 持久化数据放置于容量充足的数据盘；
+- 详细边界与版本化配置见 `docs/REMOTE_RETRIEVAL_BASELINE.md`。

@@ -1,0 +1,15 @@
+services:
+  elasticsearch:
+    container_name: zhiyan-elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
+    restart: unless-stopped
+    mem_limit: 4g
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms2g -Xmx2g
+    ports:
+      - "127.0.0.1:9200:9200"
+    volumes:
+      - "${ZHIYAN_DATA_ROOT:?set ZHIYAN_DATA_ROOT}/elasticsearch:/usr/share/elasticsearch/data"
+
