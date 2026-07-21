@@ -98,6 +98,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 - Milvus `2.6.18` standalone 工程基线通过 BGE-M3 写入、COSINE 搜索、ACL 过滤和完整重启恢复；
 - Elasticsearch、Milvus、MinIO、Ollama 的宿主机端口均限制为回环监听，持久化数据放在容量充足的数据盘；
 - 已固化脱敏 Compose 配置和远程检索基线文档，但真实应用适配器、正式 Schema/Mapping、316 Chunk 重跑和性能验收尚未开始。
+- Elasticsearch BM25 适配器已在本地实现：严格 Mapping、源身份、服务端 ACL、Bulk UTF-8、漂移失败关闭和 Answer API 边界测试通过；远程 Fixture 尚待执行。
 
 ## 输入
 
@@ -142,7 +143,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 1. **共享范围与评测线：** 保留 AI 工程集与人工验收的独立记账；不恢复日常全量双人工；
 2. **A 本地工程线：** 500 题四路对比已完成，暂缓重排；下一步固化配置和结果接口；
 3. **B 远程基础设施线：** 主机、PostgreSQL、Elasticsearch、Milvus 和 BGE-M3 工程基线已闭环；保持回环监听和数据盘持久化边界；
-4. **真实检索接入：** 先实现 Elasticsearch 适配器、正式 Mapping 和固定 Canary；通过后再实现 Milvus 适配器，避免同时改变两个检索变量；
+4. **真实检索接入：** Elasticsearch 适配器本地就绪；先完成远程 Fixture 和固定 Canary，通过后再实现 Milvus 适配器，避免同时改变两个检索变量；
 5. A 已完成同一 Canary 的词项、SQLite BM25、向量和混合检索比较；真实 LLM 仍放在扩展评测和远程检索证据链稳定后单独接入；
 6. GPT 辅助 500 题只用于近期工程决策；只有恢复原方案双人工验收口径，并让范围、正式评测、真实 ES/Milvus 基线和模型资源选型都形成证据后，才能按最高方案关闭阶段 0。
 

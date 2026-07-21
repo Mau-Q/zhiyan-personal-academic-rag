@@ -10,10 +10,16 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from backend.api.models import ErrorV1, RagAnswerRequestV1, RagAnswerV1
+from backend.rag.elasticsearch_consumer import answer_elasticsearch_question
 from backend.rag.fixture_consumer import answer_fixture_question
 from backend.rag.sqlite_fts_consumer import answer_sqlite_fts_question
 from backend.rag.vector_consumer import answer_rrf_question, answer_vector_question
 from backend.retrieval.embedding import EmbeddingProvider, OllamaEmbeddingProvider
+from backend.retrieval.elasticsearch import (
+    ElasticsearchBm25Index,
+    ElasticsearchTransport,
+    UrllibElasticsearchTransport,
+)
 from backend.retrieval.fixture import filter_authorized_chunks, load_chunks, load_scope
 from backend.retrieval.hybrid import (
     DEFAULT_CANDIDATE_K,
@@ -27,7 +33,13 @@ from backend.retrieval.vector import DEFAULT_VECTOR_MIN_SCORE, LocalVectorIndex
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CHUNKS_PATH = ROOT / "fixtures" / "chunks-v1.json"
 DEFAULT_SCOPE_PATH = ROOT / "fixtures" / "authorized-scope-v1.json"
-RetrievalBackend = Literal["lexical_overlap", "sqlite_fts5", "local_vector", "local_rrf"]
+RetrievalBackend = Literal[
+    "lexical_overlap",
+    "sqlite_fts5",
+    "local_vector",
+    "local_rrf",
+    "elasticsearch_bm25",
+]
 
 
 def _error_response(*, status_code: int, code: str, message: str, retryable: bool) -> JSONResponse:
@@ -62,11 +74,15 @@ def create_app(
     vector_min_score: float = DEFAULT_VECTOR_MIN_SCORE,
     candidate_k: int = DEFAULT_CANDIDATE_K,
     rrf_k: int = DEFAULT_RRF_K,
+    elasticsearch_url: str = "http://127.0.0.1:9200",
+    elasticsearch_index: str | None = None,
+    elasticsearch_transport: ElasticsearchTransport | None = None,
 ) -> FastAPI:
     chunks = load_chunks(chunks_path)
     sqlite_index: SQLiteFtsIndex | None = None
     vector_index: LocalVectorIndex | None = None
     hybrid_retriever: LocalRrfHybridRetriever | None = None
+    elasticsearch_bm25_index: ElasticsearchBm25Index | None = None
     if retrieval_backend in ("sqlite_fts5", "local_rrf"):
         if index_path is None:
             raise ValueError(f"index_path is required for {retrieval_backend} retrieval")
@@ -95,6 +111,15 @@ def create_app(
             rrf_k=rrf_k,
             vector_min_score=vector_min_score,
         )
+    elif retrieval_backend == "elasticsearch_bm25":
+        if elasticsearch_index is None:
+            raise ValueError("elasticsearch_index is required for elasticsearch_bm25 retrieval")
+        if elasticsearch_transport is None:
+            elasticsearch_transport = UrllibElasticsearchTransport(base_url=elasticsearch_url)
+        elasticsearch_bm25_index = ElasticsearchBm25Index(
+            elasticsearch_index, elasticsearch_transport
+        )
+        elasticsearch_bm25_index.verify_source(chunks)
     elif retrieval_backend not in ("lexical_overlap", "sqlite_fts5", "local_vector"):
         raise ValueError(f"unsupported retrieval backend: {retrieval_backend}")
 
@@ -103,6 +128,7 @@ def create_app(
         "sqlite_fts5": "local SQLite FTS5/BM25 with Fake LLM",
         "local_vector": "real local dense vector retrieval with Fake LLM",
         "local_rrf": "local SQLite FTS5 plus dense RRF retrieval with Fake LLM",
+        "elasticsearch_bm25": "remote Elasticsearch BM25 retrieval with Fake LLM",
     }
     boundary = boundaries[retrieval_backend]
     app = FastAPI(
@@ -118,6 +144,7 @@ def create_app(
     app.state.embedding_provider = embedding_provider
     app.state.vector_min_score = vector_min_score
     app.state.hybrid_retriever = hybrid_retriever
+    app.state.elasticsearch_bm25_index = elasticsearch_bm25_index
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request_handler(
@@ -156,7 +183,14 @@ def create_app(
             )
 
         effective_scope = _narrow_scope(base_scope, payload.document_ids)
-        if app.state.retrieval_backend == "sqlite_fts5":
+        if app.state.retrieval_backend == "elasticsearch_bm25":
+            answer = answer_elasticsearch_question(
+                payload.question,
+                effective_scope,
+                chunks,
+                app.state.elasticsearch_bm25_index,
+            )
+        elif app.state.retrieval_backend == "sqlite_fts5":
             answer = answer_sqlite_fts_question(
                 payload.question,
                 effective_scope,
