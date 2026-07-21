@@ -15,11 +15,13 @@
 - 仓库所有者确定负责成员 A 的在线链路；
 - 第二位成员已由仓库所有者邀请；
 - 从本地语料筛选 8 篇 PDF，并只提交元数据、页数和 SHA-256；
-- 建立三个静态合同、RAG Answer、Trace、错误码、SSE 和契约测试草案。
+- 建立三个静态合同、RAG Answer、Trace、错误码、SSE 和契约测试草案；
+- 创建 [Draft PR #1](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/1)，GitHub Actions 契约检查已通过；
+- 创建 [M0 里程碑](https://github.com/Mau-Q/zhiyan-personal-academic-rag/milestone/1)和 Issue #2～#5。
 
 ## Pending input
 
-第二位成员需接受邀请，并与成员 A 共同评审 V1 合同。样本文献只能用于本地工程验证，PDF 本体不得提交。
+第二位成员 `chouyyds-blip` 需接受邀请，并与成员 A 共同评审 V1 合同。样本文献只能用于本地工程验证，PDF 本体不得提交。
 
 ## Next gate
 

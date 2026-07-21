@@ -49,8 +49,17 @@
 - [x] RAG Answer、Trace、错误码和 SSE V1 已形成文件；
 - [x] 确定性 Chunk Fixture 已建立；
 - [x] 8 篇本地联调 PDF 已登记，不上传原文件；
+- [x] GitHub Actions 中契约测试通过；
 - [ ] 双方共同评审并接受合同；
-- [ ] GitHub Actions 中契约测试通过；
 - [ ] 成员 A 与成员 B 分别以自己的最小消费者验证同一 Fixture。
 
 合同评审完成后进入阶段 1，不提前扩展架构。
+
+## 7. GitHub 协作入口
+
+- [Draft PR #1：阶段 0 合同评审](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/1)
+- [Milestone M0：合同冻结与最小链路](https://github.com/Mau-Q/zhiyan-personal-academic-rag/milestone/1)
+- [Issue #2：共同合同评审](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/2)
+- [Issue #3：成员 A 在线 Fixture 消费者](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/3)
+- [Issue #4：成员 B PDF 到 ChunkRecordV1](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/4)
+- [Issue #5：首次单篇论文集中联调](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/5)
