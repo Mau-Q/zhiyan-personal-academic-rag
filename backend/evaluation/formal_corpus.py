@@ -49,12 +49,13 @@ Answerability = Literal[
 ]
 AnnotationStatus = Literal[
     "DRAFT",
+    "GPT_ASSISTED",
     "DOUBLE_ANNOTATED",
     "ADJUDICATED",
     "EXPERT_REVIEWED",
 ]
-ENGINEERING_MIN_ITEMS = 60
-ENGINEERING_MAX_ITEMS = 100
+ENGINEERING_TARGET_ITEMS = 500
+ENGINEERING_HUMAN_AUDIT_MIN_RATIO = 0.10
 
 
 class StrictModel(BaseModel):
@@ -189,16 +190,18 @@ class EvaluationItemV1(StrictModel):
             raise ValueError("acceptance items must be blind_holdout")
         minimum_records = {
             "DRAFT": 0,
+            "GPT_ASSISTED": 1,
             "DOUBLE_ANNOTATED": 2,
             "ADJUDICATED": 3,
             "EXPERT_REVIEWED": 3,
         }[self.annotation_status]
         if len(self.annotation_record_ids) < minimum_records:
             raise ValueError("annotation status has too few annotation records")
-        if self.annotation_status in {"DRAFT", "DOUBLE_ANNOTATED"}:
+        if self.annotation_status in {"DRAFT", "GPT_ASSISTED", "DOUBLE_ANNOTATED"}:
             if self.final_annotation_id is not None:
                 raise ValueError(
-                    "DRAFT and DOUBLE_ANNOTATED items cannot have final_annotation_id"
+                    "DRAFT, GPT_ASSISTED, and DOUBLE_ANNOTATED items cannot have "
+                    "final_annotation_id"
                 )
         if self.annotation_status in {"ADJUDICATED", "EXPERT_REVIEWED"}:
             if self.final_annotation_id not in self.annotation_record_ids:
@@ -403,6 +406,8 @@ def validate_corpus(manifest_path: Path) -> dict[str, Any]:
         raise ValueError("evaluation item dataset_version does not match manifest")
 
     leakage_splits: dict[str, set[str]] = defaultdict(set)
+    low_risk_dev_test_count = 0
+    low_risk_dev_test_human_reviewed = 0
     for item in items:
         leakage_splits[item.leakage_group_id].add(item.split)
     leaking = sorted(group for group, splits in leakage_splits.items() if len(splits) > 1)
@@ -509,9 +514,24 @@ def validate_corpus(manifest_path: Path) -> dict[str, Any]:
             )
         if item.annotation_status == "DRAFT":
             blockers.append(f"{item.question_id} is still draft")
-        if item.agreement_score is None:
+        if item.annotation_status == "GPT_ASSISTED":
+            blockers.append(
+                f"{item.question_id} formal corpus requires double-human status"
+            )
+            gpt_records = [
+                record for record in independent_records if record.actor_type == "GPT"
+            ]
+            if not gpt_records:
+                blockers.append(f"{item.question_id} GPT_ASSISTED item lacks GPT annotation")
+            if any(
+                not _record_matches_item(record, item) for record in independent_records
+            ):
+                blockers.append(
+                    f"{item.question_id} GPT-assisted labels require conflict review"
+                )
+        if item.agreement_score is None and item.annotation_status != "GPT_ASSISTED":
             blockers.append(f"{item.question_id} lacks agreement_score")
-        elif item.agreement_score < 1.0:
+        elif item.agreement_score is not None and item.agreement_score < 1.0:
             if item.annotation_status not in {"ADJUDICATED", "EXPERT_REVIEWED"}:
                 blockers.append(f"{item.question_id} has conflict requiring adjudication")
         elif item.annotation_status == "DOUBLE_ANNOTATED":
@@ -530,21 +550,18 @@ def validate_corpus(manifest_path: Path) -> dict[str, Any]:
         )
         if needs_expert and item.annotation_status != "EXPERT_REVIEWED":
             blockers.append(f"{item.question_id} requires expert review")
-        needs_human = (
-            item.split == "acceptance"
-            or item.answerability == "FORBIDDEN"
-            or item.difficulty == "hard"
-            or bool(
-                set(item.question_types)
-                & {
-                    "standards_freshness",
-                    "no_answer_evidence_insufficient",
-                    "adversarial_security",
-                }
-            )
-        )
+        needs_human = item.split == "acceptance"
         if needs_human and not any(record.actor_type == "HUMAN" for record in records):
             blockers.append(f"{item.question_id} requires human review")
+        is_low_risk_dev_test = (
+            item.split in {"dev", "test"}
+            and item.difficulty != "hard"
+            and not needs_expert
+        )
+        if is_low_risk_dev_test:
+            low_risk_dev_test_count += 1
+            if any(record.actor_type == "HUMAN" for record in records):
+                low_risk_dev_test_human_reviewed += 1
         if item.final_annotation_id is not None:
             final_record = annotation_by_id.get(item.final_annotation_id)
             if final_record is None:
@@ -570,11 +587,23 @@ def validate_corpus(manifest_path: Path) -> dict[str, Any]:
         if not blocker.startswith("primary_item_count ")
         and not blocker.startswith("LOCKED corpus ")
         and "formal corpus requires two human annotators" not in blocker
+        and "formal corpus requires double-human status" not in blocker
+        and "lacks two independent reviewers" not in blocker
     ]
-    if not ENGINEERING_MIN_ITEMS <= primary_count <= ENGINEERING_MAX_ITEMS:
+    if primary_count != ENGINEERING_TARGET_ITEMS:
         engineering_blockers.append(
-            f"primary_item_count {primary_count} is outside engineering range "
-            f"[{ENGINEERING_MIN_ITEMS}, {ENGINEERING_MAX_ITEMS}]"
+            f"primary_item_count {primary_count} does not equal GPT-assisted target "
+            f"{ENGINEERING_TARGET_ITEMS}"
+        )
+    audit_ratio = (
+        low_risk_dev_test_human_reviewed / low_risk_dev_test_count
+        if low_risk_dev_test_count
+        else 0.0
+    )
+    if audit_ratio < ENGINEERING_HUMAN_AUDIT_MIN_RATIO:
+        engineering_blockers.append(
+            f"low-risk dev/test human audit ratio {audit_ratio:.4f} is below "
+            f"{ENGINEERING_HUMAN_AUDIT_MIN_RATIO:.4f}"
         )
     lock_ready = not blockers
     engineering_ready = not engineering_blockers
@@ -587,7 +616,10 @@ def validate_corpus(manifest_path: Path) -> dict[str, Any]:
         "item_count": len(items),
         "primary_item_count": primary_count,
         "online_hard_case_count": split_counts["online_hard_cases"],
-        "engineering_target_range": [ENGINEERING_MIN_ITEMS, ENGINEERING_MAX_ITEMS],
+        "engineering_target_size": ENGINEERING_TARGET_ITEMS,
+        "low_risk_dev_test_count": low_risk_dev_test_count,
+        "low_risk_dev_test_human_reviewed": low_risk_dev_test_human_reviewed,
+        "low_risk_dev_test_human_audit_ratio": round(audit_ratio, 6),
         "engineering_ready": engineering_ready,
         "engineering_blockers": engineering_blockers,
         "annotation_record_count": len(annotations),

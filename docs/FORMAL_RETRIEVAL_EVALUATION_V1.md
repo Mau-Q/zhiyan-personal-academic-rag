@@ -4,14 +4,14 @@
 
 正式检索评测的合同、校验器、拆分规则、评审谱系和指标计算已就绪。当前采用两套不混淆的执行口径：
 
-- 近期工程门禁：`RISK_BASED_80 / GPT_ASSISTED / HUMAN_HIGH_RISK_REVIEW`；
+- 近期工程门禁：`GPT_ASSISTED_500 / RISK_BASED_HUMAN_REVIEW`；
 - 最高方案兼容门禁：`SOURCE_FORMAL_500 / DOUBLE_HUMAN / NOT_LOCK_READY`。
 
-公开 Fixture 只有 4 条合成样本，用于证明合同和失败关闭语义。原有 3 论文 15 题继续作为快速 Canary。80 题工程基线用于决定检索、阈值和重排是否值得继续，不代表最高方案的规模验收完成。
+公开 Fixture 只有 4 条合成样本，用于证明合同和失败关闭语义。原有 3 论文 15 题继续作为快速 Canary。GPT 辅助 500 题用于决定检索、阈值和重排是否值得继续；它与原方案正式口径题量相同，但人工评审强度不同。
 
 ## 目标规模
 
-最高方案阶段 0 要求 200～500 条初始评测集，第 6 章同时建议首期不少于 500 条，因此正式兼容 Manifest 仍保留 `500` 条目标。根据用户批准的降复杂度决策，近期先建立默认 80 条、允许 60～100 条的工程基线；该基线保持 `DATA_COLLECTION`，不使用 `LOCKED` 冒充原方案完成。
+最高方案阶段 0 要求 200～500 条初始评测集，第 6 章同时建议首期不少于 500 条，因此两套口径都保留 `500` 条目标。根据用户批准的降复杂度决策，近期由 GPT 完成全部候选与低风险初标，人工只做 Acceptance 单人确认、冲突仲裁、专业高难复核和低风险分层抽检。
 
 只有准备按最高方案正式验收，并且以下条件同时成立后，Manifest 才能进入 `LOCKED`：
 
@@ -76,15 +76,15 @@ V1 初始拆分固定为：
 1. 冻结语料和 Chunk 快照；
 2. 问题编写者依据原文和业务分层出题，不根据某个检索后端的结果反向写题；
 3. 为每题记录授权范围、路由、0～3 级 Chunk 相关性、参考主张、可接受答案点、禁止主张和引用；
-4. 低风险 `dev/test` 可由人工与 GPT 或不同 GPT 模型独立提交 `ANNOTATOR` 记录；相同模型重复运行只算一个评审；
+4. 低风险 `dev/test` 可使用单个可复现 GPT `ANNOTATOR` 记录，并按 10%～20% 做分层人工抽检；
 5. GPT 记录必须固定模型身份、Prompt 版本和温度；
-6. 一致样本可停在 `DOUBLE_ANNOTATED`，不再强制每题增加仲裁记录；
+6. 单 GPT 低风险样本使用 `GPT_ASSISTED`；存在第二评审且一致时可停在 `DOUBLE_ANNOTATED`；
 7. 存在冲突时由人工提交 `ADJUDICATOR`；GPT 不得担任仲裁者；
 8. Acceptance、无答案、越权、安全问题必须有人复核；`hard` 或 `standards_freshness` 还必须提交人工 `EXPERT_REVIEWER`；
 9. 最终仲裁或专家标签必须与样本逐字段一致；
 10. 锁定后不静默改题、页码或标签；语料/页码漂移必须升级数据集版本。
 
-标注者 ID 使用项目内假名，不保存真实身份信息。近期 80 题工程基线允许 GPT 承担低风险初标，并对低风险 `dev/test` 做 10%～20% 分层人工抽检；Acceptance 与高风险题保留人工结论。只有最高方案兼容的 `LOCKED` 正式集仍要求每题两名人工标注者。
+标注者 ID 使用项目内假名，不保存真实身份信息。近期 500 题工程基线允许 GPT 承担低风险初标，并对低风险 `dev/test` 做 10%～20% 分层人工抽检；100 条 Acceptance 每题一次人工确认。只有最高方案兼容的 `LOCKED` 正式集仍要求每题两名人工标注者。
 
 完整的后续阶段选测原则见 [风险驱动测试策略](RISK_BASED_TESTING_STRATEGY.md)。
 
@@ -105,6 +105,20 @@ V1 初始拆分固定为：
 
 ## 可执行入口
 
+冻结本地 Chunk 源并初始化空的 500 题工作区：
+
+```bash
+python3 scripts/init_assisted_evaluation_workspace.py \
+  --chunks runtime/evaluation/local-3-paper-v1/chunks/all-three.json \
+  --output-dir runtime/evaluation/formal-retrieval-v1 \
+  --corpus-id local-3-paper-v1 \
+  --dataset-id local-3-paper-assisted-evaluation-v1 \
+  --dataset-version local-3-paper-assisted-v1 \
+  --created-at <ISO-8601-with-timezone>
+```
+
+初始化器验证 `ChunkRecordV1`、拒绝失效或重复 Chunk、拒绝覆盖非空工作区，并生成源快照、空 JSONL、Manifest 和初始化报告。空题集必须保持 `engineering_ready=false / lock_ready=false`。
+
 验证公开设计 Fixture：
 
 ```bash
@@ -119,7 +133,7 @@ python3 -m backend.evaluation.formal_corpus \
   --require-lock-ready
 ```
 
-验证 60～100 题工程基线是否达到近期门禁：
+验证 GPT 辅助 500 题是否达到近期门禁：
 
 ```bash
 python3 -m backend.evaluation.formal_corpus \
@@ -144,9 +158,9 @@ python3 -m backend.evaluation.retrieval_metrics \
 
 ## 下一门禁
 
-1. 共享方冻结首期知识源、用户类型和实际语言分布；
-2. 从真实语料快照建立默认 80 条工程问题和泄漏组；
-3. GPT 完成候选整理和低风险初标，人工确认 Acceptance、冲突与高风险题；
+1. 三论文 316 Chunk 源快照已经冻结，下一步补充用户类型和实际语言分布；
+2. 从该真实语料快照建立 500 条工程问题和泄漏组；
+3. GPT 完成候选整理和低风险初标，人工确认 Acceptance、冲突与专业高难题；
 4. 运行词项、BM25、向量和 RRF 的工程对比；
-5. 只有 80 题证明稳定排序缺口后，才打开重排实现门禁；
-6. 只有准备按最高方案正式验收时，才扩展至原方案规模并进入 `LOCKED`。
+5. 只有 500 题证明稳定排序缺口后，才打开重排实现门禁；
+6. 只有准备按最高方案正式验收时，才把同规模题集升级为双人工标注并进入 `LOCKED`。

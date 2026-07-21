@@ -19,7 +19,7 @@
 
 ## 当前状态
 
-当前总体状态为 `SOURCE_PHASE_0_IN_PROGRESS / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / RISK_BASED_TESTING_READY / MEMBER_B_REMOTE_PENDING`。仓库已形成本地 PDF 到非流式 Answer API 的可审计最小链路，完成真实本地 BGE-M3 向量与 RRF 混合检索，并建立原方案兼容评测合同和风险驱动测试策略；近期默认建立 80 题 GPT 辅助工程基线，原方案正式规模、真实 ES/Milvus、真实生成模型和远程验收尚未完成。
+当前总体状态为 `SOURCE_PHASE_0_IN_PROGRESS / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / RISK_BASED_TESTING_READY / MEMBER_B_REMOTE_PENDING`。仓库已形成本地 PDF 到非流式 Answer API 的可审计最小链路，完成真实本地 BGE-M3 向量与 RRF 混合检索，并建立原方案兼容评测合同和风险驱动测试策略。三论文 316 Chunk 评测源已冻结，500 题 GPT 辅助工作区已初始化为 `0/500`；原方案双人工口径、真实 ES/Milvus、真实生成模型和远程验收尚未完成。
 
 - GitHub：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 - 最高方案追踪：[`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md)

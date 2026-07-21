@@ -98,6 +98,16 @@
       ]
     },
     {
+      "id": "assisted_evaluation_workspace_initializer",
+      "status": "READY",
+      "owner": "A",
+      "evidence": [
+        "scripts/init_assisted_evaluation_workspace.py",
+        "tests/evaluation/test_assisted_workspace.py",
+        "docs/FORMAL_RETRIEVAL_EVALUATION_V1.md"
+      ]
+    },
+    {
       "id": "formal_evaluation_corpus",
       "status": "PARTIAL",
       "owner": "SHARED",

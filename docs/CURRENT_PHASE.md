@@ -66,18 +66,21 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 新增 Manifest、样本、独立标注/仲裁和排名结果合同，固定 0～3 级相关性、泄漏组、Acceptance 盲测和 SHA-256 身份；
 - 新增正式集校验器与 Recall/Precision/MRR/nDCG、无答案、越权和延迟指标，多后端报告只输出差值、不自动宣布胜者；
 - 公开 4 条合成 Fixture 仅证明合同和工具可执行，校验结果保持 `NOT_LOCK_READY`，不计入正式 500 条或 15 题 Canary。
-- 用户批准后续阶段采用风险驱动的最小充分测试：默认 80 题工程基线，允许 60～100 题按风险调整；
-- GPT 可承担候选生成、低风险初标和回归，人工集中于 Acceptance、冲突、无答案、安全、时效和高难问题；
-- 修正评审门禁：一致样本停在双评审，不再要求每题仲裁；相同 GPT 模型重复运行不算独立评审；
-- 原方案 200～500 条初始评测和 800～1500 条正式验收继续作为未完成需求，不用 80 题工程结果替代。
+- 用户批准后续阶段采用风险驱动的最小充分测试，并澄清保留 500 题规模，只降低人工评审复杂度；
+- GPT 可承担全部候选生成、低风险初标和回归；低风险 `dev/test` 人工抽检 10%～20%，Acceptance 单人确认；
+- 修正评审门禁：低风险样本可停在单 GPT 初标或一致双评审，不再要求每题仲裁；
+- 冲突才由人工仲裁，专业高难题才专家复核；原方案双人工标注口径继续单独记为未完成。
+- 新增 500 题工作区初始化器，验证真实 `ChunkRecordV1`、拒绝失效/重复 Chunk 和非空目录覆盖；
+- 已冻结三论文 316 Chunk 源快照：Chunk SHA-256 为 `f7eb7e4a6c7820abde5523dca906df1d1a052e2e3b2174887781531295c7a282`；
+- 已在被忽略的 `runtime/evaluation/formal-retrieval-v1/` 初始化目标 500 的空工作区，当前如实为 `0/500 / SOURCE_FROZEN_DATA_COLLECTION_PENDING`。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：真实 80 题工程集、原方案正式规模与双人工标注、正式范围/SLO、成员 B 远程准备、PostgreSQL、真实 Elasticsearch、Milvus、真实生成模型和远程模型服务；
-- 下一工作优先冻结首期知识源和用户分布，再建立 80 题 GPT 辅助工程基线；重排、原方案正式扩容、远程模型与生产索引参数保持证据驱动。
+- 未完成能力：500 条真实问题与 GPT 标注、用户/语言分布、原方案双人工标注、正式范围/SLO、成员 B 远程准备、PostgreSQL、真实 Elasticsearch、Milvus、真实生成模型和远程模型服务；
+- 下一工作是固定问题分布和 GPT 评审 Prompt，再分批生成、去重并标注 500 题；重排、原方案人工升级、远程模型与生产索引参数保持证据驱动。
 
 ## 验收
 
@@ -107,16 +110,16 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 ## Current boundary
 
-当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0，仓库 M0、本地 RRF M1 和评测工具只是已验证的子基线。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；近期评测执行边界为 `RISK_BASED_80_PROFILE_READY / DATA_COLLECTION_PENDING`，原方案执行边界为 `SOURCE_FORMAL_PENDING`。它们不证明真实 80 题、原方案正式规模、PostgreSQL、Elasticsearch、Milvus、远程部署、真实生成模型或生产参数已完成。PDF、真实 Chunk、私有问题集、标注记录、索引和运行报告不得提交。
+当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0，仓库 M0、本地 RRF M1 和评测工具只是已验证的子基线。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；近期评测执行边界为 `GPT_ASSISTED_500_PROFILE_READY / SOURCE_FROZEN_316_CHUNKS / ITEMS_0_OF_500`，原方案执行边界为 `SOURCE_FORMAL_DOUBLE_HUMAN_PENDING`。它们不证明真实 500 题、原方案双人工口径、PostgreSQL、Elasticsearch、Milvus、远程部署、真实生成模型或生产参数已完成。PDF、真实 Chunk、私有问题集、标注记录、索引和运行报告不得提交。
 
 ## Next gate
 
-1. **共享范围与评测线：** 冻结首期知识源和用户/语言分布后，建立默认 80 条工程集；GPT 初标，人工确认 Acceptance、冲突和高风险题；
-2. **A 本地工程线：** 本地真实向量、RRF 和指标工具已完成；80 题就绪后运行四路工程对比，不在没有证据增益时接入重排；
+1. **共享范围与评测线：** 三论文源已冻结；下一步固定用户/语言分布和 GPT Prompt，分批建立 500 条问题与标注；人工只做抽检、Acceptance、冲突和专业高难复核；
+2. **A 本地工程线：** 本地真实向量、RRF 和指标工具已完成；500 题就绪后运行四路工程对比，不在没有证据增益时接入重排；
 3. **B 远程基础设施线：** 按 Issue #9 完成主机盘点，拉取同一 `main` 运行全量测试和 Fixture 冒烟；
 4. B 的基线通过后，按 PostgreSQL、Elasticsearch、Milvus、模型服务逐项建立真实状态，不同时切换多个基础设施变量；
 5. A 已完成同一 Canary 的词项、SQLite BM25、向量和混合检索比较；真实 LLM 仍放在扩展评测和远程检索证据链稳定后单独接入；
-6. 80 题只用于近期工程决策；只有恢复原方案验收口径，并让范围、正式评测、真实 ES/Milvus 基线和模型资源选型都形成证据后，才能按最高方案关闭阶段 0。
+6. GPT 辅助 500 题只用于近期工程决策；只有恢复原方案双人工验收口径，并让范围、正式评测、真实 ES/Milvus 基线和模型资源选型都形成证据后，才能按最高方案关闭阶段 0。
 
 ## Prohibited shortcuts
 

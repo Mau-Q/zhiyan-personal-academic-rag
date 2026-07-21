@@ -37,7 +37,7 @@ class FormalCorpusTests(unittest.TestCase):
         self.assertEqual(report["annotation_record_count"], 12)
         self.assertFalse(report["lock_ready"])
         self.assertFalse(report["engineering_ready"])
-        self.assertEqual(report["engineering_target_range"], [60, 100])
+        self.assertEqual(report["engineering_target_size"], 500)
         self.assertTrue(any("below target_size" in value for value in report["blockers"]))
 
     def test_online_hard_cases_do_not_count_toward_primary_target(self):
@@ -65,6 +65,22 @@ class FormalCorpusTests(unittest.TestCase):
         payload["model_identity"] = None
         with self.assertRaisesRegex(ValueError, "GPT annotations require"):
             AnnotationRecordV1.model_validate(payload)
+
+    def test_low_risk_item_can_use_single_gpt_assisted_review(self):
+        payload = json.loads(
+            (FIXTURE_DIR / "fixture-items-v1.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()[0]
+        )
+        payload.update(
+            {
+                "annotation_status": "GPT_ASSISTED",
+                "annotation_record_ids": ["ann.fixture.answerable.gpt"],
+                "final_annotation_id": None,
+                "agreement_score": None,
+            }
+        )
+        EvaluationItemV1.model_validate(payload)
 
     def test_consensus_does_not_require_adjudication_but_conflict_does(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -185,7 +201,7 @@ class FormalCorpusTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 1, completed.stderr)
         self.assertIn('"lock_ready": false', completed.stdout)
 
-    def test_require_engineering_ready_returns_one_for_small_fixture(self):
+    def test_require_engineering_ready_returns_one_for_incomplete_fixture(self):
         completed = subprocess.run(
             [
                 "python3",

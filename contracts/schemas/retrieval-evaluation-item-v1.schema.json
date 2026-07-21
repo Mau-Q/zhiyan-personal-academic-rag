@@ -190,6 +190,7 @@
     "annotation_status": {
       "enum": [
         "DRAFT",
+        "GPT_ASSISTED",
         "DOUBLE_ANNOTATED",
         "ADJUDICATED",
         "EXPERT_REVIEWED"

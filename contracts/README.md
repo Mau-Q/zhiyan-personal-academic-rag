@@ -14,7 +14,7 @@
 - `error-codes.md`：首批稳定错误码。
 - 正式检索评测：Manifest、样本、独立标注/仲裁记录和检索排名结果合同。
 
-正式评测 JSON Schema 由 `scripts/export_evaluation_contracts.py` 从运行时 Pydantic 模型导出，并用 `--check` 防止漂移。标注记录区分人工、GPT 和合成 Fixture；GPT 必须固定模型、Prompt 版本和温度，且不能担任仲裁或专家。合同和合成 Fixture 就绪不代表 80 题工程基线或原方案正式评测已经完成。
+正式评测 JSON Schema 由 `scripts/export_evaluation_contracts.py` 从运行时 Pydantic 模型导出，并用 `--check` 防止漂移。标注记录区分人工、GPT 和合成 Fixture；GPT 必须固定模型、Prompt 版本和温度，且不能担任仲裁或专家。合同和合成 Fixture 就绪不代表真实 500 题或原方案双人工评测已经完成。
 
 ## 变更规则
 
