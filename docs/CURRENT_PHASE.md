@@ -75,9 +75,10 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 已在被忽略的 `runtime/evaluation/formal-retrieval-v1/` 初始化目标 500 的空工作区，当前如实为 `0/500 / SOURCE_FROZEN_DATA_COLLECTION_PENDING`。
 - 固定 500 题的拆分、题型、语言、查询形态、难度与可回答性配额，生成 500 个确定性槽位和 50 个内部容错分组；
 - 新增 Qwen3.7-Plus 并发执行器，默认 20 路并发，强制关闭思考、JSON 输出、自动重试和断点续跑；
-- Qwen3.7-Plus 已以 20 路并发完成 373/500 个候选，全部为 `enable_thinking=false`、`finish_reason=stop`，且无 reasoning 内容；
-- 剩余 127 个候选因账户返回 `AllocationQuota.FreeTierOnly` 暂停，解除免费额度用完即停或完成充值后可断点续跑；
-- 373 个结果中有 3 个重复题面，需在回填正式题集前重生成或去重；候选尚未导入正式合同，因此正式题集仍如实保持 `0/500`。
+- Qwen3.7-Plus 已以 20 路并发完成 500/500 个原始候选，失败 0；全部为 `enable_thinking=false`、`finish_reason=stop`，且无 reasoning 内容；
+- 生成共消耗 1,177,007 Token；结果包含 3 个重复组、4 个多余重复题面；
+- 严格审计发现 46 个槽位存在类型或槽位约束偏差，与 4 个重复替换槽位合并后共 50 个待处理槽位；
+- 其中 43 个可做显式、可追踪的合同规范化，真正需要重新调用模型的只有 7 个；候选尚未导入正式合同，因此正式题集仍如实保持 `0/500`。
 
 ## 输入
 
@@ -85,7 +86,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
 - 未完成能力：500 条真实问题与 GPT 标注、用户/语言分布、原方案双人工标注、正式范围/SLO、成员 B 远程准备、PostgreSQL、真实 Elasticsearch、Milvus、真实生成模型和远程模型服务；
-- 下一工作是解除 DashScope 免费额度门禁并断点补齐 127 个候选，随后校验、去重并回填 500 题；重排、原方案人工升级、远程模型与生产索引参数保持证据驱动。
+- 下一工作是定向重生成 7 个异常候选、规范化其余合同偏差并重新审计，随后回填 500 题；重排、原方案人工升级、远程模型与生产索引参数保持证据驱动。
 
 ## 验收
 
@@ -115,7 +116,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 ## Current boundary
 
-当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0，仓库 M0、本地 RRF M1 和评测工具只是已验证的子基线。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；近期评测执行边界为 `GPT_ASSISTED_500_PROFILE_READY / SOURCE_FROZEN_316_CHUNKS / QWEN_CANDIDATES_373_OF_500 / ITEMS_0_OF_500`，原方案执行边界为 `SOURCE_FORMAL_DOUBLE_HUMAN_PENDING`。它们不证明正式 500 题、原方案双人工口径、PostgreSQL、Elasticsearch、Milvus、远程部署、真实 RAG 生成模型或生产参数已完成。PDF、真实 Chunk、私有问题集、标注记录、索引和运行报告不得提交。
+当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0，仓库 M0、本地 RRF M1 和评测工具只是已验证的子基线。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；近期评测执行边界为 `GPT_ASSISTED_500_PROFILE_READY / SOURCE_FROZEN_316_CHUNKS / QWEN_RAW_CANDIDATES_500 / QA_REPAIR_50 / ITEMS_0_OF_500`，原方案执行边界为 `SOURCE_FORMAL_DOUBLE_HUMAN_PENDING`。它们不证明正式 500 题、原方案双人工口径、PostgreSQL、Elasticsearch、Milvus、远程部署、真实 RAG 生成模型或生产参数已完成。PDF、真实 Chunk、私有问题集、标注记录、索引和运行报告不得提交。
 
 ## Next gate
 
