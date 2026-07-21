@@ -8,12 +8,15 @@ import concurrent.futures
 import json
 import os
 import random
+import ssl
 import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+import certifi
 
 
 REQUIRED_OUTPUT_FIELDS = {
@@ -162,6 +165,15 @@ def parse_api_response(
     return candidate, metadata
 
 
+def build_https_opener() -> urllib.request.OpenerDirector:
+    """Use certifi explicitly while keeping certificate verification enabled."""
+    context = ssl.create_default_context(cafile=certifi.where())
+    return urllib.request.build_opener(
+        urllib.request.ProxyHandler({}),
+        urllib.request.HTTPSHandler(context=context),
+    )
+
+
 def call_one(
     request_payload: dict[str, Any], settings: Settings
 ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -173,6 +185,7 @@ def call_one(
     ).encode("utf-8")
     endpoint = settings.base_url.rstrip("/") + "/chat/completions"
     last_error: Exception | None = None
+    opener = build_https_opener()
     for attempt in range(settings.retries + 1):
         api_request = urllib.request.Request(
             endpoint,
@@ -184,7 +197,6 @@ def call_one(
             method="POST",
         )
         try:
-            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
             with opener.open(api_request, timeout=settings.timeout) as response:
                 response_payload = json.loads(response.read().decode("utf-8"))
             return parse_api_response(response_payload, slot_id)

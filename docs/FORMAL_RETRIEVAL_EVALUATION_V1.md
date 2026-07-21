@@ -142,6 +142,8 @@ python3 scripts/run_assisted_generation_qwen.py \
 
 执行器不修改 `.env`，不打印密钥；逐题原子落盘，重复运行时跳过已完成题目，并对 408、409、429 和 5xx 自动重试。只有 `run-report.json` 达到 `completed_count=500 / failed_count=0` 后，才允许把生成阶段记为完成。
 
+macOS Python 使用独立 CA 路径时，执行器显式加载 `certifi` 并保持主机名和证书链校验开启，不允许以关闭 TLS 校验作为修复。当前实跑已完成 373/500；其余 127 条由 DashScope 的 `AllocationQuota.FreeTierOnly` 阻断，可在账户允许按量付费后通过同一命令续跑。
+
 验证公开设计 Fixture：
 
 ```bash

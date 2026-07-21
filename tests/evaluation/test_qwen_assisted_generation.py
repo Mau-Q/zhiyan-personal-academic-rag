@@ -7,12 +7,25 @@ from pathlib import Path
 
 from scripts.run_assisted_generation_qwen import (
     build_api_payload,
+    build_https_opener,
     load_env_file,
     parse_api_response,
 )
 
 
 class QwenAssistedGenerationTests(unittest.TestCase):
+    def test_https_opener_uses_verified_tls_context(self) -> None:
+        opener = build_https_opener()
+        https_handler = next(
+            handler
+            for handler in opener.handlers
+            if handler.__class__.__name__ == "HTTPSHandler"
+        )
+        context = https_handler._context
+        self.assertEqual(context.verify_mode.name, "CERT_REQUIRED")
+        self.assertTrue(context.check_hostname)
+        self.assertGreater(context.cert_store_stats()["x509_ca"], 0)
+
     def test_builds_non_thinking_structured_request(self) -> None:
         request = {
             "instructions": "generate",

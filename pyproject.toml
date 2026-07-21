@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Contract-first personal academic-space RAG system"
 requires-python = ">=3.11"
 dependencies = [
+  "certifi>=2024.8.30",
   "fastapi>=0.115,<1",
   "pydantic>=2.10,<3",
   "pypdf>=5.7,<7",
