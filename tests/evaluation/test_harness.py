@@ -5,9 +5,13 @@ import unittest
 from pathlib import Path
 
 from backend.evaluation.harness import DEFAULT_CASES_PATH, load_cases, run_suite
+from backend.rag.sqlite_fts_consumer import SQLITE_FTS_EXECUTION_BOUNDARY
+from backend.retrieval.fixture import load_chunks
+from backend.retrieval.sqlite_fts import SQLiteFtsIndex
 
 
 ROOT = Path(__file__).resolve().parents[2]
+SQLITE_CASES_PATH = ROOT / "evaluation" / "suites" / "fixture-sqlite-fts-v1.jsonl"
 
 
 class EvaluationHarnessTests(unittest.TestCase):
@@ -71,6 +75,27 @@ class EvaluationHarnessTests(unittest.TestCase):
             report = json.loads(report_path.read_text(encoding="utf-8"))
             self.assertEqual(report["summary"]["passed"], 6)
             self.assertIn("6/6 cases passed", completed.stdout)
+
+    def test_same_suite_runs_through_sqlite_fts_backend(self):
+        cases = load_cases(SQLITE_CASES_PATH)
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            index_path = Path(temporary_directory) / "chunks.sqlite"
+            SQLiteFtsIndex.build(
+                index_path, load_chunks(ROOT / "fixtures" / "chunks-v1.json")
+            )
+            report = run_suite(
+                cases,
+                suite_id="fixture-sqlite-fts-v1",
+                retrieval_backend="sqlite_fts5",
+                index_path=index_path,
+            )
+
+        self.assertEqual(report["summary"]["passed"], 6)
+        self.assertEqual(report["retrieval_backend"], "sqlite_fts5")
+        self.assertEqual(
+            report["execution_boundary"], SQLITE_FTS_EXECUTION_BOUNDARY
+        )
 
 
 if __name__ == "__main__":

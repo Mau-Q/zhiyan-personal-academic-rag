@@ -26,6 +26,16 @@
       "evidence": ["backend/api/app.py", "tests/api/test_rag_answers_api.py"]
     },
     {
+      "id": "local_persistent_bm25_retrieval",
+      "status": "READY",
+      "owner": "A",
+      "evidence": [
+        "backend/retrieval/sqlite_fts.py",
+        "tests/retrieval/test_sqlite_fts_retrieval.py",
+        "docs/SQLITE_FTS_RETRIEVAL.md"
+      ]
+    },
+    {
       "id": "rag_evaluation_harness",
       "status": "LOCAL_3_PAPER_BASELINE_READY",
       "owner": "A",

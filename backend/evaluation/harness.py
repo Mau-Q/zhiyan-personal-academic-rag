@@ -20,12 +20,14 @@ from pydantic import (
 )
 
 from backend.api.app import DEFAULT_CHUNKS_PATH, DEFAULT_SCOPE_PATH, create_app
+from backend.rag.sqlite_fts_consumer import SQLITE_FTS_EXECUTION_BOUNDARY
 
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CASES_PATH = ROOT / "evaluation" / "suites" / "fixture-smoke-v1.jsonl"
 HARNESS_VERSION = "thin_eval_harness_v1"
 EXECUTION_BOUNDARY = "LOCAL_API_FAKE_LLM"
+RetrievalBackend = Literal["lexical_overlap", "sqlite_fts5"]
 
 CaseId = Annotated[
     str,
@@ -232,10 +234,19 @@ def run_suite(
     chunks_path: Path = DEFAULT_CHUNKS_PATH,
     scope_path: Path = DEFAULT_SCOPE_PATH,
     suite_id: str = "local-suite",
+    retrieval_backend: RetrievalBackend = "lexical_overlap",
+    index_path: Path | None = None,
 ) -> dict[str, Any]:
     """Run cases through the production-shaped local API adapter."""
 
-    client = TestClient(create_app(chunks_path=chunks_path, scope_path=scope_path))
+    client = TestClient(
+        create_app(
+            chunks_path=chunks_path,
+            scope_path=scope_path,
+            retrieval_backend=retrieval_backend,
+            index_path=index_path,
+        )
+    )
     results = [_run_case(client, case) for case in cases]
     category_summary: dict[str, dict[str, int]] = {}
     for category in ("ANSWERABLE", "NO_EVIDENCE", "FORBIDDEN"):
@@ -249,7 +260,12 @@ def run_suite(
     return {
         "harness_version": HARNESS_VERSION,
         "suite_id": suite_id,
-        "execution_boundary": EXECUTION_BOUNDARY,
+        "execution_boundary": (
+            SQLITE_FTS_EXECUTION_BOUNDARY
+            if retrieval_backend == "sqlite_fts5"
+            else EXECUTION_BOUNDARY
+        ),
+        "retrieval_backend": retrieval_backend,
         "summary": {
             "total": len(results),
             "passed": passed,
@@ -269,6 +285,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--scope", type=Path, default=DEFAULT_SCOPE_PATH)
     parser.add_argument("--suite-id", default=None)
     parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument(
+        "--retrieval-backend",
+        choices=("lexical_overlap", "sqlite_fts5"),
+        default="lexical_overlap",
+    )
+    parser.add_argument("--index", type=Path, default=None)
     return parser
 
 
@@ -281,6 +303,8 @@ def main() -> int:
             chunks_path=args.chunks,
             scope_path=args.scope,
             suite_id=args.suite_id or args.cases.stem,
+            retrieval_backend=args.retrieval_backend,
+            index_path=args.index,
         )
     except (OSError, ValueError, ValidationError, json.JSONDecodeError) as exc:
         print(f"evaluation harness input error: {exc}", file=sys.stderr)

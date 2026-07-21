@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -11,12 +11,15 @@ from fastapi.responses import JSONResponse
 
 from backend.api.models import ErrorV1, RagAnswerRequestV1, RagAnswerV1
 from backend.rag.fixture_consumer import answer_fixture_question
+from backend.rag.sqlite_fts_consumer import answer_sqlite_fts_question
 from backend.retrieval.fixture import filter_authorized_chunks, load_chunks, load_scope
+from backend.retrieval.sqlite_fts import SQLiteFtsIndex
 
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CHUNKS_PATH = ROOT / "fixtures" / "chunks-v1.json"
 DEFAULT_SCOPE_PATH = ROOT / "fixtures" / "authorized-scope-v1.json"
+RetrievalBackend = Literal["lexical_overlap", "sqlite_fts5"]
 
 
 def _error_response(*, status_code: int, code: str, message: str, retryable: bool) -> JSONResponse:
@@ -42,14 +45,32 @@ def create_app(
     *,
     chunks_path: Path = DEFAULT_CHUNKS_PATH,
     scope_path: Path = DEFAULT_SCOPE_PATH,
+    retrieval_backend: RetrievalBackend = "lexical_overlap",
+    index_path: Path | None = None,
 ) -> FastAPI:
+    sqlite_index: SQLiteFtsIndex | None = None
+    if retrieval_backend == "sqlite_fts5":
+        if index_path is None:
+            raise ValueError("index_path is required for sqlite_fts5 retrieval")
+        sqlite_index = SQLiteFtsIndex(index_path)
+        sqlite_index.verify_source(load_chunks(chunks_path))
+    elif retrieval_backend != "lexical_overlap":
+        raise ValueError(f"unsupported retrieval backend: {retrieval_backend}")
+
+    boundary = (
+        "local SQLite FTS5/BM25 with Fake LLM"
+        if retrieval_backend == "sqlite_fts5"
+        else "Stage 0 fixture-only lexical retrieval with Fake LLM"
+    )
     app = FastAPI(
         title="智研个人学术空间 RAG API",
         version="0.1.0",
-        description="Stage 0 fixture-only API; no production data or remote model is used.",
+        description=f"{boundary}; no remote model is used.",
     )
     app.state.chunks_path = chunks_path
     app.state.scope_path = scope_path
+    app.state.retrieval_backend = retrieval_backend
+    app.state.sqlite_index = sqlite_index
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request_handler(
@@ -88,7 +109,15 @@ def create_app(
             )
 
         effective_scope = _narrow_scope(base_scope, payload.document_ids)
-        answer = answer_fixture_question(payload.question, effective_scope, chunks)
+        if app.state.retrieval_backend == "sqlite_fts5":
+            answer = answer_sqlite_fts_question(
+                payload.question,
+                effective_scope,
+                chunks,
+                app.state.sqlite_index,
+            )
+        else:
+            answer = answer_fixture_question(payload.question, effective_scope, chunks)
         return RagAnswerV1.model_validate(answer)
 
     return app

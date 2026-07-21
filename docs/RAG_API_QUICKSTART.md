@@ -2,12 +2,13 @@
 
 ## 边界
 
-当前 API 是成员 A 的阶段 0 本地实现：
+当前 API 是成员 A 的本地实现，默认保持 Fixture 词项重叠模式，也支持显式注入 SQLite FTS5/BM25：
 
 - 使用仓库内 `AuthorizedScopeV1` 和 `ChunkRecordV1` Fixture；
 - 客户端 `document_ids` 只能收窄服务端范围，不能扩大权限；
 - 返回 `RagAnswerV1` 或 `ErrorV1`；
 - 仅支持 `stream=false`；
+- SQLite 模式使用本地持久化索引并校验源 Chunk 指纹；
 - 不连接 PostgreSQL、Elasticsearch、Milvus、真实 LLM 或远程 4090。
 
 ## 安装
@@ -47,3 +48,5 @@ make test
 ```
 
 响应中的 `FIXTURE_ONLY_FAKE_LLM` 是强制边界，当前输出不得作为真实检索或模型质量结果。
+
+SQLite 模式由 `create_app(retrieval_backend="sqlite_fts5", index_path=...)` 注入，响应边界为 `LOCAL_SQLITE_FTS5_FAKE_LLM`。公开可执行入口是 `make sqlite-fts-fixture-smoke`，详见 [`SQLITE_FTS_RETRIEVAL.md`](SQLITE_FTS_RETRIEVAL.md)。

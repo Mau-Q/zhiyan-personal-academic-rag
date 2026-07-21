@@ -19,7 +19,7 @@
 
 ## 当前状态
 
-当前阶段为 `M0_COMPLETE / M1_EVALUATION_HARNESS_READY / MEMBER_B_REMOTE_PENDING`：本地 PDF 解析、`ChunkRecordV1`、授权检索、拒答、引用和非流式 Answer API 已形成完整链路；M1 薄评测 Harness 已提供可回答、无证据和越权三类基线；成员 B 并行负责远程主机准备与部署验证。
+当前阶段为 `M0_COMPLETE / M1_SQLITE_FTS5_BASELINE_READY / MEMBER_B_REMOTE_PENDING`：本地 PDF 解析、`ChunkRecordV1`、持久化 SQLite FTS5/BM25、授权检索、拒答、引用和非流式 Answer API 已形成完整链路；三论文 15 题基线已通过；成员 B 并行负责远程主机准备与部署验证。
 
 - GitHub：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 - 下一门禁：[`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)
@@ -28,6 +28,7 @@
 - 合同入口：[`contracts/README.md`](contracts/README.md)
 - 仓库 Harness 入口：[`AGENTS.md`](AGENTS.md)
 - 薄评测 Harness：[`docs/EVALUATION_HARNESS.md`](docs/EVALUATION_HARNESS.md)
+- SQLite FTS5/BM25：[`docs/SQLITE_FTS_RETRIEVAL.md`](docs/SQLITE_FTS_RETRIEVAL.md)
 
 ## 双人开发边界
 
@@ -99,6 +100,14 @@ make evaluation-smoke
 ```
 
 该命令用版本化 JSONL 用例调用现有 RAG Answer API，并把机器可读报告写入被 Git 忽略的 `runtime/evaluation/`。当前公开基线只验证 Fixture/Fake LLM 下的状态、证据页码和权限边界；真实三篇论文问题集保留在本地。完整说明见 [`docs/EVALUATION_HARNESS.md`](docs/EVALUATION_HARNESS.md)。
+
+## SQLite FTS5/BM25
+
+```bash
+make sqlite-fts-fixture-smoke
+```
+
+该命令使用标准库 `sqlite3` 建立持久化 FTS5 索引，并通过现有 Answer API 和评测 Harness 验证授权、Evidence、拒答和越权阻断。索引写入被忽略的 `runtime/`；答案仍为 Fake LLM。实现与三论文结果见 [`docs/SQLITE_FTS_RETRIEVAL.md`](docs/SQLITE_FTS_RETRIEVAL.md)。
 
 ## 非流式 RAG API
 

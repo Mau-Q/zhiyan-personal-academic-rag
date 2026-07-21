@@ -5,7 +5,7 @@
   "default_branch": "main",
   "visibility": "PRIVATE",
   "current_phase": {
-    "id": "m1-local-3-paper-evaluation-ready",
+    "id": "m1-sqlite-fts5-baseline-ready",
     "status": "READY",
     "authority_doc": "docs/CURRENT_PHASE.md"
   },
@@ -23,8 +23,8 @@
     "history_repair": "FIX_FORWARD_NO_FORCE_PUSH"
   },
   "execution_boundaries": {
-    "local_rag": "COMPLETE_WITH_FAKE_LLM",
-    "evaluation": "LOCAL_3_PAPER_BASELINE_READY_WITH_FAKE_LLM",
+    "local_rag": "COMPLETE_WITH_SQLITE_FTS5_AND_FAKE_LLM",
+    "evaluation": "LOCAL_3_PAPER_SQLITE_FTS5_BASELINE_READY_WITH_FAKE_LLM",
     "remote_host": "PENDING_MEMBER_B",
     "real_elasticsearch": "NOT_STARTED",
     "real_milvus": "NOT_STARTED",

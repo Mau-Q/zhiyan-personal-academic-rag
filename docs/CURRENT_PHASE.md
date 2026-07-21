@@ -2,9 +2,9 @@
 
 ## Status
 
-`M0_COMPLETE / REPOSITORY_HARNESS_READY / M1_LOCAL_3_PAPER_EVALUATION_READY / MEMBER_B_REMOTE_PENDING`
+`M0_COMPLETE / REPOSITORY_HARNESS_READY / M1_SQLITE_FTS5_BASELINE_READY / MEMBER_B_REMOTE_PENDING`
 
-Phase ID：`m1-local-3-paper-evaluation-ready`
+Phase ID：`m1-sqlite-fts5-baseline-ready`
 
 ## Completed
 
@@ -47,19 +47,25 @@ Phase ID：`m1-local-3-paper-evaluation-ready`
 - 词项检索基线首轮通过 15/15，分类结果为 `ANSWERABLE 9/9`、`NO_EVIDENCE 3/3`、`FORBIDDEN 3/3`；
 - 三论文题集、PDF、Chunk、页面渲染和报告只进入被忽略的 `runtime/`，仓库仅记录脱敏方法与汇总结果。
 - 再次简化成员 A 的普通低风险流程：本地 Harness、受影响测试和 diff 检查后直推，仅核对远程 SHA；Actions 改为条件检查。
+- 接入本地持久化 SQLite FTS5/BM25 索引，固定 Porter 分词、OR 查询和 `2.0,1.0` 列权重；
+- 索引绑定源 Chunk SHA-256 和数量，配置或来源漂移时失效关闭；
+- SQLite 检索继续复用既有授权判断，未授权、跨租户和失效 Chunk 不得进入 Evidence；
+- 新增公开 SQLite Fixture 冒烟入口和检索、API、评测测试；
+- 三论文同题集首轮 14/15，经词形和停用词诊断后在不改题目、页码或 `top_k` 的情况下达到 15/15。
 
 ## 输入
 
 - 基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
-- 已实现能力：本地 PDF 到 Answer API、公开 Fixture 评测和本地三论文词项检索评测基线；
+- 已实现能力：本地 PDF 到 Answer API、公开 Fixture 评测、本地三论文词项重叠基线和 SQLite FTS5/BM25 持久化检索基线；
 - 未完成能力：成员 B 远程准备、真实 Elasticsearch、Milvus 和模型接入；
-- 本阶段固定现有合同、授权、词项检索和 Fake LLM，只扩展真实 PDF 输入与人工页码评测，不修改 RAG 算法。
+- 本阶段固定合同、授权、题集、页码、`top_k` 和 Fake LLM，只新增 SQLite FTS5/BM25 这一项检索变量。
 
 ## 验收
 
 - `python3 scripts/validate_harness_contract.py` 必须通过；
 - `make test` 必须覆盖合同、入库、检索、RAG、API、评测和仓库 Harness；
 - 本地三论文 Harness 必须通过 15/15，且三类结果分别达到 9/9、3/3、3/3；
+- `make sqlite-fts-fixture-smoke` 必须通过 6/6；
 - `git diff --check` 必须通过；
 - 不得出现被跟踪的 `runtime/`、PDF、`.env`、数据或存储目录；
 - 仓库状态、能力清单和本文件必须一致。
@@ -74,14 +80,14 @@ Phase ID：`m1-local-3-paper-evaluation-ready`
 
 ## Current boundary
 
-当前仓库 Harness 已建立，负责约束阶段、范围、验证和交付；RAG 评测 Harness 只负责用例运行。本地三论文词项检索基线已完成，但执行边界仍为 `LOCAL_API_FAKE_LLM`。远程主机、数据库、向量库和真实模型不是该基线的前置条件，也不能由 15/15 结果推断为已完成。PDF、真实 Chunk、私有问题集和运行报告不得提交。
+当前仓库 Harness 已建立，负责约束阶段、范围、验证和交付；RAG 评测 Harness 只负责用例运行。本地 SQLite FTS5/BM25 是已验证的真实持久化检索后端，但执行边界仍为 `LOCAL_API_SQLITE_FTS5_FAKE_LLM`。它不证明 Elasticsearch、Milvus、向量检索、远程部署或真实模型已完成。PDF、真实 Chunk、私有问题集、SQLite 索引和运行报告不得提交。
 
 ## Next gate
 
 1. 成员 B 按 [Issue #9](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/9) 完成远程准备；
 2. 远程拉取同一 `main` 提交运行全量测试、Fixture API 和 Fixture Harness；
-3. 成员 A 固定当前本地三论文题集和页码标注，下一阶段先接入一种真实检索后端；
-4. 用同一题集依次比较词项、向量、混合检索和重排，不一次改变多个变量；
+3. 成员 A 固定当前本地三论文题集、页码、`top_k` 和 SQLite BM25 结果，下一阶段只新增一种向量检索；
+4. 用同一题集比较词项重叠、SQLite BM25、向量、混合检索和重排，不一次改变多个变量；
 5. 真实模型接入放在检索证据链稳定之后，单独评估答案正确性与引用一致性。
 
 ## Prohibited shortcuts

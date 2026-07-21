@@ -6,6 +6,8 @@
 
 当前执行边界固定为 `LOCAL_API_FAKE_LLM`。通过只说明本地 API 的状态、权限和证据定位符合用例预期，不代表真实模型回答质量已经通过。
 
+Harness 也支持 `--retrieval-backend sqlite_fts5 --index <path>`。此时报告边界为 `LOCAL_API_SQLITE_FTS5_FAKE_LLM`，用例必须要求对应警告，不能继续沿用 Fixture 警告制造虚假通过。
+
 ## 已提交基线
 
 `evaluation/suites/fixture-smoke-v1.jsonl` 包含 6 个公开 Fixture 用例：
@@ -54,3 +56,4 @@ python3 -m backend.evaluation.harness \
 - 无证据题必须是 `NO_EVIDENCE` 且 Evidence 数量为 0；
 - 越权请求必须是 HTTP 403 和 `RAG_FORBIDDEN_SCOPE`；
 - 报告保留 `execution_boundary`，Fixture/Fake 结果不能表述为真实模型通过。
+- 报告保留 `retrieval_backend`，不同检索器必须使用相同问题、页码和 `top_k` 才能比较。
