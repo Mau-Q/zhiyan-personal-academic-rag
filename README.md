@@ -19,7 +19,7 @@
 
 ## 当前状态
 
-当前阶段为 `STAGE_0 / CONTRACT_BASELINE_MERGED / CONSUMER_IMPLEMENTATION`：V1 合同已经合并到 `main`，成员 A 与成员 B 可以分别实现在线、离线最小消费者。
+当前阶段为 `STAGE_0 / MEMBER_A_CONSUMER_COMPLETE / MEMBER_B_PENDING`：V1 合同和成员 A 的在线 Fixture 消费者已经合并到 `main`，下一门禁是成员 B 的离线产物及首次集中联调。
 
 - GitHub：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 - 下一门禁：[`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)

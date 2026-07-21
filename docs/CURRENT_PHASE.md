@@ -2,7 +2,7 @@
 
 ## Status
 
-`STAGE_0 / CONTRACT_BASELINE_MERGED / CONSUMER_IMPLEMENTATION`
+`STAGE_0 / MEMBER_A_CONSUMER_COMPLETE / MEMBER_B_PENDING`
 
 ## Completed
 
@@ -17,7 +17,9 @@
 - 从本地语料筛选 8 篇 PDF，并只提交元数据、页数和 SHA-256；
 - 建立三个静态合同、RAG Answer、Trace、错误码、SSE 和契约测试草案；
 - [PR #1](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/1) 已由成员 A 确认并 Squash Merge，GitHub Actions 契约检查通过；
-- 创建 [M0 里程碑](https://github.com/Mau-Q/zhiyan-personal-academic-rag/milestone/1)和 Issue #2～#5。
+- 创建 [M0 里程碑](https://github.com/Mau-Q/zhiyan-personal-academic-rag/milestone/1)和 Issue #2～#5；
+- [PR #6](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/6) 已由成员 A 直接合并，[Issue #3](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/3) 已关闭；
+- 成员 A 的授权过滤、确定性检索、Fake LLM、Evidence、Citation 和 `NO_EVIDENCE` 已通过 25 项测试。
 
 ## Current boundary
 
@@ -25,10 +27,10 @@
 
 ## Next gate
 
-1. 成员 A 完成 [Issue #3](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/3) 的在线 Fixture 消费者；
-2. 成员 B 完成 [Issue #4](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/4) 的 PDF 到 `ChunkRecordV1`；
-3. 双方分别验证同一 Fixture；
-4. 通过 [Issue #5](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/5) 完成一次集中联调；
+1. 成员 B 完成 [Issue #4](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/4) 的 PDF 到 `ChunkRecordV1`；
+2. 使用成员 B 的输出替换测试 Fixture，不修改成员 A 的合同消费逻辑；
+3. 通过 [Issue #5](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/5) 完成一次集中联调；
+4. 验证回答、拒答、越权阻断和引用页码；
 5. 最小链路通过后关闭 M0 并进入下一阶段。
 
 ## Prohibited shortcuts
