@@ -58,6 +58,26 @@
       ]
     },
     {
+      "id": "local_real_vector_retrieval",
+      "status": "READY",
+      "owner": "A",
+      "evidence": [
+        "backend/retrieval/vector.py",
+        "tests/retrieval/test_vector_retrieval.py",
+        "docs/LOCAL_VECTOR_RRF_RETRIEVAL.md"
+      ]
+    },
+    {
+      "id": "local_rrf_hybrid_retrieval",
+      "status": "READY",
+      "owner": "A",
+      "evidence": [
+        "backend/retrieval/hybrid.py",
+        "tests/retrieval/test_hybrid_retrieval.py",
+        "docs/LOCAL_VECTOR_RRF_RETRIEVAL.md"
+      ]
+    },
+    {
       "id": "formal_evaluation_corpus",
       "status": "NOT_STARTED",
       "owner": "SHARED",

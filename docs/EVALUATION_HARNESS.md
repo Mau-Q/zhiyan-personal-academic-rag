@@ -8,6 +8,14 @@
 
 Harness 也支持 `--retrieval-backend sqlite_fts5 --index <path>`。此时报告边界为 `LOCAL_API_SQLITE_FTS5_FAKE_LLM`，用例必须要求对应警告，不能继续沿用 Fixture 警告制造虚假通过。
 
+真实本地检索还支持：
+
+- `--retrieval-backend local_vector --vector-index <path>`；
+- `--retrieval-backend local_rrf --index <fts-path> --vector-index <vector-path>`；
+- `--embedding-model`、`--vector-min-score`、`--candidate-k` 和 `--rrf-k` 显式进入报告配置。
+
+本地 BGE-M3 与 RRF 的固定三论文结果、模型 digest 和阈值依据见 [本地真实向量与 RRF 混合检索基线](LOCAL_VECTOR_RRF_RETRIEVAL.md)。
+
 ## 已提交基线
 
 `evaluation/suites/fixture-smoke-v1.jsonl` 包含 6 个公开 Fixture 用例：

@@ -50,3 +50,5 @@ make test
 响应中的 `FIXTURE_ONLY_FAKE_LLM` 是强制边界，当前输出不得作为真实检索或模型质量结果。
 
 SQLite 模式由 `create_app(retrieval_backend="sqlite_fts5", index_path=...)` 注入，响应边界为 `LOCAL_SQLITE_FTS5_FAKE_LLM`。公开可执行入口是 `make sqlite-fts-fixture-smoke`，详见 [`SQLITE_FTS_RETRIEVAL.md`](SQLITE_FTS_RETRIEVAL.md)。
+
+真实本地向量模式使用 `local_vector` 和 `vector_index_path`；RRF 混合模式使用 `local_rrf`，同时传入 FTS `index_path` 与 `vector_index_path`。两者仍由 Fake LLM 拼装答案，并分别携带真实向量或 RRF 的执行边界警告。公开入口为 `make vector-fixture-smoke` 和 `make rrf-fixture-smoke`，详见 [`LOCAL_VECTOR_RRF_RETRIEVAL.md`](LOCAL_VECTOR_RRF_RETRIEVAL.md)。

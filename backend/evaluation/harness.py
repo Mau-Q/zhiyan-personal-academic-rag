@@ -21,13 +21,17 @@ from pydantic import (
 
 from backend.api.app import DEFAULT_CHUNKS_PATH, DEFAULT_SCOPE_PATH, create_app
 from backend.rag.sqlite_fts_consumer import SQLITE_FTS_EXECUTION_BOUNDARY
+from backend.rag.vector_consumer import RRF_EXECUTION_BOUNDARY, VECTOR_EXECUTION_BOUNDARY
+from backend.retrieval.embedding import EmbeddingProvider
+from backend.retrieval.hybrid import DEFAULT_CANDIDATE_K, DEFAULT_RRF_K
+from backend.retrieval.vector import DEFAULT_VECTOR_MIN_SCORE
 
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CASES_PATH = ROOT / "evaluation" / "suites" / "fixture-smoke-v1.jsonl"
 HARNESS_VERSION = "thin_eval_harness_v1"
 EXECUTION_BOUNDARY = "LOCAL_API_FAKE_LLM"
-RetrievalBackend = Literal["lexical_overlap", "sqlite_fts5"]
+RetrievalBackend = Literal["lexical_overlap", "sqlite_fts5", "local_vector", "local_rrf"]
 
 CaseId = Annotated[
     str,
@@ -236,16 +240,34 @@ def run_suite(
     suite_id: str = "local-suite",
     retrieval_backend: RetrievalBackend = "lexical_overlap",
     index_path: Path | None = None,
+    vector_index_path: Path | None = None,
+    embedding_provider: EmbeddingProvider | None = None,
+    embedding_model: str = "bge-m3:latest",
+    embedding_base_url: str = "http://127.0.0.1:11434",
+    vector_min_score: float = DEFAULT_VECTOR_MIN_SCORE,
+    candidate_k: int = DEFAULT_CANDIDATE_K,
+    rrf_k: int = DEFAULT_RRF_K,
 ) -> dict[str, Any]:
     """Run cases through the production-shaped local API adapter."""
 
-    client = TestClient(
-        create_app(
-            chunks_path=chunks_path,
-            scope_path=scope_path,
-            retrieval_backend=retrieval_backend,
-            index_path=index_path,
-        )
+    application = create_app(
+        chunks_path=chunks_path,
+        scope_path=scope_path,
+        retrieval_backend=retrieval_backend,
+        index_path=index_path,
+        vector_index_path=vector_index_path,
+        embedding_provider=embedding_provider,
+        embedding_model=embedding_model,
+        embedding_base_url=embedding_base_url,
+        vector_min_score=vector_min_score,
+        candidate_k=candidate_k,
+        rrf_k=rrf_k,
+    )
+    client = TestClient(application)
+    vector_metadata = (
+        application.state.vector_index.inspect()
+        if application.state.vector_index is not None
+        else {}
     )
     results = [_run_case(client, case) for case in cases]
     category_summary: dict[str, dict[str, int]] = {}
@@ -260,12 +282,29 @@ def run_suite(
     return {
         "harness_version": HARNESS_VERSION,
         "suite_id": suite_id,
-        "execution_boundary": (
-            SQLITE_FTS_EXECUTION_BOUNDARY
-            if retrieval_backend == "sqlite_fts5"
-            else EXECUTION_BOUNDARY
-        ),
+        "execution_boundary": {
+            "lexical_overlap": EXECUTION_BOUNDARY,
+            "sqlite_fts5": SQLITE_FTS_EXECUTION_BOUNDARY,
+            "local_vector": VECTOR_EXECUTION_BOUNDARY,
+            "local_rrf": RRF_EXECUTION_BOUNDARY,
+        }[retrieval_backend],
         "retrieval_backend": retrieval_backend,
+        "retrieval_configuration": {
+            "top_k": 3,
+            "embedding_model": embedding_model
+            if retrieval_backend in ("local_vector", "local_rrf")
+            else None,
+            "embedding_model_digest": vector_metadata.get("embedding_model_digest"),
+            "embedding_dimension": int(vector_metadata["embedding_dimension"])
+            if vector_metadata
+            else None,
+            "source_chunks_sha256": vector_metadata.get("source_chunks_sha256"),
+            "vector_min_score": vector_min_score
+            if retrieval_backend in ("local_vector", "local_rrf")
+            else None,
+            "candidate_k": candidate_k if retrieval_backend == "local_rrf" else None,
+            "rrf_k": rrf_k if retrieval_backend == "local_rrf" else None,
+        },
         "summary": {
             "total": len(results),
             "passed": passed,
@@ -287,10 +326,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument(
         "--retrieval-backend",
-        choices=("lexical_overlap", "sqlite_fts5"),
+        choices=("lexical_overlap", "sqlite_fts5", "local_vector", "local_rrf"),
         default="lexical_overlap",
     )
     parser.add_argument("--index", type=Path, default=None)
+    parser.add_argument("--vector-index", type=Path, default=None)
+    parser.add_argument("--embedding-model", default="bge-m3:latest")
+    parser.add_argument("--embedding-base-url", default="http://127.0.0.1:11434")
+    parser.add_argument(
+        "--vector-min-score", type=float, default=DEFAULT_VECTOR_MIN_SCORE
+    )
+    parser.add_argument("--candidate-k", type=int, default=DEFAULT_CANDIDATE_K)
+    parser.add_argument("--rrf-k", type=int, default=DEFAULT_RRF_K)
     return parser
 
 
@@ -305,6 +352,12 @@ def main() -> int:
             suite_id=args.suite_id or args.cases.stem,
             retrieval_backend=args.retrieval_backend,
             index_path=args.index,
+            vector_index_path=args.vector_index,
+            embedding_model=args.embedding_model,
+            embedding_base_url=args.embedding_base_url,
+            vector_min_score=args.vector_min_score,
+            candidate_k=args.candidate_k,
+            rrf_k=args.rrf_k,
         )
     except (OSError, ValueError, ValidationError, json.JSONDecodeError) as exc:
         print(f"evaluation harness input error: {exc}", file=sys.stderr)

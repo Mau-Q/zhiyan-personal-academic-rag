@@ -37,9 +37,9 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | SR-02 | PostgreSQL 作为元数据、ACL 和生命周期唯一事实源 | `NOT_STARTED` | 合同与 Fixture 权限规则 | 真实 Schema、ACL 计算、时间戳和软删除未接入 |
 | SR-03 | PDF/OCR、章节页码、父子 Chunk、版本和幂等入库 | `PARTIAL` | 本地文本层 PDF、`ChunkRecordV1`、稳定 ID 和页码 | OCR、MinIO、Outbox、死信、完整版本/删除链路未实现 |
 | SR-04 | Elasticsearch 论文级和 Chunk 级 BM25 | `NOT_STARTED` | SQLite FTS5/BM25 本地可重复替代基线 | 真实 ES Mapping、分词、别名、ACL 过滤和性能基线未实现 |
-| SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `NOT_STARTED` | 无真实向量能力 | Embedding 模型、指令模板、向量索引和 ANN 基线未确定 |
+| SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `PARTIAL` | 本地 Ollama BGE-M3、精确余弦索引、模型/Chunk 身份和 15 题基线 | 真实 Milvus、ANN 参数、远程服务和性能基线未实现 |
 | SR-06 | 规范化、指代消解、意图路由、查询改写和拆解 | `NOT_STARTED` | API 问题输入合同 | 结构化路由、回退、实体保持和多轮未实现 |
-| SR-07 | ES/Milvus 并行、RRF、去重、多样性、Cross-Encoder 重排 | `NOT_STARTED` | 单路词项与 SQLite 基线 | 混合融合、重排模型、阈值和消融未实现 |
+| SR-07 | ES/Milvus 并行、RRF、去重、多样性、Cross-Encoder 重排 | `PARTIAL` | 本地 SQLite BM25 + BGE-M3 RRF 15/15 | 真实 ES/Milvus 并行、去重/多样性、重排和扩展消融未实现 |
 | SR-08 | 证据上下文、真实 LLM、强制引用、校验与拒答 | `PARTIAL` | Evidence/Citation、`NO_EVIDENCE`、Fake LLM Answer API | 真实模型、主张支持校验和冲突处理未实现 |
 | SR-09 | 问答 API、SSE、Evidence API、Agent Evidence API 和原文定位 | `PARTIAL` | 非流式 Answer API、SSE 文件合同、PDF 页码 | SSE 运行、Evidence API、Agent API 和鉴权预览未实现 |
 | SR-10 | Trace、反馈、指标、告警和运营闭环 | `PARTIAL` | Trace 合同与评测报告结构 | 持久化、反馈 API、看板、告警和难例回流未实现 |
@@ -53,8 +53,8 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | 方案阶段 | 当前判断 | 说明 |
 |---|---|---|
 | 阶段 0：范围冻结与基线 | `IN_PROGRESS` | 有本地范围和 15 题 Canary，但正式评测规模、目标语料/并发、真实 ES/Milvus 基线与模型资源预算未冻结 |
-| 阶段 1：数据与索引底座 | `PARTIAL` | 本地 PDF/Chunk 链路可用，但 PostgreSQL、ES、Milvus、Outbox 和完整生命周期未完成 |
-| 阶段 2：基础 RAG MVP | `PARTIAL` | 非流式 API、Evidence、拒答可运行，但仍是单路检索与 Fake LLM |
+| 阶段 1：数据与索引底座 | `PARTIAL` | 本地 PDF/Chunk、SQLite BM25 和真实 BGE-M3 精确向量链路可用，但 PostgreSQL、ES、Milvus、Outbox 和完整生命周期未完成 |
+| 阶段 2：基础 RAG MVP | `PARTIAL` | 非流式 API、Evidence、拒答和本地 RRF 可运行，但仍无真实生成模型与远程混合检索 |
 | 阶段 3：复杂科研问答 | `NOT_STARTED` | 暂未实现比较、多跳、时效、主张级校验和 Agent Evidence API |
 | 阶段 4：系统化评测、安全与性能 | `NOT_STARTED` | Harness 只是早期工具，尚未达到方案规模和验收门槛 |
 | 阶段 5：灰度上线与运营 | `NOT_STARTED` | 未进入发布阶段 |
@@ -64,7 +64,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 方案阶段 0 的下一门禁是同时推进三条不互相阻塞的工作线：
 
 1. **范围与评测线（共享）：** 冻结目标语料量、峰值并发、硬件预算和 SLO；把 15 题保留为 Canary，另建 200～500 条初始分层评测集；
-2. **本地工程线（A）：** 固定 3 论文、15 题、页码、`top_k=3`、ACL 和 Fake LLM，只新增一种真实向量检索，为 Milvus/BGE-M3 接入建立可比较基线；
+2. **本地工程线（A）：** 已固定同一 Canary 完成 BGE-M3 精确向量与 SQLite BM25 RRF；下一步扩展分层评测和排序指标，为远程 Milvus/BGE-M3 接入保留可比较基线；
 3. **远程基础设施线（B）：** 先完成主机盘点和同一 `main` 基线验证，再按 PostgreSQL、Elasticsearch、Milvus、模型服务逐项建立真实状态和性能基线。
 
 任何一条工作线通过都不自动代表方案阶段 0 完成。只有范围、评测、真实基础设施基线和资源选型共同形成可审计证据后，才能关闭方案阶段 0。

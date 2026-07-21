@@ -19,7 +19,7 @@
 
 ## 当前状态
 
-当前总体状态为 `SOURCE_PHASE_0_IN_PROGRESS / REPO_M0_COMPLETE / M1_SQLITE_FTS5_BASELINE_READY / MEMBER_B_REMOTE_PENDING`。仓库已形成本地 PDF 到非流式 Answer API 的可审计最小链路，三论文 15 题 Canary 已通过；但最高方案要求的正式范围基线、真实 ES/Milvus、真实模型和大规模评测尚未完成。
+当前总体状态为 `SOURCE_PHASE_0_IN_PROGRESS / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MEMBER_B_REMOTE_PENDING`。仓库已形成本地 PDF 到非流式 Answer API 的可审计最小链路，并完成真实本地 BGE-M3 向量与 RRF 混合检索基线；但最高方案要求的正式范围基线、真实 ES/Milvus、真实生成模型和大规模评测尚未完成。
 
 - GitHub：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 - 最高方案追踪：[`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md)
@@ -30,6 +30,7 @@
 - 仓库 Harness 入口：[`AGENTS.md`](AGENTS.md)
 - 薄评测 Harness：[`docs/EVALUATION_HARNESS.md`](docs/EVALUATION_HARNESS.md)
 - SQLite FTS5/BM25：[`docs/SQLITE_FTS_RETRIEVAL.md`](docs/SQLITE_FTS_RETRIEVAL.md)
+- 本地向量与 RRF：[`docs/LOCAL_VECTOR_RRF_RETRIEVAL.md`](docs/LOCAL_VECTOR_RRF_RETRIEVAL.md)
 
 ## 双人开发边界
 

@@ -33,10 +33,13 @@
     "history_repair": "FIX_FORWARD_NO_FORCE_PUSH"
   },
   "execution_boundaries": {
-    "local_rag": "REPO_MINIMAL_CHAIN_COMPLETE_WITH_SQLITE_FTS5_AND_FAKE_LLM",
-    "evaluation": "LOCAL_3_PAPER_CANARY_READY_WITH_SQLITE_FTS5_AND_FAKE_LLM",
+    "local_rag": "REPO_MINIMAL_CHAIN_COMPLETE_WITH_REAL_BGE_M3_RRF_AND_FAKE_LLM",
+    "evaluation": "LOCAL_3_PAPER_CANARY_READY_WITH_VECTOR_12_OF_15_AND_RRF_15_OF_15",
     "remote_host": "PENDING_MEMBER_B",
     "real_elasticsearch": "NOT_STARTED",
+    "local_real_vector": "READY_EXACT_COSINE_BGE_M3",
+    "local_rrf_hybrid": "READY_SQLITE_FTS5_BGE_M3",
+    "reranker": "DEFERRED_PENDING_EVIDENCE_GAIN",
     "real_milvus": "NOT_STARTED",
     "real_model": "NOT_STARTED"
   }

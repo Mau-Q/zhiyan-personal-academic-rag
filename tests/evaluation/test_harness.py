@@ -6,8 +6,11 @@ from pathlib import Path
 
 from backend.evaluation.harness import DEFAULT_CASES_PATH, load_cases, run_suite
 from backend.rag.sqlite_fts_consumer import SQLITE_FTS_EXECUTION_BOUNDARY
+from backend.rag.vector_consumer import RRF_EXECUTION_BOUNDARY, VECTOR_EXECUTION_BOUNDARY
 from backend.retrieval.fixture import load_chunks
 from backend.retrieval.sqlite_fts import SQLiteFtsIndex
+from backend.retrieval.vector import LocalVectorIndex
+from tests.retrieval.fake_embedding import FakeEmbeddingProvider
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -96,6 +99,61 @@ class EvaluationHarnessTests(unittest.TestCase):
         self.assertEqual(
             report["execution_boundary"], SQLITE_FTS_EXECUTION_BOUNDARY
         )
+
+    def test_same_suite_runs_through_vector_and_rrf_backends(self):
+        cases = load_cases(SQLITE_CASES_PATH)
+        chunks = load_chunks(ROOT / "fixtures" / "chunks-v1.json")
+        provider = FakeEmbeddingProvider()
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            vector_path = temporary / "chunks.vector.sqlite"
+            fts_path = temporary / "chunks.fts.sqlite"
+            LocalVectorIndex.build(vector_path, chunks, provider)
+            SQLiteFtsIndex.build(fts_path, chunks)
+
+            vector_cases = [case.model_copy(deep=True) for case in cases]
+            for case in vector_cases:
+                if case.category == "ANSWERABLE":
+                    case.expected.required_warnings = ["LOCAL_REAL_VECTOR_FAKE_LLM"]
+                elif case.category == "NO_EVIDENCE":
+                    case.expected.required_warnings = ["LOCAL_REAL_VECTOR_ONLY"]
+            vector_report = run_suite(
+                vector_cases,
+                suite_id="fixture-vector-v1",
+                retrieval_backend="local_vector",
+                vector_index_path=vector_path,
+                embedding_provider=provider,
+                embedding_model="semantic-fixture-v1",
+                vector_min_score=0.5,
+            )
+
+            rrf_cases = [case.model_copy(deep=True) for case in cases]
+            for case in rrf_cases:
+                if case.category == "ANSWERABLE":
+                    case.expected.required_warnings = ["LOCAL_RRF_HYBRID_FAKE_LLM"]
+                elif case.category == "NO_EVIDENCE":
+                    case.expected.required_warnings = ["LOCAL_RRF_HYBRID_ONLY"]
+            rrf_report = run_suite(
+                rrf_cases,
+                suite_id="fixture-rrf-v1",
+                retrieval_backend="local_rrf",
+                index_path=fts_path,
+                vector_index_path=vector_path,
+                embedding_provider=provider,
+                embedding_model="semantic-fixture-v1",
+                vector_min_score=0.5,
+            )
+
+        self.assertEqual(vector_report["summary"]["passed"], 6)
+        self.assertEqual(vector_report["execution_boundary"], VECTOR_EXECUTION_BOUNDARY)
+        self.assertEqual(
+            vector_report["retrieval_configuration"]["embedding_model_digest"],
+            provider.digest,
+        )
+        self.assertEqual(vector_report["retrieval_configuration"]["embedding_dimension"], 4)
+        self.assertEqual(rrf_report["summary"]["passed"], 6)
+        self.assertEqual(rrf_report["execution_boundary"], RRF_EXECUTION_BOUNDARY)
 
 
 if __name__ == "__main__":
