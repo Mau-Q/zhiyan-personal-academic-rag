@@ -2,9 +2,9 @@
 
 ## Status
 
-`M0_COMPLETE / REPOSITORY_HARNESS_READY / M1_SQLITE_FTS5_BASELINE_READY / MEMBER_B_REMOTE_PENDING`
+`SOURCE_PHASE_0_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_SQLITE_FTS5_BASELINE_READY / MEMBER_B_REMOTE_PENDING`
 
-Phase ID：`m1-sqlite-fts5-baseline-ready`
+Phase ID：`source-phase0-foundation-in-progress`
 
 ## Completed
 
@@ -52,13 +52,18 @@ Phase ID：`m1-sqlite-fts5-baseline-ready`
 - SQLite 检索继续复用既有授权判断，未授权、跨租户和失效 Chunk 不得进入 Evidence；
 - 新增公开 SQLite Fixture 冒烟入口和检索、API、评测测试；
 - 三论文同题集首轮 14/15，经词形和停用词诊断后在不改题目、页码或 `top_k` 的情况下达到 15/15。
+- 确认《个人学术空间 RAG 问答系统建设与测试方案》为最高层需求、目标架构和验收依据；
+- 建立 12 项需求追踪和方案阶段 0～5 完成度映射；
+- 明确仓库 `M0/M1` 为内部工程里程碑，当前最高方案阶段 0 仍为 `IN_PROGRESS`；
+- 将 3 论文 15 题定位为快速工程 Canary，不代替 200～500 条初始评测和 800～1500 条正式验收规模。
 
 ## 输入
 
-- 基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
+- 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
+- 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture 评测、本地三论文词项重叠基线和 SQLite FTS5/BM25 持久化检索基线；
-- 未完成能力：成员 B 远程准备、真实 Elasticsearch、Milvus 和模型接入；
-- 本阶段固定合同、授权、题集、页码、`top_k` 和 Fake LLM，只新增 SQLite FTS5/BM25 这一项检索变量。
+- 未完成能力：正式范围/SLO、200～500 条初始评测、成员 B 远程准备、PostgreSQL、真实 Elasticsearch、Milvus 和模型接入；
+- 下一本地工程子阶段固定合同、授权、15 题 Canary、页码、`top_k` 和 Fake LLM，只新增一种真实向量检索。
 
 ## 验收
 
@@ -69,6 +74,8 @@ Phase ID：`m1-sqlite-fts5-baseline-ready`
 - `git diff --check` 必须通过；
 - 不得出现被跟踪的 `runtime/`、PDF、`.env`、数据或存储目录；
 - 仓库状态、能力清单和本文件必须一致。
+- 最高方案文件名、`2074` 行与 SHA-256 必须在需求追踪和机器状态中一致；
+- 不得将仓库 `M0_COMPLETE`、15 题 Canary 或 Fake LLM 写成最高方案阶段 0/2 已完成。
 
 ## Git
 
@@ -80,15 +87,16 @@ Phase ID：`m1-sqlite-fts5-baseline-ready`
 
 ## Current boundary
 
-当前仓库 Harness 已建立，负责约束阶段、范围、验证和交付；RAG 评测 Harness 只负责用例运行。本地 SQLite FTS5/BM25 是已验证的真实持久化检索后端，但执行边界仍为 `LOCAL_API_SQLITE_FTS5_FAKE_LLM`。它不证明 Elasticsearch、Milvus、向量检索、远程部署或真实模型已完成。PDF、真实 Chunk、私有问题集、SQLite 索引和运行报告不得提交。
+当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0，仓库 M0 和 SQLite M1 只是已验证的子基线。本地 SQLite FTS5/BM25 执行边界仍为 `LOCAL_API_SQLITE_FTS5_FAKE_LLM`；它不证明 PostgreSQL、Elasticsearch、Milvus、向量检索、远程部署或真实模型已完成。PDF、真实 Chunk、私有问题集、索引和运行报告不得提交。
 
 ## Next gate
 
-1. 成员 B 按 [Issue #9](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/9) 完成远程准备；
-2. 远程拉取同一 `main` 提交运行全量测试、Fixture API 和 Fixture Harness；
-3. 成员 A 固定当前本地三论文题集、页码、`top_k` 和 SQLite BM25 结果，下一阶段只新增一种向量检索；
-4. 用同一题集比较词项重叠、SQLite BM25、向量、混合检索和重排，不一次改变多个变量；
-5. 真实模型接入放在检索证据链稳定之后，单独评估答案正确性与引用一致性。
+1. **共享范围与评测线：** 冻结目标语料量、峰值并发、硬件预算和 SLO，设计 200～500 条初始分层评测集的标注与拆分规则；
+2. **A 本地工程线：** 固定 3 论文 15 题 Canary、页码、`top_k=3`、ACL 和 Fake LLM，只新增一种真实向量检索；
+3. **B 远程基础设施线：** 按 Issue #9 完成主机盘点，拉取同一 `main` 运行全量测试和 Fixture 冒烟；
+4. B 的基线通过后，按 PostgreSQL、Elasticsearch、Milvus、模型服务逐项建立真实状态，不同时切换多个基础设施变量；
+5. A 用同一 Canary 比较词项重叠、SQLite BM25、向量、混合检索和可选重排；真实 LLM 放在检索证据链稳定后单独接入；
+6. 只有范围、200～500 条初始评测、真实 ES/Milvus 基线和模型资源选型都形成证据后，才能关闭最高方案阶段 0。
 
 ## Prohibited shortcuts
 

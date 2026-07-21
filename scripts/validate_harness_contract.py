@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_FILES = (
     "AGENTS.md",
     "docs/HARNESS_ARCHITECTURE.md",
+    "docs/REQUIREMENTS_TRACEABILITY.md",
     "docs/PROJECT_GUARDRAILS.md",
     "docs/PRODUCT_DECISIONS.md",
     "docs/EXECUTION_CONTRACT.md",
@@ -43,6 +44,7 @@ FEATURE_STATUSES = {
     "COMPLETE_WITH_FAKE_LLM",
     "FIXTURE_BASELINE_READY",
     "LOCAL_3_PAPER_BASELINE_READY",
+    "PARTIAL",
     "PENDING",
     "NOT_STARTED",
 }
@@ -94,10 +96,19 @@ def check_project_state() -> None:
     if state.get("project_id") != "zhiyan-personal-academic-rag":
         raise ValueError("project_state project_id is invalid")
     current_phase = state.get("current_phase")
+    source_authority = state.get("source_authority")
     harness = state.get("repository_harness")
     git_policy = state.get("git_policy")
     if not isinstance(current_phase, dict) or current_phase.get("status") != "READY":
         raise ValueError("project_state current_phase must be READY")
+    if source_authority != {
+        "title": "个人学术空间RAG问答系统建设与测试方案_副本.md",
+        "sha256": "ae2ea50d200c74e4c85595afaa5316e6cabd9d782dcc9e4a9ed673891bd9430e",
+        "line_count": 2074,
+        "traceability_doc": "docs/REQUIREMENTS_TRACEABILITY.md",
+        "source_phase": {"id": "phase-0", "status": "IN_PROGRESS"},
+    }:
+        raise ValueError("project_state source_authority is invalid")
     if not isinstance(harness, dict) or harness.get("status") != "READY":
         raise ValueError("project_state repository_harness must be READY")
     if not isinstance(git_policy, dict) or git_policy != {
@@ -119,6 +130,18 @@ def check_project_state() -> None:
         path = harness.get(key)
         if not isinstance(path, str) or not (ROOT / path).is_file():
             raise ValueError(f"project_state repository_harness.{key} path is invalid")
+    traceability_path = source_authority["traceability_doc"]
+    if not (ROOT / traceability_path).is_file():
+        raise ValueError("project_state source_authority.traceability_doc path is invalid")
+    traceability_text = (ROOT / traceability_path).read_text(encoding="utf-8")
+    for expected in (
+        source_authority["title"],
+        source_authority["sha256"],
+        f"`{source_authority['line_count']}`",
+        "方案阶段 0 IN_PROGRESS",
+    ):
+        if expected not in traceability_text:
+            raise ValueError(f"source authority identity missing from traceability: {expected}")
 
 
 def check_feature_list() -> None:

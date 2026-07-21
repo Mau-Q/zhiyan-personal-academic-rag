@@ -2,6 +2,18 @@
   "schema_version": "feature_list_v1",
   "features": [
     {
+      "id": "requirements_traceability",
+      "status": "READY",
+      "owner": "SHARED",
+      "evidence": ["docs/REQUIREMENTS_TRACEABILITY.md", "docs/PRODUCT_DECISIONS.md"]
+    },
+    {
+      "id": "source_phase_zero_foundation",
+      "status": "PARTIAL",
+      "owner": "SHARED",
+      "evidence": ["docs/REQUIREMENTS_TRACEABILITY.md", "docs/CURRENT_PHASE.md"]
+    },
+    {
       "id": "repository_harness",
       "status": "READY",
       "owner": "A",
@@ -42,6 +54,15 @@
       "evidence": [
         "backend/evaluation/harness.py",
         "docs/EVALUATION_HARNESS.md",
+        "docs/LOCAL_3_PAPER_EVALUATION.md"
+      ]
+    },
+    {
+      "id": "formal_evaluation_corpus",
+      "status": "NOT_STARTED",
+      "owner": "SHARED",
+      "evidence": [
+        "docs/REQUIREMENTS_TRACEABILITY.md",
         "docs/LOCAL_3_PAPER_EVALUATION.md"
       ]
     },

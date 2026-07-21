@@ -1,4 +1,6 @@
-# 阶段 0 范围与门禁
+# 仓库 M0 范围与门禁
+
+> 本文件记录 GitHub 仓库的内部 M0 工程里程碑，不等于最高方案第 10.1 节的“阶段 0：范围冻结与基线建立”。两者的映射和当前差距见 [`REQUIREMENTS_TRACEABILITY.md`](REQUIREMENTS_TRACEABILITY.md)。
 
 ## 1. 目标
 

@@ -4,13 +4,14 @@
 
 ## 必读顺序
 
-1. [`machine/project_state.json`](machine/project_state.json)：当前阶段和执行边界；
-2. [`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)：本阶段输入、验收、Git 和下一门禁；
-3. [`docs/PROJECT_GUARDRAILS.md`](docs/PROJECT_GUARDRAILS.md)：数据、安全、真实性和范围硬边界；
-4. [`docs/PRODUCT_DECISIONS.md`](docs/PRODUCT_DECISIONS.md)：已接受的长期决策；
-5. [`docs/EXECUTION_CONTRACT.md`](docs/EXECUTION_CONTRACT.md)：实施、验证和收尾规则；
-6. [`machine/feature_list.json`](machine/feature_list.json)：能力完成度与证据路径；
-7. 与任务直接相关的 `contracts/`、源码、测试和专题文档。
+1. [`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md)：最高方案的身份、阶段口径和需求追踪；
+2. [`machine/project_state.json`](machine/project_state.json)：当前阶段和执行边界；
+3. [`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)：本阶段输入、验收、Git 和下一门禁；
+4. [`docs/PROJECT_GUARDRAILS.md`](docs/PROJECT_GUARDRAILS.md)：数据、安全、真实性和范围硬边界；
+5. [`docs/PRODUCT_DECISIONS.md`](docs/PRODUCT_DECISIONS.md)：已接受的长期决策；
+6. [`docs/EXECUTION_CONTRACT.md`](docs/EXECUTION_CONTRACT.md)：实施、验证和收尾规则；
+7. [`machine/feature_list.json`](machine/feature_list.json)：能力完成度与证据路径；
+8. 与任务直接相关的 `contracts/`、源码、测试和专题文档。
 
 ## 初始化
 
@@ -23,11 +24,13 @@ python3 scripts/validate_harness_contract.py
 
 ## 权威边界
 
+- 《个人学术空间 RAG 问答系统建设与测试方案》是项目的最高层需求、目标架构和验收依据，仓库身份和映射以 `docs/REQUIREMENTS_TRACEABILITY.md` 为准；
 - 用户当前明确指令决定本次任务目标，但不能把 Fixture、Fake、计划或未验证状态表述为真实完成；
 - API、Schema、权限和错误语义以 `contracts/` 为准；
 - 阶段状态以 `machine/project_state.json` 和 `docs/CURRENT_PHASE.md` 的一致交集为准；
 - 长期决策以 `docs/PRODUCT_DECISIONS.md` 为准；
 - README 是入口说明，不单独证明能力完成。
+- 仓库 `M0/M1` 是内部工程里程碑，不得写成最高方案的“阶段 0/1”已完成。
 
 ## 硬规则
 

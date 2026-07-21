@@ -19,11 +19,12 @@
 
 ## 当前状态
 
-当前阶段为 `M0_COMPLETE / M1_SQLITE_FTS5_BASELINE_READY / MEMBER_B_REMOTE_PENDING`：本地 PDF 解析、`ChunkRecordV1`、持久化 SQLite FTS5/BM25、授权检索、拒答、引用和非流式 Answer API 已形成完整链路；三论文 15 题基线已通过；成员 B 并行负责远程主机准备与部署验证。
+当前总体状态为 `SOURCE_PHASE_0_IN_PROGRESS / REPO_M0_COMPLETE / M1_SQLITE_FTS5_BASELINE_READY / MEMBER_B_REMOTE_PENDING`。仓库已形成本地 PDF 到非流式 Answer API 的可审计最小链路，三论文 15 题 Canary 已通过；但最高方案要求的正式范围基线、真实 ES/Milvus、真实模型和大规模评测尚未完成。
 
 - GitHub：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
+- 最高方案追踪：[`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md)
 - 下一门禁：[`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)
-- 阶段 0 范围：[`docs/STAGE_0_SCOPE.md`](docs/STAGE_0_SCOPE.md)
+- 仓库 M0 范围：[`docs/STAGE_0_SCOPE.md`](docs/STAGE_0_SCOPE.md)
 - 双人分工：[`docs/TEAM_WORK_SPLIT.md`](docs/TEAM_WORK_SPLIT.md)
 - 合同入口：[`contracts/README.md`](contracts/README.md)
 - 仓库 Harness 入口：[`AGENTS.md`](AGENTS.md)

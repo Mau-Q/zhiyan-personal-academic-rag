@@ -59,6 +59,20 @@ class RepositoryHarnessTests(unittest.TestCase):
         self.assertEqual(state["git_policy"]["member_b_remote"], "PULL_REQUEST")
         self.assertEqual(state["git_policy"]["ci_mode"], "CONDITIONAL_ACTIONS_CHECK")
 
+    def test_highest_source_authority_is_machine_readable(self):
+        state = json.loads(
+            (ROOT / "machine" / "project_state.json").read_text(encoding="utf-8")
+        )
+        authority = state["source_authority"]
+        self.assertEqual(
+            authority["sha256"],
+            "ae2ea50d200c74e4c85595afaa5316e6cabd9d782dcc9e4a9ed673891bd9430e",
+        )
+        self.assertEqual(authority["line_count"], 2074)
+        self.assertEqual(authority["source_phase"]["status"], "IN_PROGRESS")
+        traceability = ROOT / authority["traceability_doc"]
+        self.assertTrue(traceability.is_file())
+
     def test_validator_rejects_template_as_concrete_phase_result(self):
         template = json.loads(
             (ROOT / "machine" / "phase_result.template.json").read_text(encoding="utf-8")
