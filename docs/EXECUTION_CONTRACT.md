@@ -39,12 +39,12 @@ runtime/phases/<phase-id>/phase_result.json
 
 ## 5. Git 收尾
 
-- 从最新 `main` 建独立分支；
-- 只暂存本任务文件；
-- 提交前审查 diff 并重跑门禁；
-- PR 说明变更、原因、边界和验证；
-- 普通成员 A 任务在 CI 通过后直接合并；
-- 合并后同步本地 `main`，确认本地与 `origin/main` 一致。
+- 成员 A 普通低风险任务：从最新 `main` 实施，只暂存本任务文件，门禁通过后 commit 并直接 push `main`；
+- 成员 B 远程任务和高风险变更：从最新 `main` 建分支，通过 PR 交付；
+- 高风险包括合同破坏、安全边界、真实数据、公网暴露和大型跨模块改动；
+- 直推或 PR 前都必须审查 diff 并重跑门禁；
+- 直推后的 GitHub Actions 是复验门禁，失败时新增修复提交，不 force push；
+- 收尾时确认本地 `main` 与 `origin/main` 一致。
 
 ## 6. 完成定义
 

@@ -48,6 +48,17 @@ class RepositoryHarnessTests(unittest.TestCase):
         for heading in ("## 输入", "## 验收", "## Git"):
             self.assertIn(heading, text)
 
+    def test_simplified_git_policy_is_machine_readable(self):
+        state = json.loads(
+            (ROOT / "machine" / "project_state.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            state["git_policy"]["member_a_low_risk"],
+            "DIRECT_MAIN_AFTER_LOCAL_GATES",
+        )
+        self.assertEqual(state["git_policy"]["member_b_remote"], "PULL_REQUEST")
+        self.assertEqual(state["git_policy"]["ci_mode"], "POST_PUSH_VERIFICATION")
+
     def test_validator_rejects_template_as_concrete_phase_result(self):
         template = json.loads(
             (ROOT / "machine" / "phase_result.template.json").read_text(encoding="utf-8")

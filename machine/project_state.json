@@ -15,6 +15,13 @@
     "validator": "scripts/validate_harness_contract.py",
     "feature_list": "machine/feature_list.json"
   },
+  "git_policy": {
+    "member_a_low_risk": "DIRECT_MAIN_AFTER_LOCAL_GATES",
+    "member_b_remote": "PULL_REQUEST",
+    "high_risk": "PULL_REQUEST_AND_CONFIRMATION",
+    "ci_mode": "POST_PUSH_VERIFICATION",
+    "history_repair": "FIX_FORWARD_NO_FORCE_PUSH"
+  },
   "execution_boundaries": {
     "local_rag": "COMPLETE_WITH_FAKE_LLM",
     "evaluation": "FIXTURE_BASELINE_READY",

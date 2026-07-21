@@ -94,10 +94,19 @@ def check_project_state() -> None:
         raise ValueError("project_state project_id is invalid")
     current_phase = state.get("current_phase")
     harness = state.get("repository_harness")
+    git_policy = state.get("git_policy")
     if not isinstance(current_phase, dict) or current_phase.get("status") != "READY":
         raise ValueError("project_state current_phase must be READY")
     if not isinstance(harness, dict) or harness.get("status") != "READY":
         raise ValueError("project_state repository_harness must be READY")
+    if not isinstance(git_policy, dict) or git_policy != {
+        "member_a_low_risk": "DIRECT_MAIN_AFTER_LOCAL_GATES",
+        "member_b_remote": "PULL_REQUEST",
+        "high_risk": "PULL_REQUEST_AND_CONFIRMATION",
+        "ci_mode": "POST_PUSH_VERIFICATION",
+        "history_repair": "FIX_FORWARD_NO_FORCE_PUSH",
+    }:
+        raise ValueError("project_state git_policy is invalid")
     current_phase_text = (ROOT / "docs/CURRENT_PHASE.md").read_text(encoding="utf-8")
     if current_phase.get("id") not in current_phase_text:
         raise ValueError("project_state current phase id is missing from CURRENT_PHASE")

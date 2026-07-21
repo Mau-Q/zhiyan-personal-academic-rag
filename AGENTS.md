@@ -36,7 +36,8 @@ python3 scripts/validate_harness_contract.py
 - 不在远程结果返回前声称远程主机、Elasticsearch、Milvus 或真实模型已可用；
 - 不用评测 Harness 代替仓库 Harness，也不用仓库 Harness 证明 RAG 质量；
 - 不同时引入多个真实基础设施变量；
-- 普通成员 A 模块在测试和 CI 通过后可直接合并；合同破坏、安全边界和公网暴露必须先确认。
+- 成员 A 的普通低风险任务在本地 Harness、全量测试和 diff 检查通过后可直接推送 `main`；
+- 成员 B 的远程任务，以及合同破坏、安全边界、真实数据、公网暴露和大型跨模块变更必须走 PR 并先确认。
 
 ## 完成门禁
 
@@ -49,3 +50,5 @@ git diff --check
 ```
 
 阶段状态变化时同步更新 `docs/CURRENT_PHASE.md`、`machine/project_state.json` 和 `machine/feature_list.json`。具体运行证据写入被忽略的 `runtime/phases/<phase-id>/phase_result.json`，不得提交伪造的运行结果。
+
+成员 A 直接推送后，以 GitHub Actions 作为推送后复验；失败时新增修复提交，不改写 `main` 历史。

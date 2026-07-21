@@ -40,7 +40,8 @@ Phase ID：`m1-repository-harness-ready`
 - 加入评测测试后，合同、入库、检索、RAG、API 和评测共 48 项测试通过。
 - 建立仓库级 Harness：入口、长期护栏、产品决策、执行合同、机器状态和只读校验器；
 - 明确仓库 Harness 与 RAG 评测 Harness 的职责边界。
-- 加入仓库 Harness 测试后，全仓共 53 项测试通过。
+- 加入仓库 Harness 与 Git 流程测试后，全仓共 54 项测试通过。
+- 简化 Git 流程：成员 A 普通低风险任务本地门禁通过后直接推送 `main`，高风险和成员 B 任务保留 PR。
 
 ## 输入
 
@@ -60,9 +61,10 @@ Phase ID：`m1-repository-harness-ready`
 ## Git
 
 - 默认分支：`main`；
-- 本阶段分支：`agent/add-repository-harness`；
-- 通过独立 PR 交付；普通成员 A 任务在测试和 CI 通过后直接合并；
-- 合并后本地 `main` 必须与 `origin/main` 指向同一提交。
+- 当前 Repository Harness 提交从 `agent/add-repository-harness` 快进到 `main`；
+- 成员 A 普通低风险任务通过本地门禁后直接 push `main`；
+- 成员 B 远程任务和高风险变更继续通过 PR；
+- 推送后本地 `main` 必须与 `origin/main` 指向同一提交，并检查 GitHub Actions。
 
 ## Current boundary
 
