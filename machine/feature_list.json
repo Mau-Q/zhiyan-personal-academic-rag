@@ -181,21 +181,25 @@
     },
     {
       "id": "remote_host_readiness",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "B",
       "evidence": ["docs/REMOTE_HOST_READINESS.md"]
     },
     {
       "id": "real_retrieval_infrastructure",
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "owner": "SHARED",
-      "evidence": ["docs/CURRENT_PHASE.md"]
+      "evidence": [
+        "docs/REMOTE_RETRIEVAL_BASELINE.md",
+        "deploy/remote/compose.elasticsearch.yml",
+        "deploy/remote/compose.milvus.yml"
+      ]
     },
     {
       "id": "real_model_integration",
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "owner": "SHARED",
-      "evidence": ["docs/CURRENT_PHASE.md"]
+      "evidence": ["docs/REMOTE_RETRIEVAL_BASELINE.md", "docs/CURRENT_PHASE.md"]
     }
   ]
 }
