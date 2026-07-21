@@ -17,8 +17,8 @@
               "examples": {
                 "single_document": {
                   "value": {
-                    "question": "论文采用了什么检索方法？",
-                    "document_ids": ["doc_001"],
+                    "question": "How are candidates combined before reranking?",
+                    "document_ids": ["doc_fixture_001"],
                     "stream": false
                   }
                 }

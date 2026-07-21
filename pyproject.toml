@@ -1,14 +1,29 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "zhiyan-personal-academic-rag"
 version = "0.1.0"
 description = "Contract-first personal academic-space RAG system"
 requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "pydantic>=2.10,<3",
+]
 
 [project.optional-dependencies]
 dev = [
+  "httpx2>=2,<3",
   "jsonschema>=4.23,<5",
+]
+server = [
+  "uvicorn>=0.34,<1",
 ]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.setuptools.packages.find]
+include = ["backend*"]

@@ -64,6 +64,15 @@ python3 -m backend.rag.fixture_consumer \
 
 该命令只运行授权过滤、确定性词项检索和 Fake LLM 证据拼装。输出明确包含 `FIXTURE_ONLY_FAKE_LLM`，不能作为真实模型或真实索引效果。完整说明见 [`docs/ONLINE_FIXTURE_CONSUMER.md`](docs/ONLINE_FIXTURE_CONSUMER.md)。
 
+## 非流式 RAG API
+
+```bash
+source .venv/bin/activate
+uvicorn backend.api.app:app --host 127.0.0.1 --port 8000
+```
+
+当前只提供 `POST /api/v1/rag/answers`，使用服务端 Fixture 授权范围，客户端只能通过 `document_ids` 收窄范围。安装、请求和错误响应见 [`docs/RAG_API_QUICKSTART.md`](docs/RAG_API_QUICKSTART.md)。
+
 ## 计划目录
 
 ```text
