@@ -10,6 +10,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Iterable, Mapping, Sequence
+from pathlib import Path
 from typing import Any, Protocol
 
 from backend.retrieval.fixture import is_chunk_authorized, load_chunks, load_scope
@@ -371,11 +372,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--index", required=True)
     subparsers = parser.add_subparsers(dest="command", required=True)
     build = subparsers.add_parser("build")
-    build.add_argument("--chunks", required=True)
+    build.add_argument("--chunks", required=True, type=Path)
     inspect = subparsers.add_parser("inspect")
     query = subparsers.add_parser("query")
-    query.add_argument("--chunks", required=True)
-    query.add_argument("--scope", required=True)
+    query.add_argument("--chunks", required=True, type=Path)
+    query.add_argument("--scope", required=True, type=Path)
     query.add_argument("--question", required=True)
     query.add_argument("--top-k", type=int, default=3)
     return parser
@@ -410,4 +411,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

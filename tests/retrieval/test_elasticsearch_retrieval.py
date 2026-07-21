@@ -1,10 +1,12 @@
 import json
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from backend.retrieval.elasticsearch import (
     ElasticsearchBm25Index,
     ElasticsearchIndexNotReadyError,
+    _build_parser,
 )
 from backend.retrieval.fixture import load_chunks, load_scope
 from backend.retrieval.sqlite_fts import chunks_fingerprint
@@ -95,7 +97,26 @@ class ElasticsearchRetrievalTests(unittest.TestCase):
             payload["query"]["bool"]["filter"][0]["bool"]["must_not"],
         )
 
+    def test_cli_converts_fixture_arguments_to_paths(self):
+        with patch(
+            "sys.argv",
+            [
+                "elasticsearch",
+                "--index",
+                "fixture-chunks-v1",
+                "query",
+                "--chunks",
+                "fixtures/chunks-v1.json",
+                "--scope",
+                "fixtures/authorized-scope-v1.json",
+                "--question",
+                "hybrid retrieval",
+            ],
+        ):
+            args = _build_parser().parse_args()
+        self.assertIsInstance(args.chunks, Path)
+        self.assertIsInstance(args.scope, Path)
+
 
 if __name__ == "__main__":
     unittest.main()
-
