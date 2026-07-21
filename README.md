@@ -19,10 +19,12 @@
 
 ## 当前状态
 
-当前阶段为 `REPOSITORY_BOOTSTRAP / REMOTE_READY`：Private GitHub 仓库、源码边界和首个 `main` 基线已经建立，业务实现尚未开始。
+当前阶段为 `STAGE_0 / CONTRACTS_DRAFTED / REVIEW_PENDING`：成员 A 已确定，协作者已邀请，首批合同、Fixture 和本地样本文献清单已进入评审。
 
 - GitHub：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 - 下一门禁：[`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)
+- 阶段 0 范围：[`docs/STAGE_0_SCOPE.md`](docs/STAGE_0_SCOPE.md)
+- 合同入口：[`contracts/README.md`](contracts/README.md)
 
 ## 双人开发边界
 
@@ -41,6 +43,17 @@
 - 当前知识库整理目录中的大型压缩包和 4090 混合部署包。
 
 详细规则见 [`docs/REPOSITORY_POLICY.md`](docs/REPOSITORY_POLICY.md)。
+
+## 合同验证
+
+本地需要 Python 3.11+ 和 `jsonschema`：
+
+```bash
+python3 -m pip install 'jsonschema>=4.23,<5'
+make contract-test
+```
+
+验证只读取仓库内的 Schema、示例和人工 Fixture，不访问远程模型或生产数据。
 
 ## 计划目录
 

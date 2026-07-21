@@ -1,0 +1,38 @@
+[
+  {
+    "chunk_id": "chunk_fixture_001",
+    "document_id": "doc_fixture_001",
+    "version_id": "version_fixture_001",
+    "text": "Hybrid retrieval combines lexical candidates and semantic candidates before reranking.",
+    "section_path": "3 Method > 3.2 Retrieval",
+    "page_start": 5,
+    "page_end": 5,
+    "parent_chunk_id": "parent_fixture_001",
+    "previous_chunk_id": null,
+    "next_chunk_id": "chunk_fixture_002",
+    "tenant_id": "tenant_fixture",
+    "visibility": "private",
+    "library_scope_ids": ["lib_fixture"],
+    "parse_version": "fixture_parser_v1",
+    "embedding_version": "fixture_embedding_v1",
+    "is_active": true
+  },
+  {
+    "chunk_id": "chunk_fixture_002",
+    "document_id": "doc_fixture_001",
+    "version_id": "version_fixture_001",
+    "text": "The reranker scores only candidates that have already passed authorization filters.",
+    "section_path": "3 Method > 3.3 Reranking",
+    "page_start": 6,
+    "page_end": 6,
+    "parent_chunk_id": "parent_fixture_001",
+    "previous_chunk_id": "chunk_fixture_001",
+    "next_chunk_id": null,
+    "tenant_id": "tenant_fixture",
+    "visibility": "private",
+    "library_scope_ids": ["lib_fixture"],
+    "parse_version": "fixture_parser_v1",
+    "embedding_version": "fixture_embedding_v1",
+    "is_active": true
+  }
+]

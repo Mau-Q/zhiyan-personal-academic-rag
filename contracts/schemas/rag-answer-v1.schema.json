@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mau-Q/zhiyan-personal-academic-rag/contracts/rag-answer-v1.schema.json",
+  "title": "RagAnswerV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "request_id",
+    "trace_id",
+    "status",
+    "answer",
+    "evidence",
+    "citations",
+    "warnings"
+  ],
+  "properties": {
+    "request_id": {"$ref": "#/$defs/id"},
+    "trace_id": {"$ref": "#/$defs/id"},
+    "status": {"enum": ["COMPLETED", "NO_EVIDENCE", "DEGRADED", "FAILED"]},
+    "answer": {"type": "string"},
+    "evidence": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/evidence"},
+      "uniqueItems": true
+    },
+    "citations": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/citation"},
+      "uniqueItems": true
+    },
+    "warnings": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "chunk_id",
+        "document_id",
+        "version_id",
+        "section_path",
+        "page_start",
+        "page_end",
+        "quote"
+      ],
+      "properties": {
+        "evidence_id": {"$ref": "#/$defs/id"},
+        "chunk_id": {"$ref": "#/$defs/id"},
+        "document_id": {"$ref": "#/$defs/id"},
+        "version_id": {"$ref": "#/$defs/id"},
+        "section_path": {"type": "string", "minLength": 1},
+        "page_start": {"type": "integer", "minimum": 1},
+        "page_end": {"type": "integer", "minimum": 1},
+        "quote": {"type": "string", "minLength": 1}
+      }
+    },
+    "citation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["citation_id", "evidence_id", "document_id", "page_start", "page_end"],
+      "properties": {
+        "citation_id": {"$ref": "#/$defs/id"},
+        "evidence_id": {"$ref": "#/$defs/id"},
+        "document_id": {"$ref": "#/$defs/id"},
+        "page_start": {"type": "integer", "minimum": 1},
+        "page_end": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

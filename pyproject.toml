@@ -1,0 +1,14 @@
+[project]
+name = "zhiyan-personal-academic-rag"
+version = "0.1.0"
+description = "Contract-first personal academic-space RAG system"
+requires-python = ">=3.11"
+
+[project.optional-dependencies]
+dev = [
+  "jsonschema>=4.23,<5",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

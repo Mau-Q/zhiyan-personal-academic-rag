@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mau-Q/zhiyan-personal-academic-rag/contracts/chunk-record-v1.schema.json",
+  "title": "ChunkRecordV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "chunk_id",
+    "document_id",
+    "version_id",
+    "text",
+    "section_path",
+    "page_start",
+    "page_end",
+    "parent_chunk_id",
+    "previous_chunk_id",
+    "next_chunk_id",
+    "tenant_id",
+    "visibility",
+    "library_scope_ids",
+    "parse_version",
+    "embedding_version",
+    "is_active"
+  ],
+  "properties": {
+    "chunk_id": {"$ref": "#/$defs/id"},
+    "document_id": {"$ref": "#/$defs/id"},
+    "version_id": {"$ref": "#/$defs/id"},
+    "text": {"type": "string", "minLength": 1},
+    "section_path": {"type": "string", "minLength": 1},
+    "page_start": {"type": "integer", "minimum": 1},
+    "page_end": {"type": "integer", "minimum": 1},
+    "parent_chunk_id": {"$ref": "#/$defs/nullable_id"},
+    "previous_chunk_id": {"$ref": "#/$defs/nullable_id"},
+    "next_chunk_id": {"$ref": "#/$defs/nullable_id"},
+    "tenant_id": {"$ref": "#/$defs/id"},
+    "visibility": {"enum": ["public", "tenant", "private"]},
+    "library_scope_ids": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/id"},
+      "uniqueItems": true
+    },
+    "parse_version": {"$ref": "#/$defs/id"},
+    "embedding_version": {"$ref": "#/$defs/id"},
+    "is_active": {"type": "boolean"}
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "nullable_id": {
+      "oneOf": [
+        {"$ref": "#/$defs/id"},
+        {"type": "null"}
+      ]
+    }
+  }
+}

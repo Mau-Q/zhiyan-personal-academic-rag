@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mau-Q/zhiyan-personal-academic-rag/contracts/authorized-scope-v1.schema.json",
+  "title": "AuthorizedScopeV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "user_id",
+    "tenant_id",
+    "library_ids",
+    "folder_ids",
+    "document_ids",
+    "include_public",
+    "acl_version"
+  ],
+  "properties": {
+    "user_id": {"$ref": "#/$defs/id"},
+    "tenant_id": {"$ref": "#/$defs/id"},
+    "library_ids": {"$ref": "#/$defs/id_list"},
+    "folder_ids": {"$ref": "#/$defs/id_list"},
+    "document_ids": {"$ref": "#/$defs/id_list"},
+    "include_public": {"type": "boolean"},
+    "acl_version": {"$ref": "#/$defs/id"}
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "id_list": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/id"},
+      "uniqueItems": true
+    }
+  }
+}
