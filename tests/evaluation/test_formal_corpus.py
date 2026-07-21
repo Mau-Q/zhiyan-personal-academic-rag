@@ -5,7 +5,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from backend.evaluation.formal_corpus import EvaluationItemV1, validate_corpus
+from backend.evaluation.formal_corpus import (
+    AnnotationRecordV1,
+    EvaluationItemV1,
+    validate_corpus,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -32,6 +36,8 @@ class FormalCorpusTests(unittest.TestCase):
         self.assertEqual(report["online_hard_case_count"], 0)
         self.assertEqual(report["annotation_record_count"], 12)
         self.assertFalse(report["lock_ready"])
+        self.assertFalse(report["engineering_ready"])
+        self.assertEqual(report["engineering_target_range"], [60, 100])
         self.assertTrue(any("below target_size" in value for value in report["blockers"]))
 
     def test_online_hard_cases_do_not_count_toward_primary_target(self):
@@ -49,6 +55,89 @@ class FormalCorpusTests(unittest.TestCase):
         payload["blind_holdout"] = False
         with self.assertRaisesRegex(ValueError, "acceptance items must be blind_holdout"):
             EvaluationItemV1.model_validate(payload)
+
+    def test_gpt_annotation_requires_reproducible_model_identity(self):
+        payload = json.loads(
+            (ROOT / "contracts" / "examples" / "retrieval-annotation-record-v1.json")
+            .read_text(encoding="utf-8")
+        )
+        AnnotationRecordV1.model_validate(payload)
+        payload["model_identity"] = None
+        with self.assertRaisesRegex(ValueError, "GPT annotations require"):
+            AnnotationRecordV1.model_validate(payload)
+
+    def test_consensus_does_not_require_adjudication_but_conflict_does(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+            items = [
+                json.loads(line)
+                for line in (FIXTURE_DIR / "fixture-items-v1.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+            ]
+            annotations = [
+                json.loads(line)
+                for line in (FIXTURE_DIR / "fixture-annotations-v1.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+            ]
+            question_id = items[0]["question_id"]
+            final_id = items[0]["final_annotation_id"]
+            items[0]["annotation_status"] = "DOUBLE_ANNOTATED"
+            items[0]["annotation_record_ids"] = items[0]["annotation_record_ids"][:2]
+            items[0]["final_annotation_id"] = None
+            annotations = [
+                record for record in annotations if record["annotation_id"] != final_id
+            ]
+            manifest["items_path"] = "items.jsonl"
+            manifest["annotation_records_path"] = "annotations.jsonl"
+            manifest["items_sha256"] = write_jsonl(temporary / "items.jsonl", items)
+            manifest["annotation_records_sha256"] = write_jsonl(
+                temporary / "annotations.jsonl", annotations
+            )
+            manifest_path = temporary / "manifest.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            report = validate_corpus(manifest_path)
+            self.assertFalse(
+                any(
+                    question_id in blocker and "adjudication" in blocker
+                    for blocker in report["blockers"]
+                )
+            )
+
+            for record in annotations[:2]:
+                record.update(
+                    {
+                        "actor_type": "GPT",
+                        "model_identity": "same-model",
+                        "prompt_version": "judge-v1",
+                        "temperature": 0.0,
+                    }
+                )
+            manifest["annotation_records_sha256"] = write_jsonl(
+                temporary / "annotations.jsonl", annotations
+            )
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            report = validate_corpus(manifest_path)
+            self.assertTrue(
+                any(
+                    question_id in blocker and "two independent reviewers" in blocker
+                    for blocker in report["blockers"]
+                )
+            )
+
+            items[0]["agreement_score"] = 0.5
+            manifest["items_sha256"] = write_jsonl(temporary / "items.jsonl", items)
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            report = validate_corpus(manifest_path)
+            self.assertTrue(
+                any(
+                    question_id in blocker and "conflict requiring adjudication" in blocker
+                    for blocker in report["blockers"]
+                )
+            )
 
     def test_hash_drift_and_cross_split_leakage_fail_closed(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -95,6 +184,24 @@ class FormalCorpusTests(unittest.TestCase):
         )
         self.assertEqual(completed.returncode, 1, completed.stderr)
         self.assertIn('"lock_ready": false', completed.stdout)
+
+    def test_require_engineering_ready_returns_one_for_small_fixture(self):
+        completed = subprocess.run(
+            [
+                "python3",
+                "-m",
+                "backend.evaluation.formal_corpus",
+                "--manifest",
+                str(MANIFEST_PATH),
+                "--require-engineering-ready",
+            ],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertIn('"engineering_ready": false', completed.stdout)
 
     def test_generated_contracts_are_current(self):
         completed = subprocess.run(

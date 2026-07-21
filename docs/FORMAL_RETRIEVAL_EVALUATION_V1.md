@@ -2,23 +2,26 @@
 
 ## 当前结论
 
-正式检索评测的合同、校验器、拆分规则、双标注谱系和指标计算已就绪；真实 500 条人工评测集尚未采集，当前状态为：
+正式检索评测的合同、校验器、拆分规则、评审谱系和指标计算已就绪。当前采用两套不混淆的执行口径：
 
-`FRAMEWORK_READY / DATA_COLLECTION_PENDING / NOT_LOCK_READY`
+- 近期工程门禁：`RISK_BASED_80 / GPT_ASSISTED / HUMAN_HIGH_RISK_REVIEW`；
+- 最高方案兼容门禁：`SOURCE_FORMAL_500 / DOUBLE_HUMAN / NOT_LOCK_READY`。
 
-公开 Fixture 只有 4 条合成样本，用于证明合同和失败关闭语义，不能计入阶段 0 的 500 条正式样本。原有 3 论文 15 题继续作为工程 Canary，也不能并入正式 `dev/test/acceptance` 后制造规模完成。
+公开 Fixture 只有 4 条合成样本，用于证明合同和失败关闭语义。原有 3 论文 15 题继续作为快速 Canary。80 题工程基线用于决定检索、阈值和重排是否值得继续，不代表最高方案的规模验收完成。
 
 ## 目标规模
 
-最高方案阶段 0 要求 200～500 条初始评测集，第 6 章同时建议首期不少于 500 条。因此 V1 目标固定为 `500` 条，以同时满足两个口径。只有以下条件同时成立后，Manifest 才能进入 `LOCKED`：
+最高方案阶段 0 要求 200～500 条初始评测集，第 6 章同时建议首期不少于 500 条，因此正式兼容 Manifest 仍保留 `500` 条目标。根据用户批准的降复杂度决策，近期先建立默认 80 条、允许 60～100 条的工程基线；该基线保持 `DATA_COLLECTION`，不使用 `LOCKED` 冒充原方案完成。
+
+只有准备按最高方案正式验收，并且以下条件同时成立后，Manifest 才能进入 `LOCKED`：
 
 - `dev/test/acceptance` 恰好 500 条最终样本，在线难例不得计入该规模；
 - 数据快照、Chunk 快照、样本和标注记录 SHA-256 一致；
 - 拆分与分层比例通过；
 - 同一泄漏组不跨拆分；
-- 每条至少两名标注者独立标注；
-- 完成仲裁；
-- 高难度和标准/时效问题完成专家复核；
+- 每条至少两名人工标注者独立标注；
+- 有冲突的样本完成仲裁；
+- 高难度和标准/时效问题完成对应背景人员复核；
 - Acceptance 保持盲测。
 
 ## 数据合同
@@ -27,7 +30,7 @@ Manifest、样本、标注和运行结果分别由以下合同约束：
 
 - `retrieval_evaluation_manifest_v1`：数据集身份、目标规模、快照、拆分、分层和质量门禁；
 - `retrieval_evaluation_item_v1`：问题、授权范围、路由、相关 Chunk、主张、禁止主张和最终标注；
-- `retrieval_annotation_record_v1`：独立标注、仲裁和专家复核的不可混淆谱系；
+- `retrieval_annotation_record_v1`：人工、GPT、合成 Fixture、仲裁和专家复核的不可混淆谱系；
 - `retrieval_ranking_result_v1`：后端、Top-K、决策、延迟和有序候选。
 
 JSON Schema 由 Pydantic 模型机械导出，使用以下命令检查漂移：
@@ -73,13 +76,17 @@ V1 初始拆分固定为：
 1. 冻结语料和 Chunk 快照；
 2. 问题编写者依据原文和业务分层出题，不根据某个检索后端的结果反向写题；
 3. 为每题记录授权范围、路由、0～3 级 Chunk 相关性、参考主张、可接受答案点、禁止主张和引用；
-4. 标注者 A、B 独立提交 `ANNOTATOR` 记录，互不可见；
-5. 计算并记录一致性，存在冲突时由第三人提交 `ADJUDICATOR` 记录；
-6. `hard` 或 `standards_freshness` 样本必须再提交 `EXPERT_REVIEWER` 记录；
-7. 最终样本必须指向仲裁或专家记录，且最终标签逐字段一致；
-8. 锁定后不静默改题、页码或标签；语料/页码漂移必须升级数据集版本。
+4. 低风险 `dev/test` 可由人工与 GPT 或不同 GPT 模型独立提交 `ANNOTATOR` 记录；相同模型重复运行只算一个评审；
+5. GPT 记录必须固定模型身份、Prompt 版本和温度；
+6. 一致样本可停在 `DOUBLE_ANNOTATED`，不再强制每题增加仲裁记录；
+7. 存在冲突时由人工提交 `ADJUDICATOR`；GPT 不得担任仲裁者；
+8. Acceptance、无答案、越权、安全问题必须有人复核；`hard` 或 `standards_freshness` 还必须提交人工 `EXPERT_REVIEWER`；
+9. 最终仲裁或专家标签必须与样本逐字段一致；
+10. 锁定后不静默改题、页码或标签；语料/页码漂移必须升级数据集版本。
 
-标注者 ID 使用项目内假名，不保存真实身份信息。自动生成只能协助候选整理，不能代替两名人工标注或专家结论。
+标注者 ID 使用项目内假名，不保存真实身份信息。近期 80 题工程基线允许 GPT 承担低风险初标，并对低风险 `dev/test` 做 10%～20% 分层人工抽检；Acceptance 与高风险题保留人工结论。只有最高方案兼容的 `LOCKED` 正式集仍要求每题两名人工标注者。
+
+完整的后续阶段选测原则见 [风险驱动测试策略](RISK_BASED_TESTING_STRATEGY.md)。
 
 ## 检索指标
 
@@ -112,6 +119,16 @@ python3 -m backend.evaluation.formal_corpus \
   --require-lock-ready
 ```
 
+验证 60～100 题工程基线是否达到近期门禁：
+
+```bash
+python3 -m backend.evaluation.formal_corpus \
+  --manifest runtime/evaluation/formal-retrieval-v1/manifest.json \
+  --require-engineering-ready
+```
+
+同一报告分别输出 `engineering_ready` 和 `lock_ready`，两者不能互相替代。
+
 比较多个检索运行：
 
 ```bash
@@ -128,7 +145,8 @@ python3 -m backend.evaluation.retrieval_metrics \
 ## 下一门禁
 
 1. 共享方冻结首期知识源、用户类型和实际语言分布；
-2. 从真实语料快照建立 500 条问题候选和泄漏组；
-3. 完成双人独立标注、仲裁与专家复核；
-4. 锁定 `dev/test/acceptance` 后，运行词项、BM25、向量和 RRF 的正式对比；
-5. 只有扩展集证明稳定排序缺口后，才打开重排实现门禁。
+2. 从真实语料快照建立默认 80 条工程问题和泄漏组；
+3. GPT 完成候选整理和低风险初标，人工确认 Acceptance、冲突与高风险题；
+4. 运行词项、BM25、向量和 RRF 的工程对比；
+5. 只有 80 题证明稳定排序缺口后，才打开重排实现门禁；
+6. 只有准备按最高方案正式验收时，才扩展至原方案规模并进入 `LOCKED`。

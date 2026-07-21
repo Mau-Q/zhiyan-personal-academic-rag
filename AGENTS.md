@@ -8,10 +8,11 @@
 2. [`machine/project_state.json`](machine/project_state.json)：当前阶段和执行边界；
 3. [`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)：本阶段输入、验收、Git 和下一门禁；
 4. [`docs/PROJECT_GUARDRAILS.md`](docs/PROJECT_GUARDRAILS.md)：数据、安全、真实性和范围硬边界；
-5. [`docs/PRODUCT_DECISIONS.md`](docs/PRODUCT_DECISIONS.md)：已接受的长期决策；
-6. [`docs/EXECUTION_CONTRACT.md`](docs/EXECUTION_CONTRACT.md)：实施、验证和收尾规则；
-7. [`machine/feature_list.json`](machine/feature_list.json)：能力完成度与证据路径；
-8. 与任务直接相关的 `contracts/`、源码、测试和专题文档。
+5. [`docs/RISK_BASED_TESTING_STRATEGY.md`](docs/RISK_BASED_TESTING_STRATEGY.md)：后续阶段的最小充分测试与 GPT/人工边界；
+6. [`docs/PRODUCT_DECISIONS.md`](docs/PRODUCT_DECISIONS.md)：已接受的长期决策；
+7. [`docs/EXECUTION_CONTRACT.md`](docs/EXECUTION_CONTRACT.md)：实施、验证和收尾规则；
+8. [`machine/feature_list.json`](machine/feature_list.json)：能力完成度与证据路径；
+9. 与任务直接相关的 `contracts/`、源码、测试和专题文档。
 
 ## 初始化
 

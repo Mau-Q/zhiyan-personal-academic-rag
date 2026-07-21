@@ -59,6 +59,16 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
+    "actor_type": {
+      "default": "FIXTURE",
+      "enum": [
+        "HUMAN",
+        "GPT",
+        "FIXTURE"
+      ],
+      "title": "Actor Type",
+      "type": "string"
+    },
     "annotation_id": {
       "maxLength": 128,
       "minLength": 1,
@@ -115,10 +125,39 @@
       "title": "Expected Route",
       "type": "string"
     },
+    "model_identity": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model Identity"
+    },
     "notes": {
       "maxLength": 4000,
       "title": "Notes",
       "type": "string"
+    },
+    "prompt_version": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Prompt Version"
     },
     "question_id": {
       "maxLength": 128,
@@ -145,6 +184,20 @@
       "format": "date-time",
       "title": "Submitted At",
       "type": "string"
+    },
+    "temperature": {
+      "anyOf": [
+        {
+          "maximum": 2.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Temperature"
     }
   },
   "required": [

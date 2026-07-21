@@ -88,6 +88,16 @@
       ]
     },
     {
+      "id": "risk_based_testing_strategy",
+      "status": "READY",
+      "owner": "SHARED",
+      "evidence": [
+        "docs/RISK_BASED_TESTING_STRATEGY.md",
+        "docs/PRODUCT_DECISIONS.md",
+        "backend/evaluation/formal_corpus.py"
+      ]
+    },
+    {
       "id": "formal_evaluation_corpus",
       "status": "PARTIAL",
       "owner": "SHARED",

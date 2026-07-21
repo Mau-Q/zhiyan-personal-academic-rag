@@ -53,6 +53,8 @@ AnnotationStatus = Literal[
     "ADJUDICATED",
     "EXPERT_REVIEWED",
 ]
+ENGINEERING_MIN_ITEMS = 60
+ENGINEERING_MAX_ITEMS = 100
 
 
 class StrictModel(BaseModel):
@@ -189,12 +191,15 @@ class EvaluationItemV1(StrictModel):
             "DRAFT": 0,
             "DOUBLE_ANNOTATED": 2,
             "ADJUDICATED": 3,
-            "EXPERT_REVIEWED": 4,
+            "EXPERT_REVIEWED": 3,
         }[self.annotation_status]
         if len(self.annotation_record_ids) < minimum_records:
             raise ValueError("annotation status has too few annotation records")
-        if self.annotation_status == "DRAFT" and self.final_annotation_id is not None:
-            raise ValueError("DRAFT items cannot have final_annotation_id")
+        if self.annotation_status in {"DRAFT", "DOUBLE_ANNOTATED"}:
+            if self.final_annotation_id is not None:
+                raise ValueError(
+                    "DRAFT and DOUBLE_ANNOTATED items cannot have final_annotation_id"
+                )
         if self.annotation_status in {"ADJUDICATED", "EXPERT_REVIEWED"}:
             if self.final_annotation_id not in self.annotation_record_ids:
                 raise ValueError("final_annotation_id must reference an annotation record")
@@ -208,6 +213,13 @@ class AnnotationRecordV1(StrictModel):
     question_id: Identifier
     role: Literal["ANNOTATOR", "ADJUDICATOR", "EXPERT_REVIEWER"]
     annotator_id: Identifier
+    actor_type: Literal["HUMAN", "GPT", "FIXTURE"] = "FIXTURE"
+    model_identity: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=256),
+    ] | None = None
+    prompt_version: Identifier | None = None
+    temperature: float | None = Field(default=None, ge=0.0, le=2.0, allow_inf_nan=False)
     submitted_at: datetime
     answerability: Answerability
     expected_route: Identifier
@@ -231,13 +243,36 @@ class AnnotationRecordV1(StrictModel):
 
     @model_validator(mode="after")
     def validate_role_lineage(self) -> "AnnotationRecordV1":
+        model_fields = (self.model_identity, self.prompt_version, self.temperature)
+        if self.actor_type == "GPT" and any(value is None for value in model_fields):
+            raise ValueError(
+                "GPT annotations require model_identity, prompt_version, and temperature"
+            )
+        if self.actor_type != "GPT" and any(value is not None for value in model_fields):
+            raise ValueError("only GPT annotations may declare model execution fields")
+        if self.actor_type == "GPT" and self.role != "ANNOTATOR":
+            raise ValueError("GPT may assist annotation but cannot arbitrate or expert-review")
         if self.role == "ANNOTATOR" and self.based_on_annotation_ids:
             raise ValueError("independent annotators cannot depend on prior annotations")
         if self.role == "ADJUDICATOR" and len(self.based_on_annotation_ids) < 2:
             raise ValueError("adjudicator must reference two independent annotations")
         if self.role == "EXPERT_REVIEWER" and not self.based_on_annotation_ids:
-            raise ValueError("expert reviewer must reference an adjudicated annotation")
+            raise ValueError("expert reviewer must reference prior review lineage")
         return self
+
+
+def _reviewer_identity(record: AnnotationRecordV1) -> tuple[str, str]:
+    if record.actor_type == "GPT":
+        return record.actor_type, record.model_identity or ""
+    return record.actor_type, record.annotator_id
+
+
+def _record_matches_item(record: AnnotationRecordV1, item: EvaluationItemV1) -> bool:
+    return (
+        record.answerability == item.answerability
+        and record.expected_route == item.expected_route
+        and record.chunk_judgments == item.chunk_judgments
+    )
 
 
 class SourceSnapshotV1(StrictModel):
@@ -432,11 +467,21 @@ def validate_corpus(manifest_path: Path) -> dict[str, Any]:
         if record.role == "ADJUDICATOR":
             if any(parent.role != "ANNOTATOR" for parent in parents):
                 raise ValueError("adjudicator parents must be independent annotations")
-            if len({parent.annotator_id for parent in parents}) < 2:
-                raise ValueError("adjudicator parents must have distinct annotators")
+            if len({_reviewer_identity(parent) for parent in parents}) < 2:
+                raise ValueError("adjudicator parents must have independent reviewers")
         if record.role == "EXPERT_REVIEWER":
-            if any(parent.role != "ADJUDICATOR" for parent in parents):
-                raise ValueError("expert reviewer parents must be adjudications")
+            direct_consensus = (
+                len(parents) >= 2
+                and all(parent.role == "ANNOTATOR" for parent in parents)
+                and len({_reviewer_identity(parent) for parent in parents}) >= 2
+            )
+            adjudicated_conflict = (
+                len(parents) == 1 and parents[0].role == "ADJUDICATOR"
+            )
+            if not (direct_consensus or adjudicated_conflict):
+                raise ValueError(
+                    "expert reviewer must reference independent annotations or adjudication"
+                )
     for item in items:
         records = []
         for annotation_id in item.annotation_record_ids:
@@ -449,13 +494,33 @@ def validate_corpus(manifest_path: Path) -> dict[str, Any]:
             if record.dataset_version != manifest.dataset_version:
                 raise ValueError("annotation record dataset_version does not match manifest")
             records.append(record)
-        independent = {
-            record.annotator_id for record in records if record.role == "ANNOTATOR"
-        }
+        independent_records = [record for record in records if record.role == "ANNOTATOR"]
+        independent = {_reviewer_identity(record) for record in independent_records}
         if len(independent) < manifest.quality_gates.minimum_independent_annotators:
-            blockers.append(f"{item.question_id} lacks two independent annotators")
-        if item.annotation_status not in {"ADJUDICATED", "EXPERT_REVIEWED"}:
-            blockers.append(f"{item.question_id} is not adjudicated")
+            blockers.append(f"{item.question_id} lacks two independent reviewers")
+        independent_humans = {
+            record.annotator_id
+            for record in independent_records
+            if record.actor_type == "HUMAN"
+        }
+        if len(independent_humans) < manifest.quality_gates.minimum_independent_annotators:
+            blockers.append(
+                f"{item.question_id} formal corpus requires two human annotators"
+            )
+        if item.annotation_status == "DRAFT":
+            blockers.append(f"{item.question_id} is still draft")
+        if item.agreement_score is None:
+            blockers.append(f"{item.question_id} lacks agreement_score")
+        elif item.agreement_score < 1.0:
+            if item.annotation_status not in {"ADJUDICATED", "EXPERT_REVIEWED"}:
+                blockers.append(f"{item.question_id} has conflict requiring adjudication")
+        elif item.annotation_status == "DOUBLE_ANNOTATED":
+            if any(
+                not _record_matches_item(record, item) for record in independent_records
+            ):
+                blockers.append(
+                    f"{item.question_id} consensus labels do not match independent reviews"
+                )
         needs_expert = (
             item.difficulty in manifest.quality_gates.expert_review_difficulties
             or bool(
@@ -465,8 +530,21 @@ def validate_corpus(manifest_path: Path) -> dict[str, Any]:
         )
         if needs_expert and item.annotation_status != "EXPERT_REVIEWED":
             blockers.append(f"{item.question_id} requires expert review")
-        if item.agreement_score is None:
-            blockers.append(f"{item.question_id} lacks agreement_score")
+        needs_human = (
+            item.split == "acceptance"
+            or item.answerability == "FORBIDDEN"
+            or item.difficulty == "hard"
+            or bool(
+                set(item.question_types)
+                & {
+                    "standards_freshness",
+                    "no_answer_evidence_insufficient",
+                    "adversarial_security",
+                }
+            )
+        )
+        if needs_human and not any(record.actor_type == "HUMAN" for record in records):
+            blockers.append(f"{item.question_id} requires human review")
         if item.final_annotation_id is not None:
             final_record = annotation_by_id.get(item.final_annotation_id)
             if final_record is None:
@@ -479,14 +557,27 @@ def validate_corpus(manifest_path: Path) -> dict[str, Any]:
                 )
                 if final_record.role != expected_role:
                     blockers.append(f"{item.question_id} final annotation role is invalid")
-                if (
-                    final_record.answerability != item.answerability
-                    or final_record.expected_route != item.expected_route
-                    or final_record.chunk_judgments != item.chunk_judgments
-                ):
+                if final_record.actor_type != "HUMAN":
+                    blockers.append(
+                        f"{item.question_id} final arbitration or expert review must be human"
+                    )
+                if not _record_matches_item(final_record, item):
                     blockers.append(f"{item.question_id} final labels do not match annotation")
 
+    engineering_blockers = [
+        blocker
+        for blocker in blockers
+        if not blocker.startswith("primary_item_count ")
+        and not blocker.startswith("LOCKED corpus ")
+        and "formal corpus requires two human annotators" not in blocker
+    ]
+    if not ENGINEERING_MIN_ITEMS <= primary_count <= ENGINEERING_MAX_ITEMS:
+        engineering_blockers.append(
+            f"primary_item_count {primary_count} is outside engineering range "
+            f"[{ENGINEERING_MIN_ITEMS}, {ENGINEERING_MAX_ITEMS}]"
+        )
     lock_ready = not blockers
+    engineering_ready = not engineering_blockers
     return {
         "schema_version": "retrieval_evaluation_validation_report_v1",
         "dataset_id": manifest.dataset_id,
@@ -496,6 +587,9 @@ def validate_corpus(manifest_path: Path) -> dict[str, Any]:
         "item_count": len(items),
         "primary_item_count": primary_count,
         "online_hard_case_count": split_counts["online_hard_cases"],
+        "engineering_target_range": [ENGINEERING_MIN_ITEMS, ENGINEERING_MAX_ITEMS],
+        "engineering_ready": engineering_ready,
+        "engineering_blockers": engineering_blockers,
         "annotation_record_count": len(annotations),
         "split_counts": dict(sorted(split_counts.items())),
         "question_type_counts": dict(sorted(type_counts.items())),
@@ -510,6 +604,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--require-lock-ready", action="store_true")
+    parser.add_argument("--require-engineering-ready", action="store_true")
     return parser
 
 
@@ -526,7 +621,13 @@ def main() -> int:
     else:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(serialized, encoding="utf-8")
-        print(f"formal corpus report={args.output}; lock_ready={report['lock_ready']}")
+        print(
+            f"formal corpus report={args.output}; "
+            f"engineering_ready={report['engineering_ready']}; "
+            f"lock_ready={report['lock_ready']}"
+        )
+    if args.require_engineering_ready and not report["engineering_ready"]:
+        return 1
     if (args.require_lock_ready or report["status"] == "LOCKED") and not report["lock_ready"]:
         return 1
     return 0

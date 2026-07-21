@@ -1,11 +1,15 @@
 {
   "schema_version": "retrieval_annotation_record_v1",
-  "annotation_id": "ann.fixture.answerable.final",
+  "annotation_id": "ann.fixture.answerable.gpt",
   "dataset_version": "fixture-v1",
   "question_id": "fixture.formal.answerable",
-  "role": "ADJUDICATOR",
-  "annotator_id": "adjudicator_fixture",
-  "submitted_at": "2026-07-21T09:10:00+08:00",
+  "role": "ANNOTATOR",
+  "annotator_id": "gpt_reviewer_fixture",
+  "actor_type": "GPT",
+  "model_identity": "gpt-fixed-evaluation-model",
+  "prompt_version": "retrieval-judge-v1",
+  "temperature": 0.0,
+  "submitted_at": "2026-07-21T09:05:00+08:00",
   "answerability": "ANSWERABLE",
   "expected_route": "HYBRID_QA",
   "chunk_judgments": [
@@ -18,9 +22,6 @@
       "supports_claims": ["claim_fixture_001"]
     }
   ],
-  "notes": "Adjudicated public fixture label.",
-  "based_on_annotation_ids": [
-    "ann.fixture.answerable.a",
-    "ann.fixture.answerable.b"
-  ]
+  "notes": "Synthetic example of a versioned GPT-assisted first-pass annotation.",
+  "based_on_annotation_ids": []
 }

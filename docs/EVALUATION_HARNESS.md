@@ -18,6 +18,8 @@ Harness 也支持 `--retrieval-backend sqlite_fts5 --index <path>`。此时报�
 
 本文件描述的薄 Harness 继续服务于 6 条公开 Fixture 和 15 题工程 Canary。正式 500 条检索评测使用独立的版本化 Manifest、双标注谱系、泄漏检查和 Recall/MRR/nDCG 指标，见 [正式检索评测体系 V1](FORMAL_RETRIEVAL_EVALUATION_V1.md)。两者不能互相替代。
 
+后续阶段默认先按 [风险驱动测试策略](RISK_BASED_TESTING_STRATEGY.md) 运行受影响测试、固定 Canary 和 80 题工程基线；只有共享层变化、失败信号或正式验收才扩大范围。
+
 ## 已提交基线
 
 `evaluation/suites/fixture-smoke-v1.jsonl` 包含 6 个公开 Fixture 用例：

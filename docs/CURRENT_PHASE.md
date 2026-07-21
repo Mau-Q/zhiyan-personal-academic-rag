@@ -2,7 +2,7 @@
 
 ## Status
 
-`SOURCE_PHASE_0_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / FORMAL_EVAL_FRAMEWORK_READY / MEMBER_B_REMOTE_PENDING`
+`SOURCE_PHASE_0_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / RISK_BASED_TESTING_READY / MEMBER_B_REMOTE_PENDING`
 
 Phase ID：`source-phase0-foundation-in-progress`
 
@@ -66,14 +66,18 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 新增 Manifest、样本、独立标注/仲裁和排名结果合同，固定 0～3 级相关性、泄漏组、Acceptance 盲测和 SHA-256 身份；
 - 新增正式集校验器与 Recall/Precision/MRR/nDCG、无答案、越权和延迟指标，多后端报告只输出差值、不自动宣布胜者；
 - 公开 4 条合成 Fixture 仅证明合同和工具可执行，校验结果保持 `NOT_LOCK_READY`，不计入正式 500 条或 15 题 Canary。
+- 用户批准后续阶段采用风险驱动的最小充分测试：默认 80 题工程基线，允许 60～100 题按风险调整；
+- GPT 可承担候选生成、低风险初标和回归，人工集中于 Acceptance、冲突、无答案、安全、时效和高难问题；
+- 修正评审门禁：一致样本停在双评审，不再要求每题仲裁；相同 GPT 模型重复运行不算独立评审；
+- 原方案 200～500 条初始评测和 800～1500 条正式验收继续作为未完成需求，不用 80 题工程结果替代。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
-- 已实现能力：本地 PDF 到 Answer API、公开 Fixture 评测、本地三论文四路检索基线、正式 500 条评测的合同/校验/指标框架；
-- 未完成能力：真实 500 条人工评测集与双标注、正式范围/SLO、成员 B 远程准备、PostgreSQL、真实 Elasticsearch、Milvus、真实生成模型和远程模型服务；
-- 下一工作优先冻结首期知识源和用户分布，再采集、双标注、仲裁并锁定真实 500 条；重排、远程模型与生产索引参数保持后置。
+- 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
+- 未完成能力：真实 80 题工程集、原方案正式规模与双人工标注、正式范围/SLO、成员 B 远程准备、PostgreSQL、真实 Elasticsearch、Milvus、真实生成模型和远程模型服务；
+- 下一工作优先冻结首期知识源和用户分布，再建立 80 题 GPT 辅助工程基线；重排、原方案正式扩容、远程模型与生产索引参数保持证据驱动。
 
 ## 验收
 
@@ -83,8 +87,10 @@ Phase ID：`source-phase0-foundation-in-progress`
 - `make sqlite-fts-fixture-smoke` 必须通过 6/6；
 - `make vector-fixture-smoke` 和 `make rrf-fixture-smoke` 必须分别通过 6/6；
 - 本地三论文向量基线必须如实记录 12/15，RRF 必须通过 15/15；
-- `make formal-evaluation-fixture` 必须通过，且公开 4 条 Fixture 必须保持 `lock_ready=false`；
+- `make formal-evaluation-fixture` 必须通过，且公开 4 条 Fixture 必须保持 `engineering_ready=false / lock_ready=false`；
 - `python3 scripts/export_evaluation_contracts.py --check` 必须通过；
+- GPT 标注必须携带模型身份、Prompt 版本和温度，且不得担任仲裁或专家；
+- 一致低风险题不得因流程惯性强制增加仲裁，Acceptance 与高风险题不得取消人工复核；
 - `git diff --check` 必须通过；
 - 不得出现被跟踪的 `runtime/`、PDF、`.env`、数据或存储目录；
 - 仓库状态、能力清单和本文件必须一致。
@@ -101,16 +107,16 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 ## Current boundary
 
-当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0，仓库 M0、本地 RRF M1 和正式评测框架只是已验证的子基线。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；正式评测执行边界为 `FRAMEWORK_READY / DATA_COLLECTION_PENDING`。它们不证明真实 500 条评测、PostgreSQL、Elasticsearch、Milvus、远程部署、真实生成模型或生产参数已完成。PDF、真实 Chunk、私有问题集、标注记录、索引和运行报告不得提交。
+当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0，仓库 M0、本地 RRF M1 和评测工具只是已验证的子基线。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；近期评测执行边界为 `RISK_BASED_80_PROFILE_READY / DATA_COLLECTION_PENDING`，原方案执行边界为 `SOURCE_FORMAL_PENDING`。它们不证明真实 80 题、原方案正式规模、PostgreSQL、Elasticsearch、Milvus、远程部署、真实生成模型或生产参数已完成。PDF、真实 Chunk、私有问题集、标注记录、索引和运行报告不得提交。
 
 ## Next gate
 
-1. **共享范围与评测线：** 评测框架已完成；冻结首期知识源、用户/语言分布后，采集并双标注真实 500 条，完成仲裁和专家复核；
-2. **A 本地工程线：** 本地真实向量、RRF 和正式指标工具已完成；等待锁定的 `dev/test` 运行四路正式对比，不在没有证据增益时接入重排；
+1. **共享范围与评测线：** 冻结首期知识源和用户/语言分布后，建立默认 80 条工程集；GPT 初标，人工确认 Acceptance、冲突和高风险题；
+2. **A 本地工程线：** 本地真实向量、RRF 和指标工具已完成；80 题就绪后运行四路工程对比，不在没有证据增益时接入重排；
 3. **B 远程基础设施线：** 按 Issue #9 完成主机盘点，拉取同一 `main` 运行全量测试和 Fixture 冒烟；
 4. B 的基线通过后，按 PostgreSQL、Elasticsearch、Milvus、模型服务逐项建立真实状态，不同时切换多个基础设施变量；
 5. A 已完成同一 Canary 的词项、SQLite BM25、向量和混合检索比较；真实 LLM 仍放在扩展评测和远程检索证据链稳定后单独接入；
-6. 只有范围、锁定的 500 条初始评测、真实 ES/Milvus 基线和模型资源选型都形成证据后，才能关闭最高方案阶段 0。
+6. 80 题只用于近期工程决策；只有恢复原方案验收口径，并让范围、正式评测、真实 ES/Milvus 基线和模型资源选型都形成证据后，才能按最高方案关闭阶段 0。
 
 ## Prohibited shortcuts
 

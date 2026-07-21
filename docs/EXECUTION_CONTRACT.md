@@ -17,7 +17,7 @@
 
 ## 3. 验证
 
-普通低风险任务的最低门禁：
+验证按 `docs/RISK_BASED_TESTING_STRATEGY.md` 选择最小充分范围。普通低风险任务的最低门禁：
 
 ```bash
 python3 scripts/validate_harness_contract.py
@@ -25,7 +25,7 @@ python3 scripts/validate_harness_contract.py
 git diff --check
 ```
 
-阶段状态、合同、依赖、公共接口或跨模块代码变化时运行 `make test`；按风险增加真实 PDF、HTTP、远程或安全验证。缺少某个工具时必须区分“环境未安装”和“源码失败”。
+阶段状态、合同、依赖、公共接口或跨模块代码变化时运行 `make test`；按风险增加固定 Canary、80 题工程基线、真实 PDF、HTTP、远程或安全验证。没有对应变量和失败信号时，不提前展开完整性能矩阵或大规模评审。缺少某个工具时必须区分“环境未安装”和“源码失败”。
 
 ## 4. 阶段结果
 
