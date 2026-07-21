@@ -5,6 +5,7 @@ on:
     paths:
       - "contracts/**"
       - "backend/**"
+      - "evaluation/**"
       - "fixtures/**"
       - "tests/**"
       - "pyproject.toml"
@@ -15,6 +16,7 @@ on:
     paths:
       - "contracts/**"
       - "backend/**"
+      - "evaluation/**"
       - "fixtures/**"
       - "tests/**"
       - "pyproject.toml"

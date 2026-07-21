@@ -19,13 +19,14 @@
 
 ## 当前状态
 
-当前阶段为 `M0_COMPLETE / LOCAL_PDF_RAG_COMPLETE / MEMBER_B_REMOTE_PENDING`：本地 PDF 解析、`ChunkRecordV1`、授权检索、拒答、引用和非流式 Answer API 已形成完整链路并合并到 `main`；成员 B 并行负责远程主机准备与部署验证。
+当前阶段为 `M0_COMPLETE / M1_EVALUATION_HARNESS_READY / MEMBER_B_REMOTE_PENDING`：本地 PDF 解析、`ChunkRecordV1`、授权检索、拒答、引用和非流式 Answer API 已形成完整链路；M1 薄评测 Harness 已提供可回答、无证据和越权三类基线；成员 B 并行负责远程主机准备与部署验证。
 
 - GitHub：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 - 下一门禁：[`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)
 - 阶段 0 范围：[`docs/STAGE_0_SCOPE.md`](docs/STAGE_0_SCOPE.md)
 - 双人分工：[`docs/TEAM_WORK_SPLIT.md`](docs/TEAM_WORK_SPLIT.md)
 - 合同入口：[`contracts/README.md`](contracts/README.md)
+- 薄评测 Harness：[`docs/EVALUATION_HARNESS.md`](docs/EVALUATION_HARNESS.md)
 
 ## 双人开发边界
 
@@ -81,6 +82,14 @@ python3 -m backend.ingestion.cli \
 该命令只处理有文本层的本地 PDF，不调用网络、OCR、远程模型、数据库或向量库。完整边界见 [`docs/LOCAL_PDF_INGESTION.md`](docs/LOCAL_PDF_INGESTION.md)。
 
 真实 TRACER PDF 的本地解析与 Answer API 结果见 [`docs/LOCAL_PDF_CANARY.md`](docs/LOCAL_PDF_CANARY.md)。仓库只记录身份、命令和验收结论，不保存 PDF 或真实 Chunk 输出。
+
+## M1 薄评测 Harness
+
+```bash
+make evaluation-smoke
+```
+
+该命令用版本化 JSONL 用例调用现有 RAG Answer API，并把机器可读报告写入被 Git 忽略的 `runtime/evaluation/`。当前公开基线只验证 Fixture/Fake LLM 下的状态、证据页码和权限边界；真实三篇论文问题集保留在本地。完整说明见 [`docs/EVALUATION_HARNESS.md`](docs/EVALUATION_HARNESS.md)。
 
 ## 非流式 RAG API
 
