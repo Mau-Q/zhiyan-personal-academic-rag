@@ -2,7 +2,7 @@
 
 ## Status
 
-`STAGE_0 / MEMBER_A_API_COMPLETE / MEMBER_B_PENDING`
+`STAGE_0 / LOCAL_PDF_RAG_COMPLETE / MEMBER_B_REMOTE_PENDING`
 
 ## Completed
 
@@ -22,18 +22,25 @@
 - [PR #8](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/8) 已由成员 A 在 CI 通过后直接合并，[Issue #7](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/7) 已关闭；
 - 成员 A 的授权过滤、确定性检索、Fake LLM、Evidence、Citation、`NO_EVIDENCE` 和非流式 Answer API 已通过 33 项测试；
 - 本地真实 HTTP 冒烟已覆盖 `200/COMPLETED`、`200/NO_EVIDENCE` 和 `403/RAG_FORBIDDEN_SCOPE`。
+- 分工已调整：成员 A 负责完整本地核心链路，成员 B 负责远程主机准备和部署验证；
+- [Issue #4](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/4) 已调整为成员 A 的 PDF 到 `ChunkRecordV1` 任务；
+- 已创建成员 B 的 [Issue #9](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/9)，且远程准备不阻塞 M0；
+- 本地入库、合同、检索、RAG 和 API 共 43 项测试通过；
+- TRACER PDF 的 SHA-256 与样本清单一致，生成 63 个稳定 Chunk，覆盖第 1～10 页，12 个 Chunk 跨页；
+- 真实 PDF 重复入库输出字节一致，63 条合同和相邻链接校验通过；
+- 真实 PDF Chunk 已通过 HTTP 验证 `COMPLETED`、`NO_EVIDENCE` 和 403 越权阻断。
 
 ## Current boundary
 
-当前没有外部阻塞。V1 是成员 A 确认的初始基线；成员 B 可在实现中提出兼容性补充。样本文献只能用于本地工程验证，PDF 本体不得提交。
+当前本地 M0 没有外部阻塞。远程主机、数据库、向量库和真实模型都不是本地链路的前置条件。样本文献只能用于本地工程验证，PDF 和生成的真实 Chunk 本体不得提交。
 
 ## Next gate
 
-1. 成员 B 完成 [Issue #4](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/4) 的 PDF 到 `ChunkRecordV1`；
-2. 使用成员 B 的输出替换测试 Fixture，不修改成员 A 的合同消费逻辑；
-3. 通过 [Issue #5](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/5) 完成一次集中联调；
-4. 验证回答、拒答、越权阻断和引用页码；
-5. 最小链路通过后关闭 M0 并进入下一阶段。
+1. 合并成员 A 的本地 PDF 入库与真实论文联调；
+2. 关闭 [Issue #4](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/4) 和 [Issue #5](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/5)；
+3. 关闭 M0，并为真实索引、模型接入和评测分别建立下一阶段任务；
+4. 成员 B 按 [Issue #9](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/9) 完成远程准备；
+5. 远程拉取同一 `main` 提交运行测试和 Fixture API，不能反向阻塞本地开发。
 
 ## Prohibited shortcuts
 

@@ -19,18 +19,19 @@
 
 ## 当前状态
 
-当前阶段为 `STAGE_0 / MEMBER_A_API_COMPLETE / MEMBER_B_PENDING`：V1 合同、成员 A 的在线 Fixture 消费者和非流式 Answer API 已合并到 `main`，下一门禁是成员 B 的离线产物及首次集中联调。
+当前阶段为 `STAGE_0 / LOCAL_PDF_RAG_COMPLETE / MEMBER_B_REMOTE_PENDING`：本地 PDF 解析、`ChunkRecordV1`、授权检索、拒答、引用和非流式 Answer API 已形成完整链路；成员 B 并行负责远程主机准备与部署验证。
 
 - GitHub：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 - 下一门禁：[`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)
 - 阶段 0 范围：[`docs/STAGE_0_SCOPE.md`](docs/STAGE_0_SCOPE.md)
+- 双人分工：[`docs/TEAM_WORK_SPLIT.md`](docs/TEAM_WORK_SPLIT.md)
 - 合同入口：[`contracts/README.md`](contracts/README.md)
 
 ## 双人开发边界
 
-- 成员 A：在线查询、RAG 回答和系统集成；
-- 成员 B：离线入库、索引和基础设施；
-- 双方通过 `ChunkRecordV1`、`AuthorizedScopeV1`、`IndexVersionV1` 三个版本化静态合同交接。
+- 成员 A：PDF 入库、本地检索、RAG 回答和核心系统集成；
+- 成员 B：远程主机准备、部署验证和后续基础设施状态核验；
+- 双方通过 GitHub 提交和同一 `main` 版本交接，远程工作不阻塞本地最小链路。
 
 ## 仓库边界
 
@@ -63,6 +64,23 @@ python3 -m backend.rag.fixture_consumer \
 ```
 
 该命令只运行授权过滤、确定性词项检索和 Fake LLM 证据拼装。输出明确包含 `FIXTURE_ONLY_FAKE_LLM`，不能作为真实模型或真实索引效果。完整说明见 [`docs/ONLINE_FIXTURE_CONSUMER.md`](docs/ONLINE_FIXTURE_CONSUMER.md)。
+
+## 本地 PDF 入库
+
+```bash
+python3 -m backend.ingestion.cli \
+  --pdf /local/path/paper.pdf \
+  --document-id doc_local_001 \
+  --tenant-id tenant_fixture \
+  --visibility private \
+  --library-scope-id lib_fixture \
+  --strategy section_parent_child_v1 \
+  --output /tmp/chunks-v1.json
+```
+
+该命令只处理有文本层的本地 PDF，不调用网络、OCR、远程模型、数据库或向量库。完整边界见 [`docs/LOCAL_PDF_INGESTION.md`](docs/LOCAL_PDF_INGESTION.md)。
+
+真实 TRACER PDF 的本地解析与 Answer API 结果见 [`docs/LOCAL_PDF_CANARY.md`](docs/LOCAL_PDF_CANARY.md)。仓库只记录身份、命令和验收结论，不保存 PDF 或真实 Chunk 输出。
 
 ## 非流式 RAG API
 

@@ -2,13 +2,13 @@
 
 ## 1. 目标
 
-建立双方可以独立消费的 V1 合同，使成员 A 能基于确定性 Fixture 开发在线问答链路，成员 B 能基于本地 PDF 开发离线入库链路。
+建立一条可以本地独立运行的 V1 最小链路，并让远程环境准备与核心代码解耦并行。
 
 ## 2. 已确定角色
 
-- 成员 A：仓库所有者，负责在线查询、RAG Answer、引用/拒答和后续前端集成；
-- 成员 B：已加入 GitHub，负责 PDF 解析、Chunk、索引和一致性；
-- 双方共同维护 `contracts/` 和 `tests/contracts/`。
+- 成员 A：负责 PDF 入库、Chunk、在线查询、RAG Answer、引用/拒答和核心集成；
+- 成员 B：负责远程主机准备、部署验证和后续基础设施状态核验；
+- `contracts/` 和 `tests/contracts/` 是冻结共享边界，破坏性变更必须先说明。
 
 ## 3. 首个 MVP
 
@@ -39,7 +39,7 @@
 
 `fixtures/sample-corpus-v1.json` 登记 8 篇已完成本地 PDF 可读性检查的 arXiv 文献。PDF 本体不进入 Git；清单中的 `redistribution_allowed=false` 是仓库交付边界，不是对论文版权状态的法律结论。
 
-正式联调前，成员 B 应在本地逐项核对 SHA-256。哈希不匹配的文件不得沿用同一文档版本。
+正式联调前，成员 A 应在本地逐项核对 SHA-256。哈希不匹配的文件不得沿用同一文档版本。
 
 ## 6. 完成门禁
 
@@ -53,8 +53,9 @@
 - [x] 成员 A 确认初始 V1 基线并合并 PR #1；
 - [x] 成员 A 的在线最小消费者通过 Fixture 验证并合并 PR #6；
 - [x] 成员 A 的非流式 Answer API 通过 33 项测试并合并 PR #8；
-- [ ] 成员 B 的离线最小消费者输出符合合同的 Chunk；
-- [ ] 双方使用成员 B 的同一份输出完成集中联调。
+- [x] 成员 A 的本地 PDF 消费者输出符合合同的 Chunk；
+- [x] 同一份真实 PDF 输出已完成回答、拒答、越权和页码联调；
+- [ ] 成员 B 在远程拉取同一 `main` 提交完成部署基线验证。
 
 两名成员现在可以按同一基线并行实现。普通模块 PR 不强制互审；只有 `contracts/` 的破坏性变更或跨成员边界变化需要另一方确认。
 
@@ -64,7 +65,8 @@
 - [Milestone M0：合同冻结与最小链路](https://github.com/Mau-Q/zhiyan-personal-academic-rag/milestone/1)
 - [Issue #2：共同合同评审](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/2)
 - [Issue #3：成员 A 在线 Fixture 消费者](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/3)
-- [Issue #4：成员 B PDF 到 ChunkRecordV1](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/4)
+- [Issue #4：成员 A PDF 到 ChunkRecordV1](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/4)
 - [Issue #5：首次单篇论文集中联调](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/5)
 - [Issue #7：成员 A 非流式 RAG Answer API](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/7)
 - [Merged PR #8：实现非流式 RAG Answer API](https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/8)
+- [Issue #9：成员 B 远程主机准备与部署验证](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/9)
