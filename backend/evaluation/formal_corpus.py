@@ -360,6 +360,12 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def sha256_evaluation_text(path: Path) -> str:
+    """Hash evaluation text with platform-independent newline semantics."""
+    payload = path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return hashlib.sha256(payload).hexdigest()
+
+
 def _load_jsonl(path: Path, model: type[BaseModel]) -> list[Any]:
     records: list[Any] = []
     for line_number, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
@@ -383,13 +389,13 @@ def load_manifest_and_items(
         raise ValueError(f"invalid evaluation manifest: {exc}") from exc
     base = manifest_path.parent
     items_path = base / manifest.items_path
-    if sha256_file(items_path) != manifest.items_sha256:
+    if sha256_evaluation_text(items_path) != manifest.items_sha256:
         raise ValueError("evaluation items SHA-256 does not match manifest")
     items = _load_jsonl(items_path, EvaluationItemV1)
     annotations: list[AnnotationRecordV1] = []
     if manifest.annotation_records_path is not None:
         annotations_path = base / manifest.annotation_records_path
-        if sha256_file(annotations_path) != manifest.annotation_records_sha256:
+        if sha256_evaluation_text(annotations_path) != manifest.annotation_records_sha256:
             raise ValueError("annotation records SHA-256 does not match manifest")
         annotations = _load_jsonl(annotations_path, AnnotationRecordV1)
     return manifest, items, annotations

@@ -9,6 +9,7 @@ from pathlib import Path
 from backend.evaluation.formal_corpus import (
     AnnotationRecordV1,
     EvaluationItemV1,
+    sha256_evaluation_text,
     validate_corpus,
 )
 
@@ -28,6 +29,17 @@ def write_jsonl(path: Path, records: list[dict]) -> str:
 
 
 class FormalCorpusTests(unittest.TestCase):
+    def test_evaluation_hash_normalizes_platform_newlines(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            lf = temporary / "lf.jsonl"
+            crlf = temporary / "crlf.jsonl"
+            lf.write_bytes(b'{"id":1}\n{"id":2}\n')
+            crlf.write_bytes(b'{"id":1}\r\n{"id":2}\r\n')
+            self.assertEqual(
+                sha256_evaluation_text(lf), sha256_evaluation_text(crlf)
+            )
+
     def test_public_fixture_is_valid_but_truthfully_not_lock_ready(self):
         report = validate_corpus(MANIFEST_PATH)
 

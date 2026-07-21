@@ -24,7 +24,7 @@ from backend.evaluation.formal_corpus import (
     AnnotationRecordV1,
     EvaluationItemV1,
     EvaluationManifestV1,
-    sha256_file,
+    sha256_evaluation_text,
 )
 from backend.retrieval.embedding import OllamaEmbeddingProvider
 
@@ -490,8 +490,10 @@ def build_corpus(
     _write_jsonl(annotations_path, annotations)
     manifest_value = manifest.model_dump(mode="json")
     manifest_value["status"] = "ANNOTATION"
-    manifest_value["items_sha256"] = sha256_file(items_path)
-    manifest_value["annotation_records_sha256"] = sha256_file(annotations_path)
+    manifest_value["items_sha256"] = sha256_evaluation_text(items_path)
+    manifest_value["annotation_records_sha256"] = sha256_evaluation_text(
+        annotations_path
+    )
     manifest_path.write_text(
         json.dumps(manifest_value, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
