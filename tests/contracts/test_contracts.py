@@ -61,6 +61,10 @@ class ContractTests(unittest.TestCase):
             validator.validate(chunk)
             self.assertLessEqual(chunk["page_start"], chunk["page_end"])
 
+    def test_fixture_scope_matches_authorized_scope_contract(self):
+        scope = load_json(ROOT / "fixtures" / "authorized-scope-v1.json")
+        self.validator("authorized-scope-v1.schema.json").validate(scope)
+
     def test_fixture_neighbor_links_are_reciprocal(self):
         chunks = load_json(ROOT / "fixtures" / "chunks-v1.json")
         by_id = {chunk["chunk_id"]: chunk for chunk in chunks}

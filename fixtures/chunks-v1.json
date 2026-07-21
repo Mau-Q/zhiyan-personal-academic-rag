@@ -34,5 +34,41 @@
     "parse_version": "fixture_parser_v1",
     "embedding_version": "fixture_embedding_v1",
     "is_active": true
+  },
+  {
+    "chunk_id": "chunk_fixture_unauthorized",
+    "document_id": "doc_fixture_private_other_tenant",
+    "version_id": "version_fixture_001",
+    "text": "Quantum entanglement is the confidential benchmark topic for another tenant.",
+    "section_path": "4 Private Evaluation",
+    "page_start": 7,
+    "page_end": 7,
+    "parent_chunk_id": null,
+    "previous_chunk_id": null,
+    "next_chunk_id": null,
+    "tenant_id": "tenant_other",
+    "visibility": "private",
+    "library_scope_ids": ["lib_other"],
+    "parse_version": "fixture_parser_v1",
+    "embedding_version": "fixture_embedding_v1",
+    "is_active": true
+  },
+  {
+    "chunk_id": "chunk_fixture_inactive",
+    "document_id": "doc_fixture_001",
+    "version_id": "version_fixture_old",
+    "text": "The obsolete evaluation protocol used a deprecated scoring method.",
+    "section_path": "Archive > Evaluation",
+    "page_start": 8,
+    "page_end": 8,
+    "parent_chunk_id": null,
+    "previous_chunk_id": null,
+    "next_chunk_id": null,
+    "tenant_id": "tenant_fixture",
+    "visibility": "private",
+    "library_scope_ids": ["lib_fixture"],
+    "parse_version": "fixture_parser_v0",
+    "embedding_version": "fixture_embedding_v0",
+    "is_active": false
   }
 ]
