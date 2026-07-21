@@ -83,6 +83,8 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 使用同一本机 BGE-M3 对题面与参考答案进行语义筛查，形成 443 个泄漏组；原拆分 24 个跨组冲突通过按组移动 30 题消除，最终仍为 `300/100/100`；
 - 正式工作区已回填 500 个 `GPT_ASSISTED` items 与 500 条带模型、Prompt、温度和响应谱系的 Qwen 标注，Manifest 为 `ANNOTATION`；
 - 当前正式校验结构、题量、配额和泄漏均通过，但 `engineering_ready=false / lock_ready=false`：100 条 Acceptance、25 条冲突、50 条 hard/standards、75 条无证据/越权/安全题尚未完成人工确认；四类合并去重为 213 题，其中 75 题同时覆盖 362 条低风险 `dev/test` 的 20.7%，无需再单独增加抽检题量。
+- 已生成一个去重风险复核包，不拆成人工批次：213 条只读证据队列和 213 条预填但保持 `PENDING` 的决策模板；ZIP 含 README、SHA-256 清单和汇总，压缩包完整性与成员边界已验证；
+- 复核包按 `P0/P1/P2=50/126/37` 排序，50 条要求领域专家、163 条要求普通人工复核；当前真实进度保持 `0/213`，未把空模板计作人工结果。
 
 ## 输入
 
@@ -90,7 +92,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
 - 未完成能力：风险驱动人工确认、原方案双人工标注、正式范围/SLO、成员 B 远程准备、PostgreSQL、真实 Elasticsearch、Milvus、真实生成模型和远程模型服务；
-- 下一工作是生成去重的风险复核清单并完成人工确认；人工门禁通过后运行 500 题词项、BM25、向量和 RRF 对比。重排、原方案人工升级、远程模型与生产索引参数保持证据驱动。
+- 下一工作是只填写复核包内一个 `risk-review-decisions-v1.jsonl`，再通过导入校验器回填人工谱系；人工门禁通过后运行 500 题词项、BM25、向量和 RRF 对比。重排、原方案人工升级、远程模型与生产索引参数保持证据驱动。
 
 ## 验收
 
@@ -120,11 +122,11 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 ## Current boundary
 
-当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0，仓库 M0、本地 RRF M1 和评测工具只是已验证的子基线。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；近期评测执行边界为 `GPT_ASSISTED_ITEMS_500 / LEAKAGE_GROUPS_443 / SPLITS_300_100_100 / HUMAN_RISK_REVIEW_PENDING`，原方案执行边界为 `SOURCE_FORMAL_DOUBLE_HUMAN_PENDING`。它们不证明风险人工门禁、原方案双人工口径、PostgreSQL、Elasticsearch、Milvus、远程部署、真实 RAG 生成模型或生产参数已完成。PDF、真实 Chunk、私有问题集、标注记录、索引和运行报告不得提交。
+当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0，仓库 M0、本地 RRF M1 和评测工具只是已验证的子基线。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；近期评测执行边界为 `GPT_ASSISTED_ITEMS_500 / LEAKAGE_GROUPS_443 / SPLITS_300_100_100 / RISK_REVIEW_PACKAGE_213_READY / HUMAN_DECISIONS_0_OF_213`，原方案执行边界为 `SOURCE_FORMAL_DOUBLE_HUMAN_PENDING`。它们不证明风险人工门禁、原方案双人工口径、PostgreSQL、Elasticsearch、Milvus、远程部署、真实 RAG 生成模型或生产参数已完成。PDF、真实 Chunk、私有问题集、标注记录、索引和运行报告不得提交。
 
 ## Next gate
 
-1. **共享范围与评测线：** 500 条 GPT 辅助 items、标注和泄漏拆分已完成；下一步只做人为风险复核并复用其覆盖低风险抽检，不恢复全量双人工；
+1. **共享范围与评测线：** 500 条 GPT 辅助 items、标注、泄漏拆分和 213 题单一复核包已完成；下一步填写一个决策文件并复用风险复核覆盖低风险抽检，不恢复全量双人工；
 2. **A 本地工程线：** 本地真实向量、RRF 和指标工具已完成；风险人工门禁通过后运行 500 题四路工程对比，不在没有证据增益时接入重排；
 3. **B 远程基础设施线：** 按 Issue #9 完成主机盘点，拉取同一 `main` 运行全量测试和 Fixture 冒烟；
 4. B 的基线通过后，按 PostgreSQL、Elasticsearch、Milvus、模型服务逐项建立真实状态，不同时切换多个基础设施变量；

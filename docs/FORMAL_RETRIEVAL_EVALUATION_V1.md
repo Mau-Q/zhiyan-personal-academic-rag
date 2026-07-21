@@ -170,6 +170,18 @@ python3 scripts/build_assisted_formal_corpus.py \
 
 实跑得到 68 条匹配边、443 个泄漏组，其中 33 个为多题组，最大组 7 题。原拆分有 24 个组跨越多个 split；按组重分配 30 题后恢复 `dev/test/acceptance=300/100/100`，跨拆分泄漏组为 0。正式工作区现有 500 个 `GPT_ASSISTED` items 和 500 条 Qwen 标注记录，Manifest 状态为 `ANNOTATION`。25 个冲突候选以及 Acceptance、无证据/越权/安全题和专业高难题仍须按风险策略人工确认，四类合并去重为 213 题；其中 75 题已覆盖低风险 `dev/test` 的 20.7%，因此不再额外制造一套抽检工作。人工记录尚未回填前不得标记为 `engineering_ready` 或 `LOCKED`。
 
+人工复核不再拆成多个批次。用一个命令生成单一去重包：
+
+```bash
+python3 scripts/prepare_risk_review_package.py \
+  --manifest runtime/evaluation/formal-retrieval-v1/manifest.json \
+  --batch-dir runtime/evaluation/formal-retrieval-v1/generation-v1/batches \
+  --output-dir runtime/evaluation/formal-retrieval-v1/risk-review-package-v1 \
+  --created-at 2026-07-21T18:01:21+08:00
+```
+
+包内 `risk-review-queue-v1.jsonl` 为 213 条只读问题、Qwen 提议和冻结 Chunk 文本，`risk-review-decisions-v1.jsonl` 为唯一需要填写的文件。每题只出现一次，多种风险通过 `review_reasons` 合并；模板预填现有标签以减少机械录入，但 `review_outcome` 全部保持 `PENDING`。实跑分布为 `P0/P1/P2=50/126/37`、`HUMAN_EXPERT/HUMAN_REVIEWER=50/163`，当前人工完成数为 0。ZIP 只含 README、队列、决策模板、汇总和 SHA-256 清单，不含 `.env`、PDF 或其他运行文件。
+
 验证公开设计 Fixture：
 
 ```bash
@@ -209,8 +221,9 @@ python3 -m backend.evaluation.retrieval_metrics \
 
 ## 下一门禁
 
-1. 三论文 316 Chunk、500 个题目与 GPT 初标、443 个泄漏组和 300/100/100 拆分已经建立；
-2. 按风险策略人工确认 Acceptance、冲突、无证据/越权/安全题和专业高难题；已覆盖的低风险 `dev/test` 复核计入 10%～20% 分层抽检，不重复制造人工工作；
-3. 风险驱动人工门禁通过后运行词项、BM25、向量和 RRF 的工程对比；
-4. 只有 500 题证明稳定排序缺口后，才打开重排实现门禁；
-5. 只有准备按最高方案正式验收时，才把同规模题集升级为双人工标注并进入 `LOCKED`。
+1. 三论文 316 Chunk、500 个题目与 GPT 初标、443 个泄漏组、300/100/100 拆分和 213 题单一风险复核包已经建立；
+2. 只填写一个决策文件，完成人工 Acceptance、冲突、无证据/越权/安全题和专业高难复核；已覆盖的低风险 `dev/test` 复核计入 10%～20% 分层抽检；
+3. 实现严格导入器：拒绝 `PENDING`、标签哈希漂移、缺失身份/时区、普通 reviewer 冒充专家和未解释的标签修改；
+4. 风险驱动人工门禁通过后运行词项、BM25、向量和 RRF 的工程对比；
+5. 只有 500 题证明稳定排序缺口后，才打开重排实现门禁；
+6. 只有准备按最高方案正式验收时，才把同规模题集升级为双人工标注并进入 `LOCKED`。
