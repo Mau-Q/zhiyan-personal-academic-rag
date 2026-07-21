@@ -138,13 +138,24 @@
       ]
     },
     {
+      "id": "assisted_leakage_grouping_and_import",
+      "status": "READY",
+      "owner": "A",
+      "evidence": [
+        "scripts/build_assisted_formal_corpus.py",
+        "tests/evaluation/test_build_assisted_formal_corpus.py",
+        "docs/FORMAL_RETRIEVAL_EVALUATION_V1.md"
+      ]
+    },
+    {
       "id": "formal_evaluation_corpus",
       "status": "PARTIAL",
       "owner": "SHARED",
       "evidence": [
         "docs/REQUIREMENTS_TRACEABILITY.md",
         "docs/FORMAL_RETRIEVAL_EVALUATION_V1.md",
-        "evaluation/formal/fixture-manifest-v1.json"
+        "evaluation/formal/fixture-manifest-v1.json",
+        "scripts/build_assisted_formal_corpus.py"
       ]
     },
     {

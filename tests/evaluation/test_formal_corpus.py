@@ -40,6 +40,17 @@ class FormalCorpusTests(unittest.TestCase):
         self.assertEqual(report["engineering_target_size"], 500)
         self.assertTrue(any("below target_size" in value for value in report["blockers"]))
 
+    def test_negative_and_security_items_require_human_review(self):
+        report = validate_corpus(MANIFEST_PATH)
+
+        for question_id in ("fixture.formal.no_evidence", "fixture.formal.forbidden"):
+            self.assertTrue(
+                any(
+                    blocker == f"{question_id} requires human review"
+                    for blocker in report["engineering_blockers"]
+                )
+            )
+
     def test_online_hard_cases_do_not_count_toward_primary_target(self):
         report = validate_corpus(MANIFEST_PATH)
 

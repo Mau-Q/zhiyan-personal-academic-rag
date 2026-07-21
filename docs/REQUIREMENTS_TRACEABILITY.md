@@ -43,7 +43,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | SR-08 | 证据上下文、真实 LLM、强制引用、校验与拒答 | `PARTIAL` | Evidence/Citation、`NO_EVIDENCE`、Fake LLM Answer API | 真实模型、主张支持校验和冲突处理未实现 |
 | SR-09 | 问答 API、SSE、Evidence API、Agent Evidence API 和原文定位 | `PARTIAL` | 非流式 Answer API、SSE 文件合同、PDF 页码 | SSE 运行、Evidence API、Agent API 和鉴权预览未实现 |
 | SR-10 | Trace、反馈、指标、告警和运营闭环 | `PARTIAL` | Trace 合同与评测报告结构 | 持久化、反馈 API、看板、告警和难例回流未实现 |
-| SR-11 | 200～500 条初始评测，正式 800～1500 条与专家复核 | `PARTIAL` | 15 题 Canary；原方案兼容合同；GPT 辅助 500 题策略；三论文 316 Chunk 源快照已冻结 | 题集仍为 0/500；原方案双人工标注和正式盲测未完成 |
+| SR-11 | 200～500 条初始评测，正式 800～1500 条与专家复核 | `PARTIAL` | 15 题 Canary；原方案兼容合同；三论文 316 Chunk 源快照；500 条 GPT 辅助 items/标注；443 个语义泄漏组且拆分无跨组泄漏 | 风险驱动人工确认、原方案双人工标注和正式盲测未完成 |
 | SR-12 | 性能、容量、故障、安全、灰度和回滚 | `NOT_STARTED` | 本地单元/合同/权限边界测试 | 远程资源、目标规模压测、故障注入、专项安全与发布未验收 |
 
 `COMPLETE`、`PARTIAL`、`NOT_STARTED` 均按最高方案的完整口径判断，不用仓库内部里程碑结果替代。
@@ -52,7 +52,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 
 | 方案阶段 | 当前判断 | 说明 |
 |---|---|---|
-| 阶段 0：范围冻结与基线 | `IN_PROGRESS` | 有本地范围、15 题 Canary、原方案兼容框架和 GPT 辅助 500 题策略，但真实题集、原方案人工口径、目标语料/并发和远程资源仍未冻结 |
+| 阶段 0：范围冻结与基线 | `IN_PROGRESS` | 有本地范围、15 题 Canary、原方案兼容框架和 500 条 GPT 辅助工程集，但风险驱动人工确认、原方案人工口径、目标语料/并发和远程资源仍未冻结 |
 | 阶段 1：数据与索引底座 | `PARTIAL` | 本地 PDF/Chunk、SQLite BM25 和真实 BGE-M3 精确向量链路可用，但 PostgreSQL、ES、Milvus、Outbox 和完整生命周期未完成 |
 | 阶段 2：基础 RAG MVP | `PARTIAL` | 非流式 API、Evidence、拒答和本地 RRF 可运行，但仍无真实生成模型与远程混合检索 |
 | 阶段 3：复杂科研问答 | `NOT_STARTED` | 暂未实现比较、多跳、时效、主张级校验和 Agent Evidence API |

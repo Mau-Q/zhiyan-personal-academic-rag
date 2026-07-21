@@ -550,7 +550,12 @@ def validate_corpus(manifest_path: Path) -> dict[str, Any]:
         )
         if needs_expert and item.annotation_status != "EXPERT_REVIEWED":
             blockers.append(f"{item.question_id} requires expert review")
-        needs_human = item.split == "acceptance"
+        needs_human = (
+            item.split == "acceptance"
+            or item.answerability
+            in {"CONFLICTING_EVIDENCE", "NO_EVIDENCE", "FORBIDDEN"}
+            or "adversarial_security" in item.question_types
+        )
         if needs_human and not any(record.actor_type == "HUMAN" for record in records):
             blockers.append(f"{item.question_id} requires human review")
         is_low_risk_dev_test = (

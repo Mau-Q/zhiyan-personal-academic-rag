@@ -155,7 +155,20 @@ python3 scripts/finalize_assisted_candidates.py \
   --output-dir runtime/evaluation/formal-retrieval-v1/qwen3.7-plus-finalized-v1
 ```
 
-最终化工具从冻结 slot 恢复主题型、文档范围和 answerability，将自由文本路由固定为 `HYBRID_QA`，从相关性判断派生引用，并让无证据/越权题保持无支持证据。当前输出为 500 个唯一题面、500 个通过 `EvaluationItemV1` 的草稿。25 个冲突候选仍须定向人工复核；近似问题和共享答案模板的泄漏组完成前，不覆盖正式 `items-v1.jsonl`。
+最终化工具从冻结 slot 恢复主题型、文档范围和 answerability，将自由文本路由固定为 `HYBRID_QA`，从相关性判断派生引用，并让无证据/越权题保持无支持证据。输出为 500 个唯一题面、500 个通过 `EvaluationItemV1` 的草稿。
+
+随后使用本机同一 Ollama `bge-m3:latest` 对完整题面和参考答案分别编码，按题面高相似、同文档答案模板高相似、共享 Chunk 题面相似和题面/答案联合相似四条规则建立泄漏组：
+
+```bash
+python3 scripts/build_assisted_formal_corpus.py \
+  --candidates runtime/evaluation/formal-retrieval-v1/qwen3.7-plus-finalized-v1/normalized-candidates-v1.jsonl \
+  --manifest runtime/evaluation/formal-retrieval-v1/manifest.json \
+  --embedding-cache runtime/evaluation/formal-retrieval-v1/qwen3.7-plus-finalized-v1/leakage-embedding-cache-v1.json \
+  --report runtime/evaluation/formal-retrieval-v1/leakage-and-import-report-v1.json \
+  --submitted-at 2026-07-21T17:50:09+08:00
+```
+
+实跑得到 68 条匹配边、443 个泄漏组，其中 33 个为多题组，最大组 7 题。原拆分有 24 个组跨越多个 split；按组重分配 30 题后恢复 `dev/test/acceptance=300/100/100`，跨拆分泄漏组为 0。正式工作区现有 500 个 `GPT_ASSISTED` items 和 500 条 Qwen 标注记录，Manifest 状态为 `ANNOTATION`。25 个冲突候选以及 Acceptance、无证据/越权/安全题和专业高难题仍须按风险策略人工确认，四类合并去重为 213 题；其中 75 题已覆盖低风险 `dev/test` 的 20.7%，因此不再额外制造一套抽检工作。人工记录尚未回填前不得标记为 `engineering_ready` 或 `LOCKED`。
 
 验证公开设计 Fixture：
 
@@ -196,9 +209,8 @@ python3 -m backend.evaluation.retrieval_metrics \
 
 ## 下一门禁
 
-1. 三论文 316 Chunk 源快照已经冻结，500 个配额槽位和模型请求也已准备；
-2. 并发执行 Qwen3.7-Plus，校验、去重并回填 500 条工程问题和泄漏组；
-3. GPT 完成候选整理和低风险初标，人工确认 Acceptance、冲突与专业高难题；
-4. 运行词项、BM25、向量和 RRF 的工程对比；
-5. 只有 500 题证明稳定排序缺口后，才打开重排实现门禁；
-6. 只有准备按最高方案正式验收时，才把同规模题集升级为双人工标注并进入 `LOCKED`。
+1. 三论文 316 Chunk、500 个题目与 GPT 初标、443 个泄漏组和 300/100/100 拆分已经建立；
+2. 按风险策略人工确认 Acceptance、冲突、无证据/越权/安全题和专业高难题；已覆盖的低风险 `dev/test` 复核计入 10%～20% 分层抽检，不重复制造人工工作；
+3. 风险驱动人工门禁通过后运行词项、BM25、向量和 RRF 的工程对比；
+4. 只有 500 题证明稳定排序缺口后，才打开重排实现门禁；
+5. 只有准备按最高方案正式验收时，才把同规模题集升级为双人工标注并进入 `LOCKED`。
