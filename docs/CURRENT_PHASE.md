@@ -2,9 +2,9 @@
 
 ## Status
 
-`M0_COMPLETE / REPOSITORY_HARNESS_READY / M1_EVALUATION_HARNESS_READY / MEMBER_B_REMOTE_PENDING`
+`M0_COMPLETE / REPOSITORY_HARNESS_READY / M1_LOCAL_3_PAPER_EVALUATION_READY / MEMBER_B_REMOTE_PENDING`
 
-Phase ID：`m1-repository-harness-ready`
+Phase ID：`m1-local-3-paper-evaluation-ready`
 
 ## Completed
 
@@ -42,18 +42,23 @@ Phase ID：`m1-repository-harness-ready`
 - 明确仓库 Harness 与 RAG 评测 Harness 的职责边界。
 - 加入仓库 Harness 与 Git 流程测试后，全仓共 54 项测试通过。
 - 简化 Git 流程：成员 A 普通低风险任务本地门禁通过后直接推送 `main`，高风险和成员 B 任务保留 PR。
+- 完成本地三论文摄取：TRACER、SciNet 和 EVMbench 的 PDF 身份校验与解析均通过，共生成 316 个 Chunk；
+- 人工完成 15 题本地评测集，覆盖 9 个目标页可回答题、3 个无证据题和 3 个越权请求；
+- 词项检索基线首轮通过 15/15，分类结果为 `ANSWERABLE 9/9`、`NO_EVIDENCE 3/3`、`FORBIDDEN 3/3`；
+- 三论文题集、PDF、Chunk、页面渲染和报告只进入被忽略的 `runtime/`，仓库仅记录脱敏方法与汇总结果。
 
 ## 输入
 
-- 基线：已合并 PR #11 的 `main`；
-- 已实现能力：本地 PDF 到 Answer API、Fixture 评测基线；
+- 基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
+- 已实现能力：本地 PDF 到 Answer API、公开 Fixture 评测和本地三论文词项检索评测基线；
 - 未完成能力：成员 B 远程准备、真实 Elasticsearch、Milvus 和模型接入；
-- 本阶段只修改仓库治理、状态、校验和相应测试，不修改业务合同或 RAG 算法。
+- 本阶段固定现有合同、授权、词项检索和 Fake LLM，只扩展真实 PDF 输入与人工页码评测，不修改 RAG 算法。
 
 ## 验收
 
 - `python3 scripts/validate_harness_contract.py` 必须通过；
 - `make test` 必须覆盖合同、入库、检索、RAG、API、评测和仓库 Harness；
+- 本地三论文 Harness 必须通过 15/15，且三类结果分别达到 9/9、3/3、3/3；
 - `git diff --check` 必须通过；
 - 不得出现被跟踪的 `runtime/`、PDF、`.env`、数据或存储目录；
 - 仓库状态、能力清单和本文件必须一致。
@@ -68,15 +73,15 @@ Phase ID：`m1-repository-harness-ready`
 
 ## Current boundary
 
-当前仓库 Harness 已建立，负责约束阶段、范围、验证和交付；RAG 评测 Harness 只负责用例运行。远程主机、数据库、向量库和真实模型不是当前仓库 Harness 或本地评测基线的前置条件。PDF、真实 Chunk、私有问题集和运行报告不得提交。
+当前仓库 Harness 已建立，负责约束阶段、范围、验证和交付；RAG 评测 Harness 只负责用例运行。本地三论文词项检索基线已完成，但执行边界仍为 `LOCAL_API_FAKE_LLM`。远程主机、数据库、向量库和真实模型不是该基线的前置条件，也不能由 15/15 结果推断为已完成。PDF、真实 Chunk、私有问题集和运行报告不得提交。
 
 ## Next gate
 
-1. 成员 A 在本地扩展为 3 篇论文、约 15 题的人工页码标注集，真实输入只进入 `runtime/`；
-2. 成员 B 按 [Issue #9](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/9) 完成远程准备；
-3. 远程拉取同一 `main` 提交运行全量测试、Fixture API 和 Fixture Harness；
-4. 在远程结果返回前不引入真实 Elasticsearch、Milvus 或模型服务；
-5. 后续用同一题集分别比较词项、向量、混合检索和重排，不一次改变多个变量。
+1. 成员 B 按 [Issue #9](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/9) 完成远程准备；
+2. 远程拉取同一 `main` 提交运行全量测试、Fixture API 和 Fixture Harness；
+3. 成员 A 固定当前本地三论文题集和页码标注，下一阶段先接入一种真实检索后端；
+4. 用同一题集依次比较词项、向量、混合检索和重排，不一次改变多个变量；
+5. 真实模型接入放在检索证据链稳定之后，单独评估答案正确性与引用一致性。
 
 ## Prohibited shortcuts
 

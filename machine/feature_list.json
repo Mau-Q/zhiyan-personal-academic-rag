@@ -27,9 +27,13 @@
     },
     {
       "id": "rag_evaluation_harness",
-      "status": "FIXTURE_BASELINE_READY",
+      "status": "LOCAL_3_PAPER_BASELINE_READY",
       "owner": "A",
-      "evidence": ["backend/evaluation/harness.py", "docs/EVALUATION_HARNESS.md"]
+      "evidence": [
+        "backend/evaluation/harness.py",
+        "docs/EVALUATION_HARNESS.md",
+        "docs/LOCAL_3_PAPER_EVALUATION.md"
+      ]
     },
     {
       "id": "remote_host_readiness",

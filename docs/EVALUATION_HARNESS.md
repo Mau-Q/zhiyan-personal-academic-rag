@@ -40,9 +40,11 @@ python3 -m backend.evaluation.harness \
 {"case_id":"local.paper1.answerable.01","category":"ANSWERABLE","question":"问题文本","document_ids":["doc_local_001"],"expected":{"http_status":200,"answer_status":"COMPLETED","min_evidence_count":1,"required_evidence":[{"document_id":"doc_local_001","page_start":3,"page_end":4}],"required_warnings":["FIXTURE_ONLY_FAKE_LLM"]}}
 ```
 
-第一批目标为 3 篇论文、约 15 题：每篇至少 3 个可回答问题，另外统一加入至少 3 个无证据问题和 3 个越权请求。题目必须由人工根据 PDF 页码编写，不能仅依据检索结果反向生成答案。
+第一批已完成 3 篇论文、15 题：每篇 3 个可回答问题，另外统一加入 3 个无证据问题和 3 个越权请求。题目由人工根据 PDF 页码编写，不能仅依据检索结果反向生成答案。
 
 本地运行时把 `--chunks` 指向三篇论文合并后的 `ChunkRecordV1` JSON，把 `--scope` 指向本地授权范围。报告只进入 `runtime/`，不得提交问题对应的私有正文、Chunk 或绝对路径。
+
+脱敏后的输入身份、方法和 15/15 分类结果见 [本地三论文词项检索评测基线](LOCAL_3_PAPER_EVALUATION.md)。
 
 ## 通过标准
 
