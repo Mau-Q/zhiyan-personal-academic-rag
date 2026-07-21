@@ -1,0 +1,166 @@
+{
+  "$defs": {
+    "ChunkJudgmentV1": {
+      "additionalProperties": false,
+      "properties": {
+        "chunk_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "title": "Chunk Id",
+          "type": "string"
+        },
+        "document_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "title": "Document Id",
+          "type": "string"
+        },
+        "page_end": {
+          "minimum": 1,
+          "title": "Page End",
+          "type": "integer"
+        },
+        "page_start": {
+          "minimum": 1,
+          "title": "Page Start",
+          "type": "integer"
+        },
+        "relevance": {
+          "maximum": 3,
+          "minimum": 0,
+          "title": "Relevance",
+          "type": "integer"
+        },
+        "supports_claims": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "title": "Supports Claims",
+          "type": "array"
+        }
+      },
+      "required": [
+        "chunk_id",
+        "document_id",
+        "page_start",
+        "page_end",
+        "relevance"
+      ],
+      "title": "ChunkJudgmentV1",
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/Mau-Q/zhiyan-personal-academic-rag/contracts/retrieval-annotation-record-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "annotation_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "title": "Annotation Id",
+      "type": "string"
+    },
+    "annotator_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "title": "Annotator Id",
+      "type": "string"
+    },
+    "answerability": {
+      "enum": [
+        "ANSWERABLE",
+        "PARTIALLY_ANSWERABLE",
+        "NO_EVIDENCE",
+        "CONFLICTING_EVIDENCE",
+        "FORBIDDEN"
+      ],
+      "title": "Answerability",
+      "type": "string"
+    },
+    "based_on_annotation_ids": {
+      "items": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+        "type": "string"
+      },
+      "title": "Based On Annotation Ids",
+      "type": "array"
+    },
+    "chunk_judgments": {
+      "items": {
+        "$ref": "#/$defs/ChunkJudgmentV1"
+      },
+      "title": "Chunk Judgments",
+      "type": "array"
+    },
+    "dataset_version": {
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "title": "Dataset Version",
+      "type": "string"
+    },
+    "expected_route": {
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "title": "Expected Route",
+      "type": "string"
+    },
+    "notes": {
+      "maxLength": 4000,
+      "title": "Notes",
+      "type": "string"
+    },
+    "question_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "title": "Question Id",
+      "type": "string"
+    },
+    "role": {
+      "enum": [
+        "ANNOTATOR",
+        "ADJUDICATOR",
+        "EXPERT_REVIEWER"
+      ],
+      "title": "Role",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "retrieval_annotation_record_v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "submitted_at": {
+      "format": "date-time",
+      "title": "Submitted At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "annotation_id",
+    "dataset_version",
+    "question_id",
+    "role",
+    "annotator_id",
+    "submitted_at",
+    "answerability",
+    "expected_route",
+    "chunk_judgments",
+    "notes",
+    "based_on_annotation_ids"
+  ],
+  "title": "AnnotationRecordV1",
+  "type": "object"
+}

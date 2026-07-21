@@ -12,6 +12,9 @@
 - `openapi.json`：首个非流式问答接口和错误响应；
 - `sse-events.md`：后续流式接口的事件和顺序合同；
 - `error-codes.md`：首批稳定错误码。
+- 正式检索评测：Manifest、样本、独立标注/仲裁记录和检索排名结果合同。
+
+正式评测 JSON Schema 由 `scripts/export_evaluation_contracts.py` 从运行时 Pydantic 模型导出，并用 `--check` 防止漂移。合同和合成 Fixture 就绪不代表真实 500 条人工评测集已经完成。
 
 ## 变更规则
 
@@ -25,4 +28,5 @@
 
 ```bash
 make contract-test
+python3 scripts/export_evaluation_contracts.py --check
 ```

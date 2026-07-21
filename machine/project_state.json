@@ -34,7 +34,8 @@
   },
   "execution_boundaries": {
     "local_rag": "REPO_MINIMAL_CHAIN_COMPLETE_WITH_REAL_BGE_M3_RRF_AND_FAKE_LLM",
-    "evaluation": "LOCAL_3_PAPER_CANARY_READY_WITH_VECTOR_12_OF_15_AND_RRF_15_OF_15",
+    "evaluation": "FORMAL_500_FRAMEWORK_READY_DATA_COLLECTION_PENDING",
+    "evaluation_canary": "LOCAL_3_PAPER_READY_WITH_VECTOR_12_OF_15_AND_RRF_15_OF_15",
     "remote_host": "PENDING_MEMBER_B",
     "real_elasticsearch": "NOT_STARTED",
     "local_real_vector": "READY_EXACT_COSINE_BGE_M3",

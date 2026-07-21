@@ -1,0 +1,18 @@
+{
+  "schema_version": "retrieval_ranking_result_v1",
+  "run_id": "fixture-rrf-v1",
+  "dataset_version": "fixture-v1",
+  "question_id": "fixture.formal.answerable",
+  "backend": "local_rrf",
+  "top_k": 3,
+  "decision": "EVIDENCE_FOUND",
+  "latency_ms": 3.2,
+  "candidates": [
+    {
+      "rank": 1,
+      "chunk_id": "chunk_fixture_001",
+      "document_id": "doc_fixture_001",
+      "score": 0.0328
+    }
+  ]
+}

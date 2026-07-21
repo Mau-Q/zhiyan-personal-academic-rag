@@ -1,0 +1,418 @@
+{
+  "$defs": {
+    "ChunkJudgmentV1": {
+      "additionalProperties": false,
+      "properties": {
+        "chunk_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "title": "Chunk Id",
+          "type": "string"
+        },
+        "document_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "title": "Document Id",
+          "type": "string"
+        },
+        "page_end": {
+          "minimum": 1,
+          "title": "Page End",
+          "type": "integer"
+        },
+        "page_start": {
+          "minimum": 1,
+          "title": "Page Start",
+          "type": "integer"
+        },
+        "relevance": {
+          "maximum": 3,
+          "minimum": 0,
+          "title": "Relevance",
+          "type": "integer"
+        },
+        "supports_claims": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "title": "Supports Claims",
+          "type": "array"
+        }
+      },
+      "required": [
+        "chunk_id",
+        "document_id",
+        "page_start",
+        "page_end",
+        "relevance"
+      ],
+      "title": "ChunkJudgmentV1",
+      "type": "object"
+    },
+    "ConversationTurnV1": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "minLength": 1,
+          "title": "Content",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "user",
+            "assistant"
+          ],
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "content"
+      ],
+      "title": "ConversationTurnV1",
+      "type": "object"
+    },
+    "ExpectedFiltersV1": {
+      "additionalProperties": false,
+      "properties": {
+        "document_ids": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "title": "Document Ids",
+          "type": "array"
+        },
+        "year_gte": {
+          "anyOf": [
+            {
+              "maximum": 9999,
+              "minimum": 1000,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Year Gte"
+        },
+        "year_lte": {
+          "anyOf": [
+            {
+              "maximum": 9999,
+              "minimum": 1000,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Year Lte"
+        }
+      },
+      "title": "ExpectedFiltersV1",
+      "type": "object"
+    },
+    "ReferenceClaimV1": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "title": "Claim Id",
+          "type": "string"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        },
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim_id",
+        "text",
+        "required"
+      ],
+      "title": "ReferenceClaimV1",
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/Mau-Q/zhiyan-personal-academic-rag/contracts/retrieval-evaluation-item-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "acceptable_answer_points": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Acceptable Answer Points",
+      "type": "array"
+    },
+    "agreement_score": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Agreement Score"
+    },
+    "annotation_record_ids": {
+      "items": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+        "type": "string"
+      },
+      "title": "Annotation Record Ids",
+      "type": "array"
+    },
+    "annotation_status": {
+      "enum": [
+        "DRAFT",
+        "DOUBLE_ANNOTATED",
+        "ADJUDICATED",
+        "EXPERT_REVIEWED"
+      ],
+      "title": "Annotation Status",
+      "type": "string"
+    },
+    "answerability": {
+      "enum": [
+        "ANSWERABLE",
+        "PARTIALLY_ANSWERABLE",
+        "NO_EVIDENCE",
+        "CONFLICTING_EVIDENCE",
+        "FORBIDDEN"
+      ],
+      "title": "Answerability",
+      "type": "string"
+    },
+    "authorized_scope_ids": {
+      "items": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+        "type": "string"
+      },
+      "title": "Authorized Scope Ids",
+      "type": "array"
+    },
+    "blind_holdout": {
+      "title": "Blind Holdout",
+      "type": "boolean"
+    },
+    "chunk_judgments": {
+      "items": {
+        "$ref": "#/$defs/ChunkJudgmentV1"
+      },
+      "title": "Chunk Judgments",
+      "type": "array"
+    },
+    "conversation_history": {
+      "items": {
+        "$ref": "#/$defs/ConversationTurnV1"
+      },
+      "title": "Conversation History",
+      "type": "array"
+    },
+    "dataset_version": {
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "title": "Dataset Version",
+      "type": "string"
+    },
+    "difficulty": {
+      "enum": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "title": "Difficulty",
+      "type": "string"
+    },
+    "expected_citations": {
+      "items": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+        "type": "string"
+      },
+      "title": "Expected Citations",
+      "type": "array"
+    },
+    "expected_filters": {
+      "$ref": "#/$defs/ExpectedFiltersV1"
+    },
+    "expected_route": {
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "title": "Expected Route",
+      "type": "string"
+    },
+    "final_annotation_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Final Annotation Id"
+    },
+    "freshness_cutoff": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Freshness Cutoff"
+    },
+    "language": {
+      "enum": [
+        "zh",
+        "en",
+        "mixed"
+      ],
+      "title": "Language",
+      "type": "string"
+    },
+    "leakage_group_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "title": "Leakage Group Id",
+      "type": "string"
+    },
+    "must_not_claim": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Must Not Claim",
+      "type": "array"
+    },
+    "query_form": {
+      "enum": [
+        "short",
+        "long",
+        "typo",
+        "abbreviation",
+        "multi_turn"
+      ],
+      "title": "Query Form",
+      "type": "string"
+    },
+    "question": {
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Question",
+      "type": "string"
+    },
+    "question_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "title": "Question Id",
+      "type": "string"
+    },
+    "question_types": {
+      "items": {
+        "enum": [
+          "exact_lookup",
+          "single_document_fact",
+          "single_document_explanation",
+          "cross_document_semantic",
+          "comparison",
+          "multi_hop",
+          "teaching_explanation",
+          "standards_freshness",
+          "no_answer_evidence_insufficient",
+          "adversarial_security"
+        ],
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Question Types",
+      "type": "array"
+    },
+    "reference_claims": {
+      "items": {
+        "$ref": "#/$defs/ReferenceClaimV1"
+      },
+      "title": "Reference Claims",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "retrieval_evaluation_item_v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "split": {
+      "enum": [
+        "dev",
+        "test",
+        "acceptance",
+        "online_hard_cases"
+      ],
+      "title": "Split",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "dataset_version",
+    "question_id",
+    "split",
+    "leakage_group_id",
+    "question",
+    "authorized_scope_ids",
+    "question_types",
+    "language",
+    "query_form",
+    "expected_route",
+    "expected_filters",
+    "answerability",
+    "chunk_judgments",
+    "reference_claims",
+    "acceptable_answer_points",
+    "must_not_claim",
+    "expected_citations",
+    "freshness_cutoff",
+    "difficulty",
+    "annotation_status",
+    "annotation_record_ids",
+    "final_annotation_id",
+    "blind_holdout"
+  ],
+  "title": "EvaluationItemV1",
+  "type": "object"
+}

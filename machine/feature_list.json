@@ -78,12 +78,23 @@
       ]
     },
     {
+      "id": "formal_retrieval_evaluation_framework",
+      "status": "READY",
+      "owner": "A",
+      "evidence": [
+        "backend/evaluation/formal_corpus.py",
+        "backend/evaluation/retrieval_metrics.py",
+        "docs/FORMAL_RETRIEVAL_EVALUATION_V1.md"
+      ]
+    },
+    {
       "id": "formal_evaluation_corpus",
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "owner": "SHARED",
       "evidence": [
         "docs/REQUIREMENTS_TRACEABILITY.md",
-        "docs/LOCAL_3_PAPER_EVALUATION.md"
+        "docs/FORMAL_RETRIEVAL_EVALUATION_V1.md",
+        "evaluation/formal/fixture-manifest-v1.json"
       ]
     },
     {

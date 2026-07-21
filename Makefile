@@ -1,4 +1,4 @@
-.PHONY: harness-validate harness-test contract-test ingestion-test retrieval-test rag-test api-test evaluation-test evaluation-smoke sqlite-fts-fixture-smoke vector-fixture-smoke rrf-fixture-smoke test
+.PHONY: harness-validate harness-test contract-test ingestion-test retrieval-test rag-test api-test evaluation-test evaluation-contract-check formal-evaluation-fixture evaluation-smoke sqlite-fts-fixture-smoke vector-fixture-smoke rrf-fixture-smoke test
 
 harness-validate:
 	python3 scripts/validate_harness_contract.py
@@ -24,6 +24,13 @@ api-test:
 evaluation-test:
 	python3 -m unittest discover -s tests/evaluation -p 'test_*.py' -v
 
+evaluation-contract-check:
+	python3 scripts/export_evaluation_contracts.py --check
+
+formal-evaluation-fixture:
+	python3 -m backend.evaluation.formal_corpus --manifest evaluation/formal/fixture-manifest-v1.json --output runtime/evaluation/formal-fixture-validation-v1.json
+	python3 -m backend.evaluation.retrieval_metrics --manifest evaluation/formal/fixture-manifest-v1.json --run lexical_overlap=evaluation/formal/fixture-rankings-lexical-v1.jsonl --run local_rrf=evaluation/formal/fixture-rankings-rrf-v1.jsonl --split dev --k 3 --output runtime/evaluation/formal-fixture-metrics-v1.json
+
 evaluation-smoke:
 	python3 -m backend.evaluation.harness --output runtime/evaluation/fixture-smoke-v1-report.json
 
@@ -40,4 +47,4 @@ rrf-fixture-smoke:
 	python3 -m backend.retrieval.vector build --chunks fixtures/chunks-v1.json --output runtime/evaluation/fixture-rrf-v1.vector.sqlite
 	python3 -m backend.evaluation.harness --cases evaluation/suites/fixture-rrf-v1.jsonl --chunks fixtures/chunks-v1.json --scope fixtures/authorized-scope-v1.json --suite-id fixture-rrf-v1 --retrieval-backend local_rrf --index runtime/evaluation/fixture-rrf-v1.fts.sqlite --vector-index runtime/evaluation/fixture-rrf-v1.vector.sqlite --output runtime/evaluation/fixture-rrf-v1-report.json
 
-test: harness-validate harness-test contract-test ingestion-test retrieval-test rag-test api-test evaluation-test
+test: harness-validate harness-test contract-test ingestion-test retrieval-test rag-test api-test evaluation-test evaluation-contract-check

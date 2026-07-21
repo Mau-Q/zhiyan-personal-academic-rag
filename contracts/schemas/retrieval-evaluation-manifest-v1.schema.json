@@ -1,0 +1,288 @@
+{
+  "$defs": {
+    "QualityGatesV1": {
+      "additionalProperties": false,
+      "properties": {
+        "expert_review_difficulties": {
+          "items": {
+            "enum": [
+              "easy",
+              "medium",
+              "hard"
+            ],
+            "type": "string"
+          },
+          "title": "Expert Review Difficulties",
+          "type": "array"
+        },
+        "expert_review_question_types": {
+          "items": {
+            "enum": [
+              "exact_lookup",
+              "single_document_fact",
+              "single_document_explanation",
+              "cross_document_semantic",
+              "comparison",
+              "multi_hop",
+              "teaching_explanation",
+              "standards_freshness",
+              "no_answer_evidence_insufficient",
+              "adversarial_security"
+            ],
+            "type": "string"
+          },
+          "title": "Expert Review Question Types",
+          "type": "array"
+        },
+        "minimum_independent_annotators": {
+          "minimum": 2,
+          "title": "Minimum Independent Annotators",
+          "type": "integer"
+        },
+        "relevance_scale": {
+          "const": "0_3",
+          "title": "Relevance Scale",
+          "type": "string"
+        }
+      },
+      "required": [
+        "minimum_independent_annotators",
+        "relevance_scale",
+        "expert_review_question_types",
+        "expert_review_difficulties"
+      ],
+      "title": "QualityGatesV1",
+      "type": "object"
+    },
+    "SourceSnapshotV1": {
+      "additionalProperties": false,
+      "properties": {
+        "chunk_snapshot_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Chunk Snapshot Sha256",
+          "type": "string"
+        },
+        "corpus_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "title": "Corpus Id",
+          "type": "string"
+        },
+        "corpus_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Corpus Sha256",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "corpus_id",
+        "corpus_sha256",
+        "chunk_snapshot_sha256",
+        "created_at"
+      ],
+      "title": "SourceSnapshotV1",
+      "type": "object"
+    },
+    "SplitPolicyV1": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptance_blind": {
+          "const": true,
+          "title": "Acceptance Blind",
+          "type": "boolean"
+        },
+        "acceptance_ratio": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Acceptance Ratio",
+          "type": "number"
+        },
+        "dev_ratio": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Dev Ratio",
+          "type": "number"
+        },
+        "online_hard_cases_separate": {
+          "const": true,
+          "title": "Online Hard Cases Separate",
+          "type": "boolean"
+        },
+        "ratio_tolerance": {
+          "maximum": 0.1,
+          "minimum": 0.0,
+          "title": "Ratio Tolerance",
+          "type": "number"
+        },
+        "test_ratio": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Test Ratio",
+          "type": "number"
+        }
+      },
+      "required": [
+        "dev_ratio",
+        "test_ratio",
+        "acceptance_ratio",
+        "ratio_tolerance",
+        "acceptance_blind",
+        "online_hard_cases_separate"
+      ],
+      "title": "SplitPolicyV1",
+      "type": "object"
+    },
+    "StratumTargetV1": {
+      "additionalProperties": false,
+      "properties": {
+        "max_ratio": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Max Ratio",
+          "type": "number"
+        },
+        "min_ratio": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Min Ratio",
+          "type": "number"
+        },
+        "question_type": {
+          "enum": [
+            "exact_lookup",
+            "single_document_fact",
+            "single_document_explanation",
+            "cross_document_semantic",
+            "comparison",
+            "multi_hop",
+            "teaching_explanation",
+            "standards_freshness",
+            "no_answer_evidence_insufficient",
+            "adversarial_security"
+          ],
+          "title": "Question Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question_type",
+        "min_ratio",
+        "max_ratio"
+      ],
+      "title": "StratumTargetV1",
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/Mau-Q/zhiyan-personal-academic-rag/contracts/retrieval-evaluation-manifest-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "annotation_records_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Annotation Records Path"
+    },
+    "annotation_records_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Annotation Records Sha256"
+    },
+    "dataset_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "title": "Dataset Id",
+      "type": "string"
+    },
+    "dataset_version": {
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "title": "Dataset Version",
+      "type": "string"
+    },
+    "items_path": {
+      "title": "Items Path",
+      "type": "string"
+    },
+    "items_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Items Sha256",
+      "type": "string"
+    },
+    "quality_gates": {
+      "$ref": "#/$defs/QualityGatesV1"
+    },
+    "schema_version": {
+      "const": "retrieval_evaluation_manifest_v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_snapshot": {
+      "$ref": "#/$defs/SourceSnapshotV1"
+    },
+    "split_policy": {
+      "$ref": "#/$defs/SplitPolicyV1"
+    },
+    "status": {
+      "enum": [
+        "DESIGN_READY",
+        "DATA_COLLECTION",
+        "ANNOTATION",
+        "LOCKED",
+        "RETIRED"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "stratification_targets": {
+      "items": {
+        "$ref": "#/$defs/StratumTargetV1"
+      },
+      "title": "Stratification Targets",
+      "type": "array"
+    },
+    "target_size": {
+      "maximum": 500,
+      "minimum": 200,
+      "title": "Target Size",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "dataset_id",
+    "dataset_version",
+    "status",
+    "target_size",
+    "source_snapshot",
+    "items_path",
+    "items_sha256",
+    "annotation_records_path",
+    "annotation_records_sha256",
+    "split_policy",
+    "stratification_targets",
+    "quality_gates"
+  ],
+  "title": "EvaluationManifestV1",
+  "type": "object"
+}

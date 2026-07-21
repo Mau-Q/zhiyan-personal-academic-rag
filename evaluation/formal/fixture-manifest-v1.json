@@ -1,0 +1,43 @@
+{
+  "schema_version": "retrieval_evaluation_manifest_v1",
+  "dataset_id": "fixture.formal-retrieval-v1",
+  "dataset_version": "fixture-v1",
+  "status": "DATA_COLLECTION",
+  "target_size": 500,
+  "source_snapshot": {
+    "corpus_id": "fixture-public-v1",
+    "corpus_sha256": "64d453d915ee822766b44a7bec5ab9f031d957532a85bc529e4d1f849bd9c2fb",
+    "chunk_snapshot_sha256": "ecac3d9cc72a1b5b9b81901ea6424398909339939dacb23a60492e386753f063",
+    "created_at": "2026-07-21T10:00:00+08:00"
+  },
+  "items_path": "fixture-items-v1.jsonl",
+  "items_sha256": "f6cd862e2ebc309e402dce61f71bbe3868f7c4180bf1f226fa131836d60bdd0f",
+  "annotation_records_path": "fixture-annotations-v1.jsonl",
+  "annotation_records_sha256": "f5ef953804a6f3fef96be8d5b6f5146e8d3d64bfefae59b9ff0c67a82a8aeec3",
+  "split_policy": {
+    "dev_ratio": 0.6,
+    "test_ratio": 0.2,
+    "acceptance_ratio": 0.2,
+    "ratio_tolerance": 0.02,
+    "acceptance_blind": true,
+    "online_hard_cases_separate": true
+  },
+  "stratification_targets": [
+    {"question_type": "exact_lookup", "min_ratio": 0.08, "max_ratio": 0.12},
+    {"question_type": "single_document_fact", "min_ratio": 0.12, "max_ratio": 0.18},
+    {"question_type": "single_document_explanation", "min_ratio": 0.08, "max_ratio": 0.12},
+    {"question_type": "cross_document_semantic", "min_ratio": 0.12, "max_ratio": 0.18},
+    {"question_type": "comparison", "min_ratio": 0.08, "max_ratio": 0.12},
+    {"question_type": "multi_hop", "min_ratio": 0.08, "max_ratio": 0.12},
+    {"question_type": "teaching_explanation", "min_ratio": 0.03, "max_ratio": 0.07},
+    {"question_type": "standards_freshness", "min_ratio": 0.08, "max_ratio": 0.12},
+    {"question_type": "no_answer_evidence_insufficient", "min_ratio": 0.10, "max_ratio": 0.20},
+    {"question_type": "adversarial_security", "min_ratio": 0.05, "max_ratio": 0.10}
+  ],
+  "quality_gates": {
+    "minimum_independent_annotators": 2,
+    "relevance_scale": "0_3",
+    "expert_review_question_types": ["standards_freshness"],
+    "expert_review_difficulties": ["hard"]
+  }
+}

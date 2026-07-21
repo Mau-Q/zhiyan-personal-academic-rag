@@ -2,7 +2,7 @@
 
 ## Status
 
-`SOURCE_PHASE_0_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MEMBER_B_REMOTE_PENDING`
+`SOURCE_PHASE_0_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / FORMAL_EVAL_FRAMEWORK_READY / MEMBER_B_REMOTE_PENDING`
 
 Phase ID：`source-phase0-foundation-in-progress`
 
@@ -62,14 +62,18 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 实现 SQLite BM25 + BGE-M3 的本地 RRF，固定候选数 20、`k=60`，同一 15 题达到 15/15；
 - 固化 `lexical_overlap`、`sqlite_fts5`、`local_vector`、`local_rrf` 后端选择，新增模型/索引漂移失败关闭、ACL、API、评测和公开 Fixture 测试；
 - 由于 RRF 未超过既有 BM25 的 15/15，重排状态为 `DEFER_RERANK`，等待扩展评测出现可测排序缺口后再判断。
+- 按最高方案建立正式检索评测 V1：目标 500 条，固定 `dev/test/acceptance=60/20/20`，`online_hard_cases` 独立管理；
+- 新增 Manifest、样本、独立标注/仲裁和排名结果合同，固定 0～3 级相关性、泄漏组、Acceptance 盲测和 SHA-256 身份；
+- 新增正式集校验器与 Recall/Precision/MRR/nDCG、无答案、越权和延迟指标，多后端报告只输出差值、不自动宣布胜者；
+- 公开 4 条合成 Fixture 仅证明合同和工具可执行，校验结果保持 `NOT_LOCK_READY`，不计入正式 500 条或 15 题 Canary。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
-- 已实现能力：本地 PDF 到 Answer API、公开 Fixture 评测、本地三论文词项/SQLite BM25/BGE-M3 向量/RRF 基线；
-- 未完成能力：正式范围/SLO、200～500 条初始评测、成员 B 远程准备、PostgreSQL、真实 Elasticsearch、Milvus、真实生成模型和远程模型服务；
-- 下一本地工作优先扩展分层评测和排序指标；重排、远程模型与生产索引参数保持后置。
+- 已实现能力：本地 PDF 到 Answer API、公开 Fixture 评测、本地三论文四路检索基线、正式 500 条评测的合同/校验/指标框架；
+- 未完成能力：真实 500 条人工评测集与双标注、正式范围/SLO、成员 B 远程准备、PostgreSQL、真实 Elasticsearch、Milvus、真实生成模型和远程模型服务；
+- 下一工作优先冻结首期知识源和用户分布，再采集、双标注、仲裁并锁定真实 500 条；重排、远程模型与生产索引参数保持后置。
 
 ## 验收
 
@@ -79,6 +83,8 @@ Phase ID：`source-phase0-foundation-in-progress`
 - `make sqlite-fts-fixture-smoke` 必须通过 6/6；
 - `make vector-fixture-smoke` 和 `make rrf-fixture-smoke` 必须分别通过 6/6；
 - 本地三论文向量基线必须如实记录 12/15，RRF 必须通过 15/15；
+- `make formal-evaluation-fixture` 必须通过，且公开 4 条 Fixture 必须保持 `lock_ready=false`；
+- `python3 scripts/export_evaluation_contracts.py --check` 必须通过；
 - `git diff --check` 必须通过；
 - 不得出现被跟踪的 `runtime/`、PDF、`.env`、数据或存储目录；
 - 仓库状态、能力清单和本文件必须一致。
@@ -95,16 +101,16 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 ## Current boundary
 
-当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0，仓库 M0 和本地 RRF M1 只是已验证的子基线。当前最宽本地执行边界为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`：Embedding 为真实本地 BGE-M3，但答案仍为 Fake LLM；它不证明 PostgreSQL、Elasticsearch、Milvus、远程部署、真实生成模型或生产参数已完成。PDF、真实 Chunk、私有问题集、索引和运行报告不得提交。
+当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0，仓库 M0、本地 RRF M1 和正式评测框架只是已验证的子基线。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；正式评测执行边界为 `FRAMEWORK_READY / DATA_COLLECTION_PENDING`。它们不证明真实 500 条评测、PostgreSQL、Elasticsearch、Milvus、远程部署、真实生成模型或生产参数已完成。PDF、真实 Chunk、私有问题集、标注记录、索引和运行报告不得提交。
 
 ## Next gate
 
-1. **共享范围与评测线：** 冻结目标语料量、峰值并发、硬件预算和 SLO，设计 200～500 条初始分层评测集的标注与拆分规则；
-2. **A 本地工程线：** 本地真实向量与 RRF 已完成；继续完善 200～500 条分层评测设计和排序指标，不在没有证据增益时接入重排；
+1. **共享范围与评测线：** 评测框架已完成；冻结首期知识源、用户/语言分布后，采集并双标注真实 500 条，完成仲裁和专家复核；
+2. **A 本地工程线：** 本地真实向量、RRF 和正式指标工具已完成；等待锁定的 `dev/test` 运行四路正式对比，不在没有证据增益时接入重排；
 3. **B 远程基础设施线：** 按 Issue #9 完成主机盘点，拉取同一 `main` 运行全量测试和 Fixture 冒烟；
 4. B 的基线通过后，按 PostgreSQL、Elasticsearch、Milvus、模型服务逐项建立真实状态，不同时切换多个基础设施变量；
 5. A 已完成同一 Canary 的词项、SQLite BM25、向量和混合检索比较；真实 LLM 仍放在扩展评测和远程检索证据链稳定后单独接入；
-6. 只有范围、200～500 条初始评测、真实 ES/Milvus 基线和模型资源选型都形成证据后，才能关闭最高方案阶段 0。
+6. 只有范围、锁定的 500 条初始评测、真实 ES/Milvus 基线和模型资源选型都形成证据后，才能关闭最高方案阶段 0。
 
 ## Prohibited shortcuts
 

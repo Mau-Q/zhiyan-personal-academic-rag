@@ -34,10 +34,17 @@ class ContractTests(unittest.TestCase):
             "index-version-v1.schema.json": "index-version-v1.json",
             "rag-answer-v1.schema.json": "rag-answer-v1.json",
             "trace-v1.schema.json": "trace-v1.json",
+            "retrieval-evaluation-item-v1.schema.json": "retrieval-evaluation-item-v1.json",
+            "retrieval-annotation-record-v1.schema.json": "retrieval-annotation-record-v1.json",
+            "retrieval-ranking-result-v1.schema.json": "retrieval-ranking-result-v1.json",
         }
         for schema_name, example_name in pairs.items():
             with self.subTest(example=example_name):
                 self.validator(schema_name).validate(load_json(EXAMPLES / example_name))
+
+    def test_formal_evaluation_manifest_matches_generated_contract(self):
+        payload = load_json(ROOT / "evaluation" / "formal" / "fixture-manifest-v1.json")
+        self.validator("retrieval-evaluation-manifest-v1.schema.json").validate(payload)
 
     def test_no_evidence_is_an_explicit_empty_evidence_result(self):
         payload = load_json(EXAMPLES / "rag-no-evidence-v1.json")
