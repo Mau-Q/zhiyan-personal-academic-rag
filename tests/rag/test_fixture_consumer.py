@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -61,7 +62,7 @@ class FixtureConsumerTests(unittest.TestCase):
     def test_cli_emits_rag_answer_json(self):
         completed = subprocess.run(
             [
-                "python3",
+                sys.executable,
                 "-m",
                 "backend.rag.fixture_consumer",
                 "--question",

@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -62,7 +63,7 @@ class EvaluationHarnessTests(unittest.TestCase):
             report_path = Path(temporary_directory) / "report.json"
             completed = subprocess.run(
                 [
-                    "python3",
+                    sys.executable,
                     "-m",
                     "backend.evaluation.harness",
                     "--output",

@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 class RepositoryHarnessTests(unittest.TestCase):
     def test_repository_harness_validator_passes(self):
         completed = subprocess.run(
-            ["python3", "scripts/validate_harness_contract.py"],
+            [sys.executable, "scripts/validate_harness_contract.py"],
             cwd=ROOT,
             check=False,
             capture_output=True,
@@ -82,7 +83,7 @@ class RepositoryHarnessTests(unittest.TestCase):
             result_path.write_text(json.dumps(template), encoding="utf-8")
             completed = subprocess.run(
                 [
-                    "python3",
+                    sys.executable,
                     "scripts/validate_harness_contract.py",
                     "--phase-result",
                     str(result_path),

@@ -2,7 +2,7 @@
 
 ## Status
 
-`SOURCE_PHASE_0_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / RISK_BASED_TESTING_READY / MEMBER_B_REMOTE_PENDING`
+`SOURCE_PHASE_0_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / RISK_BASED_TESTING_READY / MEMBER_B_REMOTE_PARTIAL`
 
 Phase ID：`source-phase0-foundation-in-progress`
 
@@ -88,14 +88,16 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 收到 213 条外部 AI 独立复核：`155 APPROVE_AS_IS / 40 EDIT_LABELS / 18 REJECT_ITEM`；已构建保持 500 题的检索专用工程集，40 项精确更正，18 项最小修复标记为 `DRAFT`；人工复核仍为 `0/213`。
 - 已对 500 题完成词项、SQLite BM25、本地 BGE-M3 向量和 RRF 四路检索，每路 `500/500`；test 的 `nDCG@10` 依次为 `0.457569 / 0.502652 / 0.631910 / 0.647269`。
 - dev 上向量 `nDCG@10=0.614514` 高于 RRF `0.607016`，test 上 RRF 反超约 `0.015359`；优势不稳定，暂不增加重排复杂度。
+- 成员 B 的 PR #13 已合并：远端为 Windows 11 x64、64 GB 内存、RTX 4090 24 GB；Docker/Compose 可用，PostgreSQL 已运行，Elasticsearch、Milvus 和模型服务未部署。
+- 远端在 `ff5993e` 通过 Harness 和 HTTP 冒烟；62 项测试通过、5 项因 Windows 无 `python3` 命令失败。仓库已改为子进程复用 `sys.executable`，等待 B 在最新 `main` 复测。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：风险驱动人工确认、原方案双人工标注、正式范围/SLO、成员 B 远程准备、PostgreSQL、真实 Elasticsearch、Milvus、真实生成模型和远程模型服务；
-- 500 题四路检索已完成，下一工作是固化运行配置与结果接口，然后等待 B 的远程盘点进入第一次合流；重排继续暂缓。
+- 未完成能力：风险驱动人工确认、原方案双人工标注、正式范围/SLO、远端 CPU/磁盘/端口/WSL2 GPU 容器状态、PostgreSQL 实际接入、真实 Elasticsearch、Milvus 和模型服务；
+- 第一次合流已开始；下一工作是 B 在最新 `main` 复测并补齐 CPU、磁盘、端口和 WSL2/GPU 容器状态，然后冻结远程部署拓扑。
 
 ## 验收
 
@@ -131,8 +133,8 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 1. **共享范围与评测线：** 保留 AI 工程集与人工验收的独立记账；不恢复日常全量双人工；
 2. **A 本地工程线：** 500 题四路对比已完成，暂缓重排；下一步固化配置和结果接口；
-3. **B 远程基础设施线：** 按 Issue #9 完成主机盘点，拉取同一 `main` 运行全量测试和 Fixture 冒烟；
-4. B 的基线通过后，按 PostgreSQL、Elasticsearch、Milvus、模型服务逐项建立真实状态，不同时切换多个基础设施变量；
+3. **B 远程基础设施线：** 拉取最新 `main` 复测，补充 CPU、磁盘、可用端口及监听限制、WSL2 与 GPU 容器可用性；
+4. 远端盘点闭环后，先验证已存 PostgreSQL 的版本/连接/端口，再按 Elasticsearch、Milvus、模型服务逐项建立真实状态；
 5. A 已完成同一 Canary 的词项、SQLite BM25、向量和混合检索比较；真实 LLM 仍放在扩展评测和远程检索证据链稳定后单独接入；
 6. GPT 辅助 500 题只用于近期工程决策；只有恢复原方案双人工验收口径，并让范围、正式评测、真实 ES/Milvus 基线和模型资源选型都形成证据后，才能按最高方案关闭阶段 0。
 

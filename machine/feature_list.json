@@ -181,7 +181,7 @@
     },
     {
       "id": "remote_host_readiness",
-      "status": "PENDING",
+      "status": "PARTIAL",
       "owner": "B",
       "evidence": ["docs/REMOTE_HOST_READINESS.md"]
     },

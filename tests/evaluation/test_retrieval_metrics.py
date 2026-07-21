@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -87,7 +88,7 @@ class RetrievalMetricsTests(unittest.TestCase):
     def test_acceptance_metrics_require_explicit_unlock(self):
         completed = subprocess.run(
             [
-                "python3",
+                sys.executable,
                 "-m",
                 "backend.evaluation.retrieval_metrics",
                 "--manifest",

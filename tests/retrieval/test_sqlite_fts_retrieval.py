@@ -1,6 +1,7 @@
 import json
 import sqlite3
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -91,7 +92,7 @@ class SQLiteFtsRetrievalTests(unittest.TestCase):
         cli_index = Path(self.temporary_directory.name) / "cli.sqlite"
         completed = subprocess.run(
             [
-                "python3",
+                sys.executable,
                 "-m",
                 "backend.retrieval.sqlite_fts",
                 "build",

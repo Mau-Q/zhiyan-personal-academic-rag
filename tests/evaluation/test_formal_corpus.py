@@ -1,6 +1,7 @@
 import hashlib
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -197,7 +198,7 @@ class FormalCorpusTests(unittest.TestCase):
     def test_require_lock_ready_returns_one_for_incomplete_fixture(self):
         completed = subprocess.run(
             [
-                "python3",
+                sys.executable,
                 "-m",
                 "backend.evaluation.formal_corpus",
                 "--manifest",
@@ -215,7 +216,7 @@ class FormalCorpusTests(unittest.TestCase):
     def test_require_engineering_ready_returns_one_for_incomplete_fixture(self):
         completed = subprocess.run(
             [
-                "python3",
+                sys.executable,
                 "-m",
                 "backend.evaluation.formal_corpus",
                 "--manifest",
@@ -232,7 +233,7 @@ class FormalCorpusTests(unittest.TestCase):
 
     def test_generated_contracts_are_current(self):
         completed = subprocess.run(
-            ["python3", "scripts/export_evaluation_contracts.py", "--check"],
+            [sys.executable, "scripts/export_evaluation_contracts.py", "--check"],
             cwd=ROOT,
             check=False,
             capture_output=True,
