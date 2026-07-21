@@ -1,0 +1,23 @@
+{
+  "trace_id": "trace_001",
+  "request_id": "request_001",
+  "terminal_status": "COMPLETED",
+  "authorized_scope_hash": "15c253c132b7e704e88e57b0250271e79321c528412c9eaffcdb2a7ee01ec0be",
+  "index_version": "paper_chunks_v1",
+  "stages": [
+    {
+      "name": "RECEIVED",
+      "started_at": "2026-07-21T00:00:00Z",
+      "ended_at": "2026-07-21T00:00:00.005Z",
+      "duration_ms": 5,
+      "outcome": "OK"
+    },
+    {
+      "name": "AUTHORIZED",
+      "started_at": "2026-07-21T00:00:00.005Z",
+      "ended_at": "2026-07-21T00:00:00.010Z",
+      "duration_ms": 5,
+      "outcome": "OK"
+    }
+  ]
+}

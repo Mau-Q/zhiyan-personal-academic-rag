@@ -1,0 +1,28 @@
+{
+  "request_id": "request_001",
+  "trace_id": "trace_001",
+  "status": "COMPLETED",
+  "answer": "Hybrid retrieval combines lexical and semantic candidates before reranking [1].",
+  "evidence": [
+    {
+      "evidence_id": "evidence_001",
+      "chunk_id": "chunk_001",
+      "document_id": "doc_001",
+      "version_id": "version_001",
+      "section_path": "3 Method > 3.2 Retrieval",
+      "page_start": 5,
+      "page_end": 6,
+      "quote": "The retrieval stage combines lexical and semantic candidates before reranking."
+    }
+  ],
+  "citations": [
+    {
+      "citation_id": "citation_001",
+      "evidence_id": "evidence_001",
+      "document_id": "doc_001",
+      "page_start": 5,
+      "page_end": 6
+    }
+  ],
+  "warnings": []
+}

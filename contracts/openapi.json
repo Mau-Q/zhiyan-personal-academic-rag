@@ -1,0 +1,87 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "智研个人学术空间 RAG API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/rag/answers": {
+      "post": {
+        "operationId": "createRagAnswer",
+        "summary": "在服务端授权范围内生成证据约束回答",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/RagAnswerRequestV1"},
+              "examples": {
+                "single_document": {
+                  "value": {
+                    "question": "论文采用了什么检索方法？",
+                    "document_ids": ["doc_001"],
+                    "stream": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "完成、证据不足拒答或显式降级的回答",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "./schemas/rag-answer-v1.schema.json"}
+              }
+            }
+          },
+          "403": {
+            "description": "请求范围未获授权",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ErrorV1"}
+              }
+            }
+          },
+          "422": {
+            "description": "请求结构无效",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ErrorV1"}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RagAnswerRequestV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["question", "document_ids", "stream"],
+        "properties": {
+          "question": {"type": "string", "minLength": 1, "maxLength": 4000},
+          "document_ids": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "uniqueItems": true
+          },
+          "stream": {"const": false}
+        }
+      },
+      "ErrorV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["request_id", "code", "message", "retryable"],
+        "properties": {
+          "request_id": {"type": "string", "minLength": 1},
+          "code": {"type": "string", "minLength": 1},
+          "message": {"type": "string", "minLength": 1},
+          "retryable": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "chunk_id": "chunk_001",
+  "document_id": "doc_001",
+  "version_id": "version_001",
+  "text": "The retrieval stage combines lexical and semantic candidates before reranking.",
+  "section_path": "3 Method > 3.2 Retrieval",
+  "page_start": 5,
+  "page_end": 6,
+  "parent_chunk_id": "parent_001",
+  "previous_chunk_id": "chunk_000",
+  "next_chunk_id": "chunk_002",
+  "tenant_id": "tenant_001",
+  "visibility": "private",
+  "library_scope_ids": ["lib_001"],
+  "parse_version": "parser_v1",
+  "embedding_version": "bge_m3_v1",
+  "is_active": true
+}

@@ -1,0 +1,9 @@
+{
+  "request_id": "request_002",
+  "trace_id": "trace_002",
+  "status": "NO_EVIDENCE",
+  "answer": "当前授权文献范围内没有足够证据回答该问题。",
+  "evidence": [],
+  "citations": [],
+  "warnings": []
+}

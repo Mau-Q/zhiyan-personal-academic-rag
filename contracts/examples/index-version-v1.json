@@ -1,0 +1,8 @@
+{
+  "es_papers_alias": "papers_current",
+  "es_chunks_alias": "paper_chunks_current",
+  "milvus_collection": "paper_chunks_v1",
+  "schema_version": "chunk_record_v1",
+  "embedding_version": "bge_m3_v1",
+  "activated_at": "2026-07-21T00:00:00Z"
+}

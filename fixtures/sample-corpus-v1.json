@@ -1,0 +1,81 @@
+{
+  "catalog_version": "sample_corpus_v1",
+  "storage_policy": "local_only",
+  "redistribution_allowed": false,
+  "selected_at": "2026-07-21",
+  "selection_note": "用于解析、页码、引用、长文档和跨主题检索联调；仓库不包含 PDF 本体。",
+  "documents": [
+    {
+      "arxiv_id": "2602.11409",
+      "title": "TRACER: Trajectory Risk Aggregation for Critical Episodes in Agentic Reasoning",
+      "source_url": "https://arxiv.org/pdf/2602.11409.pdf",
+      "file_name": "2602.11409.pdf",
+      "pages": 10,
+      "sha256": "3e7e4628ffadc9183e85341b3a88050c3b58a06dec02926c8f2028b55879d6ea",
+      "focus": ["short_document", "two_column", "agent_reasoning"]
+    },
+    {
+      "arxiv_id": "2604.23459",
+      "title": "Architecture Matters for Multi-Agent Security",
+      "source_url": "https://arxiv.org/pdf/2604.23459.pdf",
+      "file_name": "2604.23459.pdf",
+      "pages": 24,
+      "sha256": "e53da5e486c58903605b2c0e9d701051be3ca5416b83777635454a490e4e9417",
+      "focus": ["security", "two_column", "medium_document"]
+    },
+    {
+      "arxiv_id": "2603.04915",
+      "title": "EVMbench: Evaluating AI Agents on Smart Contract Security",
+      "source_url": "https://arxiv.org/pdf/2603.04915.pdf",
+      "file_name": "2603.04915.pdf",
+      "pages": 32,
+      "sha256": "ff3b39d94690de98cff09998c669b20333861d43b797ea000af812bc7f524dcf",
+      "focus": ["benchmark", "security", "tables"]
+    },
+    {
+      "arxiv_id": "2603.15952",
+      "title": "Protein Design with Agent Rosetta: A Case Study for Specialized Scientific Agents",
+      "source_url": "https://arxiv.org/pdf/2603.15952.pdf",
+      "file_name": "2603.15952.pdf",
+      "pages": 73,
+      "sha256": "1ee4528746bd73fb6de2aadce95fca518dd1a2bf71f5f335d1b2529c2114b6af",
+      "focus": ["scientific_agent", "long_document", "a4_layout"]
+    },
+    {
+      "arxiv_id": "2602.00887",
+      "title": "EffGen: Enabling Small Language Models as Capable Autonomous Agents",
+      "source_url": "https://arxiv.org/pdf/2602.00887.pdf",
+      "file_name": "2602.00887.pdf",
+      "pages": 140,
+      "sha256": "d8577b27bcf88a13163f93189d06e577f6fe1db043ac08d71fcd74182fda859f",
+      "focus": ["very_long_document", "small_language_model", "appendix"]
+    },
+    {
+      "arxiv_id": "2606.13949",
+      "title": "MINIM: Privacy-Aware Minimal View for Agents via Trusted Local Sanitization",
+      "source_url": "https://arxiv.org/pdf/2606.13949.pdf",
+      "file_name": "2606.13949.pdf",
+      "pages": 17,
+      "sha256": "9428ef767800bdc67e45b7270d323ed83a0f9429728e366ec3d41413fb01a8b3",
+      "focus": ["privacy", "prompt_injection", "two_column"]
+    },
+    {
+      "arxiv_id": "2601.03260",
+      "title": "SciNet: Evaluating AI Agents in Relation-Aware Scientific Literature Retrieval",
+      "source_url": "https://arxiv.org/pdf/2601.03260.pdf",
+      "file_name": "2601.03260.pdf",
+      "pages": 18,
+      "sha256": "d509e0891cedd235251940fa57880bd31721e08a22379d922cddd534f62dce70",
+      "focus": ["scientific_retrieval", "benchmark", "rag_relevance"]
+    },
+    {
+      "arxiv_id": "2602.14516",
+      "title": "Efficient Multi-round LLM Inference over Disaggregated Serving",
+      "source_url": "https://arxiv.org/pdf/2602.14516.pdf",
+      "file_name": "2602.14516.pdf",
+      "pages": 14,
+      "sha256": "5d2efb11ec9beb1c7582bf36531fbcb713a76df97191be7deb1629035e4936de",
+      "focus": ["inference_system", "diagram", "performance"]
+    }
+  ]
+}

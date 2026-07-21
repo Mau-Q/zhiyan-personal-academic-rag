@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mau-Q/zhiyan-personal-academic-rag/contracts/index-version-v1.schema.json",
+  "title": "IndexVersionV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "es_papers_alias",
+    "es_chunks_alias",
+    "milvus_collection",
+    "schema_version",
+    "embedding_version",
+    "activated_at"
+  ],
+  "properties": {
+    "es_papers_alias": {"type": "string", "minLength": 1},
+    "es_chunks_alias": {"type": "string", "minLength": 1},
+    "milvus_collection": {"type": "string", "minLength": 1},
+    "schema_version": {"const": "chunk_record_v1"},
+    "embedding_version": {"type": "string", "minLength": 1},
+    "activated_at": {"type": "string", "format": "date-time"}
+  }
+}

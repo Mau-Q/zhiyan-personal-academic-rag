@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mau-Q/zhiyan-personal-academic-rag/contracts/trace-v1.schema.json",
+  "title": "TraceV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "trace_id",
+    "request_id",
+    "terminal_status",
+    "authorized_scope_hash",
+    "index_version",
+    "stages"
+  ],
+  "properties": {
+    "trace_id": {"$ref": "#/$defs/id"},
+    "request_id": {"$ref": "#/$defs/id"},
+    "terminal_status": {
+      "enum": ["COMPLETED", "NO_EVIDENCE", "DEGRADED", "REJECTED", "TIMEOUT", "FAILED"]
+    },
+    "authorized_scope_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "index_version": {"type": "string", "minLength": 1},
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "started_at", "ended_at", "duration_ms", "outcome"],
+        "properties": {
+          "name": {
+            "enum": [
+              "RECEIVED",
+              "AUTHORIZED",
+              "UNDERSTOOD",
+              "RETRIEVED",
+              "RERANKED",
+              "CONTEXT_READY",
+              "GENERATING",
+              "VALIDATED"
+            ]
+          },
+          "started_at": {"type": "string", "format": "date-time"},
+          "ended_at": {"type": "string", "format": "date-time"},
+          "duration_ms": {"type": "integer", "minimum": 0},
+          "outcome": {"enum": ["OK", "EMPTY", "DEGRADED", "ERROR"]}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "user_id": "user_001",
+  "tenant_id": "tenant_001",
+  "library_ids": ["lib_001"],
+  "folder_ids": [],
+  "document_ids": [],
+  "include_public": false,
+  "acl_version": "acl_v1"
+}
