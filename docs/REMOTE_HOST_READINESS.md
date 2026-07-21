@@ -66,3 +66,30 @@
 - 不上传 PDF、数据库、索引、模型权重和用户数据；
 - 不在本地 M0 未合并前修改核心合同和入库实现；
 - 不把“命令存在”当作服务已经可用，必须记录实际检查结果。
+
+## 8. Windows 远程验证结果
+
+- 验证提交：`fff5993e`
+- 工作树：干净。
+- 操作系统：Windows 11 x64。
+- 内存：约 64 GB。
+- GPU：NVIDIA GeForce RTX 4090，约 24 GB 显存。
+- NVIDIA 驱动：`591.86`；驱动报告 CUDA 兼容版本 `13.1`。
+- CUDA 编译器：`nvcc 11.3`。
+- Git：`2.40.0.windows.1`，`CONFIRMED`。
+- Python：`3.11.15`，`CONFIRMED`。
+- Docker：`27.5.1`，Docker 守护进程可用，`CONFIRMED`。
+- Docker Compose：`v2.32.4-desktop.1`，`CONFIRMED`。
+- GNU Make：`NOT_INSTALLED`；Windows 主机使用 Makefile 对应的 Python unittest 命令执行测试。
+- NVIDIA Container Toolkit：`DEFERRED`；当前为原生 Windows 主机，未接入 Linux/WSL2 GPU 容器运行时。
+- PostgreSQL：`CONFIRMED`，已安装且运行；本阶段未连接或部署。
+- Elasticsearch：`NOT_INSTALLED`；未部署、未连接。
+- Milvus：`NOT_INSTALLED`；未部署、未连接。
+- 模型服务：`NOT_INSTALLED`；未部署、未连接。
+- 仓库 Harness：`CONFIRMED`，`8/8` 检查通过。
+- Python 测试：`62` 项通过；`5` 项未通过。原因是 Windows 环境没有 `python3` 命令，部分测试子进程返回退出码 `9009`；该问题未通过修改核心代码或安全配置绕过。
+- Fixture API：`CONFIRMED`，仅监听 `127.0.0.1:8000`。
+- HTTP 冒烟：`CONFIRMED`。
+  - `COMPLETED`：HTTP `200`，返回 Evidence、Citation 和 `FIXTURE_ONLY_FAKE_LLM` 边界标识。
+  - `NO_EVIDENCE`：HTTP `200`，`evidence=[]`。
+  - 越权请求：HTTP `403`，`code=RAG_FORBIDDEN_SCOPE`，`retryable=false`。
