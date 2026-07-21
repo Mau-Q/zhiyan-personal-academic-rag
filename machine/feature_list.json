@@ -158,6 +158,16 @@
       ]
     },
     {
+      "id": "token_constrained_evaluation_corpus",
+      "status": "READY",
+      "owner": "A",
+      "evidence": [
+        "scripts/build_token_constrained_corpus.py",
+        "tests/evaluation/test_build_token_constrained_corpus.py",
+        "docs/RISK_BASED_TESTING_STRATEGY.md"
+      ]
+    },
+    {
       "id": "formal_evaluation_corpus",
       "status": "PARTIAL",
       "owner": "SHARED",
