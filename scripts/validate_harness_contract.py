@@ -115,7 +115,7 @@ def check_project_state() -> None:
     if not isinstance(harness, dict) or harness.get("status") != "READY":
         raise ValueError("project_state repository_harness must be READY")
     if not isinstance(git_policy, dict) or git_policy != {
-        "member_a_low_risk": "DIRECT_MAIN_AFTER_LOCAL_GATES",
+        "member_a_low_risk": "LOCAL_COMMIT_AFTER_LOCAL_GATES_PUSH_ONLY_EXPLICIT",
         "remote_operations": "USER_EXECUTED_FROM_VERSIONED_RUNBOOK",
         "high_risk": "PULL_REQUEST_AND_CONFIRMATION",
         "ci_mode": "CONDITIONAL_ACTIONS_CHECK",

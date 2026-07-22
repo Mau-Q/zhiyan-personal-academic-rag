@@ -178,9 +178,9 @@ Phase ID：`source-phase1-data-index-minimal-loop-in-progress`
 
 - 默认分支：`main`；
 - 当前 Repository Harness 提交从 `agent/add-repository-harness` 快进到 `main`；
-- 成员 A 普通低风险任务通过本地门禁后直接 push `main`；
+- 成员 A 普通低风险任务通过本地门禁后建立独立本地提交；只有用户显式授权时才 push；
 - 远程主机操作由用户按版本化清单亲自执行；高风险源码变更继续通过 PR；
-- 推送后本地 `main` 必须与 `origin/main` 指向同一提交；仅在 CI 配置、依赖、跨平台、高风险变更或异常状态时检查 GitHub Actions。
+- 用户显式授权推送后，本地 `main` 必须与 `origin/main` 指向同一提交；未授权时如实报告领先提交数。仅在 CI 配置、依赖、跨平台、高风险变更或异常状态时检查 GitHub Actions。
 
 ## Current boundary
 

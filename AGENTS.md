@@ -42,7 +42,7 @@ make harness-validate
 - 不在远程结果返回前声称远程主机、Elasticsearch、Milvus 或真实模型已可用；
 - 不用评测 Harness 代替仓库 Harness，也不用仓库 Harness 证明 RAG 质量；
 - 不同时引入多个真实基础设施变量；
-- 成员 A 的普通低风险任务在本地 Harness、受影响测试和 diff 检查通过后可直接推送 `main`；
+- 成员 A 的普通低风险任务在本地 Harness、受影响测试和 diff 检查通过后建立独立本地提交；只有用户显式授权时才推送；
 - 远程主机操作由用户按版本化操作清单亲自执行；代理只准备源码、验证脚本并根据脱敏原始输出判断，不代替用户连接或重启稳定服务；
 - 合同破坏、安全边界、真实数据、公网暴露和大型跨模块变更必须走 PR 并先确认。
 
@@ -58,4 +58,4 @@ git diff --check
 
 阶段状态变化时同步更新 `docs/CURRENT_PHASE.md`、`machine/project_state.json` 和 `machine/feature_list.json`。具体运行证据写入被忽略的 `runtime/phases/<phase-id>/phase_result.json`，不得提交伪造的运行结果。
 
-成员 A 直接推送后确认本地 `HEAD` 与 `origin/main` 一致。只有 CI 配置、依赖、跨平台、高风险变更，或本地门禁/远程状态异常时，GitHub Actions 才是必查项；失败时新增修复提交，不改写 `main` 历史。
+用户显式授权推送后确认本地 `HEAD` 与 `origin/main` 一致。只有 CI 配置、依赖、跨平台、高风险变更，或本地门禁/远程状态异常时，GitHub Actions 才是必查项；失败时新增修复提交，不改写 `main` 历史。

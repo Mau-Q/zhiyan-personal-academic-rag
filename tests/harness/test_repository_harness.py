@@ -80,7 +80,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             state["git_policy"]["member_a_low_risk"],
-            "DIRECT_MAIN_AFTER_LOCAL_GATES",
+            "LOCAL_COMMIT_AFTER_LOCAL_GATES_PUSH_ONLY_EXPLICIT",
         )
         self.assertEqual(
             state["git_policy"]["remote_operations"],
