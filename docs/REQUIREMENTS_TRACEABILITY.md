@@ -27,13 +27,13 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 - `方案阶段 0～5`：最高方案第 10 章定义的项目阶段，用于判断最终建设完成度；
 - `仓库 M0/M1`：GitHub 中已使用的内部工程里程碑，只证明某个窄范围实现和门禁通过；
 - `仓库 M0_COMPLETE` 不等于 `方案阶段 0 COMPLETE`；
-- 当前项目总体位于 `方案阶段 0 IN_PROGRESS`，同时存在部分阶段 1/2 的工程探路成果。
+- 当前项目总体位于 `方案阶段 0 IN_PROGRESS`：评测 Baseline 与范围/资源/SLO 目标已冻结，数据身份适配和上游生命周期语义仍待冻结；同时存在部分阶段 1/2 的工程探路成果。
 
 ## 4. 需求追踪矩阵
 
 | ID | 最高方案要求 | 当前状态 | 已有证据 | 关键缺口 |
 |---|---|---|---|---|
-| SR-01 | 冻结个人库知识源、用户范围、语料量、并发、硬件预算和 SLO | `PARTIAL` | 最高方案已冻结上传/收藏论文与个人库边界；`docs/STAGE_0_SCOPE.md`、3 论文 Canary | 单用户目标语料量、峰值并发、硬件预算和 Baseline 后 SLO 未冻结 |
+| SR-01 | 冻结个人库知识源、用户范围、语料量、并发、硬件预算和 SLO | `COMPLETE` | `machine/phase_zero_scope_resource_slo.json`：500 篇标称/1000 篇验证上界、0.2 QPS、问答并发 2、入库并发 1、单台既有主机预算及阶段 1 SLO；`docs/PHASE_0_SCOPE_RESOURCE_SLO.md` | 数值已冻结为阶段 1 验收目标，但目标规模性能、真实 LLM 延迟和 PostgreSQL `owner_id` 生命周期仍待实测，不冒充已达标 |
 | SR-02 | PostgreSQL 作为 `owner_id`、主键适配和生命周期唯一事实源 | `NOT_STARTED` | 既有 Fixture ACL 和失败关闭规则 | 实际 Schema、`paper_id ↔ document_id`、`owner_id`、上游时间戳及软删除未接入；现有 V1 合同仍是 legacy 权限字段 |
 | SR-03 | PDF/OCR、章节页码、三种 Chunk Baseline、版本和幂等入库 | `PARTIAL` | 三种切片策略已实现并完成同源受控对比：每种 SQLite BM25 15/15、BGE-M3 12/15，无总体胜者；本地文本层 PDF、稳定 ID 和页码已验证 | OCR、MinIO 入库资产和完整版本/删除链路未完成；未因小样本持平切换默认策略 |
 | SR-04 | Elasticsearch 论文级和 Chunk 级 BM25 | `PARTIAL` | 远程 ES 9.4.3；严格 Mapping、ACL、BM25 适配器；316 Chunk Canary 14/15；175 题严格通过 85/175 | `owner_id/is_active` 目标字段迁移、中文分词选型、生产别名和性能基线未完成 |
@@ -52,7 +52,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 
 | 方案阶段 | 当前判断 | 说明 |
 |---|---|---|
-| 阶段 0：范围与 Baseline | `IN_PROGRESS` | 175 题人工校验、ES/Milvus 同集单路 Baseline 和三种 Chunk 受控 Baseline 已完成；单用户目标语料量、峰值并发、硬件预算和 SLO 仍未冻结 |
+| 阶段 0：范围与 Baseline | `IN_PROGRESS` | 175 题人工校验、ES/Milvus 同集单路 Baseline、三种 Chunk 受控 Baseline 及单用户范围/资源/SLO 目标均已冻结；`paper_id ↔ document_id`、`owner_id` 和上游生命周期目标语义仍待冻结 |
 | 阶段 1：数据与索引最小闭环 | `PARTIAL` | 本地链路及远程 ES/Milvus/BGE-M3 应用 Canary 可用，PostgreSQL 仅完成主机基线；正式 Schema、Outbox 和完整生命周期未完成 |
 | 阶段 2：基础 RAG MVP | `PARTIAL` | 非流式 API、Evidence、拒答和远程 RRF Canary 可运行，但仍无真实生成模型、完整去重/多样性和生产验收 |
 | 阶段 3：针对失败类型增强 | `NOT_STARTED` | 待基于人工校验 Baseline 的真实失败决定是否引入改写、拆解、去重、多样性或重排 |
@@ -63,8 +63,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 
 方案阶段 0 的下一门禁是：
 
-1. **基线冻结：** 保留 175 题 ES 85/175、Milvus 109/175 及三种 Chunk 策略 `BM25 15/15 / BGE-M3 12/15` 的报告、哈希、固定参数和真实失败，不重跑、不改题、不改标签、不调参；
-2. **范围收口：** 冻结单用户目标语料量、峰值并发、硬件预算和 Baseline 后 SLO；
-3. **复杂度门禁：** 当前不跑 175 题 RRF，不重跑远程 500 题，不增加重排、真实 LLM、HyDE、multi-query、multi-hop 或在线 NLI。
-
-范围/资源/SLO 未收口前，不得将阶段 0 标记为完成。
+1. **数据语义冻结：** 明确 PostgreSQL `owner_id`、`paper_id ↔ document_id`、文档版本、上游时间戳和软删除字段及状态机，但本阶段不接入运行时；
+2. **阶段 1 交接：** 数据合同冻结后，阶段 1 再实现可重放 Outbox/幂等入库、ES/Milvus 状态对账和撤权失效；
+3. **性能后置：** 数据与索引闭环完成后，按 `machine/phase_zero_scope_resource_slo.json` 的 500/1000 篇与单用户流量模型执行容量和延迟验收；
+4. **复杂度门禁：** 当前不跑 175 题 RRF，不重跑远程 500 题，不增加重排、真实 LLM、HyDE、multi-query、multi-hop 或在线 NLI。

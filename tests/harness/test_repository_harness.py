@@ -95,9 +95,32 @@ class RepositoryHarnessTests(unittest.TestCase):
             "43fd5d4af4d38884c2449b9ff39fcee537cf27af5a7a700747a932be5f74dc78",
         )
         self.assertEqual(authority["line_count"], 725)
-        self.assertEqual(authority["source_phase"]["status"], "IN_PROGRESS")
+        self.assertEqual(
+            authority["source_phase"], {"id": "phase-0", "status": "IN_PROGRESS"}
+        )
         traceability = ROOT / authority["traceability_doc"]
         self.assertTrue(traceability.is_file())
+
+    def test_phase_zero_scope_resource_and_slo_are_frozen(self):
+        payload = json.loads(
+            (ROOT / "machine" / "phase_zero_scope_resource_slo.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        self.assertEqual(payload["status"], "FROZEN_FOR_PHASE_1_VALIDATION")
+        self.assertEqual(payload["scope"]["nominal_paper_count"], 500)
+        self.assertEqual(payload["scope"]["validation_upper_bound_paper_count"], 1000)
+        self.assertEqual(payload["traffic"]["peak_concurrent_answer_requests"], 2)
+        self.assertEqual(payload["traffic"]["measurement_window_seconds"], 900)
+        self.assertEqual(payload["hardware_budget"]["deployment_host_count"], 1)
+        self.assertEqual(payload["hardware_budget"]["new_hardware_procurement_cny"], 0)
+        self.assertEqual(payload["slo_targets"]["retrieval_p95_ms_max"], 300)
+        self.assertEqual(payload["slo_targets"]["owner_scope_correctness_min"], 1.0)
+        self.assertEqual(
+            payload["validation"]["capacity_and_latency"],
+            "PENDING_PHASE_1_TARGET_SCALE_TEST",
+        )
 
     def test_validator_rejects_template_as_concrete_phase_result(self):
         template = json.loads(

@@ -11,7 +11,21 @@
       "id": "source_phase_zero_foundation",
       "status": "PARTIAL",
       "owner": "SHARED",
-      "evidence": ["docs/REQUIREMENTS_TRACEABILITY.md", "docs/CURRENT_PHASE.md"]
+      "evidence": [
+        "docs/REQUIREMENTS_TRACEABILITY.md",
+        "docs/CURRENT_PHASE.md",
+        "machine/phase_zero_scope_resource_slo.json"
+      ]
+    },
+    {
+      "id": "phase_zero_scope_resource_slo",
+      "status": "READY",
+      "owner": "SHARED",
+      "evidence": [
+        "machine/phase_zero_scope_resource_slo.json",
+        "docs/PHASE_0_SCOPE_RESOURCE_SLO.md",
+        "tests/harness/test_repository_harness.py"
+      ]
     },
     {
       "id": "repository_harness",

@@ -1,0 +1,68 @@
+{
+  "schema_version": "phase_zero_scope_resource_slo_v1",
+  "decision_id": "PD-025",
+  "status": "FROZEN_FOR_PHASE_1_VALIDATION",
+  "scope": {
+    "user_model": "SINGLE_AUTHENTICATED_OWNER",
+    "knowledge_sources": [
+      "USER_UPLOADED_PAPER",
+      "PUBLIC_PAPER_COLLECTED_INTO_PERSONAL_LIBRARY"
+    ],
+    "excluded_from_mvp": [
+      "PUBLIC_LIBRARY_FEDERATED_SEARCH",
+      "RESEARCH_GROUP_SHARED_LIBRARY",
+      "CROSS_OWNER_RETRIEVAL"
+    ],
+    "nominal_paper_count": 500,
+    "validation_upper_bound_paper_count": 1000,
+    "planning_chunks_per_paper": 100,
+    "nominal_planning_chunk_count": 50000,
+    "validation_upper_bound_planning_chunk_count": 100000
+  },
+  "traffic": {
+    "sustained_answer_qps": 0.2,
+    "peak_concurrent_answer_requests": 2,
+    "peak_concurrent_ingestion_jobs": 1,
+    "measurement_window_seconds": 900,
+    "warmup_request_count": 30,
+    "mixed_workload": "ONE_ANSWER_REQUEST_PLUS_ONE_INGESTION_JOB"
+  },
+  "hardware_budget": {
+    "deployment_host_count": 1,
+    "new_hardware_procurement_cny": 0,
+    "cpu_physical_cores_max": 12,
+    "ram_gib_max": 48,
+    "gpu_count_max": 1,
+    "gpu_vram_gib_max": 20,
+    "persistent_disk_gib_max": 300,
+    "external_api_monthly_cny_max": 0
+  },
+  "slo_targets": {
+    "retrieval_p95_ms_max": 300,
+    "retrieval_p99_ms_max": 500,
+    "ttft_p95_ms_max": 3000,
+    "complete_answer_p95_ms_max": 10000,
+    "end_to_end_p99_ms_max": 15000,
+    "timeout_or_degraded_rate_max": 0.01,
+    "owner_scope_correctness_min": 1.0,
+    "cross_owner_leak_count_max": 0,
+    "citation_target_integrity_min": 1.0
+  },
+  "validation": {
+    "current_evidence": "TARGETS_FROZEN_CORRECTNESS_BASELINES_COMPLETE",
+    "capacity_and_latency": "PENDING_PHASE_1_TARGET_SCALE_TEST",
+    "real_llm_ttft_and_answer_latency": "PENDING_REAL_LLM_INTEGRATION",
+    "owner_scope_and_lifecycle": "PENDING_PHASE_1_POSTGRESQL_INTEGRATION",
+    "owners": {
+      "application_and_contract": "A",
+      "target_host_and_load_test": "B",
+      "final_slo_acceptance": "SHARED"
+    }
+  },
+  "deferred": [
+    "RERANKER_RESOURCE_BUDGET",
+    "PLATFORM_GLOBAL_SHARDING",
+    "HIGH_AVAILABILITY",
+    "EXTERNAL_LLM_TOKEN_BUDGET"
+  ]
+}

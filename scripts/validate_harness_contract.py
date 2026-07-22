@@ -21,8 +21,10 @@ REQUIRED_FILES = (
     "docs/PRODUCT_DECISIONS.md",
     "docs/EXECUTION_CONTRACT.md",
     "docs/CURRENT_PHASE.md",
+    "docs/PHASE_0_SCOPE_RESOURCE_SLO.md",
     "machine/project_state.json",
     "machine/feature_list.json",
+    "machine/phase_zero_scope_resource_slo.json",
     "machine/phase_result.schema.json",
     "machine/phase_result.template.json",
     "scripts/validate_harness_contract.py",
@@ -243,6 +245,111 @@ def check_current_phase() -> None:
         raise ValueError(f"CURRENT_PHASE missing headings: {', '.join(missing)}")
 
 
+def check_phase_zero_scope_resource_slo() -> None:
+    payload = _read_json("machine/phase_zero_scope_resource_slo.json")
+    if payload.get("schema_version") != "phase_zero_scope_resource_slo_v1":
+        raise ValueError("phase zero scope schema_version is invalid")
+    if payload.get("decision_id") != "PD-025":
+        raise ValueError("phase zero scope decision_id must be PD-025")
+    if payload.get("status") != "FROZEN_FOR_PHASE_1_VALIDATION":
+        raise ValueError("phase zero scope status is not frozen")
+
+    scope = payload.get("scope")
+    if not isinstance(scope, dict) or {
+        "nominal_paper_count": scope.get("nominal_paper_count"),
+        "validation_upper_bound_paper_count": scope.get(
+            "validation_upper_bound_paper_count"
+        ),
+        "planning_chunks_per_paper": scope.get("planning_chunks_per_paper"),
+        "nominal_planning_chunk_count": scope.get("nominal_planning_chunk_count"),
+        "validation_upper_bound_planning_chunk_count": scope.get(
+            "validation_upper_bound_planning_chunk_count"
+        ),
+    } != {
+        "nominal_paper_count": 500,
+        "validation_upper_bound_paper_count": 1000,
+        "planning_chunks_per_paper": 100,
+        "nominal_planning_chunk_count": 50000,
+        "validation_upper_bound_planning_chunk_count": 100000,
+    }:
+        raise ValueError("phase zero corpus capacity targets drifted")
+    if scope.get("user_model") != "SINGLE_AUTHENTICATED_OWNER":
+        raise ValueError("phase zero user model must remain single owner")
+    if scope.get("knowledge_sources") != [
+        "USER_UPLOADED_PAPER",
+        "PUBLIC_PAPER_COLLECTED_INTO_PERSONAL_LIBRARY",
+    ]:
+        raise ValueError("phase zero knowledge sources drifted")
+    if scope.get("excluded_from_mvp") != [
+        "PUBLIC_LIBRARY_FEDERATED_SEARCH",
+        "RESEARCH_GROUP_SHARED_LIBRARY",
+        "CROSS_OWNER_RETRIEVAL",
+    ]:
+        raise ValueError("phase zero excluded scope drifted")
+
+    traffic = payload.get("traffic")
+    if not isinstance(traffic, dict) or {
+        "sustained_answer_qps": traffic.get("sustained_answer_qps"),
+        "peak_concurrent_answer_requests": traffic.get(
+            "peak_concurrent_answer_requests"
+        ),
+        "peak_concurrent_ingestion_jobs": traffic.get("peak_concurrent_ingestion_jobs"),
+        "measurement_window_seconds": traffic.get("measurement_window_seconds"),
+        "warmup_request_count": traffic.get("warmup_request_count"),
+    } != {
+        "sustained_answer_qps": 0.2,
+        "peak_concurrent_answer_requests": 2,
+        "peak_concurrent_ingestion_jobs": 1,
+        "measurement_window_seconds": 900,
+        "warmup_request_count": 30,
+    }:
+        raise ValueError("phase zero traffic targets drifted")
+
+    hardware = payload.get("hardware_budget")
+    if not isinstance(hardware, dict) or {
+        "deployment_host_count": hardware.get("deployment_host_count"),
+        "new_hardware_procurement_cny": hardware.get("new_hardware_procurement_cny"),
+        "cpu_physical_cores_max": hardware.get("cpu_physical_cores_max"),
+        "ram_gib_max": hardware.get("ram_gib_max"),
+        "gpu_count_max": hardware.get("gpu_count_max"),
+        "gpu_vram_gib_max": hardware.get("gpu_vram_gib_max"),
+        "persistent_disk_gib_max": hardware.get("persistent_disk_gib_max"),
+        "external_api_monthly_cny_max": hardware.get(
+            "external_api_monthly_cny_max"
+        ),
+    } != {
+        "deployment_host_count": 1,
+        "new_hardware_procurement_cny": 0,
+        "cpu_physical_cores_max": 12,
+        "ram_gib_max": 48,
+        "gpu_count_max": 1,
+        "gpu_vram_gib_max": 20,
+        "persistent_disk_gib_max": 300,
+        "external_api_monthly_cny_max": 0,
+    }:
+        raise ValueError("phase zero hardware budget drifted")
+
+    slo = payload.get("slo_targets")
+    expected_slo = {
+        "retrieval_p95_ms_max": 300,
+        "retrieval_p99_ms_max": 500,
+        "ttft_p95_ms_max": 3000,
+        "complete_answer_p95_ms_max": 10000,
+        "end_to_end_p99_ms_max": 15000,
+        "timeout_or_degraded_rate_max": 0.01,
+        "owner_scope_correctness_min": 1.0,
+        "cross_owner_leak_count_max": 0,
+        "citation_target_integrity_min": 1.0,
+    }
+    if slo != expected_slo:
+        raise ValueError("phase zero SLO targets drifted")
+    validation = payload.get("validation")
+    if not isinstance(validation, dict) or validation.get("capacity_and_latency") != (
+        "PENDING_PHASE_1_TARGET_SCALE_TEST"
+    ):
+        raise ValueError("phase zero performance validation boundary is invalid")
+
+
 def check_harness_links() -> None:
     for relative_path in ("AGENTS.md", "docs/HARNESS_ARCHITECTURE.md"):
         text = (ROOT / relative_path).read_text(encoding="utf-8")
@@ -302,6 +409,7 @@ def main() -> int:
         ("feature_list", check_feature_list),
         ("phase_contract", check_phase_contract),
         ("current_phase", check_current_phase),
+        ("phase_zero_scope_resource_slo", check_phase_zero_scope_resource_slo),
         ("harness_links", check_harness_links),
         ("content_safety", check_harness_content_safety),
         ("tracked_artifact_boundary", check_tracked_artifact_boundary),

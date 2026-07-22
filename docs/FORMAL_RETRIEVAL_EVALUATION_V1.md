@@ -249,4 +249,4 @@ make formal-evaluation-fixture
 1. 175 题已完成人工校验，分类、拆分、泄漏组、修订后正式合同和专家签署均通过；
 2. ES only/Milvus only 已完成 175/175，报告、参数、哈希和真实失败已冻结；
 3. 现有 500 题四路结果和 213 题 AI 审计只作为工程证据，不冒充 175 题的人工结论；
-4. 当前不跑 175 题 RRF，不实现重排、真实 LLM、HyDE、multi-query、multi-hop、在线 NLI 或远程 500 题全量跑测；下一步是分开无证据校准与安全策略合同，并冻结阶段 0 的范围与 SLO。
+4. 当前不跑 175 题 RRF，不实现重排、真实 LLM、HyDE、multi-query、multi-hop、在线 NLI 或远程 500 题全量跑测；阶段 0 范围与 SLO 已冻结，下一步只冻结 PostgreSQL 数据身份适配与上游生命周期语义。
