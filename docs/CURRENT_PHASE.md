@@ -164,6 +164,8 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 - 已冻结独立模型选型 Harness：回退基线为 `llama3.2:latest@a80c4f17...b8b72`，唯一候选为 `qwen3:14b@bdbd181c...debe8`；两者直接调用同一 Ollama API，复用同一 Prompt、Schema、解码和四组公开中文科研 Evidence，不连接或修改检索基础设施。
 - 模型选型 v1 的“证据不足”用例被过窄短语表误判；v2 保留原 Evidence/Prompt/模型，只补充等价拒答措辞，并将字节一致降为观测项、两次确定性门禁均通过作为稳定性条件。用户已在提交 `ebb12c4` 完成远程 v2：Qwen `4/4`、llama3.2 `2/4`，结果 `PASS / PROMOTE_QWEN3_14B / NONE`，脱敏报告 SHA-256 为 `21C27EAE18848962FC25A879AC620F989F4DD9690C6EB67A10236BE71DAF788B`。
 - READY Canary 的真实生成稳定回放同步采用相同边界：两次 Answer API 调用必须分别完成引用门禁并返回相同 Citation 集合；答案是否逐字一致单独记录为 `generation_byte_stable_replay`，不作为自然语言模型硬门禁。
+- Qwen READY 首次远程运行以 `PERSISTED_SNAPSHOT_ANSWER_HTTP_FAILED` 停在 Answer API；同 Run ID 恢复后已进入真实生成，但以 `REAL_GENERATION_INITIAL_FAILED_CLOSED` 失败关闭，尚未执行失效和三路清理。该结果证明问题不是缺少 Ollama API 配置，但原统一错误码无法区分传输、响应 JSON、答案 JSON、Schema 或引用失败。
+- 生成器现为上述失败类别携带固定 allowlist 代码；远程 Canary 仅观察并输出该代码，不保存异常正文、模型回答、Prompt 或 Evidence，也不改变对外 Answer API 的 `DEGRADED`、warning 和 Schema。
 
 ## 输入
 
@@ -211,7 +213,7 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 
 ## Next gate
 
-1. **Qwen READY 端到端 Gate：** 使用新 Run ID 和冻结摘要，在现有 PostgreSQL READY + ES/Milvus RRF 链路验证 `qwen3:14b` 两次独立引用门禁、删除后 403 与三路清理；不修改检索参数；
+1. **Qwen READY 端到端 Gate：** 推送稳定生成失败分类后，以现有 Run ID 恢复并确定具体 Qwen 生成失败类别；修复后仍复用 PostgreSQL READY + ES/Milvus RRF，验证两次独立引用门禁、删除后 403 与三路清理，不修改检索参数；
 2. **阶段 2 验收包：** 在指定文档与普通学术问答上记录真实生成、引用、ACL、版本和定位的门禁稳定回放，并保持 Hybrid 14/15 未胜 ES 的原始结论；
 3. **Reranker 独立 Gate：** 只有冻结 Baseline 出现可测排序缺口时，才单独验证一个 Cross-Encoder；不与生成、模型选型、MinIO、OCR 或性能变量混改。
 

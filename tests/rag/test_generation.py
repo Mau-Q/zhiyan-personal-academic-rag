@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import unittest
+import urllib.error
+from unittest.mock import patch
 
 from backend.rag.answer_builder import build_answer
 from backend.rag.generation import (
+    GenerationServiceError,
     GenerationModelIdentity,
     GenerationResult,
     OllamaGenerationProvider,
@@ -74,9 +77,15 @@ class StubGenerationProvider:
 
 
 class FakeOllamaGenerationProvider(OllamaGenerationProvider):
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        chat_content: str = (
+            '{"claims":[{"text":"Supported result.","citation_ids":[1]}]}'
+        ),
+    ) -> None:
         super().__init__(model="llama3.2:latest", expected_digest=DIGEST)
         self.requests = []
+        self.chat_content = chat_content
 
     def _request(self, path, payload=None):
         self.requests.append((path, payload))
@@ -90,9 +99,7 @@ class FakeOllamaGenerationProvider(OllamaGenerationProvider):
             "done": True,
             "model": "llama3.2:latest",
             "message": {
-                "content": (
-                    '{"claims":[{"text":"Supported result.","citation_ids":[1]}]}'
-                )
+                "content": self.chat_content
             },
             "prompt_eval_count": 80,
             "eval_count": 8,
@@ -158,6 +165,53 @@ class RealGenerationTests(unittest.TestCase):
         provider.expected_digest = "b" * 64
         with self.assertRaisesRegex(RuntimeError, "digest drift"):
             provider.generate("Question?", base_answer()["evidence"])
+
+    def test_ollama_failure_codes_distinguish_transport_json_schema_and_citation(self):
+        provider = OllamaGenerationProvider(
+            model="llama3.2:latest",
+            expected_digest=DIGEST,
+        )
+        with patch(
+            "backend.rag.generation.urllib.request.urlopen",
+            side_effect=urllib.error.URLError("private transport detail"),
+        ):
+            with self.assertRaises(GenerationServiceError) as transport_error:
+                provider._request("/api/chat", {})
+        self.assertEqual(transport_error.exception.code, "OLLAMA_CHAT_REQUEST_FAILED")
+
+        class InvalidJsonResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                del exc_type, exc, traceback
+
+            def read(self):
+                return b"not-json"
+
+        with patch(
+            "backend.rag.generation.urllib.request.urlopen",
+            return_value=InvalidJsonResponse(),
+        ):
+            with self.assertRaises(GenerationServiceError) as response_error:
+                provider._request("/api/chat", {})
+        self.assertEqual(response_error.exception.code, "OLLAMA_CHAT_RESPONSE_INVALID")
+
+        cases = (
+            ("not-json", "OLLAMA_ANSWER_JSON_INVALID"),
+            ('{"claims":[]}', "OLLAMA_ANSWER_SCHEMA_INVALID"),
+            (
+                '{"claims":[{"text":"Unsupported.","citation_ids":[3]}]}',
+                "OLLAMA_ANSWER_CITATION_INVALID",
+            ),
+        )
+        for content, expected_code in cases:
+            with self.subTest(expected_code=expected_code):
+                with self.assertRaises(GenerationServiceError) as error:
+                    FakeOllamaGenerationProvider(content).generate(
+                        "Question?", base_answer()["evidence"]
+                    )
+                self.assertEqual(error.exception.code, expected_code)
 
 
 if __name__ == "__main__":

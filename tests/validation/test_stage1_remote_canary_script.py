@@ -6,9 +6,11 @@ import unittest
 from pathlib import Path
 
 from backend.ingestion.persistent import RuntimeSnapshotPersistenceError
+from backend.rag.generation import GenerationServiceError
 from scripts.run_stage1_remote_canary import (
     EXPECTED_CLEANUP_JOBS,
     REPORT_SCHEMA_VERSION,
+    _ObservedGenerationProvider,
     _generation_replay_byte_stable,
     _require_answer_api_gate,
     _sanitized_error_code,
@@ -133,6 +135,47 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
                 },
                 generation_enabled=True,
             )
+
+    def test_generation_failure_uses_observed_allowlisted_detail(self):
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "^REAL_GENERATION_INITIAL_OLLAMA_ANSWER_SCHEMA_INVALID$",
+        ):
+            _require_answer_api_gate(
+                status_code=200,
+                payload={
+                    "status": "DEGRADED",
+                    "evidence": [{"evidence_id": "evidence_001"}],
+                    "warnings": ["BOUNDARY_FAILED_CLOSED_EVIDENCE_ONLY"],
+                },
+                generation_enabled=True,
+                generation_failure_code="OLLAMA_ANSWER_SCHEMA_INVALID",
+            )
+        self.assertEqual(
+            _sanitized_error_code(
+                RuntimeError(
+                    "REAL_GENERATION_INITIAL_OLLAMA_ANSWER_SCHEMA_INVALID"
+                )
+            ),
+            "REAL_GENERATION_INITIAL_OLLAMA_ANSWER_SCHEMA_INVALID",
+        )
+
+    def test_generation_observer_captures_code_without_exception_detail(self):
+        class FailingProvider:
+            def configured_identity(self):
+                return None
+
+            def generate(self, question, evidence):
+                del question, evidence
+                raise GenerationServiceError(
+                    "OLLAMA_CHAT_INCOMPLETE",
+                    "private upstream detail",
+                )
+
+        observer = _ObservedGenerationProvider(FailingProvider())
+        with self.assertRaises(GenerationServiceError):
+            observer.generate("question", [])
+        self.assertEqual(observer.failure_code, "OLLAMA_CHAT_INCOMPLETE")
 
     def test_generation_replay_citation_gate_has_stable_error_code(self):
         with self.assertRaisesRegex(

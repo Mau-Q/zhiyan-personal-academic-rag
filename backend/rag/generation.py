@@ -56,9 +56,36 @@ _ANSWER_SCHEMA = {
     "additionalProperties": False,
 }
 
+GENERATION_FAILURE_CODES = frozenset(
+    {
+        "OLLAMA_REQUEST_FAILED",
+        "OLLAMA_RESPONSE_INVALID",
+        "OLLAMA_MODEL_LIST_REQUEST_FAILED",
+        "OLLAMA_MODEL_LIST_RESPONSE_INVALID",
+        "OLLAMA_MODEL_NOT_FOUND",
+        "OLLAMA_MODEL_DIGEST_MISMATCH",
+        "OLLAMA_CHAT_REQUEST_FAILED",
+        "OLLAMA_CHAT_RESPONSE_INVALID",
+        "OLLAMA_CHAT_MODEL_IDENTITY_MISMATCH",
+        "OLLAMA_CHAT_INCOMPLETE",
+        "OLLAMA_ANSWER_JSON_INVALID",
+        "OLLAMA_ANSWER_SCHEMA_INVALID",
+        "OLLAMA_ANSWER_CITATION_INVALID",
+        "GENERATION_RESULT_IDENTITY_MISMATCH",
+        "GENERATED_ANSWER_CITATION_INVALID",
+        "UNCLASSIFIED_GENERATION_FAILURE",
+    }
+)
+
 
 class GenerationServiceError(RuntimeError):
     """Raised when a real generator cannot prove a valid, pinned result."""
+
+    def __init__(self, code: str, message: str) -> None:
+        if code not in GENERATION_FAILURE_CODES:
+            raise ValueError("generation failure code is not allowlisted")
+        self.code = code
+        super().__init__(message)
 
 
 @dataclass(frozen=True)
@@ -143,13 +170,36 @@ class OllamaGenerationProvider:
         request = urllib.request.Request(
             f"{self.base_url}{path}", data=data, headers=headers, method=method
         )
+        request_failure_code, response_failure_code = {
+            "/api/tags": (
+                "OLLAMA_MODEL_LIST_REQUEST_FAILED",
+                "OLLAMA_MODEL_LIST_RESPONSE_INVALID",
+            ),
+            "/api/chat": (
+                "OLLAMA_CHAT_REQUEST_FAILED",
+                "OLLAMA_CHAT_RESPONSE_INVALID",
+            ),
+        }.get(path, ("OLLAMA_REQUEST_FAILED", "OLLAMA_RESPONSE_INVALID"))
         try:
             with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
-                decoded = json.loads(response.read().decode("utf-8"))
-        except (OSError, urllib.error.URLError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise GenerationServiceError(f"Ollama generation request failed for {path}") from exc
+                response_bytes = response.read()
+        except (OSError, urllib.error.URLError) as exc:
+            raise GenerationServiceError(
+                request_failure_code,
+                f"Ollama generation request failed for {path}",
+            ) from exc
+        try:
+            decoded = json.loads(response_bytes.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise GenerationServiceError(
+                response_failure_code,
+                f"Ollama returned an invalid JSON response for {path}",
+            ) from exc
         if not isinstance(decoded, dict):
-            raise GenerationServiceError(f"Ollama returned a non-object response for {path}")
+            raise GenerationServiceError(
+                response_failure_code,
+                f"Ollama returned a non-object response for {path}",
+            )
         return decoded
 
     @staticmethod
@@ -164,7 +214,10 @@ class OllamaGenerationProvider:
     def _verify_live_identity(self) -> GenerationModelIdentity:
         models = self._request("/api/tags").get("models")
         if not isinstance(models, list):
-            raise GenerationServiceError("Ollama /api/tags response has no models array")
+            raise GenerationServiceError(
+                "OLLAMA_MODEL_LIST_RESPONSE_INVALID",
+                "Ollama /api/tags response has no models array",
+            )
         aliases = self._model_aliases(self.model)
         for item in models:
             if not isinstance(item, dict) or item.get("name") not in aliases:
@@ -174,9 +227,15 @@ class OllamaGenerationProvider:
             if not isinstance(name, str) or not isinstance(digest, str):
                 break
             if digest.lower() != self.expected_digest:
-                raise GenerationServiceError("Ollama generation model digest drift detected")
+                raise GenerationServiceError(
+                    "OLLAMA_MODEL_DIGEST_MISMATCH",
+                    "Ollama generation model digest drift detected",
+                )
             return self.configured_identity()
-        raise GenerationServiceError(f"Ollama generation model is not installed: {self.model}")
+        raise GenerationServiceError(
+            "OLLAMA_MODEL_NOT_FOUND",
+            f"Ollama generation model is not installed: {self.model}",
+        )
 
     @staticmethod
     def _build_user_prompt(
@@ -235,15 +294,24 @@ class OllamaGenerationProvider:
             not isinstance(response_model, str)
             or response_model not in self._model_aliases(self.model)
         ):
-            raise GenerationServiceError("Ollama chat response model identity drift detected")
+            raise GenerationServiceError(
+                "OLLAMA_CHAT_MODEL_IDENTITY_MISMATCH",
+                "Ollama chat response model identity drift detected",
+            )
         message = response.get("message")
         content = message.get("content") if isinstance(message, dict) else None
         if response.get("done") is not True or not isinstance(content, str):
-            raise GenerationServiceError("Ollama returned an incomplete chat response")
+            raise GenerationServiceError(
+                "OLLAMA_CHAT_INCOMPLETE",
+                "Ollama returned an incomplete chat response",
+            )
         try:
             generated = json.loads(content)
         except json.JSONDecodeError as exc:
-            raise GenerationServiceError("Ollama answer is not valid JSON") from exc
+            raise GenerationServiceError(
+                "OLLAMA_ANSWER_JSON_INVALID",
+                "Ollama answer is not valid JSON",
+            ) from exc
         answer = _render_claims(generated, evidence_count=len(evidence))
         return GenerationResult(
             answer=answer,
@@ -259,14 +327,23 @@ def _optional_non_negative_int(value: Any) -> int | None:
 
 def _render_claims(payload: Any, *, evidence_count: int) -> str:
     if not isinstance(payload, dict) or set(payload) != {"claims"}:
-        raise GenerationServiceError("Ollama answer JSON must contain only claims")
+        raise GenerationServiceError(
+            "OLLAMA_ANSWER_SCHEMA_INVALID",
+            "Ollama answer JSON must contain only claims",
+        )
     claims = payload["claims"]
     if not isinstance(claims, list) or not 1 <= len(claims) <= 8:
-        raise GenerationServiceError("Ollama claims array length is invalid")
+        raise GenerationServiceError(
+            "OLLAMA_ANSWER_SCHEMA_INVALID",
+            "Ollama claims array length is invalid",
+        )
     rendered: list[str] = []
     for claim in claims:
         if not isinstance(claim, dict) or set(claim) != {"text", "citation_ids"}:
-            raise GenerationServiceError("Ollama claim fields are invalid")
+            raise GenerationServiceError(
+                "OLLAMA_ANSWER_SCHEMA_INVALID",
+                "Ollama claim fields are invalid",
+            )
         text = claim["text"]
         citation_ids = claim["citation_ids"]
         if (
@@ -278,24 +355,39 @@ def _render_claims(payload: Any, *, evidence_count: int) -> str:
             or not citation_ids
             or any(type(value) is not int for value in citation_ids)
         ):
-            raise GenerationServiceError("Ollama claim content is invalid")
+            raise GenerationServiceError(
+                "OLLAMA_ANSWER_SCHEMA_INVALID",
+                "Ollama claim content is invalid",
+            )
         positions = tuple(sorted(set(citation_ids)))
         if any(position < 1 or position > evidence_count for position in positions):
-            raise GenerationServiceError("Ollama claim cites Evidence outside this request")
+            raise GenerationServiceError(
+                "OLLAMA_ANSWER_CITATION_INVALID",
+                "Ollama claim cites Evidence outside this request",
+            )
         markers = "".join(f"[{position}]" for position in positions)
         rendered.append(f"{text.strip()} {markers}")
     answer = "\n".join(rendered)
     if len(answer) > 8000:
-        raise GenerationServiceError("Ollama answer length is invalid")
+        raise GenerationServiceError(
+            "OLLAMA_ANSWER_SCHEMA_INVALID",
+            "Ollama answer length is invalid",
+        )
     return answer
 
 
 def _validated_citation_positions(answer: str, evidence_count: int) -> tuple[int, ...]:
     positions = tuple(int(value) for value in _CITATION_PATTERN.findall(answer))
     if not positions:
-        raise GenerationServiceError("generated answer has no Evidence citation")
+        raise GenerationServiceError(
+            "GENERATED_ANSWER_CITATION_INVALID",
+            "generated answer has no Evidence citation",
+        )
     if any(position < 1 or position > evidence_count for position in positions):
-        raise GenerationServiceError("generated answer cites Evidence outside this request")
+        raise GenerationServiceError(
+            "GENERATED_ANSWER_CITATION_INVALID",
+            "generated answer cites Evidence outside this request",
+        )
     return tuple(sorted(set(positions)))
 
 
@@ -332,7 +424,10 @@ def apply_real_generation(
     try:
         result = provider.generate(question, evidence)
         if result.identity != identity:
-            raise GenerationServiceError("generation result identity drift detected")
+            raise GenerationServiceError(
+                "GENERATION_RESULT_IDENTITY_MISMATCH",
+                "generation result identity drift detected",
+            )
         used_positions = _validated_citation_positions(result.answer, len(evidence))
     except Exception:
         return _degraded_answer(

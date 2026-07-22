@@ -82,6 +82,10 @@ When real generation is enabled, both calls must independently pass the Answer A
 and citation gates and return the same Citation set. The report records this as
 `generation_stable_replay=true`; `generation_byte_stable_replay` separately records
 whether the natural-language answers were byte-identical and is not a hard gate.
+If generation fails closed, the private Canary report records only an allowlisted
+stable category such as Chat transport, response JSON, answer JSON, answer Schema,
+citation, or identity failure. It never records the exception text, generated
+answer, Prompt, Evidence, or upstream response body.
 Synthetic Canary IDs and snapshot hashes are safe
 to return; object paths and Chunk payloads are not included.
 

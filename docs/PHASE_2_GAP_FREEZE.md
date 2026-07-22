@@ -28,7 +28,7 @@ PostgreSQL READY/owner/版本路由
 → COMPLETED 或 DEGRADED 证据卡
 ```
 
-生成身份冻结为：
+首个远程 READY 基线的生成身份冻结为：
 
 - Provider：`ollama`；
 - 模型：`llama3.2:latest`；
@@ -37,6 +37,8 @@ PostgreSQL READY/owner/版本路由
 - Prompt SHA-256：`796bf2fad94a92584d604479fb921bd98e72e4b97ecc09d6e49eaa2c0c71df71`；
 - 解码：`temperature=0.0`、`seed=42`、`num_predict=384`、`num_ctx=8192`；
 - 输出：JSON Schema 约束的 `claims[].text + claims[].citation_ids`，最终引用编号由服务端组装。
+
+独立模型选型 Gate 已将阶段 2 候选晋级为 `qwen3:14b@bdbd181c33f2ed1b31c972991882db3cf4d192569092138a7d29e973cd9debe8`；Prompt、Schema 和解码保持相同，llama3.2 保留为已有 READY 证据的回退基线。
 
 模型摘要漂移、模型不可用、JSON/Claim 结构非法、无引用或引用越界时，模型答案不得进入响应，API 返回 `DEGRADED` 和已验证 Evidence 卡。无 Evidence 时返回 `NO_EVIDENCE`，不调用生成模型。既有 Fake 路径只有在未注入真实生成器时使用，并继续携带原有 Fake 边界。
 
@@ -60,11 +62,13 @@ make real-generation-canary
 
 远程恢复闭环已由用户在提交 `91aca5a` 完成：同一冻结模型摘要消费 PostgreSQL READY + ES/Milvus RRF 返回的 3 条 Evidence，Answer API 为 `COMPLETED`，引用编号校验与两次稳定回放通过；随后删除后 403、ES/Milvus/运行快照 3 项清理通过。脱敏报告 SHA-256 为 `E2231FADABB368209F976B2BAB99F4E1D841ACB3053C45A07B1ADDC7B386E937`，稳定错误码为 `NONE`，报告不含回答或 Chunk 正文。
 
+Qwen READY 首次运行以 `PERSISTED_SNAPSHOT_ANSWER_HTTP_FAILED` 失败；同 Run ID 恢复已越过该边界并进入生成，但以 `REAL_GENERATION_INITIAL_FAILED_CLOSED` 失败关闭。为避免保存私有正文，生成器现在只向 Canary 观察层提供 allowlist 分类，可区分模型列表/Chat 传输、Ollama 响应 JSON、模型答案 JSON、答案 Schema、引用和身份失败；产品 Answer API 仍只返回原有 `DEGRADED` Evidence 卡。
+
 ## 4. 阶段 2 剩余差距
 
-- 用冻结 Evidence、Prompt、结构化输出和解码参数建立独立模型选型 Gate，只比较当前 `llama3.2:latest` 与一个 7B～14B 中文科研指令候选；可直接调用模型服务 API，但不得改动检索参数或同时比较多个候选；
+- 用稳定分类定位并修复 Qwen 在真实 READY Evidence 上的首次生成失败，完成两次独立引用门禁、删除后 403 和三路清理；不得改动检索参数或模型摘要；
 - 在冻结的指定文档与普通学术问答样本上记录真实生成、引用、版本和定位结果；
 - 如要满足“固定 Reranker 增益验证”的字面退出条件，需先出现可测排序缺口，再单独接入一个 Cross-Encoder 做保留/回退实验；当前不得与生成变量一起引入；
 - Claim 语义支持、冲突处理、正式 MinIO、OCR 和目标规模性能继续由各自后续 Gate 跟踪。
 
-阶段 2 因此仍为 `IN_PROGRESS/PARTIAL`。远程 READY 真实生成闭环已经完成；下一步只推进单变量模型选型与固定普通科研问答验收，不把它们与 Reranker、MinIO/OCR 或性能变量混合。
+阶段 2 因此仍为 `IN_PROGRESS/PARTIAL`。llama3.2 远程 READY 真实生成闭环与 Qwen 独立模型选型已经完成；Qwen READY 闭环仍待稳定分类后的恢复验证。后续不把它与 Reranker、MinIO/OCR 或性能变量混合。

@@ -8,15 +8,24 @@ import os
 import re
 import sys
 import urllib.parse
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict
 from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
+from typing import Any
 
 from fastapi.testclient import TestClient
 
 from backend.api.app import create_app
-from backend.rag.generation import OllamaGenerationProvider
+from backend.rag.generation import (
+    GENERATION_FAILURE_CODES,
+    GenerationModelIdentity,
+    GenerationProvider,
+    GenerationResult,
+    GenerationServiceError,
+    OllamaGenerationProvider,
+)
 from backend.ingestion.cleanup import (
     PersistentIndexCleanupScheduler,
     PersistentIndexCleanupWorker,
@@ -75,6 +84,10 @@ _SANITIZED_RUNTIME_CODES = frozenset(
         "INACTIVE_VERSION_REMAINED_VISIBLE",
         "INACTIVE_ANSWER_API_REMAINED_VISIBLE",
     }
+) | frozenset(
+    f"REAL_GENERATION_{phase}_{code}"
+    for phase in ("INITIAL", "REPLAY")
+    for code in GENERATION_FAILURE_CODES
 )
 
 
@@ -83,6 +96,32 @@ class NoCachedQueryVisibility:
 
     def invalidate_version(self, **kwargs: object) -> None:
         del kwargs
+
+
+class _ObservedGenerationProvider:
+    """Capture only an allowlisted failure code for the private Canary report."""
+
+    def __init__(self, delegate: GenerationProvider) -> None:
+        self.delegate = delegate
+        self.failure_code: str | None = None
+
+    def configured_identity(self) -> GenerationModelIdentity:
+        return self.delegate.configured_identity()
+
+    def generate(
+        self,
+        question: str,
+        evidence: Sequence[Mapping[str, Any]],
+    ) -> GenerationResult:
+        self.failure_code = None
+        try:
+            return self.delegate.generate(question, evidence)
+        except GenerationServiceError as exc:
+            self.failure_code = exc.code
+            raise
+        except Exception:
+            self.failure_code = "UNCLASSIFIED_GENERATION_FAILURE"
+            raise
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -157,6 +196,7 @@ def _require_answer_api_gate(
     payload: dict[str, object],
     generation_enabled: bool,
     replay: bool = False,
+    generation_failure_code: str | None = None,
 ) -> None:
     if replay:
         prefix = "REAL_GENERATION_REPLAY"
@@ -169,6 +209,10 @@ def _require_answer_api_gate(
             payload, "_FAILED_CLOSED_EVIDENCE_ONLY"
         ):
             generation_phase = "REPLAY" if replay else "INITIAL"
+            if generation_failure_code in GENERATION_FAILURE_CODES:
+                raise RuntimeError(
+                    f"REAL_GENERATION_{generation_phase}_{generation_failure_code}"
+                )
             raise RuntimeError(f"REAL_GENERATION_{generation_phase}_FAILED_CLOSED")
         if generation_enabled and _warnings_contain(
             payload, "_CITATION_MAPPING_FAILED_CLOSED"
@@ -267,18 +311,21 @@ def main() -> int:
                 _environment("OLLAMA_URL", "http://127.0.0.1:11434"),
             ),
         )
-        generation_provider = (
-            OllamaGenerationProvider(
-                model=args.generation_model,
-                expected_digest=args.generation_model_digest,
-                base_url=_loopback_endpoint(
-                    "OLLAMA_URL",
-                    _environment("OLLAMA_URL", "http://127.0.0.1:11434"),
-                ),
+        generation_observer = (
+            _ObservedGenerationProvider(
+                OllamaGenerationProvider(
+                    model=args.generation_model,
+                    expected_digest=args.generation_model_digest,
+                    base_url=_loopback_endpoint(
+                        "OLLAMA_URL",
+                        _environment("OLLAMA_URL", "http://127.0.0.1:11434"),
+                    ),
+                )
             )
             if args.generation_model is not None
             else None
         )
+        generation_provider = generation_observer
         milvus = MilvusVersionIndexWriter(
             collection_prefix=args.milvus_collection_prefix,
             transport=milvus_transport,
@@ -388,6 +435,11 @@ def main() -> int:
             status_code=answer_response.status_code,
             payload=answer_payload,
             generation_enabled=generation_provider is not None,
+            generation_failure_code=(
+                generation_observer.failure_code
+                if generation_observer is not None
+                else None
+            ),
         )
         generation_stable_replay = False
         generation_byte_stable_replay = False
@@ -406,6 +458,7 @@ def main() -> int:
                 payload=replay_payload,
                 generation_enabled=True,
                 replay=True,
+                generation_failure_code=generation_observer.failure_code,
             )
             generation_byte_stable_replay = _generation_replay_byte_stable(
                 answer_payload,
