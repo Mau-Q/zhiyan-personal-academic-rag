@@ -354,13 +354,19 @@ class ElasticsearchBm25Index:
         *,
         top_k: int = 3,
         expected_chunks: Sequence[Mapping[str, Any]] | None = None,
+        source_fingerprint_chunks: Sequence[Mapping[str, Any]] | None = None,
     ) -> list[RankedChunk]:
         if not question.strip():
             raise ValueError("question must not be blank")
         if top_k < 1:
             raise ValueError("top_k must be at least 1")
-        if expected_chunks is not None:
-            self.verify_source(expected_chunks)
+        fingerprint_chunks = (
+            source_fingerprint_chunks
+            if source_fingerprint_chunks is not None
+            else expected_chunks
+        )
+        if fingerprint_chunks is not None:
+            self.verify_source(fingerprint_chunks)
         payload = {
             "size": top_k,
             "track_total_hits": False,
@@ -422,6 +428,7 @@ class ElasticsearchBm25Index:
         *,
         top_k: int = 3,
         expected_chunks: Sequence[Mapping[str, Any]] | None = None,
+        source_fingerprint_chunks: Sequence[Mapping[str, Any]] | None = None,
     ) -> list[JsonObject]:
         return chunks_only(
             self.search(
@@ -429,6 +436,7 @@ class ElasticsearchBm25Index:
                 scope,
                 top_k=top_k,
                 expected_chunks=expected_chunks,
+                source_fingerprint_chunks=source_fingerprint_chunks,
             )
         )
 

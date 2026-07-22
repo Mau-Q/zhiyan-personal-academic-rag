@@ -98,6 +98,22 @@ class ElasticsearchRetrievalTests(unittest.TestCase):
         with self.assertRaisesRegex(ElasticsearchIndexNotReadyError, "query_mode"):
             self.index.inspect()
 
+    def test_online_payload_can_verify_the_staged_source_fingerprint(self):
+        staged = [{**chunk, "is_active": False} for chunk in self.chunks]
+        online = [{**chunk, "is_active": True} for chunk in self.chunks]
+        transport = FakeTransport(staged)
+        transport.search_hits = [{"_score": 1.0, "_source": online[0]}]
+        index = ElasticsearchBm25Index("fixture-chunks-v1", transport)
+
+        ranking = index.search(
+            "hybrid retrieval",
+            self.scope,
+            expected_chunks=online,
+            source_fingerprint_chunks=staged,
+        )
+
+        self.assertEqual(ranking[0].chunk["is_active"], True)
+
     def test_invalid_scope_builds_match_none_filter(self):
         self.transport.search_hits = [{"_score": 1.0, "_source": self.chunks[0]}]
         results = self.index.retrieve("hybrid", {"tenant_id": "tenant_fixture"})

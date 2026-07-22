@@ -449,14 +449,20 @@ class MilvusVectorIndex:
         top_k: int = 3,
         min_score: float = DEFAULT_VECTOR_MIN_SCORE,
         expected_chunks: Sequence[Mapping[str, Any]] | None = None,
+        source_fingerprint_chunks: Sequence[Mapping[str, Any]] | None = None,
     ) -> list[RankedChunk]:
         if not question.strip():
             raise ValueError("question must not be blank")
         if top_k < 1 or not -1.0 <= min_score <= 1.0:
             raise ValueError("top_k or min_score is invalid")
         metadata = self.verify_provider(provider)
-        if expected_chunks is not None:
-            self.verify_source(expected_chunks)
+        fingerprint_chunks = (
+            source_fingerprint_chunks
+            if source_fingerprint_chunks is not None
+            else expected_chunks
+        )
+        if fingerprint_chunks is not None:
+            self.verify_source(fingerprint_chunks)
         vector = _normalize(provider.embed([question])[0])
         if len(vector) != int(metadata["embedding_dimension"]):
             raise MilvusIndexNotReadyError("Milvus query embedding dimension does not match")
@@ -509,6 +515,7 @@ class MilvusVectorIndex:
         top_k: int = 3,
         min_score: float = DEFAULT_VECTOR_MIN_SCORE,
         expected_chunks: Sequence[Mapping[str, Any]] | None = None,
+        source_fingerprint_chunks: Sequence[Mapping[str, Any]] | None = None,
     ) -> list[JsonObject]:
         return chunks_only(
             self.search(
@@ -518,6 +525,7 @@ class MilvusVectorIndex:
                 top_k=top_k,
                 min_score=min_score,
                 expected_chunks=expected_chunks,
+                source_fingerprint_chunks=source_fingerprint_chunks,
             )
         )
 

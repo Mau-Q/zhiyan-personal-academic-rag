@@ -249,6 +249,9 @@ class OnlineVersionRrfRetriever:
                 )
             for route in routes:
                 expected_chunks = self._route_chunks(route=route, chunks=chunks)
+                staged_source_chunks = [
+                    {**chunk, "is_active": False} for chunk in expected_chunks
+                ]
                 route_scope = dict(scope)
                 route_scope["document_ids"] = [route.document_id]
                 route_scope["library_ids"] = []
@@ -261,6 +264,7 @@ class OnlineVersionRrfRetriever:
                     route_scope,
                     top_k=self.candidate_k,
                     expected_chunks=expected_chunks,
+                    source_fingerprint_chunks=staged_source_chunks,
                 )
                 vector = MilvusVectorIndex(
                     route.milvus_collection,
@@ -272,6 +276,7 @@ class OnlineVersionRrfRetriever:
                     top_k=self.candidate_k,
                     min_score=self.vector_min_score,
                     expected_chunks=expected_chunks,
+                    source_fingerprint_chunks=staged_source_chunks,
                 )
                 self._validate_route_ranking(route, lexical)
                 self._validate_route_ranking(route, vector)

@@ -930,6 +930,34 @@ class PostgresFactRepository:
             self._rollback()
             raise
 
+    def get_pdf_object(
+        self,
+        *,
+        owner_id: str,
+        document_version_id: str,
+    ) -> PdfObjectV1 | None:
+        """Return one exact owner-scoped object locator for verified recovery."""
+
+        try:
+            row = self._execute_one(
+                """-- get_pdf_object_for_recovery_v1
+                SELECT owner_id, document_id, document_version_id, object_key,
+                       storage_backend, content_sha256, size_bytes, media_type, stored_at
+                FROM rag_pdf_objects
+                WHERE owner_id = %(owner_id)s
+                  AND document_version_id = %(document_version_id)s
+                """,
+                {
+                    "owner_id": owner_id,
+                    "document_version_id": document_version_id,
+                },
+            )
+            self._commit()
+            return None if row is None else _pdf_object_from_row(row)
+        except Exception:
+            self._rollback()
+            raise
+
     def purge_inactive_runtime_snapshot(
         self,
         *,

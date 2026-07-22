@@ -173,6 +173,9 @@ class FakeElasticsearchIndex:
     def search(self, question, scope, **kwargs):
         del question, scope
         self.transport.expected[self.index_name] = kwargs["expected_chunks"]
+        self.transport.source_fingerprints[self.index_name] = kwargs[
+            "source_fingerprint_chunks"
+        ]
         return self.transport.rankings[self.index_name]
 
 
@@ -184,6 +187,9 @@ class FakeMilvusIndex:
     def search(self, question, scope, provider, **kwargs):
         del question, scope, provider
         self.transport.expected[self.collection_name] = kwargs["expected_chunks"]
+        self.transport.source_fingerprints[self.collection_name] = kwargs[
+            "source_fingerprint_chunks"
+        ]
         return self.transport.rankings[self.collection_name]
 
 
@@ -191,6 +197,7 @@ class RankingTransport:
     def __init__(self, rankings):
         self.rankings = rankings
         self.expected = {}
+        self.source_fingerprints = {}
 
 
 class FakeChunkSnapshots:
@@ -301,6 +308,18 @@ class OnlineVersionRrfRetrieverTests(unittest.TestCase):
         self.assertEqual(
             [item["document_id"] for item in elasticsearch.expected["es_version_001"]],
             ["document_001"],
+        )
+        self.assertTrue(
+            all(
+                item["is_active"] is False
+                for item in elasticsearch.source_fingerprints["es_version_001"]
+            )
+        )
+        self.assertTrue(
+            all(
+                item["is_active"] is False
+                for item in milvus.source_fingerprints["milvus_version_001"]
+            )
         )
 
     def test_candidate_identity_drift_fails_closed(self):

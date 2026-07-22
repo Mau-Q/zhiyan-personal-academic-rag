@@ -4,7 +4,7 @@
 
 阶段 1 已建立 PostgreSQL Schema、延迟加载的 `psycopg` 适配器和独立测试。PostgreSQL 是 `owner_id`、文档映射、内容版本、Chunk 快照、生命周期与入库/清理任务的唯一事实源；PDF 字节保存在独立对象根目录，Elasticsearch 和 Milvus 仍然是可重建派生索引。
 
-远程 PostgreSQL 18.4 已通过 `0001`～`0003` 迁移和基础设施生命周期 Canary。远程首次应用 `0004_runtime_snapshots.sql` 后，v2 Canary 在首条 PDF 对象注册处暴露 PostgreSQL 正则重复上限：`{0,511}` 触发 SQLSTATE `2201B`。本地以追加迁移 `0005_pdf_object_key_constraint.sql` 改为独立长度门禁和无上界字符集正则，不改写已应用的 `0004`；等待用户应用 `0005` 并使用原 Run ID 重放。
+远程 PostgreSQL 18.4 已应用 `0001`～`0005`。`0004_runtime_snapshots.sql` 首次插入曾因对象键正则 `{0,511}` 超出 PostgreSQL 重复上限而触发 SQLSTATE `2201B`；追加迁移 `0005_pdf_object_key_constraint.sql` 已改为独立长度门禁和无上界字符集正则，且未改写已应用的 `0004`。同一 Run ID 当前已持久化 1 个 PDF 对象和 4 个 Chunk 并进入双索引 `READY`，等待拉取在线暂存指纹修复后从 READY 恢复 Answer 与三路清理。
 
 ## 已实现的硬约束
 

@@ -507,6 +507,14 @@ class PostgresFactRepositoryTests(unittest.TestCase):
         self.assertEqual(inactive_pdf, pdf_object)
         self.assertIn("v.lifecycle_status = 'INACTIVE'", inactive_lookup.executions[0][0])
 
+        recovery_lookup = ScriptedConnection(pdf_object_row())
+        recovery_pdf = self.repository(recovery_lookup).get_pdf_object(
+            owner_id="owner_001",
+            document_version_id="document_version_existing",
+        )
+        self.assertEqual(recovery_pdf, pdf_object)
+        self.assertIn("get_pdf_object_for_recovery_v1", recovery_lookup.executions[0][0])
+
         purge = ScriptedConnection({"inactive": True}, None, None)
         self.repository(purge).purge_inactive_runtime_snapshot(
             owner_id="owner_001",

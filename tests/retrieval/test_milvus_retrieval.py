@@ -74,6 +74,26 @@ class MilvusVectorRetrievalTests(unittest.TestCase):
         with self.assertRaisesRegex(MilvusIndexNotReadyError, "model identity"):
             self.index.verify_provider(FakeEmbeddingProvider(digest="sha256:changed"))
 
+    def test_online_payload_can_verify_the_staged_source_fingerprint(self):
+        staged = [{**chunk, "is_active": False} for chunk in self.chunks]
+        online = [{**chunk, "is_active": True} for chunk in self.chunks]
+        transport = FakeMilvusTransport()
+        index = MilvusVectorIndex("fixture_chunks_v1", transport)
+        index.build(staged, self.provider)
+        for row, chunk in zip(transport.rows, online, strict=True):
+            row["is_active"] = True
+            row["payload"] = chunk
+
+        ranking = index.search(
+            "How are candidates combined?",
+            self.scope,
+            self.provider,
+            expected_chunks=online,
+            source_fingerprint_chunks=staged,
+        )
+
+        self.assertEqual(ranking[0].chunk["is_active"], True)
+
     def test_identity_configuration_drift_is_rejected(self):
         prefix, payload = self.transport.description.split(":", 1)
         metadata = json.loads(payload)

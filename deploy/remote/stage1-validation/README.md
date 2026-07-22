@@ -76,15 +76,20 @@ Expected report schema is `stage1_remote_canary_report_v2`. Required fields incl
 `status=PASS`, `pdf_object_reopen_proven=true`, `answer_api_status=COMPLETED`,
 `answer_api_evidence_count>=1`, `cleanup_jobs_succeeded=3`,
 `runtime_snapshot_cleanup_proven=true`, `inactive_visibility_proven=true`, and
-`inactive_answer_api_status=403`. Synthetic Canary IDs and snapshot hashes are safe
+`inactive_answer_api_status=403`. `resumed_from_ready=true` is expected when the
+same Run ID continues after a previous failure between READY and inactivation.
+Synthetic Canary IDs and snapshot hashes are safe
 to return; object paths and Chunk payloads are not included.
 
 ## Replay and single-side failure check
 
 The earlier v1 run already proved single-side recovery. For the v2 Gate, one normal
 fresh run is sufficient unless the new migration, snapshot persistence, Answer API,
-or three-way cleanup reports a failure. Do not repeat the old fault simulation only
-to create redundant evidence.
+or three-way cleanup reports a failure. A failure after PostgreSQL commits `READY`
+must be replayed with the same Run ID: the script reopens the exact PDF and Chunk
+snapshot, revalidates both physical routes, and resumes at the Answer gate without
+re-ingestion or index recreation. Do not repeat the old fault simulation only to
+create redundant evidence.
 
 Do not simulate failure by stopping a stable service. Do not use a production owner,
 index prefix, collection prefix, PDF, or idempotency key.

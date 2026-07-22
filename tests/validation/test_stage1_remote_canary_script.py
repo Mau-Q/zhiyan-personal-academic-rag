@@ -69,6 +69,12 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
             _sanitized_error_code(error),
             "CHUNK_SNAPSHOT_PERSIST_FAILED",
         )
+        self.assertEqual(
+            _sanitized_error_code(
+                RuntimeError("PERSISTED_SNAPSHOT_ANSWER_API_FAILED")
+            ),
+            "PERSISTED_SNAPSHOT_ANSWER_API_FAILED",
+        )
         self.assertEqual(_sanitized_error_code(ValueError("secret")), "ValueError")
 
 

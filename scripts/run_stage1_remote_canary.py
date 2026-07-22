@@ -38,6 +38,7 @@ from backend.retrieval.online import (
     OnlineVersionRrfRetriever,
     PostgresReadyRouteResolver,
 )
+from backend.retrieval.sqlite_fts import chunks_fingerprint
 from backend.storage.pdf_objects import FilesystemPdfObjectStore
 from backend.storage.postgres import PostgresFactRepository, connect_postgres
 from backend.validation.stage1 import Stage1ReconciliationError, reconcile_ready_scope
@@ -47,6 +48,19 @@ CONFIRMATION = "RUN_ISOLATED_STAGE1_CANARY"
 REPORT_SCHEMA_VERSION = "stage1_remote_canary_report_v2"
 EXPECTED_CLEANUP_JOBS = 3
 _RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,47}$")
+_SANITIZED_RUNTIME_CODES = frozenset(
+    {
+        "PDF_OBJECT_REOPEN_FAILED",
+        "READY_REPLAY_AMBIGUOUS",
+        "READY_REPLAY_IDENTITY_MISMATCH",
+        "READY_REPLAY_PDF_OBJECT_MISSING",
+        "PERSISTED_SNAPSHOT_ANSWER_API_FAILED",
+        "CLEANUP_DID_NOT_COMPLETE",
+        "RUNTIME_SNAPSHOT_CLEANUP_FAILED",
+        "INACTIVE_VERSION_REMAINED_VISIBLE",
+        "INACTIVE_ANSWER_API_REMAINED_VISIBLE",
+    }
+)
 
 
 class NoCachedQueryVisibility:
@@ -108,6 +122,8 @@ def _write_report(path: Path, payload: dict[str, object]) -> None:
 def _sanitized_error_code(exc: Exception) -> str:
     if isinstance(exc, RuntimeSnapshotPersistenceError):
         return exc.code
+    if type(exc) is RuntimeError and str(exc) in _SANITIZED_RUNTIME_CODES:
+        return str(exc)
     return type(exc).__name__
 
 
@@ -180,38 +196,74 @@ def main() -> int:
         now = datetime.now(timezone.utc)
         owner_id = f"stage1_canary_{args.run_id}"
         paper_id = f"paper_{args.run_id}"
-        runtime_ingestion = prepare_and_persist_pdf_ingestion(
-            pdf_bytes,
-            repository=repository,
-            object_store=pdf_object_store,
-            owner_id=owner_id,
-            paper_id=paper_id,
-            source_type="uploaded",
-            source_created_time=now,
-            source_updated_time=now,
-            idempotency_key=f"ingest_{args.run_id}",
-            strategy=args.strategy,
-            library_scope_ids=[f"library_{args.run_id}"],
-            expected_sha256=args.expected_sha256,
-        )
-        preparation = runtime_ingestion.preparation
+        ready_versions = repository.resolve_online_versions(owner_id=owner_id)
+        resumed_from_ready = bool(ready_versions)
+        if resumed_from_ready:
+            if len(ready_versions) != 1:
+                raise RuntimeError("READY_REPLAY_AMBIGUOUS")
+            version = ready_versions[0]
+            if (
+                version.paper_id != paper_id
+                or version.content_sha256 != actual_sha256
+                or version.source_snapshot_sha256 != actual_sha256
+            ):
+                raise RuntimeError("READY_REPLAY_IDENTITY_MISMATCH")
+            online_chunks = repository.load_online_chunks(
+                owner_id=owner_id,
+                document_version_ids=[version.document_version_id],
+            )
+            source_chunks = tuple(
+                chunk.model_copy(update={"is_active": False})
+                for chunk in online_chunks
+            )
+            pdf_object = repository.get_pdf_object(
+                owner_id=owner_id,
+                document_version_id=version.document_version_id,
+            )
+            if pdf_object is None:
+                raise RuntimeError("READY_REPLAY_PDF_OBJECT_MISSING")
+            runtime_snapshot_sha256 = chunks_fingerprint(
+                [chunk.model_dump(mode="json") for chunk in source_chunks]
+            )
+        else:
+            runtime_ingestion = prepare_and_persist_pdf_ingestion(
+                pdf_bytes,
+                repository=repository,
+                object_store=pdf_object_store,
+                owner_id=owner_id,
+                paper_id=paper_id,
+                source_type="uploaded",
+                source_created_time=now,
+                source_updated_time=now,
+                idempotency_key=f"ingest_{args.run_id}",
+                strategy=args.strategy,
+                library_scope_ids=[f"library_{args.run_id}"],
+                expected_sha256=args.expected_sha256,
+            )
+            preparation = runtime_ingestion.preparation
+            source_chunks = preparation.ingestion.chunks
+            pdf_object = runtime_ingestion.pdf_object
+            runtime_snapshot_sha256 = (
+                runtime_ingestion.snapshot.chunk_snapshot_sha256
+            )
+            publication = publish_prepared_indexes(
+                preparation,
+                repository=repository,
+                elasticsearch=elasticsearch,
+                milvus=milvus,
+            )
+            version = publication.version
         reopened_pdf = FilesystemPdfObjectStore(args.pdf_object_root).read_pdf(
-            runtime_ingestion.pdf_object
+            pdf_object
         )
         if reopened_pdf != pdf_bytes:
             raise RuntimeError("PDF_OBJECT_REOPEN_FAILED")
-        publication = publish_prepared_indexes(
-            preparation,
-            repository=repository,
-            elasticsearch=elasticsearch,
-            milvus=milvus,
-        )
         ready_report = reconcile_ready_scope(
             repository=repository,
             elasticsearch=elasticsearch,
             milvus=milvus,
             owner_id=owner_id,
-            document_ids=[publication.version.document_id],
+            document_ids=[version.document_id],
         )
         online_retriever = OnlineVersionRrfRetriever(
             resolver=PostgresReadyRouteResolver(
@@ -234,8 +286,8 @@ def main() -> int:
         answer_response = answer_client.post(
             "/api/v1/rag/answers",
             json={
-                "question": preparation.ingestion.chunks[0].text[:4000],
-                "document_ids": [publication.version.document_id],
+                "question": source_chunks[0].text[:4000],
+                "document_ids": [version.document_id],
                 "stream": False,
             },
         )
@@ -249,7 +301,7 @@ def main() -> int:
 
         scheduler = PersistentIndexCleanupScheduler(repository)
         inactivation = inactivate_and_schedule_cleanup(
-            publication.version,
+            version,
             reason=InactivationReason.DELETE,
             repository=repository,
             visibility=NoCachedQueryVisibility(),
@@ -272,7 +324,7 @@ def main() -> int:
             raise RuntimeError("CLEANUP_DID_NOT_COMPLETE")
         if repository.get_inactive_pdf_object(
             owner_id=owner_id,
-            document_version_id=publication.version.document_version_id,
+            document_version_id=version.document_version_id,
         ) is not None:
             raise RuntimeError("RUNTIME_SNAPSHOT_CLEANUP_FAILED")
         try:
@@ -281,7 +333,7 @@ def main() -> int:
                 elasticsearch=elasticsearch,
                 milvus=milvus,
                 owner_id=owner_id,
-                document_ids=[publication.version.document_id],
+                document_ids=[version.document_id],
             )
         except Stage1ReconciliationError:
             inactive_proven = True
@@ -293,7 +345,7 @@ def main() -> int:
             "/api/v1/rag/answers",
             json={
                 "question": "This deleted document must remain unavailable.",
-                "document_ids": [publication.version.document_id],
+                "document_ids": [version.document_id],
                 "stream": False,
             },
         )
@@ -311,13 +363,12 @@ def main() -> int:
             "pdf_sha256": actual_sha256,
             "owner_id": owner_id,
             "paper_id": paper_id,
-            "document_id": publication.version.document_id,
-            "document_version_id": publication.version.document_version_id,
-            "chunk_count": len(preparation.ingestion.chunks),
-            "runtime_snapshot_sha256": (
-                runtime_ingestion.snapshot.chunk_snapshot_sha256
-            ),
+            "document_id": version.document_id,
+            "document_version_id": version.document_version_id,
+            "chunk_count": len(source_chunks),
+            "runtime_snapshot_sha256": runtime_snapshot_sha256,
             "pdf_object_reopen_proven": True,
+            "resumed_from_ready": resumed_from_ready,
             "ready_reconciliation": ready_report.model_dump(),
             "answer_api_status": answer_payload["status"],
             "answer_api_evidence_count": len(answer_payload["evidence"]),
