@@ -8,7 +8,7 @@ ifeq ($(wildcard $(PROJECT_PYTHON)),)
 $(error Project virtualenv is missing at $(PROJECT_PYTHON); create .venv and install the project dependencies first)
 endif
 
-.PHONY: harness-validate harness-test contract-test storage-test ingestion-test retrieval-test rag-test api-test evaluation-test evaluation-contract-check formal-evaluation-fixture evaluation-smoke sqlite-fts-fixture-smoke vector-fixture-smoke rrf-fixture-smoke test
+.PHONY: harness-validate harness-test contract-test storage-test ingestion-test retrieval-test rag-test api-test evaluation-test validation-test stage1-local-canary evaluation-contract-check formal-evaluation-fixture evaluation-smoke sqlite-fts-fixture-smoke vector-fixture-smoke rrf-fixture-smoke test
 
 harness-validate:
 	$(PROJECT_PYTHON) scripts/validate_harness_contract.py
@@ -37,6 +37,20 @@ api-test:
 evaluation-test:
 	$(PROJECT_PYTHON) -m unittest discover -s tests/evaluation -p 'test_*.py' -v
 
+validation-test:
+	$(PROJECT_PYTHON) -m unittest discover -s tests/validation -p 'test_*.py' -v
+
+stage1-local-canary:
+	$(PROJECT_PYTHON) -m unittest -v \
+		tests.ingestion.test_persistent_ingestion \
+		tests.ingestion.test_index_lifecycle \
+		tests.ingestion.test_elasticsearch_version_writer \
+		tests.ingestion.test_milvus_version_writer \
+		tests.ingestion.test_cleanup \
+		tests.retrieval.test_online_visibility \
+		tests.api.test_online_ready_rag_answers_api \
+		tests.validation.test_stage1_reconciliation
+
 evaluation-contract-check:
 	$(PROJECT_PYTHON) scripts/export_evaluation_contracts.py --check
 
@@ -60,4 +74,4 @@ rrf-fixture-smoke:
 	$(PROJECT_PYTHON) -m backend.retrieval.vector build --chunks fixtures/chunks-v1.json --output runtime/evaluation/fixture-rrf-v1.vector.sqlite
 	$(PROJECT_PYTHON) -m backend.evaluation.harness --cases evaluation/suites/fixture-rrf-v1.jsonl --chunks fixtures/chunks-v1.json --scope fixtures/authorized-scope-v1.json --suite-id fixture-rrf-v1 --retrieval-backend local_rrf --index runtime/evaluation/fixture-rrf-v1.fts.sqlite --vector-index runtime/evaluation/fixture-rrf-v1.vector.sqlite --output runtime/evaluation/fixture-rrf-v1-report.json
 
-test: harness-validate harness-test contract-test storage-test ingestion-test retrieval-test rag-test api-test evaluation-test evaluation-contract-check
+test: harness-validate harness-test contract-test storage-test ingestion-test retrieval-test rag-test api-test evaluation-test validation-test evaluation-contract-check

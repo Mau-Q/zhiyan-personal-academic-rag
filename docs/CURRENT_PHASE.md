@@ -146,6 +146,8 @@ Phase ID：`source-phase1-data-index-minimal-loop-in-progress`
 - 新增 7 项 Milvus 版本写入器测试与 1 项传输生命周期测试后，全仓 207 项测试及 Harness 9 项检查通过。
 - 完成失效后物理清理闭环：只有 PostgreSQL `INACTIVE` 版本可以幂等入队；Worker 使用租约和 `SKIP LOCKED` 领取任务，恢复过期租约，按稳定错误码和有界指数退避重试，并调用身份固定的 ES/Milvus 版本删除接口。物理对象已经不存在按幂等成功处理，任何下游失败都不会重新激活事实源。
 - 完成本地在线 READY 可见性闭环：PostgreSQL 约束同一 owner/document 只有一个活动版本；Answer API 从服务端鉴权 owner 解析 `READY` 文档版本，逐版本核验确定性 ES Index、Milvus Collection、模型和活动 Chunk，再跨多版本统一 RRF。任何事实源、路由或候选身份无法证明时沿现有 403 合同失败关闭。
+- 完成阶段 1 本地集成对账门禁：对指定 owner/document 精确核对 PostgreSQL `READY`、源快照身份、ES 物理 Index 和 Milvus 物理 Collection，任一侧缺失或漂移整体失败关闭；固定 `make stage1-local-canary` 覆盖 50 项相关闭环测试。
+- 形成一次性远程验证包：用户在隔离远程主机按版本化清单执行迁移、双索引发布、READY 对账、删除失效、两个物理清理任务和单侧失败重放；报告不包含凭据、PDF/Chunk 正文或端点。
 
 ## 输入
 
@@ -188,12 +190,12 @@ Phase ID：`source-phase1-data-index-minimal-loop-in-progress`
 
 ## Current boundary
 
-最高方案阶段 0 已完成，当前进入阶段 1。当前最宽本地问答执行边界扩展为 `LOCAL_POSTGRES_READY_ROUTED_ES_MILVUS_RRF_FAKE_LLM`；评测执行边界仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。PostgreSQL 最小事实源、持久化 PDF 准备、双索引生命周期协调、ES/Milvus 版本写入器、持久化物理清理及在线 READY 权限路由已在本地就绪；远程迁移/实跑、PDF/Chunk 运行存储、目标规模性能和真实生成模型尚未完成。运行时私有数据继续不进入 Git。
+最高方案阶段 0 已完成，当前进入阶段 1。当前最宽本地问答执行边界扩展为 `LOCAL_POSTGRES_READY_ROUTED_ES_MILVUS_RRF_FAKE_LLM`；评测执行边界仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。PostgreSQL 最小事实源、持久化 PDF 准备、双索引生命周期协调、ES/Milvus 版本写入器、持久化物理清理、在线 READY 权限路由及本地集成对账已就绪，远程验证包已准备但未执行；远程迁移/实跑、PDF/Chunk 运行存储、目标规模性能和真实生成模型尚未完成。运行时私有数据继续不进入 Git。
 
 ## Next gate
 
-1. **PostgreSQL 最小事实源：** 本地 Schema、迁移器与适配器已完成；下一步由用户在隔离远程 PostgreSQL 应用迁移并返回脱敏证据；
-2. **索引闭环：** 本地协调、ES/Milvus 版本写入器、持久化物理清理及 PostgreSQL READY 多版本路由已完成；下一步执行阶段 1 本地集成对账和固定 Canary，并生成一次性远程验证包；
+1. **用户远程验证：** 本地集成对账、固定 Canary 和版本化验证包已完成；下一步由用户按 `deploy/remote/stage1-validation/README.md` 在隔离远程主机一次执行迁移、成功闭环和单侧失败重放，并返回脱敏 JSON 与 SHA-256；
+2. **阶段判定：** 根据远程原始证据判定 PostgreSQL、ES、Milvus、READY、失效和物理清理；远程证据返回前不宣称阶段 1 完成；
 3. **兼容迁移：** 持久化准备已将 `document_version_id/owner_id` 适配到 legacy Chunk 字段；在线 Answer API 已保持 V1 请求/响应合同并切换到 PostgreSQL READY 权限门禁；
 4. **性能与复杂度：** 闭环完成后再按冻结规模验收性能；当前不跑 175 题 RRF、不增加重排或真实 LLM。
 

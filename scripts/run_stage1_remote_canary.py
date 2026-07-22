@@ -1,0 +1,249 @@
+"""Run one isolated, mutating Stage 1 canary against user-operated services."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+import urllib.parse
+from datetime import datetime, timezone
+from hashlib import sha256
+from pathlib import Path
+
+from backend.ingestion.cleanup import (
+    PersistentIndexCleanupScheduler,
+    PersistentIndexCleanupWorker,
+)
+from backend.ingestion.elasticsearch_writer import ElasticsearchVersionIndexWriter
+from backend.ingestion.index_lifecycle import (
+    InactivationReason,
+    inactivate_and_schedule_cleanup,
+    publish_prepared_indexes,
+)
+from backend.ingestion.milvus_writer import MilvusVersionIndexWriter
+from backend.ingestion.persistent import prepare_persistent_pdf_ingestion
+from backend.retrieval.elasticsearch import UrllibElasticsearchTransport
+from backend.retrieval.embedding import OllamaEmbeddingProvider
+from backend.retrieval.milvus import PymilvusTransport
+from backend.storage.postgres import PostgresFactRepository, connect_postgres
+from backend.validation.stage1 import Stage1ReconciliationError, reconcile_ready_scope
+
+
+CONFIRMATION = "RUN_ISOLATED_STAGE1_CANARY"
+_RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,47}$")
+
+
+class NoCachedQueryVisibility:
+    """PG READY is queried directly; there is no separate query cache to clear."""
+
+    def invalidate_version(self, **kwargs: object) -> None:
+        del kwargs
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--pdf", type=Path, required=True)
+    parser.add_argument("--expected-sha256", required=True)
+    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--confirm", required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--strategy", default="fixed_boundary_v1")
+    parser.add_argument("--es-index-prefix", default="zhiyan-stage1-canary")
+    parser.add_argument("--milvus-collection-prefix", default="zhiyan_stage1_canary")
+    return parser
+
+
+def _environment(name: str, default: str | None = None) -> str:
+    value = os.getenv(name, default)
+    if not value:
+        raise ValueError(f"required environment variable is empty: {name}")
+    return value
+
+
+def _loopback_endpoint(name: str, value: str) -> str:
+    parsed = urllib.parse.urlparse(value)
+    if parsed.scheme not in {"http", "https", "postgresql"} or parsed.hostname not in {
+        "127.0.0.1",
+        "localhost",
+        "::1",
+    }:
+        raise ValueError(f"{name}_MUST_USE_LOOPBACK")
+    return value
+
+
+def _validate_output_path(path: Path) -> None:
+    if path.is_absolute() or not path.parts or path.parts[0] != "runtime" or ".." in path.parts:
+        raise ValueError("OUTPUT_MUST_BE_UNDER_RUNTIME")
+
+
+def _write_report(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def main() -> int:
+    args = build_parser().parse_args()
+    if args.confirm != CONFIRMATION:
+        print(
+            json.dumps(
+                {
+                    "status": "REFUSED",
+                    "error_code": "EXPLICIT_CONFIRMATION_REQUIRED",
+                    "expected_confirmation": CONFIRMATION,
+                }
+            ),
+            file=sys.stderr,
+        )
+        return 2
+    if not _RUN_ID_PATTERN.fullmatch(args.run_id):
+        print('{"status":"REFUSED","error_code":"INVALID_RUN_ID"}', file=sys.stderr)
+        return 2
+    if "canary" not in args.es_index_prefix or "canary" not in args.milvus_collection_prefix:
+        print('{"status":"REFUSED","error_code":"CANARY_PREFIX_REQUIRED"}', file=sys.stderr)
+        return 2
+    try:
+        _validate_output_path(args.output)
+    except ValueError:
+        print('{"status":"REFUSED","error_code":"UNSAFE_OUTPUT_PATH"}', file=sys.stderr)
+        return 2
+
+    connection = None
+    try:
+        pdf_bytes = args.pdf.read_bytes()
+        actual_sha256 = sha256(pdf_bytes).hexdigest()
+        if actual_sha256 != args.expected_sha256:
+            raise ValueError("PDF_IDENTITY_MISMATCH")
+
+        connection = connect_postgres(
+            _loopback_endpoint("DATABASE_URL", _environment("DATABASE_URL"))
+        )
+        repository = PostgresFactRepository(connection)
+        elasticsearch = ElasticsearchVersionIndexWriter(
+            index_prefix=args.es_index_prefix,
+            transport=UrllibElasticsearchTransport(
+                base_url=_loopback_endpoint(
+                    "ELASTICSEARCH_URL",
+                    _environment("ELASTICSEARCH_URL", "http://127.0.0.1:9200"),
+                )
+            ),
+        )
+        milvus = MilvusVersionIndexWriter(
+            collection_prefix=args.milvus_collection_prefix,
+            transport=PymilvusTransport(
+                uri=_loopback_endpoint(
+                    "MILVUS_URI",
+                    _environment("MILVUS_URI", "http://127.0.0.1:19530"),
+                )
+            ),
+            provider=OllamaEmbeddingProvider(
+                model=_environment("OLLAMA_EMBED_MODEL", "bge-m3:latest"),
+                base_url=_loopback_endpoint(
+                    "OLLAMA_URL",
+                    _environment("OLLAMA_URL", "http://127.0.0.1:11434"),
+                ),
+            ),
+        )
+        now = datetime.now(timezone.utc)
+        owner_id = f"stage1_canary_{args.run_id}"
+        paper_id = f"paper_{args.run_id}"
+        preparation = prepare_persistent_pdf_ingestion(
+            pdf_bytes,
+            repository=repository,
+            owner_id=owner_id,
+            paper_id=paper_id,
+            source_type="uploaded",
+            source_created_time=now,
+            source_updated_time=now,
+            idempotency_key=f"ingest_{args.run_id}",
+            strategy=args.strategy,
+            library_scope_ids=[f"library_{args.run_id}"],
+            expected_sha256=args.expected_sha256,
+        )
+        publication = publish_prepared_indexes(
+            preparation,
+            repository=repository,
+            elasticsearch=elasticsearch,
+            milvus=milvus,
+        )
+        ready_report = reconcile_ready_scope(
+            repository=repository,
+            elasticsearch=elasticsearch,
+            milvus=milvus,
+            owner_id=owner_id,
+            document_ids=[publication.version.document_id],
+        )
+
+        scheduler = PersistentIndexCleanupScheduler(repository)
+        inactivation = inactivate_and_schedule_cleanup(
+            publication.version,
+            reason=InactivationReason.DELETE,
+            repository=repository,
+            visibility=NoCachedQueryVisibility(),
+            cleanup=scheduler,
+            elasticsearch=elasticsearch,
+            milvus=milvus,
+        )
+        cleanup_results = PersistentIndexCleanupWorker(
+            repository=repository,
+            elasticsearch=elasticsearch,
+            milvus=milvus,
+        ).run_batch(max_jobs=2)
+        if len(cleanup_results) != 2 or not all(
+            result.succeeded for result in cleanup_results
+        ):
+            raise RuntimeError("CLEANUP_DID_NOT_COMPLETE")
+        try:
+            reconcile_ready_scope(
+                repository=repository,
+                elasticsearch=elasticsearch,
+                milvus=milvus,
+                owner_id=owner_id,
+                document_ids=[publication.version.document_id],
+            )
+        except Stage1ReconciliationError:
+            inactive_proven = True
+        else:
+            inactive_proven = False
+        if not inactive_proven:
+            raise RuntimeError("INACTIVE_VERSION_REMAINED_VISIBLE")
+
+        payload: dict[str, object] = {
+            "schema_version": "stage1_remote_canary_report_v1",
+            "status": "PASS",
+            "run_id": args.run_id,
+            "pdf_sha256": actual_sha256,
+            "owner_id": owner_id,
+            "paper_id": paper_id,
+            "document_id": publication.version.document_id,
+            "document_version_id": publication.version.document_version_id,
+            "chunk_count": len(preparation.ingestion.chunks),
+            "ready_reconciliation": ready_report.model_dump(),
+            "inactivation_reason": inactivation.reason.value,
+            "cleanup_jobs_succeeded": len(cleanup_results),
+            "inactive_visibility_proven": inactive_proven,
+        }
+        _write_report(args.output, payload)
+        print(json.dumps(payload, ensure_ascii=False))
+        return 0
+    except Exception as exc:
+        failure = {
+            "schema_version": "stage1_remote_canary_report_v1",
+            "status": "FAIL",
+            "run_id": args.run_id,
+            "error_code": type(exc).__name__,
+        }
+        _write_report(args.output, failure)
+        print(json.dumps(failure), file=sys.stderr)
+        return 1
+    finally:
+        if connection is not None:
+            connection.close()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
