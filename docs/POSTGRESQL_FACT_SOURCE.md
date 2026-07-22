@@ -62,4 +62,4 @@ Remove-Item Env:DATABASE_URL
 
 ## 后续门禁
 
-用户在隔离远程主机应用 `0004`，再运行版本化 Stage 1 v2 Canary。必须同时返回：迁移 `APPLIED/UNCHANGED`、PDF 对象重开、Chunk 快照指纹、Answer API `COMPLETED` 与 Evidence、删除后 Answer API 403、ES/Milvus/运行快照三项清理成功。报告只返回脱敏身份和哈希，不返回 PDF/Chunk 正文、对象根目录或连接信息。
+用户已在隔离远程主机应用 `0004` 与修复迁移 `0005`，并在提交 `72d71d2` 使用同一 Run ID 从 READY 恢复完成 Stage 1 v2 Canary。报告证明 PDF 对象重开、4 个 Chunk 快照、Answer API `COMPLETED` 与 3 条 Evidence、删除后 403、ES/Milvus/运行快照三项清理成功；SHA-256 为 `6B2AB3BAAD55AE8FA506C0D1FD7A310D9EF3A3833A93E33DD1A2D8A0938A9D8C`。报告未包含 PDF/Chunk 正文、对象根目录或连接信息，凭据变量已清除。

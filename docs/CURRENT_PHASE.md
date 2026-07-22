@@ -2,9 +2,9 @@
 
 ## Status
 
-`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN`
+`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN`
 
-Phase ID：`source-phase1-data-index-minimal-loop-in-progress`
+Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 
 ## Completed
 
@@ -155,13 +155,15 @@ Phase ID：`source-phase1-data-index-minimal-loop-in-progress`
 - 完成持久化快照 Answer API 闭环：在线模式不再加载 Fixture Chunk/Scope，只按 PostgreSQL READY 版本加载 Chunk，并在检索后重验事实源；失效后返回 403，ES、Milvus 和运行快照三项物理清理共用持久租约、重试与恢复。
 - 远程 v2 首次运行在 PDF 对象注册处以 SQLSTATE `2201B` 失败，未进入 ES/Milvus 发布；根因是 `0004` 的对象键正则使用 PostgreSQL 不支持的 `{0,511}` 重复上限。本地追加 `0005` 迁移，以长度检查加无上界字符集正则修复，并保留 `0004` 校验和不变。
 - 应用 `0005` 后，同一远程 Run ID 已完成 PDF/4 Chunk 持久化和 ES/Milvus `READY`，Answer 门禁暴露暂存态 `is_active=false` 指纹与 PostgreSQL READY 投影 `is_active=true` 被误判为内容漂移。本地已让 ES/Milvus 分离校验“暂存源指纹”和“在线活动载荷”，并支持同一 Run ID 从既有 READY 快照继续 Answer、失效和三路清理，不重建索引。
+- 用户在远程提交 `72d71d2` 使用原 Run ID 完成 v2 恢复：PDF 对象重开、4 个 PostgreSQL Chunk、ES/Milvus READY 对账、持久化快照 Answer API `COMPLETED` 与 3 条 Evidence、删除后 403、ES/Milvus/运行快照三项清理全部通过；报告 SHA-256 为 `6B2AB3BAAD55AE8FA506C0D1FD7A310D9EF3A3833A93E33DD1A2D8A0938A9D8C`，凭据变量已清除。
+- 最高方案阶段 1 的退出条件已满足：owner 发布阻断、ES/Milvus ID 与版本对账、删除/失效不可召回、上游时间戳与版本追踪、单侧失败不误报 READY 均有本地合同和远程运行证据。正式 MinIO、OCR 和目标规模性能仍是未完成需求，但不属于第 10.2 节列出的阶段 1 退出条件。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：远程拉取 READY 恢复修复并用原 Run ID 完成持久化快照 Answer API v2 重放、正式 MinIO 适配、OCR、目标规模性能验收、无证据校准、安全策略层和真实生成模型；
+- 未完成能力：阶段 2 的真实生成模型与完整 MVP 回放、正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -197,13 +199,13 @@ Phase ID：`source-phase1-data-index-minimal-loop-in-progress`
 
 ## Current boundary
 
-最高方案阶段 0 已完成，当前仍为阶段 1 `IN_PROGRESS`。评测执行边界仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。先前远程提交已证明 PostgreSQL、ES/Milvus、READY、失败重放与两路索引清理；当前本地又完成 PDF/Chunk 运行存储、持久化快照 Answer API 和第三路运行快照清理。新增 `0004` 与 v2 Canary 尚未远程实跑，因此仍不将整个阶段 1 标记完成。运行时私有数据继续不进入 Git。
+最高方案阶段 0、阶段 1 已完成，当前进入阶段 2 `IN_PROGRESS`。评测执行边界仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。远程 v2 已证明 PDF/Chunk 持久化、PostgreSQL READY、ES/Milvus 物理路由、Answer API Evidence、失败恢复、删除后 403 和三路清理；运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
 
 ## Next gate
 
-1. **同步 Gate：** 用户将本地提交推送到远程并确认目标 SHA 与工作树干净；
-2. **一次远程 v2 Canary：** 应用 `0004`，验证 PDF 对象重开、PostgreSQL Chunk 快照、真实 Answer API `COMPLETED + Evidence`、删除后 403 和三项清理成功；
-3. **阶段判定：** 回收脱敏 v2 报告和 SHA-256 后重新判定阶段 1；性能仍按冻结规模后置，当前不增加 RRF 调参、重排或真实 LLM。
+1. **阶段 2 差距冻结：** 以第 10.3 节退出条件核对现有 Hybrid、Reranker 决策、引用/ACL/版本/定位门禁和普通问答回放，区分已完成工程能力与 Fake LLM 边界；
+2. **最小真实生成闭环：** 只选择一个本机可运行的生成模型和固定 Prompt/解码配置，复用现有 PostgreSQL READY + ES/Milvus RRF Evidence，不修改检索参数；
+3. **阶段 2 验收包：** 在指定文档与普通学术问答上比较 Hybrid 与最佳单路、验证引用确定性和失败关闭，再决定阶段 2 是否完成。正式 MinIO、OCR 与目标规模性能保持独立 Gate，不混入本次生成变量。
 
 ## Prohibited shortcuts
 

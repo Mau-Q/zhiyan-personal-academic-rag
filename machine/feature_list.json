@@ -387,7 +387,7 @@
     },
     {
       "id": "online_ready_visibility",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "A",
       "evidence": [
         "backend/storage/migrations/0003_online_ready_visibility.sql",

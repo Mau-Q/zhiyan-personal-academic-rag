@@ -68,4 +68,4 @@ Milvus 侧已实现 `MilvusVersionIndexWriter`：每个 owner/version 使用身�
 
 `PostgresReadyRouteResolver` 只接收 PostgreSQL `READY + is_active` 版本，并要求请求中的每个 `document_id` 都属于服务端鉴权 owner；`OnlineVersionRrfRetriever` 随后按这些精确版本从 PostgreSQL 加载 Chunk 快照，再选择确定性 ES Index 与 Milvus Collection并统一 RRF。Answer API 的 `online_remote_rrf` 装配只接受服务端 `authenticated_owner_id`，不加载 Fixture Chunk 或 Fixture Scope；PostgreSQL 快照、物理路由或候选身份任一无法证明时返回现有 403 合同。
 
-本地代码和专项门禁已覆盖 PDF 对象重开、Chunk 快照重放、READY-only 加载、持久化快照 Answer API、INACTIVE 后 403 以及三项可恢复物理清理。先前远程基础设施生命周期 Canary 已通过；新增的 `0004` 迁移和持久化 Answer API v2 Canary 仍需由用户在远程主机实跑，未回收该证据前不宣称整个阶段 1 完成。
+本地代码和专项门禁已覆盖 PDF 对象重开、Chunk 快照重放、READY-only 加载、持久化快照 Answer API、INACTIVE 后 403 以及三项可恢复物理清理。远程 v2 已在提交 `72d71d2` 使用同一 Run ID 从 READY 恢复并整体 `PASS`：Answer API 返回 `COMPLETED` 和 3 条 Evidence，三项清理成功，删除后返回 403；脱敏报告 SHA-256 为 `6B2AB3BAAD55AE8FA506C0D1FD7A310D9EF3A3833A93E33DD1A2D8A0938A9D8C`。该证据满足最高方案阶段 1 退出条件，但 `filesystem_v1` 仍不冒充正式 MinIO。
