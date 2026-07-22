@@ -9,6 +9,7 @@ from backend.ingestion.persistent import RuntimeSnapshotPersistenceError
 from backend.rag.generation import GenerationServiceError
 from scripts.run_stage1_remote_canary import (
     EXPECTED_CLEANUP_JOBS,
+    REPOSITORY_ROOT,
     REPORT_SCHEMA_VERSION,
     _ObservedGenerationProvider,
     _generation_replay_byte_stable,
@@ -19,6 +20,9 @@ from scripts.run_stage1_remote_canary import (
 
 
 class Stage1RemoteCanaryScriptTests(unittest.TestCase):
+    def test_repository_script_prefers_its_checkout_over_installed_wheel(self):
+        self.assertEqual(Path(sys.path[0]).resolve(), REPOSITORY_ROOT)
+
     def test_v2_contract_includes_runtime_storage_and_three_cleanup_jobs(self):
         args = build_parser().parse_args(
             [

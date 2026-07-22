@@ -15,6 +15,13 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
+# This is a repository operator script, not an installed console entry point.
+# Bind it to the same checkout as its fixtures even when the project venv was
+# populated from a non-editable wheel, as it is in GitHub Actions.
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+if not sys.path or Path(sys.path[0]).resolve() != REPOSITORY_ROOT:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+
 from fastapi.testclient import TestClient
 
 from backend.api.app import create_app
