@@ -113,6 +113,7 @@ def main() -> int:
                 "seed": identity.seed,
                 "num_predict": identity.num_predict,
                 "num_ctx": identity.num_ctx,
+                "think": identity.think,
             },
             "completed_status": first_payload["status"],
             "answer_sha256": _sha256_text(first_payload["answer"]),

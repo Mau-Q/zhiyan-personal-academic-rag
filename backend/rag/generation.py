@@ -28,6 +28,7 @@ DEFAULT_TEMPERATURE = 0.0
 DEFAULT_SEED = 42
 DEFAULT_NUM_PREDICT = 384
 DEFAULT_NUM_CTX = 8192
+DEFAULT_THINK = False
 _DIGEST_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 _CITATION_PATTERN = re.compile(r"\[(\d+)\]")
 _ANSWER_SCHEMA = {
@@ -99,13 +100,15 @@ class GenerationModelIdentity:
     seed: int = DEFAULT_SEED
     num_predict: int = DEFAULT_NUM_PREDICT
     num_ctx: int = DEFAULT_NUM_CTX
+    think: bool = DEFAULT_THINK
 
     @property
     def execution_boundary(self) -> str:
         return (
             "REAL_GENERATION_"
             f"{self.provider.upper()}_{self.model.upper().replace(':', '_').replace('.', '_')}_"
-            f"{self.digest[:12].upper()}_{self.prompt_version.upper().replace('-', '_')}"
+            f"{self.digest[:12].upper()}_THINK_{str(self.think).upper()}_"
+            f"{self.prompt_version.upper().replace('-', '_')}"
         )
 
 
@@ -280,6 +283,7 @@ class OllamaGenerationProvider:
                     },
                 ],
                 "stream": False,
+                "think": DEFAULT_THINK,
                 "format": _ANSWER_SCHEMA,
                 "options": {
                     "temperature": DEFAULT_TEMPERATURE,

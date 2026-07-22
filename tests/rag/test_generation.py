@@ -153,6 +153,9 @@ class RealGenerationTests(unittest.TestCase):
         path, payload = provider.requests[1]
         self.assertEqual(path, "/api/chat")
         self.assertFalse(payload["stream"])
+        self.assertIs(payload["think"], False)
+        self.assertIs(provider.configured_identity().think, False)
+        self.assertIn("THINK_FALSE", provider.configured_identity().execution_boundary)
         self.assertEqual(payload["format"]["required"], ["claims"])
         self.assertEqual(
             payload["options"],

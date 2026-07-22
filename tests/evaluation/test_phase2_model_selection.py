@@ -11,6 +11,7 @@ from scripts.run_phase2_model_selection import (
     BASELINE_MODEL,
     CANDIDATE_MODEL,
     ModelSelectionGateError,
+    REPORT_SCHEMA_VERSION,
     SUITE_PATH,
     SUITE_SHA256,
     _canonical_sha256,
@@ -139,6 +140,8 @@ class Phase2ModelSelectionTests(unittest.TestCase):
         )
 
         self.assertEqual(report["status"], "PASS")
+        self.assertEqual(REPORT_SCHEMA_VERSION, "phase2_model_selection_report_v3")
+        self.assertIs(report["think"], False)
         self.assertEqual(report["decision"], "PROMOTE_QWEN3_14B")
         self.assertTrue(report["candidate_eligible"])
         self.assertTrue(report["results"][1]["hard_gate_pass"])

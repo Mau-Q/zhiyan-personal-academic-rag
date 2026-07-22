@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from backend.rag.generation import (
+    DEFAULT_THINK,
     PROMPT_SHA256,
     PROMPT_VERSION,
     GenerationProvider,
@@ -24,7 +25,7 @@ from backend.rag.generation import (
 )
 
 
-REPORT_SCHEMA_VERSION = "phase2_model_selection_report_v2"
+REPORT_SCHEMA_VERSION = "phase2_model_selection_report_v3"
 SUITE_SCHEMA_VERSION = "phase2_model_selection_suite_v2"
 SUITE_PATH = Path("evaluation/generation/phase2-model-selection-v2.json")
 SUITE_SHA256 = "f3b48efe5e3700e23cdfb3781f49b6a8907fefbd51107126705f92fdb2352260"
@@ -32,7 +33,7 @@ BASE_CASES_SCHEMA_VERSION = "phase2_model_selection_cases_v1"
 BASE_CASES_PATH = Path("evaluation/generation/phase2-model-selection-v1.json")
 BASE_CASES_SHA256 = "2ddec2697294ef98bacae7e01fd49a382235dad506b6a22b93b7b4d789ac176f"
 DEFAULT_OUTPUT = Path(
-    "runtime/phases/source-phase2-model-selection-qwen3-14b-v2/report.json"
+    "runtime/phases/source-phase2-model-selection-qwen3-14b-v3/report.json"
 )
 _CITATION_PATTERN = re.compile(r"\[(\d+)\]")
 
@@ -338,6 +339,7 @@ def run_selection(
             "base_cases_sha256": BASE_CASES_SHA256,
             "prompt_version": PROMPT_VERSION,
             "prompt_sha256": PROMPT_SHA256,
+            "think": DEFAULT_THINK,
             "retrieval_parameters_changed": False,
             "results": [baseline, candidate],
         }
@@ -350,6 +352,7 @@ def run_selection(
         "base_cases_sha256": BASE_CASES_SHA256,
         "prompt_version": PROMPT_VERSION,
         "prompt_sha256": PROMPT_SHA256,
+        "think": DEFAULT_THINK,
         "retrieval_parameters_changed": False,
         "selection_policy": (
             "PREFERRED_CANDIDATE_PROMOTES_ONLY_IF_ALL_FIXED_HARD_GATES_PASS"

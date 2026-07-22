@@ -166,6 +166,7 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 - READY Canary 的真实生成稳定回放同步采用相同边界：两次 Answer API 调用必须分别完成引用门禁并返回相同 Citation 集合；答案是否逐字一致单独记录为 `generation_byte_stable_replay`，不作为自然语言模型硬门禁。
 - Qwen READY 首次远程运行以 `PERSISTED_SNAPSHOT_ANSWER_HTTP_FAILED` 停在 Answer API；同 Run ID 恢复后已进入真实生成，但以 `REAL_GENERATION_INITIAL_FAILED_CLOSED` 失败关闭，尚未执行失效和三路清理。该结果证明问题不是缺少 Ollama API 配置，但原统一错误码无法区分传输、响应 JSON、答案 JSON、Schema 或引用失败。
 - 生成器现为上述失败类别携带固定 allowlist 代码；远程 Canary 仅观察并输出该代码，不保存异常正文、模型回答、Prompt 或 Evidence，也不改变对外 Answer API 的 `DEGRADED`、warning 和 Schema。
+- Qwen READY `retry2` 已将具体失败定位为 `REAL_GENERATION_INITIAL_OLLAMA_ANSWER_JSON_INVALID`。依据 Ollama Qwen3 thinking API 边界，当前只显式冻结 `think=false`，避免默认 thinking 在 `num_predict=384` 内挤占最终结构化回答；模型摘要、Prompt、Schema、其他解码项和检索不变。远程必须先通过同四题 v3 选型回归，再以原 Run ID 完成 READY 恢复。
 
 ## 输入
 
@@ -213,7 +214,7 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 
 ## Next gate
 
-1. **Qwen READY 端到端 Gate：** 推送稳定生成失败分类后，以现有 Run ID 恢复并确定具体 Qwen 生成失败类别；修复后仍复用 PostgreSQL READY + ES/Milvus RRF，验证两次独立引用门禁、删除后 403 与三路清理，不修改检索参数；
+1. **Qwen READY 端到端 Gate：** 先以 `think=false` 对固定四题做 v3 选型无回归验证，再以现有 Run ID 复用 PostgreSQL READY + ES/Milvus RRF，验证两次独立引用门禁、删除后 403 与三路清理，不修改检索参数；
 2. **阶段 2 验收包：** 在指定文档与普通学术问答上记录真实生成、引用、ACL、版本和定位的门禁稳定回放，并保持 Hybrid 14/15 未胜 ES 的原始结论；
 3. **Reranker 独立 Gate：** 只有冻结 Baseline 出现可测排序缺口时，才单独验证一个 Cross-Encoder；不与生成、模型选型、MinIO、OCR 或性能变量混改。
 

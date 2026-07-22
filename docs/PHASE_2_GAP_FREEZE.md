@@ -35,7 +35,7 @@ PostgreSQL READY/owner/版本路由
 - 模型 SHA-256：`a80c4f17acd55265feec403c7aef86be0c25983ab279d83f3bcd3abbcb5b8b72`；
 - Prompt：`academic-evidence-answer-v1`；
 - Prompt SHA-256：`796bf2fad94a92584d604479fb921bd98e72e4b97ecc09d6e49eaa2c0c71df71`；
-- 解码：`temperature=0.0`、`seed=42`、`num_predict=384`、`num_ctx=8192`；
+- 解码：`temperature=0.0`、`seed=42`、`num_predict=384`、`num_ctx=8192`、`think=false`；
 - 输出：JSON Schema 约束的 `claims[].text + claims[].citation_ids`，最终引用编号由服务端组装。
 
 独立模型选型 Gate 已将阶段 2 候选晋级为 `qwen3:14b@bdbd181c33f2ed1b31c972991882db3cf4d192569092138a7d29e973cd9debe8`；Prompt、Schema 和解码保持相同，llama3.2 保留为已有 READY 证据的回退基线。
@@ -62,7 +62,7 @@ make real-generation-canary
 
 远程恢复闭环已由用户在提交 `91aca5a` 完成：同一冻结模型摘要消费 PostgreSQL READY + ES/Milvus RRF 返回的 3 条 Evidence，Answer API 为 `COMPLETED`，引用编号校验与两次稳定回放通过；随后删除后 403、ES/Milvus/运行快照 3 项清理通过。脱敏报告 SHA-256 为 `E2231FADABB368209F976B2BAB99F4E1D841ACB3053C45A07B1ADDC7B386E937`，稳定错误码为 `NONE`，报告不含回答或 Chunk 正文。
 
-Qwen READY 首次运行以 `PERSISTED_SNAPSHOT_ANSWER_HTTP_FAILED` 失败；同 Run ID 恢复已越过该边界并进入生成，但以 `REAL_GENERATION_INITIAL_FAILED_CLOSED` 失败关闭。为避免保存私有正文，生成器现在只向 Canary 观察层提供 allowlist 分类，可区分模型列表/Chat 传输、Ollama 响应 JSON、模型答案 JSON、答案 Schema、引用和身份失败；产品 Answer API 仍只返回原有 `DEGRADED` Evidence 卡。
+Qwen READY 首次运行以 `PERSISTED_SNAPSHOT_ANSWER_HTTP_FAILED` 失败；同 Run ID 恢复已越过该边界并进入生成，稳定分类最终定位为 `REAL_GENERATION_INITIAL_OLLAMA_ANSWER_JSON_INVALID`。Ollama 对 Qwen3 的 API 默认启用 thinking，因此当前单变量修复显式发送 `think=false`，避免 thinking 消耗固定生成上限后使最终 JSON 不完整。为避免保存私有正文，产品 Answer API 仍只返回原有 `DEGRADED` Evidence 卡；修复必须先通过固定四题模型选型回归，再恢复 READY 闭环。
 
 ## 4. 阶段 2 剩余差距
 
