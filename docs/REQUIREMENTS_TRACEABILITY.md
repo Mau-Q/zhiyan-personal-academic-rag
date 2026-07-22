@@ -34,7 +34,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | ID | 最高方案要求 | 当前状态 | 已有证据 | 关键缺口 |
 |---|---|---|---|---|
 | SR-01 | 冻结个人库知识源、用户范围、语料量、并发、硬件预算和 SLO | `COMPLETE` | `machine/phase_zero_scope_resource_slo.json`：500 篇标称/1000 篇验证上界、0.2 QPS、问答并发 2、入库并发 1、单台既有主机预算及阶段 1 SLO；`docs/PHASE_0_SCOPE_RESOURCE_SLO.md` | 数值已冻结为阶段 1 验收目标，但目标规模性能、真实 LLM 延迟和 PostgreSQL `owner_id` 生命周期仍待实测，不冒充已达标 |
-| SR-02 | PostgreSQL 作为 `owner_id`、主键适配和生命周期唯一事实源 | `PARTIAL` | `DocumentIdentityV1`、`DocumentVersionLifecycleV1` 和机器策略已冻结 owner-scoped 映射、版本、READY、软删除与刷新语义 | PostgreSQL 表、适配器、幂等任务和索引状态对账尚未实现；现有 V1 运行时仍使用 legacy 权限/版本字段 |
+| SR-02 | PostgreSQL 作为 `owner_id`、主键适配和生命周期唯一事实源 | `PARTIAL` | `DocumentIdentityV1`、`DocumentVersionLifecycleV1` 和机器策略已冻结；`backend/storage/` 已实现 PostgreSQL Schema、版本化迁移器、owner-scoped 映射、幂等版本/任务与生命周期 CAS | 远程 PostgreSQL 尚未应用迁移；PDF 入库编排、ES/Milvus 状态对账和 legacy 运行接入尚未完成 |
 | SR-03 | PDF/OCR、章节页码、三种 Chunk Baseline、版本和幂等入库 | `PARTIAL` | 三种切片策略已实现并完成同源受控对比：每种 SQLite BM25 15/15、BGE-M3 12/15，无总体胜者；本地文本层 PDF、稳定 ID 和页码已验证 | OCR、MinIO 入库资产和完整版本/删除链路未完成；未因小样本持平切换默认策略 |
 | SR-04 | Elasticsearch 论文级和 Chunk 级 BM25 | `PARTIAL` | 远程 ES 9.4.3；严格 Mapping、ACL、BM25 适配器；316 Chunk Canary 14/15；175 题严格通过 85/175 | `owner_id/is_active` 目标字段迁移、中文分词选型、生产别名和性能基线未完成 |
 | SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `PARTIAL` | 本地精确向量基线；远程 Milvus 2.6.18 + BGE-M3；固定源/模型身份、COSINE 和 HNSW 工程参数；316 Chunk Canary 12/15；175 题严格通过 109/175 | `owner_id/is_active` 目标字段迁移、版本/删除对账和性能基线未完成；不以远程 500 题或调参作为当前门禁 |

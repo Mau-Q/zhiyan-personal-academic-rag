@@ -14,7 +14,7 @@
 → Evidence、Citation 和 PDF 页码
 ```
 
-远程主机准备与本地核心代码并行，但不作为本地 M0 的前置条件。
+远程主机已完成早期准备。后续迁移、部署和验证由用户亲自操作，代理负责准备版本化脚本、完整命令和结果判定。
 
 ## 2. 成员 A
 
@@ -32,16 +32,18 @@
 - [Issue #4：本地 PDF 到 ChunkRecordV1](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/4)
 - [Issue #5：单篇论文回答、拒答与引用联调](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/5)
 
-## 3. 成员 B
+## 3. 用户（远程操作人）
 
-成员 B 负责远程环境和部署验证：
+早期远程准备由成员 B 完成并已保留历史证据。从 PD-027 开始，用户负责亲自执行后续远程操作：
 
 - 操作系统、CPU、内存、磁盘、GPU、驱动和 CUDA 盘点；
 - Git、Python、Docker、Docker Compose 和 NVIDIA Container Toolkit 检查；
 - 远程部署目录、仓库拉取和版本同步；
 - PostgreSQL、Elasticsearch、Milvus、模型服务的真实可用状态记录；
 - 端口、防火墙、监听范围和密钥保存边界；
-- 本地链路合并后，在远程拉取同一提交运行测试和 Fixture API 冒烟；
+- 按操作清单确认远程与本地待验收提交 SHA 一致；
+- 在远程运行迁移、测试、Fixture API 冒烟和故障验证；
+- 只返回脱敏原始输出，不回传密码、DSN、IP、Token 或 `.env`；
 - 维护 `docs/REMOTE_HOST_READINESS.md`。
 
 对应 GitHub 任务：
@@ -54,7 +56,7 @@
 |---|---|
 | `backend/ingestion/`、`backend/retrieval/`、`backend/rag/`、`backend/api/` | 成员 A |
 | `tests/ingestion/`、`tests/retrieval/`、`tests/rag/`、`tests/api/` | 成员 A |
-| `deploy/`、远程检查脚本、`docs/REMOTE_HOST_READINESS.md` | 成员 B |
+| `deploy/`、远程检查脚本、`docs/REMOTE_HOST_READINESS.md` | 代理准备，用户执行 |
 | `contracts/`、`tests/contracts/` | 冻结共享边界，破坏性变更必须先说明 |
 
 成员 A 的普通低风险模块不强制 PR 或互审。合同破坏性变更、安全边界变化、远程公网暴露、真实数据处理和大型跨模块改动必须先确认并走 PR。
@@ -62,7 +64,7 @@
 ## 5. Git 交付
 
 - 成员 A 从最新 `main` 实施普通低风险任务，本地 Harness、受影响测试和 diff 检查通过后可直接 commit 并 push `main`；
-- 成员 B 从最新 `main` 建立功能分支，通过 GitHub PR 交付远程任务；
+- 用户不在远程主机直接编辑源码；远程只拉取已审查的提交并执行版本化操作清单；
 - 只提交自己负责范围内的源码、测试和文档；
 - 不使用即时通讯压缩包交付源码；
 - 普通低风险直推后核对本地与远程 SHA；CI 配置、依赖、跨平台、高风险变更或异常状态再检查 GitHub Actions；
@@ -78,7 +80,7 @@
    - 再实现混合融合，有证据增益后才接重排；
    - 检索证据链稳定后，再单独接真实 LLM 与引用校验。
 
-2. **B：远程主机与基础设施线**
+2. **用户：远程主机与基础设施线**
    - 盘点硬件、GPU/CUDA、Docker、端口和安全边界；
    - 拉取同一 `main` 运行 Harness、全量测试和 Fixture API；
    - 基线通过后按 PostgreSQL、Elasticsearch、Milvus、模型服务的顺序逐项接入；
@@ -91,7 +93,7 @@
 
 ### 6.2 合流点
 
-- B 的主机盘点不阻塞 A 的本地向量基线；
-- A 选定模型/索引参数前，使用 B 的真实资源盘点作为部署约束；
+- 已完成的远程主机盘点继续作为部署约束；
+- 代理在本地门禁通过后交付一次性完整命令，用户在同一提交上执行；
 - 远程每接入一项真实基础设施，都用 A 的固定 Canary 和扩展评测集复测；
 - PostgreSQL 身份事实源、幂等任务、双索引对账和删除/撤权闭环未实现前，不将最高方案阶段 1 标记为完成。

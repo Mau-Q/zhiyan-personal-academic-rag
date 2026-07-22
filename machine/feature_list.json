@@ -295,9 +295,22 @@
       ]
     },
     {
+      "id": "postgresql_fact_source",
+      "status": "PARTIAL",
+      "owner": "A",
+      "evidence": [
+        "backend/storage/models.py",
+        "backend/storage/postgres.py",
+        "backend/storage/migrate.py",
+        "backend/storage/migrations/0001_fact_source.sql",
+        "tests/storage/test_postgres_fact_source.py",
+        "docs/POSTGRESQL_FACT_SOURCE.md"
+      ]
+    },
+    {
       "id": "remote_host_readiness",
       "status": "READY",
-      "owner": "B",
+      "owner": "USER",
       "evidence": ["docs/REMOTE_HOST_READINESS.md"]
     },
     {

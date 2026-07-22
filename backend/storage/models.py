@@ -1,0 +1,218 @@
+"""Strict runtime models for the frozen PostgreSQL fact-source contract."""
+
+from __future__ import annotations
+
+from datetime import datetime
+from enum import StrEnum
+from typing import Annotated, Literal
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
+
+
+ContractId = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+    ),
+]
+Sha256 = Annotated[str, StringConstraints(pattern=r"^[a-f0-9]{64}$")]
+
+
+class LifecycleStatus(StrEnum):
+    REGISTERED = "REGISTERED"
+    PROCESSING = "PROCESSING"
+    REVIEW = "REVIEW"
+    READY = "READY"
+    FAILED = "FAILED"
+    INACTIVE = "INACTIVE"
+
+
+class IndexState(StrEnum):
+    PENDING = "PENDING"
+    READY = "READY"
+    FAILED = "FAILED"
+
+
+class IngestionJobStatus(StrEnum):
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+
+
+ALLOWED_LIFECYCLE_TRANSITIONS: dict[LifecycleStatus, frozenset[LifecycleStatus]] = {
+    LifecycleStatus.REGISTERED: frozenset(
+        {LifecycleStatus.PROCESSING, LifecycleStatus.INACTIVE}
+    ),
+    LifecycleStatus.PROCESSING: frozenset(
+        {
+            LifecycleStatus.REVIEW,
+            LifecycleStatus.READY,
+            LifecycleStatus.FAILED,
+            LifecycleStatus.INACTIVE,
+        }
+    ),
+    LifecycleStatus.REVIEW: frozenset(
+        {LifecycleStatus.PROCESSING, LifecycleStatus.FAILED, LifecycleStatus.INACTIVE}
+    ),
+    LifecycleStatus.READY: frozenset({LifecycleStatus.INACTIVE}),
+    LifecycleStatus.FAILED: frozenset(
+        {LifecycleStatus.PROCESSING, LifecycleStatus.INACTIVE}
+    ),
+    LifecycleStatus.INACTIVE: frozenset(),
+}
+
+
+class StorageModel(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+
+def _require_timezone(value: datetime | None, field_name: str) -> datetime | None:
+    if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+        raise ValueError(f"{field_name} must include a timezone")
+    return value
+
+
+class DocumentIdentityV1(StorageModel):
+    schema_version: Literal["document_identity_v1"] = "document_identity_v1"
+    paper_id: ContractId
+    document_id: ContractId
+    owner_id: ContractId
+    source_type: Literal["uploaded", "collected"]
+    mapping_version: ContractId
+    source_created_time: datetime
+    source_updated_time: datetime
+
+    @field_validator("source_created_time", "source_updated_time")
+    @classmethod
+    def timestamps_require_timezone(cls, value: datetime, info) -> datetime:
+        return _require_timezone(value, info.field_name)  # type: ignore[return-value]
+
+    @model_validator(mode="after")
+    def source_times_are_ordered(self) -> "DocumentIdentityV1":
+        if self.source_updated_time < self.source_created_time:
+            raise ValueError("source_updated_time must not precede source_created_time")
+        return self
+
+
+class IndexStatesV1(StorageModel):
+    elasticsearch_chunks: IndexState = IndexState.PENDING
+    milvus_vectors: IndexState = IndexState.PENDING
+
+
+class DocumentVersionLifecycleV1(StorageModel):
+    schema_version: Literal["document_version_lifecycle_v1"] = (
+        "document_version_lifecycle_v1"
+    )
+    paper_id: ContractId
+    document_id: ContractId
+    owner_id: ContractId
+    document_version_id: ContractId
+    content_sha256: Sha256
+    source_snapshot_sha256: Sha256
+    parse_version: ContractId
+    lifecycle_revision: int = Field(ge=1)
+    lifecycle_status: LifecycleStatus
+    parse_finish_time: datetime | None = None
+    chunk_splitter_time: datetime | None = None
+    chunk_create_time: datetime | None = None
+    chunk_gen_time: datetime | None = None
+    vector_index_time: datetime | None = None
+    index_states: IndexStatesV1 = Field(default_factory=IndexStatesV1)
+    delete_time: datetime | None = None
+    chunk_expire_time: datetime | None = None
+    last_access_time: datetime | None = None
+    last_refresh_time: datetime | None = None
+    failure_code: ContractId | None = None
+    updated_at: datetime
+
+    @field_validator(
+        "parse_finish_time",
+        "chunk_splitter_time",
+        "chunk_create_time",
+        "chunk_gen_time",
+        "vector_index_time",
+        "delete_time",
+        "chunk_expire_time",
+        "last_access_time",
+        "last_refresh_time",
+        "updated_at",
+    )
+    @classmethod
+    def timestamps_require_timezone(
+        cls, value: datetime | None, info
+    ) -> datetime | None:
+        return _require_timezone(value, info.field_name)
+
+    @model_validator(mode="after")
+    def lifecycle_fails_closed(self) -> "DocumentVersionLifecycleV1":
+        if self.lifecycle_status is not LifecycleStatus.INACTIVE and (
+            self.delete_time is not None or self.chunk_expire_time is not None
+        ):
+            raise ValueError("only INACTIVE versions may have delete or expiry timestamps")
+        if self.lifecycle_status is LifecycleStatus.INACTIVE and (
+            self.delete_time is None and self.chunk_expire_time is None
+        ):
+            raise ValueError("INACTIVE requires delete_time or chunk_expire_time")
+        if self.lifecycle_status is LifecycleStatus.FAILED and self.failure_code is None:
+            raise ValueError("FAILED requires failure_code")
+        if self.lifecycle_status is LifecycleStatus.READY:
+            required_times = (
+                self.parse_finish_time,
+                self.chunk_splitter_time,
+                self.chunk_create_time,
+                self.chunk_gen_time,
+                self.vector_index_time,
+            )
+            if any(value is None for value in required_times):
+                raise ValueError("READY requires all parse, chunk and vector timestamps")
+            if self.index_states != IndexStatesV1(
+                elasticsearch_chunks=IndexState.READY,
+                milvus_vectors=IndexState.READY,
+            ):
+                raise ValueError("READY requires Elasticsearch and Milvus READY")
+            if self.failure_code is not None:
+                raise ValueError("READY must not retain a failure_code")
+        return self
+
+    @property
+    def is_active(self) -> bool:
+        return (
+            self.lifecycle_status is LifecycleStatus.READY
+            and self.delete_time is None
+            and self.chunk_expire_time is None
+        )
+
+
+class IngestionJobV1(StorageModel):
+    job_id: ContractId
+    owner_id: ContractId
+    idempotency_key: ContractId
+    document_id: ContractId
+    document_version_id: ContractId
+    status: IngestionJobStatus
+    attempt_count: int = Field(ge=0)
+    failure_code: ContractId | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    @field_validator("created_at", "updated_at")
+    @classmethod
+    def timestamps_require_timezone(cls, value: datetime, info) -> datetime:
+        return _require_timezone(value, info.field_name)  # type: ignore[return-value]
+
+    @model_validator(mode="after")
+    def failed_job_requires_code(self) -> "IngestionJobV1":
+        if self.status is IngestionJobStatus.FAILED and self.failure_code is None:
+            raise ValueError("FAILED ingestion job requires failure_code")
+        return self

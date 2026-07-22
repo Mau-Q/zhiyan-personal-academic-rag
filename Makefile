@@ -8,7 +8,7 @@ ifeq ($(wildcard $(PROJECT_PYTHON)),)
 $(error Project virtualenv is missing at $(PROJECT_PYTHON); create .venv and install the project dependencies first)
 endif
 
-.PHONY: harness-validate harness-test contract-test ingestion-test retrieval-test rag-test api-test evaluation-test evaluation-contract-check formal-evaluation-fixture evaluation-smoke sqlite-fts-fixture-smoke vector-fixture-smoke rrf-fixture-smoke test
+.PHONY: harness-validate harness-test contract-test storage-test ingestion-test retrieval-test rag-test api-test evaluation-test evaluation-contract-check formal-evaluation-fixture evaluation-smoke sqlite-fts-fixture-smoke vector-fixture-smoke rrf-fixture-smoke test
 
 harness-validate:
 	$(PROJECT_PYTHON) scripts/validate_harness_contract.py
@@ -18,6 +18,9 @@ harness-test:
 
 contract-test:
 	$(PROJECT_PYTHON) -m unittest discover -s tests/contracts -p 'test_*.py' -v
+
+storage-test:
+	$(PROJECT_PYTHON) -m unittest discover -s tests/storage -p 'test_*.py' -v
 
 ingestion-test:
 	$(PROJECT_PYTHON) -m unittest discover -s tests/ingestion -p 'test_*.py' -v
@@ -57,4 +60,4 @@ rrf-fixture-smoke:
 	$(PROJECT_PYTHON) -m backend.retrieval.vector build --chunks fixtures/chunks-v1.json --output runtime/evaluation/fixture-rrf-v1.vector.sqlite
 	$(PROJECT_PYTHON) -m backend.evaluation.harness --cases evaluation/suites/fixture-rrf-v1.jsonl --chunks fixtures/chunks-v1.json --scope fixtures/authorized-scope-v1.json --suite-id fixture-rrf-v1 --retrieval-backend local_rrf --index runtime/evaluation/fixture-rrf-v1.fts.sqlite --vector-index runtime/evaluation/fixture-rrf-v1.vector.sqlite --output runtime/evaluation/fixture-rrf-v1-report.json
 
-test: harness-validate harness-test contract-test ingestion-test retrieval-test rag-test api-test evaluation-test evaluation-contract-check
+test: harness-validate harness-test contract-test storage-test ingestion-test retrieval-test rag-test api-test evaluation-test evaluation-contract-check

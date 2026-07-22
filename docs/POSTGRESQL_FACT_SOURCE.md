@@ -1,0 +1,52 @@
+# PostgreSQL 最小事实源
+
+## 当前边界
+
+阶段 1 的第一个本地实现已建立 PostgreSQL Schema、延迟加载的 `psycopg` 适配器和独立测试。PostgreSQL 是 `owner_id`、文档映射、内容版本、生命周期与入库任务的唯一事实源；Elasticsearch 和 Milvus 仍然是可重建派生索引。
+
+当前只证明源码、SQL 迁移和失效关闭语义在本地可执行。远程 PostgreSQL 18.4 尚未应用该迁移，未可宣称阶段 1 事实源已远程验收。
+
+## 已实现的硬约束
+
+- `document_id` 全局唯一，`(owner_id, paper_id)` 联合唯一；
+- `owner_id/paper_id/document_id/source_type` 由数据库触发器阻止原地修改；
+- 相同内容快照和解析版本重放时返回同一 `document_version_id`；
+- 入库任务按 `(owner_id, idempotency_key)` 幂等，同一 Key 不得换绑版本；
+- 生命周期使用修订号 Compare-and-Swap，陈旧并发更新失效关闭；
+- 解析、Chunk 和向量时间齐全，且 ES/Milvus 均为 `READY` 时才能进入 `READY`；
+- 删除、撤权或过期版本先进入终态 `INACTIVE`；在线查询始终带 `owner_id AND is_active=true`。
+
+## 仓库入口
+
+- SQL：`backend/storage/migrations/0001_fact_source.sql`；
+- 迁移器：`python -m backend.storage.migrate`；
+- 仓储适配器：`backend/storage/postgres.py`；
+- 运行时模型：`backend/storage/models.py`；
+- 本地门禁：`make storage-test`。
+
+## 由用户执行的远程迁移
+
+远程主机操作由用户亲自执行。必须先确认远程仓库提交与待验证提交一致，再在 PowerShell 中运行：
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[postgres]"
+$secureDsn = Read-Host -Prompt "DATABASE_URL" -AsSecureString
+$dsnPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureDsn)
+try {
+    $env:DATABASE_URL = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($dsnPointer)
+} finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($dsnPointer)
+}
+.\.venv\Scripts\python.exe -m backend.storage.migrate
+Remove-Item Env:DATABASE_URL
+.\.venv\Scripts\python.exe -m unittest discover -s tests/storage -p "test_*.py" -v
+```
+
+迁移器只输出 `APPLIED` 或 `UNCHANGED`，不输出 DSN。已应用的迁移如果与仓库 SHA-256 不同会直接失败，不会覆盖旧 Schema。用户应将原始命令输出返回给开发侧，不得回传密码、DSN、IP 或 `.env` 内容。
+
+## 后续门禁
+
+1. 用户在隔离的远程 PostgreSQL 上应用迁移并返回脱敏输出；
+2. 将 PDF 入库编排接到本事实源，而不是直接产生可检索 Chunk；
+3. 实现 ES/Milvus 状态对账与单侧写入失败补偿；
+4. 完成删除/撤权先失效、再异步物理清理的远程故障验证。

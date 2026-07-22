@@ -82,7 +82,10 @@ class RepositoryHarnessTests(unittest.TestCase):
             state["git_policy"]["member_a_low_risk"],
             "DIRECT_MAIN_AFTER_LOCAL_GATES",
         )
-        self.assertEqual(state["git_policy"]["member_b_remote"], "PULL_REQUEST")
+        self.assertEqual(
+            state["git_policy"]["remote_operations"],
+            "USER_EXECUTED_FROM_VERSIONED_RUNBOOK",
+        )
         self.assertEqual(state["git_policy"]["ci_mode"], "CONDITIONAL_ACTIONS_CHECK")
 
     def test_highest_source_authority_is_machine_readable(self):

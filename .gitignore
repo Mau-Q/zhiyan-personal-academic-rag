@@ -28,6 +28,12 @@ coverage/
 # Runtime and generated state
 data/
 storage/
+!backend/storage/
+!backend/storage/**
+!tests/storage/
+!tests/storage/**
+backend/storage/**/__pycache__/
+tests/storage/**/__pycache__/
 runtime/
 logs/
 cache/

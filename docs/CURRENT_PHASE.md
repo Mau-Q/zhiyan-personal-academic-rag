@@ -131,18 +131,22 @@ Phase ID：`source-phase1-data-index-minimal-loop-in-progress`
 - 冻结 `DocumentIdentityV1`、`DocumentVersionLifecycleV1` 和机器策略：映射按 `owner_id` 隔离，`document_id` 与 `(owner_id, paper_id)` 分别唯一，内容变化创建新 `document_version_id`。
 - 冻结生命周期状态机与 READY 硬门禁：解析、Chunk、ES 和 Milvus 必须全部完成，删除/过期版本先在 PostgreSQL 失效，再清缓存并异步清理索引。
 - 数据身份与生命周期合同新增 3 项语义测试后，全仓 158 项测试及 Harness 9 项检查通过；方案阶段 0 完成，当前进入阶段 1。
+- 完成阶段 1 第一个本地实现：PostgreSQL Schema、版本化迁移器、`owner_id` 事实源适配器、幂等入库任务和生命周期 Compare-and-Swap；远程 PostgreSQL 尚未应用迁移。
+- 后续远程主机操作改由用户亲自执行；代理准备脚本和完整命令，根据用户返回的脱敏原始输出判定。
+- 新增 15 项 PostgreSQL 事实源专项测试后，全仓 173 项测试及 Harness 9 项检查通过。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：PostgreSQL 表与身份适配器、持久化幂等任务、ES/Milvus 状态对账与撤权清理、目标规模性能验收、无证据校准、安全策略层和真实生成模型；
+- 未完成能力：远程 PostgreSQL 迁移实跑、PDF 入库编排接入事实源、ES/Milvus 状态对账与撤权清理、目标规模性能验收、无证据校准、安全策略层和真实生成模型；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
 
 - `make harness-validate` 必须通过，且必须由 Makefile 强制使用项目 `.venv`；
+- `make storage-test` 必须覆盖迁移校验、owner scope、幂等映射、任务绑定、READY 双索引门禁和并发修订号；
 - `make test` 必须覆盖合同、入库、检索、RAG、API、评测和仓库 Harness；
 - 本地三论文 Harness 必须通过 15/15，且三类结果分别达到 9/9、3/3、3/3；
 - `make sqlite-fts-fixture-smoke` 必须通过 6/6；
@@ -165,16 +169,16 @@ Phase ID：`source-phase1-data-index-minimal-loop-in-progress`
 - 默认分支：`main`；
 - 当前 Repository Harness 提交从 `agent/add-repository-harness` 快进到 `main`；
 - 成员 A 普通低风险任务通过本地门禁后直接 push `main`；
-- 成员 B 远程任务和高风险变更继续通过 PR；
+- 远程主机操作由用户按版本化清单亲自执行；高风险源码变更继续通过 PR；
 - 推送后本地 `main` 必须与 `origin/main` 指向同一提交；仅在 CI 配置、依赖、跨平台、高风险变更或异常状态时检查 GitHub Actions。
 
 ## Current boundary
 
-最高方案阶段 0 已完成，当前进入阶段 1。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。范围、资源、SLO 与数据身份/生命周期目标均已冻结，但 PostgreSQL 运行时、索引对账、目标规模性能和真实生成模型尚未完成。运行时私有数据继续不进入 Git。
+最高方案阶段 0 已完成，当前进入阶段 1。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。PostgreSQL 最小事实源的 Schema、迁移器和本地适配器已就绪，但远程迁移、PDF 入库编排、索引对账、目标规模性能和真实生成模型尚未完成。运行时私有数据继续不进入 Git。
 
 ## Next gate
 
-1. **PostgreSQL 最小事实源：** 按冻结合同建立 documents/document_versions 与持久化任务状态，服务端产生 `owner_id` 范围；
+1. **PostgreSQL 最小事实源：** 本地 Schema、迁移器与适配器已完成；下一步由用户在隔离远程 PostgreSQL 应用迁移并返回脱敏证据；
 2. **索引闭环：** 实现可重放幂等入库、ES/Milvus 状态对账和删除/撤权先失效后清理；
 3. **兼容迁移：** 将 legacy `version_id/tenant_id` 适配到目标 `document_version_id/owner_id`，不破坏现有 V1 Answer API；
 4. **性能与复杂度：** 闭环完成后再按冻结规模验收性能；当前不跑 175 题 RRF、不增加重排或真实 LLM。
