@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 import sys
 import unittest
+from pathlib import Path
 
 from backend.ingestion.persistent import RuntimeSnapshotPersistenceError
 from scripts.run_stage1_remote_canary import (
@@ -32,7 +33,10 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
 
         self.assertEqual(REPORT_SCHEMA_VERSION, "stage1_remote_canary_report_v2")
         self.assertEqual(EXPECTED_CLEANUP_JOBS, 3)
-        self.assertEqual(str(args.pdf_object_root), "runtime/stage1-pdf-objects")
+        self.assertEqual(
+            args.pdf_object_root,
+            Path("runtime") / "stage1-pdf-objects",
+        )
 
     def test_mutation_requires_exact_confirmation_before_pdf_or_services(self):
         result = subprocess.run(
