@@ -50,6 +50,12 @@
 
 - [Issue #9：远程主机准备与部署验证](https://github.com/Mau-Q/zhiyan-personal-academic-rag/issues/9)
 
+## 3.1 成员 B（离线评测准备）
+
+成员 B 不再操作远程主机，也不修改当前核心链路。阶段 1 期间可以独立准备阶段 2～4 的低耦合评测资产：对 `dev` 集执行失败归因和 Claim–Evidence 第二审，只提交 ID 与固定枚举标签。
+
+具体任务、隐私边界、模板、验收和 PR 正文见 [`MEMBER_B_PHASE2_4_EVALUATION_PREP.md`](MEMBER_B_PHASE2_4_EVALUATION_PREP.md)。该工作使用独立分支和 Draft PR，不接触 `test/acceptance`，不阻塞阶段 1，也不因提交 PR 自动成为最终真值。
+
 ## 4. 文件所有权
 
 | 范围 | 主要负责人 |
@@ -58,12 +64,14 @@
 | `tests/ingestion/`、`tests/retrieval/`、`tests/rag/`、`tests/api/` | 成员 A |
 | `deploy/`、远程检查脚本、`docs/REMOTE_HOST_READINESS.md` | 代理准备，用户执行 |
 | `contracts/`、`tests/contracts/` | 冻结共享边界，破坏性变更必须先说明 |
+| `evaluation/reviews/member_b/` | 成员 B 仅提交候选评测标签，通过独立 PR 交付 |
 
 成员 A 的普通低风险模块不强制 PR 或互审。合同破坏性变更、安全边界变化、远程公网暴露、真实数据处理和大型跨模块改动必须先确认并走 PR。
 
 ## 5. Git 交付
 
 - 成员 A 从最新 `main` 实施普通低风险任务，本地 Harness、受影响测试和 diff 检查通过后可直接 commit 并 push `main`；
+- 成员 B 从最新 `main` 新建 `prep/` 分支，仅按任务说明提交候选评测标签并创建 Draft PR，不得直推或自行合并；
 - 用户不在远程主机直接编辑源码；远程只拉取已审查的提交并执行版本化操作清单；
 - 只提交自己负责范围内的源码、测试和文档；
 - 不使用即时通讯压缩包交付源码；
@@ -89,6 +97,7 @@
 3. **共享：范围与评测线**
    - 维护已冻结的首期知识源、目标语料量、峰值并发、SLO 和资源预算；
    - 保留 15 题作为快速 Canary，现有 500 题作为候选池和稳定迭代证据；
+   - 成员 B 可在不接触 `test/acceptance` 的前提下，对 `dev` 集准备失败归因和 Claim–Evidence 候选第二审；
    - 175 题真实人工校验、同集 ES/Milvus 单路 Baseline、三种 Chunk 受控 Baseline、范围/资源/SLO 和数据身份/生命周期合同均已完成；下一步按合同实现阶段 1。
 
 ### 6.2 合流点

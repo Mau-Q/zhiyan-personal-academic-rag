@@ -33,7 +33,7 @@ GitHub 是本项目源码、合同、测试、Issue、Pull Request、Tag 和 Rel
 ## 4. 分支与合并
 
 - 成员 A 的普通低风险任务在本地 Harness、受影响测试和 `git diff --check` 通过后，可 commit 并直接推送 `main`；
-- 成员 B 的远程环境、部署验证和基础设施任务使用独立分支与 Pull Request；
+- 成员 B 的评测候选标签、远程环境、部署验证和基础设施任务使用独立分支与 Pull Request；
 - 合同破坏、安全边界、真实数据、公网暴露和大型跨模块变更必须使用 Pull Request 并先确认；
 - 直推前只暂存当前任务文件，并确认本地基于最新 `origin/main`；
 - 普通低风险直推后只需确认本地 `HEAD` 与 `origin/main` 一致；CI 配置、依赖、跨平台、高风险变更或异常状态才必须检查 GitHub Actions；
