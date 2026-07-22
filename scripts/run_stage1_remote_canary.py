@@ -9,7 +9,7 @@ import re
 import sys
 import urllib.parse
 from collections.abc import Mapping, Sequence
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
@@ -66,6 +66,7 @@ CONFIRMATION = "RUN_ISOLATED_STAGE1_CANARY"
 REPORT_SCHEMA_VERSION = "stage1_remote_canary_report_v2"
 EXPECTED_CLEANUP_JOBS = 3
 _RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,47}$")
+_SUITE_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 _SANITIZED_RUNTIME_CODES = frozenset(
     {
         "PDF_OBJECT_REOPEN_FAILED",
@@ -86,6 +87,8 @@ _SANITIZED_RUNTIME_CODES = frozenset(
         "REAL_GENERATION_REPLAY_CITATION_MAPPING_FAILED",
         "REAL_GENERATION_REPLAY_CITATION_GATE_FAILED",
         "REAL_GENERATION_REPLAY_CITATION_MISMATCH",
+        "ACADEMIC_QA_EVIDENCE_IDENTITY_FAILED",
+        "ACADEMIC_QA_LOCATION_GATE_FAILED",
         "CLEANUP_DID_NOT_COMPLETE",
         "RUNTIME_SNAPSHOT_CLEANUP_FAILED",
         "INACTIVE_VERSION_REMAINED_VISIBLE",
@@ -103,6 +106,20 @@ class NoCachedQueryVisibility:
 
     def invalidate_version(self, **kwargs: object) -> None:
         del kwargs
+
+
+@dataclass(frozen=True)
+class AcademicQuestionCase:
+    case_id: str
+    question: str
+    required_page_ranges: tuple[tuple[int, int], ...]
+
+
+@dataclass(frozen=True)
+class AcademicQuestionSuite:
+    suite_id: str
+    sha256: str
+    cases: tuple[AcademicQuestionCase, ...]
 
 
 class _ObservedGenerationProvider:
@@ -148,6 +165,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--milvus-collection-prefix", default="zhiyan_stage1_canary")
     parser.add_argument("--generation-model")
     parser.add_argument("--generation-model-digest")
+    parser.add_argument("--question-suite", type=Path)
+    parser.add_argument("--expected-question-suite-sha256")
     return parser
 
 
@@ -179,6 +198,83 @@ def _write_report(path: Path, payload: dict[str, object]) -> None:
     path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
+    )
+
+
+def _load_academic_question_suite(
+    path: Path,
+    *,
+    expected_sha256: str,
+    expected_pdf_sha256: str,
+) -> AcademicQuestionSuite:
+    if path.is_absolute() or not path.parts or path.parts[0] != "runtime" or ".." in path.parts:
+        raise ValueError("question suite must be under runtime")
+    raw = path.read_bytes()
+    actual_sha256 = sha256(raw).hexdigest()
+    if actual_sha256 != expected_sha256:
+        raise ValueError("question suite identity mismatch")
+    payload = json.loads(raw)
+    if not isinstance(payload, dict) or payload.get("schema_version") != (
+        "phase2_academic_qa_suite_v1"
+    ):
+        raise ValueError("question suite schema mismatch")
+    if payload.get("pdf_sha256") != expected_pdf_sha256:
+        raise ValueError("question suite PDF identity mismatch")
+    suite_id = payload.get("suite_id")
+    values = payload.get("cases")
+    if (
+        not isinstance(suite_id, str)
+        or not _SUITE_ID_PATTERN.fullmatch(suite_id)
+        or not isinstance(values, list)
+        or not 1 <= len(values) <= 8
+    ):
+        raise ValueError("question suite identity or size is invalid")
+    cases: list[AcademicQuestionCase] = []
+    seen: set[str] = set()
+    for value in values:
+        if not isinstance(value, dict):
+            raise ValueError("question suite case must be an object")
+        case_id = value.get("case_id")
+        question = value.get("question")
+        raw_ranges = value.get("required_page_ranges")
+        if (
+            not isinstance(case_id, str)
+            or not _RUN_ID_PATTERN.fullmatch(case_id)
+            or case_id in seen
+            or not isinstance(question, str)
+            or not 1 <= len(question.strip()) <= 4000
+            or not isinstance(raw_ranges, list)
+            or not raw_ranges
+        ):
+            raise ValueError("question suite case identity or question is invalid")
+        ranges: list[tuple[int, int]] = []
+        for raw_range in raw_ranges:
+            if not isinstance(raw_range, dict):
+                raise ValueError("question suite page range must be an object")
+            page_start = raw_range.get("page_start")
+            page_end = raw_range.get("page_end")
+            if (
+                not isinstance(page_start, int)
+                or isinstance(page_start, bool)
+                or not isinstance(page_end, int)
+                or isinstance(page_end, bool)
+                or page_start < 1
+                or page_end < page_start
+            ):
+                raise ValueError("question suite page range is invalid")
+            ranges.append((page_start, page_end))
+        seen.add(case_id)
+        cases.append(
+            AcademicQuestionCase(
+                case_id=case_id,
+                question=question.strip(),
+                required_page_ranges=tuple(ranges),
+            )
+        )
+    return AcademicQuestionSuite(
+        suite_id=suite_id,
+        sha256=actual_sha256,
+        cases=tuple(cases),
     )
 
 
@@ -251,6 +347,103 @@ def _generation_replay_byte_stable(
     return replay_payload.get("answer") == initial_payload.get("answer")
 
 
+def _require_academic_answer_identity_and_location(
+    payload: dict[str, object],
+    *,
+    document_id: str,
+    document_version_id: str,
+    required_page_ranges: Sequence[tuple[int, int]],
+) -> None:
+    evidence = payload.get("evidence")
+    if not isinstance(evidence, list) or not all(isinstance(value, dict) for value in evidence):
+        raise RuntimeError("ACADEMIC_QA_EVIDENCE_IDENTITY_FAILED")
+    if any(
+        value.get("document_id") != document_id
+        or value.get("version_id") != document_version_id
+        for value in evidence
+    ):
+        raise RuntimeError("ACADEMIC_QA_EVIDENCE_IDENTITY_FAILED")
+    for page_start, page_end in required_page_ranges:
+        if not any(
+            isinstance(value.get("page_start"), int)
+            and isinstance(value.get("page_end"), int)
+            and value["page_start"] <= page_end
+            and value["page_end"] >= page_start
+            for value in evidence
+        ):
+            raise RuntimeError("ACADEMIC_QA_LOCATION_GATE_FAILED")
+
+
+def _run_academic_question_case(
+    client: TestClient,
+    case: AcademicQuestionCase,
+    *,
+    document_id: str,
+    document_version_id: str,
+    generation_provider: GenerationProvider | None,
+    generation_observer: _ObservedGenerationProvider | None,
+) -> dict[str, object]:
+    request = {
+        "question": case.question,
+        "document_ids": [document_id],
+        "stream": False,
+    }
+    response = client.post("/api/v1/rag/answers", json=request)
+    payload = response.json()
+    _require_answer_api_gate(
+        status_code=response.status_code,
+        payload=payload,
+        generation_enabled=generation_provider is not None,
+        generation_failure_code=(
+            generation_observer.failure_code if generation_observer is not None else None
+        ),
+    )
+    _require_academic_answer_identity_and_location(
+        payload,
+        document_id=document_id,
+        document_version_id=document_version_id,
+        required_page_ranges=case.required_page_ranges,
+    )
+    stable_replay = False
+    byte_stable_replay: bool | None = None
+    if generation_provider is not None:
+        replay_response = client.post("/api/v1/rag/answers", json=request)
+        replay_payload = replay_response.json()
+        _require_answer_api_gate(
+            status_code=replay_response.status_code,
+            payload=replay_payload,
+            generation_enabled=True,
+            replay=True,
+            generation_failure_code=(
+                generation_observer.failure_code if generation_observer is not None else None
+            ),
+        )
+        _require_academic_answer_identity_and_location(
+            replay_payload,
+            document_id=document_id,
+            document_version_id=document_version_id,
+            required_page_ranges=case.required_page_ranges,
+        )
+        byte_stable_replay = _generation_replay_byte_stable(payload, replay_payload)
+        stable_replay = True
+    return {
+        "case_id": case.case_id,
+        "question_sha256": sha256(case.question.encode("utf-8")).hexdigest(),
+        "answer_api_status": payload["status"],
+        "evidence_count": len(payload["evidence"]),
+        "citation_ids_validated": generation_provider is not None,
+        "evidence_identity_validated": True,
+        "location_validated": True,
+        "answer_sha256": (
+            sha256(payload["answer"].encode("utf-8")).hexdigest()
+            if generation_provider is not None
+            else None
+        ),
+        "generation_stable_replay": stable_replay,
+        "generation_byte_stable_replay": byte_stable_replay,
+    }
+
+
 def main() -> int:
     args = build_parser().parse_args()
     if args.confirm != CONFIRMATION:
@@ -277,11 +470,38 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
+    if bool(args.question_suite) != bool(args.expected_question_suite_sha256):
+        print(
+            '{"status":"REFUSED","error_code":"ACADEMIC_QA_SUITE_IDENTITY_INCOMPLETE"}',
+            file=sys.stderr,
+        )
+        return 2
+    if args.question_suite is not None and args.generation_model is None:
+        print(
+            '{"status":"REFUSED","error_code":"ACADEMIC_QA_REQUIRES_REAL_GENERATION"}',
+            file=sys.stderr,
+        )
+        return 2
     try:
         _validate_output_path(args.output)
     except ValueError:
         print('{"status":"REFUSED","error_code":"UNSAFE_OUTPUT_PATH"}', file=sys.stderr)
         return 2
+
+    academic_suite = None
+    if args.question_suite is not None:
+        try:
+            academic_suite = _load_academic_question_suite(
+                args.question_suite,
+                expected_sha256=args.expected_question_suite_sha256,
+                expected_pdf_sha256=args.expected_sha256,
+            )
+        except (OSError, ValueError, json.JSONDecodeError):
+            print(
+                '{"status":"REFUSED","error_code":"ACADEMIC_QA_SUITE_INVALID"}',
+                file=sys.stderr,
+            )
+            return 2
 
     connection = None
     try:
@@ -429,49 +649,35 @@ def main() -> int:
                 generation_provider=generation_provider,
             )
         )
-        answer_response = answer_client.post(
-            "/api/v1/rag/answers",
-            json={
-                "question": source_chunks[0].text[:4000],
-                "document_ids": [version.document_id],
-                "stream": False,
-            },
+        question_cases = (
+            academic_suite.cases
+            if academic_suite is not None
+            else (
+                AcademicQuestionCase(
+                    case_id="canary.source_chunk_smoke",
+                    question=source_chunks[0].text[:4000],
+                    required_page_ranges=(),
+                ),
+            )
         )
-        answer_payload = answer_response.json()
-        _require_answer_api_gate(
-            status_code=answer_response.status_code,
-            payload=answer_payload,
-            generation_enabled=generation_provider is not None,
-            generation_failure_code=(
-                generation_observer.failure_code
-                if generation_observer is not None
-                else None
-            ),
+        academic_results = [
+            _run_academic_question_case(
+                answer_client,
+                case,
+                document_id=version.document_id,
+                document_version_id=version.document_version_id,
+                generation_provider=generation_provider,
+                generation_observer=generation_observer,
+            )
+            for case in question_cases
+        ]
+        first_answer_result = academic_results[0]
+        generation_stable_replay = all(
+            bool(result["generation_stable_replay"]) for result in academic_results
         )
-        generation_stable_replay = False
-        generation_byte_stable_replay = False
-        if generation_provider is not None:
-            replay_response = answer_client.post(
-                "/api/v1/rag/answers",
-                json={
-                    "question": source_chunks[0].text[:4000],
-                    "document_ids": [version.document_id],
-                    "stream": False,
-                },
-            )
-            replay_payload = replay_response.json()
-            _require_answer_api_gate(
-                status_code=replay_response.status_code,
-                payload=replay_payload,
-                generation_enabled=True,
-                replay=True,
-                generation_failure_code=generation_observer.failure_code,
-            )
-            generation_byte_stable_replay = _generation_replay_byte_stable(
-                answer_payload,
-                replay_payload,
-            )
-            generation_stable_replay = True
+        generation_byte_stable_replay = all(
+            bool(result["generation_byte_stable_replay"]) for result in academic_results
+        )
 
         scheduler = PersistentIndexCleanupScheduler(repository)
         inactivation = inactivate_and_schedule_cleanup(
@@ -544,19 +750,15 @@ def main() -> int:
             "pdf_object_reopen_proven": True,
             "resumed_from_ready": resumed_from_ready,
             "ready_reconciliation": ready_report.model_dump(),
-            "answer_api_status": answer_payload["status"],
-            "answer_api_evidence_count": len(answer_payload["evidence"]),
+            "answer_api_status": first_answer_result["answer_api_status"],
+            "answer_api_evidence_count": first_answer_result["evidence_count"],
             "answer_generation_boundary": (
                 generation_provider.configured_identity().execution_boundary
                 if generation_provider is not None
                 else "ONLINE_POSTGRES_READY_ES_MILVUS_RRF_FAKE_LLM"
             ),
             "answer_citation_ids_validated": generation_provider is not None,
-            "answer_sha256": (
-                sha256(answer_payload["answer"].encode("utf-8")).hexdigest()
-                if generation_provider is not None
-                else None
-            ),
+            "answer_sha256": first_answer_result["answer_sha256"],
             "generation_identity": (
                 asdict(generation_provider.configured_identity())
                 if generation_provider is not None
@@ -567,6 +769,18 @@ def main() -> int:
                 generation_byte_stable_replay
                 if generation_provider is not None
                 else None
+            ),
+            "academic_qa_suite_id": (
+                academic_suite.suite_id if academic_suite is not None else None
+            ),
+            "academic_qa_suite_sha256": (
+                academic_suite.sha256 if academic_suite is not None else None
+            ),
+            "academic_qa_case_count": (
+                len(academic_results) if academic_suite is not None else None
+            ),
+            "academic_qa_cases": (
+                academic_results if academic_suite is not None else None
             ),
             "inactivation_reason": inactivation.reason.value,
             "cleanup_jobs_succeeded": len(cleanup_results),

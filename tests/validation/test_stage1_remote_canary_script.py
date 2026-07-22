@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -13,6 +16,8 @@ from scripts.run_stage1_remote_canary import (
     REPORT_SCHEMA_VERSION,
     _ObservedGenerationProvider,
     _generation_replay_byte_stable,
+    _load_academic_question_suite,
+    _require_academic_answer_identity_and_location,
     _require_answer_api_gate,
     _sanitized_error_code,
     build_parser,
@@ -45,6 +50,94 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
             args.pdf_object_root,
             Path("runtime") / "stage1-pdf-objects",
         )
+
+    def test_academic_question_suite_pins_digest_pdf_and_target_pages(self):
+        with tempfile.TemporaryDirectory(dir="runtime") as temporary:
+            path = Path(temporary) / "suite.json"
+            payload = {
+                "schema_version": "phase2_academic_qa_suite_v1",
+                "suite_id": "phase2.qa.doc1",
+                "pdf_sha256": "a" * 64,
+                "cases": [
+                    {
+                        "case_id": "qa.case1",
+                        "question": "What result was reported?",
+                        "required_page_ranges": [{"page_start": 3, "page_end": 4}],
+                    }
+                ],
+            }
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+
+            suite = _load_academic_question_suite(
+                path.relative_to(Path.cwd()),
+                expected_sha256=digest,
+                expected_pdf_sha256="a" * 64,
+            )
+
+            self.assertEqual(suite.suite_id, "phase2.qa.doc1")
+            self.assertEqual(suite.cases[0].required_page_ranges, ((3, 4),))
+
+    def test_academic_answer_requires_active_version_identity_and_target_page(self):
+        payload = {
+            "evidence": [
+                {
+                    "document_id": "doc_1",
+                    "version_id": "version_1",
+                    "page_start": 3,
+                    "page_end": 4,
+                }
+            ]
+        }
+        _require_academic_answer_identity_and_location(
+            payload,
+            document_id="doc_1",
+            document_version_id="version_1",
+            required_page_ranges=((4, 4),),
+        )
+        with self.assertRaisesRegex(RuntimeError, "ACADEMIC_QA_LOCATION_GATE_FAILED"):
+            _require_academic_answer_identity_and_location(
+                payload,
+                document_id="doc_1",
+                document_version_id="version_1",
+                required_page_ranges=((8, 8),),
+            )
+        with self.assertRaisesRegex(RuntimeError, "ACADEMIC_QA_EVIDENCE_IDENTITY_FAILED"):
+            _require_academic_answer_identity_and_location(
+                payload,
+                document_id="doc_1",
+                document_version_id="version_2",
+                required_page_ranges=((3, 3),),
+            )
+
+    def test_academic_suite_requires_real_generation_identity_before_services(self):
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/run_stage1_remote_canary.py",
+                "--pdf",
+                "does-not-exist.pdf",
+                "--expected-sha256",
+                "0" * 64,
+                "--run-id",
+                "canary_001",
+                "--confirm",
+                "RUN_ISOLATED_STAGE1_CANARY",
+                "--output",
+                "runtime/should-not-exist.json",
+                "--question-suite",
+                "runtime/does-not-exist.json",
+                "--expected-question-suite-sha256",
+                "0" * 64,
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("ACADEMIC_QA_REQUIRES_REAL_GENERATION", result.stderr)
+        self.assertNotIn("does-not-exist", result.stderr)
 
     def test_mutation_requires_exact_confirmation_before_pdf_or_services(self):
         result = subprocess.run(

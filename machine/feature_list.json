@@ -464,6 +464,19 @@
         "tests/evaluation/test_phase2_model_selection.py",
         "docs/PHASE_2_MODEL_SELECTION.md"
       ]
+    },
+    {
+      "id": "phase2_academic_qa_acceptance",
+      "status": "PARTIAL",
+      "owner": "SHARED",
+      "evidence": [
+        "evaluation/generation/phase2-academic-qa-acceptance-v1.json",
+        "scripts/prepare_phase2_academic_qa_package.py",
+        "scripts/run_stage1_remote_canary.py",
+        "tests/evaluation/test_prepare_phase2_academic_qa_package.py",
+        "tests/validation/test_stage1_remote_canary_script.py",
+        "docs/PHASE_2_ACADEMIC_QA_ACCEPTANCE.md"
+      ]
     }
   ]
 }

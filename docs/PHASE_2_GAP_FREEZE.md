@@ -68,8 +68,8 @@ Qwen READY 首次运行以 `PERSISTED_SNAPSHOT_ANSWER_HTTP_FAILED` 失败；同 
 
 ## 4. 阶段 2 剩余差距
 
-- 在冻结的指定文档与普通学术问答样本上记录真实生成、引用、版本和定位结果；
+- 3 篇指定文档、9 个普通学术问答样本已冻结为私有验收包；仍需远程逐文档记录真实生成、引用、版本和定位结果；
 - 如要满足“固定 Reranker 增益验证”的字面退出条件，需先出现可测排序缺口，再单独接入一个 Cross-Encoder 做保留/回退实验；当前不得与生成变量一起引入；
 - Claim 语义支持、冲突处理、正式 MinIO、OCR 和目标规模性能继续由各自后续 Gate 跟踪。
 
-阶段 2 因此仍为 `IN_PROGRESS/PARTIAL`。llama3.2 与 Qwen 的远程 READY 真实生成闭环、Qwen 最终晋级均已完成；固定普通科研问答验收包和真实 Reranker 消融仍未完成。后续不把它们与 MinIO/OCR 或性能变量混合。
+阶段 2 因此仍为 `IN_PROGRESS/PARTIAL`。llama3.2 与 Qwen 的远程 READY 真实生成闭环、Qwen 最终晋级和固定普通科研问答验收包本地冻结均已完成；验收包远程执行和真实 Reranker 消融仍未完成。后续不把它们与 MinIO/OCR 或性能变量混合。
