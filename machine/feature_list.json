@@ -331,6 +331,18 @@
       ]
     },
     {
+      "id": "elasticsearch_version_writer",
+      "status": "PARTIAL",
+      "owner": "A",
+      "evidence": [
+        "backend/ingestion/elasticsearch_writer.py",
+        "backend/retrieval/elasticsearch.py",
+        "tests/ingestion/test_elasticsearch_version_writer.py",
+        "tests/retrieval/test_elasticsearch_retrieval.py",
+        "docs/LOCAL_PDF_INGESTION.md"
+      ]
+    },
+    {
       "id": "remote_host_readiness",
       "status": "READY",
       "owner": "USER",

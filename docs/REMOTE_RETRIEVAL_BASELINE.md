@@ -49,6 +49,7 @@ Windows PowerShell 5.1 发送非 ASCII JSON 时必须显式传入 UTF-8 字节�
 
 - 500 题在真实 ES/Milvus 上的同源重跑；
 - PostgreSQL 元数据/ACL 真值接入；
+- Elasticsearch 隐藏版本索引写入器的远程复测，以及 READY 后在线 Alias/路由接入；
 - 认证、TLS、备份、监控、并发和性能验收；
 - 生产 HNSW/IVF、阈值、批大小和资源参数冻结；
 - 真实生成 LLM 接入。

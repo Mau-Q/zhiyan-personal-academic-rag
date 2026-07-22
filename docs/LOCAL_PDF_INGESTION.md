@@ -58,4 +58,6 @@
 
 删除、撤权和过期使用 `inactivate_and_schedule_cleanup`：先提交 PostgreSQL `INACTIVE`，再失效查询可见性、将两路索引标记为非活动，最后分别排入异步物理清理。后续清理失败只会形成待处理结果，不会回滚事实源或重新激活版本。
 
-当前只完成本地协调层、写入器协议和失败顺序测试。尚未连接远程 PostgreSQL，未实现远程 ES/Milvus 版本写入器、持久化清理队列或在线 Answer API 的 PostgreSQL 可见性门禁，也没有将任何真实版本提升为 `READY`。
+Elasticsearch 侧已实现 `ElasticsearchVersionIndexWriter`：物理索引名由 owner/version 身份哈希确定，不暴露原始 ID；首次写入创建严格 Mapping 和隐藏物理索引，重放时核对 owner、document、version、源 Chunk 指纹、数量及 Mapping，允许补齐部分写入但拒绝来源、配置、外来 Chunk 或超量漂移。激活、失活和物理删除均再次核对 owner/version 身份。该写入器不会创建在线 Alias，因此本地激活不等于在线可检索。
+
+当前尚未连接远程 PostgreSQL 或 Elasticsearch，未实现 Milvus 版本写入器、持久化清理队列、在线 Alias/READY 路由或 Answer API 的 PostgreSQL 可见性门禁，也没有将任何真实版本提升为 `READY`。

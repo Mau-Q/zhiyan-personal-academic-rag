@@ -1,11 +1,13 @@
 import json
 import unittest
+import urllib.error
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from backend.retrieval.elasticsearch import (
     ElasticsearchBm25Index,
     ElasticsearchIndexNotReadyError,
+    UrllibElasticsearchTransport,
     _build_parser,
 )
 from backend.retrieval.fixture import load_chunks, load_scope
@@ -53,7 +55,11 @@ class ElasticsearchRetrievalTests(unittest.TestCase):
     def test_build_uses_strict_mapping_identity_and_utf8_bulk(self):
         metadata = self.index.build(self.chunks)
         self.assertEqual(metadata["source_chunks_sha256"], chunks_fingerprint(self.chunks))
-        create = next(call for call in self.transport.calls if call[:2] == ("PUT", "/fixture-chunks-v1"))
+        create = next(
+            call
+            for call in self.transport.calls
+            if call[:2] == ("PUT", "/fixture-chunks-v1")
+        )
         mapping = json.loads(create[2].decode("utf-8"))
         self.assertEqual(mapping["mappings"]["dynamic"], "strict")
         self.assertEqual(mapping["mappings"]["properties"]["tenant_id"]["type"], "keyword")
@@ -129,6 +135,22 @@ class ElasticsearchRetrievalTests(unittest.TestCase):
             args = _build_parser().parse_args()
         self.assertIsInstance(args.chunks, Path)
         self.assertIsInstance(args.scope, Path)
+
+    def test_transport_index_existence_distinguishes_404_from_failures(self):
+        transport = UrllibElasticsearchTransport()
+        response = MagicMock()
+        response.__enter__.return_value.status = 200
+        with patch("urllib.request.urlopen", return_value=response):
+            self.assertTrue(transport.index_exists("rag-version-v1"))
+
+        missing = urllib.error.HTTPError("url", 404, "missing", None, None)
+        with patch("urllib.request.urlopen", side_effect=missing):
+            self.assertFalse(transport.index_exists("rag-version-v1"))
+
+        failure = urllib.error.HTTPError("url", 500, "failure", None, None)
+        with patch("urllib.request.urlopen", side_effect=failure):
+            with self.assertRaisesRegex(ElasticsearchIndexNotReadyError, "HTTP 500"):
+                transport.index_exists("rag-version-v1")
 
 
 if __name__ == "__main__":

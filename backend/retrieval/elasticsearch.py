@@ -63,6 +63,30 @@ class UrllibElasticsearchTransport:
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
 
+    def index_exists(self, index_name: str) -> bool:
+        """Return only 200/404 existence; transport failures remain fail-closed."""
+
+        validated = _validate_index_name(index_name)
+        path = f"/{urllib.parse.quote(validated, safe='-_.')}"
+        request = urllib.request.Request(f"{self.base_url}{path}", method="HEAD")
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+                if response.status == 200:
+                    return True
+                raise ElasticsearchIndexNotReadyError(
+                    f"Elasticsearch existence check returned HTTP {response.status}"
+                )
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404:
+                return False
+            raise ElasticsearchIndexNotReadyError(
+                f"Elasticsearch existence check failed for {path}: HTTP {exc.code}"
+            ) from exc
+        except (OSError, urllib.error.URLError) as exc:
+            raise ElasticsearchIndexNotReadyError(
+                f"Elasticsearch existence check failed for {path}: {exc}"
+            ) from exc
+
     def request(
         self,
         method: str,
@@ -129,7 +153,10 @@ def _validate_chunks(chunks: Sequence[Mapping[str, Any]]) -> None:
             "parse_version",
             "embedding_version",
         )
-        if not all(isinstance(chunk.get(field), str) and chunk[field] for field in required_strings):
+        if not all(
+            isinstance(chunk.get(field), str) and chunk[field]
+            for field in required_strings
+        ):
             raise ValueError(f"chunk {chunk_id} is missing required string fields")
         if not isinstance(chunk.get("library_scope_ids"), list) or not all(
             isinstance(value, str) and value for value in chunk["library_scope_ids"]
