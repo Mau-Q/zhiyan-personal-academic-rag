@@ -2,7 +2,7 @@
 
 ## Status
 
-`SOURCE_PHASE_0_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_REVIEW_READY / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN`
+`SOURCE_PHASE_0_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN`
 
 Phase ID：`source-phase0-foundation-in-progress`
 
@@ -110,13 +110,17 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 已按固定策略从现有 500 题选出 175 题 MVP 初始队列：精确查找 30、单文档事实 50、语义改写 30、比较 20、证据边界 25、安全 20；`dev/test/acceptance=105/35/35`，175 个泄漏组互不重复。
 - 人工决策模板的 175 个结论和 1050 个检查项全部保持 `PENDING`；当前真实进度为 `0/175`，未将 GPT 初标或外部 AI 审计计为人工校验。
 - 新增 175 题策略、生成器和针对性测试后，全仓 145 项测试及 Harness 8 项检查通过。
+- 外部 AI 预审文件已以 SHA-256 `bc808388007ed5e82d153cf8454a99e12a700e91a5fba52df9a9581a50fe576f` 单独保留，不直接改名冒充人工谱系。
+- 评审者 `A` 已确认逐题复核 175 条，并以同一假名完成 4 条授权专家签署；最终结果为 `166 APPROVE_AS_IS / 9 EDIT_LABELS / 0 REJECT_ITEM`。
+- 人工最终文件无 `PENDING`，175 条修订后标签全部通过 `EvaluationItemV1` 正式合同，SHA-256 为 `a428a8fc92cece0d1aaf7e31ce11377bec2791e146b64efdc9e2ef1279800986`。
+- 新增显式人工/专家声明门禁和谱系保留测试后，全仓 147 项测试及 Harness 8 项检查通过。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：175 题真实人工校验、同集 ES/Milvus 单路 Baseline、正式范围/SLO、PostgreSQL 应用接入、真实生成模型和性能验收；
+- 未完成能力：175 题同集 ES/Milvus 单路 Baseline、正式范围/SLO、PostgreSQL 应用接入、真实生成模型和性能验收；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -147,14 +151,14 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 ## Current boundary
 
-当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；评测执行边界为 `MVP_INITIAL_175_SELECTED_HUMAN_DECISIONS_0_OF_175 / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_ES_CANARY_14_OF_15 / REMOTE_MILVUS_CANARY_12_OF_15 / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。AI 复核、Canary 和 Fake LLM 不证明人工验收、真实生成模型、生产参数或性能目标已完成。运行时私有数据继续不进入 Git。
+当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_MILVUS_175_BASELINES_PENDING / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_ES_CANARY_14_OF_15 / REMOTE_MILVUS_CANARY_12_OF_15 / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。AI 复核、Canary 和 Fake LLM 不证明真实生成模型、生产参数或性能目标已完成。运行时私有数据继续不进入 Git。
 
 ## Next gate
 
-1. **人工校验：** 只填写已生成的 175 题决策文件，完成逐题问题/范围、可答性、相关性、Claim–Evidence、答案点和引用检查；当前 `0/175`；
-2. **单路 Baseline：** 人工校验完成后，对同一冻结 175 题先跑 ES only 和 Milvus only，分类报告真实失败；
-3. **增强决策：** 只根据人工校验 Baseline 的主要失败类型决定是否进入阶段 3；当前不重跑远程 500 题，不增加重排、真实 LLM、HyDE、multi-query、multi-hop 或在线 NLI，不调 RRF；
-4. **已有证据：** 500 题四路结果和远程 `14/15 / 12/15 / 14/15` Canary 继续保留，不作为 175 题人工校验的替代。
+1. **ES-only Baseline：** 对已人工冻结的 175 题使用现有远程 ES 配置运行，不改题、不改标签、不调参；
+2. **Milvus-only Baseline：** 对完全相同的 175 题使用已锁定 BGE-M3/COSINE/索引身份运行；
+3. **增强决策：** 只根据人工 Baseline 的主要失败类型决定是否进入阶段 3；当前不重跑远程 500 题，不增加重排、真实 LLM、HyDE、multi-query、multi-hop 或在线 NLI，不调 RRF；
+4. **阶段 0 收口：** 单路结果形成后，再冻结目标语料量、峰值并发、硬件预算和 SLO。
 
 ## Prohibited shortcuts
 

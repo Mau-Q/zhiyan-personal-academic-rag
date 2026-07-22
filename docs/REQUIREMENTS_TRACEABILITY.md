@@ -43,7 +43,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | SR-08 | 证据上下文、真实 LLM、强制引用、校验与拒答 | `PARTIAL` | Evidence/Citation、`NO_EVIDENCE`、Fake LLM Answer API | 真实模型、主张支持校验和冲突处理未实现 |
 | SR-09 | 问答 API、SSE、Evidence API、Agent Evidence API 和原文定位 | `PARTIAL` | 非流式 Answer API、SSE 文件合同、PDF 页码 | SSE 运行、Evidence API、Agent API 和鉴权预览未实现 |
 | SR-10 | Trace、反馈、指标、告警和运营闭环 | `PARTIAL` | Trace 合同与评测报告结构 | 持久化、反馈 API、看板、告警和难例回流未实现 |
-| SR-11 | 150～250 条人工校验 MVP 初始集、约 500 条稳定迭代集、800～1500 条正式验收集 | `PARTIAL` | 15 题 Canary；三论文 316 Chunk 源快照；500 条 AI 工程候选及四路检索结果；已按最高方案确定性选出 175 条、`dev/test/acceptance=105/35/35`、泄漏组不重复的人工校验队列 | 175 条真实人工结论仍为 `0/175`；正式独立盲测未建立 |
+| SR-11 | 150～250 条人工校验 MVP 初始集、约 500 条稳定迭代集、800～1500 条正式验收集 | `PARTIAL` | 15 题 Canary；三论文 316 Chunk 源快照；500 条 AI 工程候选及四路检索结果；175 条已按 `105/35/35` 拆分完成人工校验，166 条原样通过、9 条修订、4 条专家签署 | 同集 ES/Milvus 单路 Baseline 和正式独立盲测未完成 |
 | SR-12 | 性能、容量、故障、安全、灰度和回滚 | `NOT_STARTED` | 本地单元/合同/权限边界测试 | 远程资源、目标规模压测、故障注入、专项安全与发布未验收 |
 
 `COMPLETE`、`PARTIAL`、`NOT_STARTED` 均按最高方案的完整口径判断，不用仓库内部里程碑结果替代。
@@ -52,7 +52,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 
 | 方案阶段 | 当前判断 | 说明 |
 |---|---|---|
-| 阶段 0：范围与 Baseline | `IN_PROGRESS` | 有本地范围、500 题工程候选池、175 题待人工校验队列和远程工程基线；人工校验、目标语料量、峰值并发和 SLO 仍未冻结 |
+| 阶段 0：范围与 Baseline | `IN_PROGRESS` | 175 题已完成人工校验，并保留 500 题工程候选池和远程工程基线；同集 ES/Milvus Baseline、目标语料量、峰值并发和 SLO 仍未冻结 |
 | 阶段 1：数据与索引最小闭环 | `PARTIAL` | 本地链路及远程 ES/Milvus/BGE-M3 应用 Canary 可用，PostgreSQL 仅完成主机基线；正式 Schema、Outbox 和完整生命周期未完成 |
 | 阶段 2：基础 RAG MVP | `PARTIAL` | 非流式 API、Evidence、拒答和远程 RRF Canary 可运行，但仍无真实生成模型、完整去重/多样性和生产验收 |
 | 阶段 3：针对失败类型增强 | `NOT_STARTED` | 待基于人工校验 Baseline 的真实失败决定是否引入改写、拆解、去重、多样性或重排 |
@@ -63,8 +63,8 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 
 方案阶段 0 的下一门禁是：
 
-1. **MVP 初始集：** 以现有 500 题为候选池，完成已冻结 175 题的真实人工校验；当前为 `0/175`，AI 初标和外部 AI 审计均不计人工签署；
-2. **单路 Baseline：** 只有 175 题校验完成后，才对同一冻结集运行 ES only 和 Milvus only，保留分类指标和真实失败；
+1. **单路 Baseline：** 175 题人工校验已完成，下一步对同一冻结集运行 ES only 和 Milvus only，保留分类指标和真实失败；
+2. **范围收口：** 基于单路结果冻结目标语料量、峰值并发、硬件预算和 SLO；
 3. **复杂度门禁：** 现有 500 题四路和 15 题远程 Canary 作为工程证据保留；本轮不实现重排、真实 LLM、HyDE、multi-query、multi-hop 或在线 NLI，也不调 RRF。
 
-175 题人工校验和同集单路 Baseline 未完成前，不得将阶段 0 标记为完成。
+同集 ES/Milvus 单路 Baseline 和范围/SLO 未收口前，不得将阶段 0 标记为完成。
