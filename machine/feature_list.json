@@ -217,6 +217,16 @@
       ]
     },
     {
+      "id": "mvp_175_remote_baseline_input",
+      "status": "PARTIAL",
+      "owner": "SHARED",
+      "evidence": [
+        "scripts/prepare_mvp_remote_baseline_package.py",
+        "tests/evaluation/test_prepare_mvp_remote_baseline_package.py",
+        "docs/FORMAL_RETRIEVAL_EVALUATION_V1.md"
+      ]
+    },
+    {
       "id": "formal_local_retrieval_runner",
       "status": "READY",
       "owner": "A",

@@ -2,7 +2,7 @@
 
 ## Status
 
-`SOURCE_PHASE_0_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN`
+`SOURCE_PHASE_0_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_BASELINE_INPUT_READY / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN`
 
 Phase ID：`source-phase0-foundation-in-progress`
 
@@ -114,6 +114,9 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 评审者 `A` 已确认逐题复核 175 条，并以同一假名完成 4 条授权专家签署；最终结果为 `166 APPROVE_AS_IS / 9 EDIT_LABELS / 0 REJECT_ITEM`。
 - 人工最终文件无 `PENDING`，175 条修订后标签全部通过 `EvaluationItemV1` 正式合同，SHA-256 为 `a428a8fc92cece0d1aaf7e31ce11377bec2791e146b64efdc9e2ef1279800986`。
 - 新增显式人工/专家声明门禁和谱系保留测试后，全仓 147 项测试及 Harness 8 项检查通过。
+- 已从同一冻结 175 题生成兼容现有远程 Harness 的 ES-only/Milvus-only 私有输入包；两路各 175 题，`dev/test/acceptance=105/35/35`，ZIP SHA-256 为 `636593badda13fb11558ead65ab8b3b3cedb50ac0449bbdeff4889787e319e0b`。
+- 输入包仅复用已锁定的 316 Chunk、`top_k=3`、ES 索引和 Milvus/BGE-M3 配置；远程双路报告尚未产生，不记为 Baseline 完成。
+- 新增输入包生成器和后端边界针对性测试后，全仓 149 项测试及 Harness 8 项检查通过。
 
 ## 输入
 
@@ -151,12 +154,12 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 ## Current boundary
 
-当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_MILVUS_175_BASELINES_PENDING / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_ES_CANARY_14_OF_15 / REMOTE_MILVUS_CANARY_12_OF_15 / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。AI 复核、Canary 和 Fake LLM 不证明真实生成模型、生产参数或性能目标已完成。运行时私有数据继续不进入 Git。
+当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_MILVUS_175_INPUT_READY_EXECUTION_PENDING / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_ES_CANARY_14_OF_15 / REMOTE_MILVUS_CANARY_12_OF_15 / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。AI 复核、Canary 和 Fake LLM 不证明真实生成模型、生产参数或性能目标已完成。运行时私有数据继续不进入 Git。
 
 ## Next gate
 
-1. **ES-only Baseline：** 对已人工冻结的 175 题使用现有远程 ES 配置运行，不改题、不改标签、不调参；
-2. **Milvus-only Baseline：** 对完全相同的 175 题使用已锁定 BGE-M3/COSINE/索引身份运行；
+1. **ES-only Baseline：** 将已校验私有包传到远程机，对已人工冻结的 175 题使用现有 ES 配置运行，不改题、不改标签、不调参；
+2. **Milvus-only Baseline：** 使用同一包中完全相同的 175 题和已锁定 BGE-M3/COSINE/索引身份运行；
 3. **增强决策：** 只根据人工 Baseline 的主要失败类型决定是否进入阶段 3；当前不重跑远程 500 题，不增加重排、真实 LLM、HyDE、multi-query、multi-hop 或在线 NLI，不调 RRF；
 4. **阶段 0 收口：** 单路结果形成后，再冻结目标语料量、峰值并发、硬件预算和 SLO。
 
