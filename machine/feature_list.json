@@ -204,6 +204,17 @@
       ]
     },
     {
+      "id": "mvp_initial_175_human_review_package",
+      "status": "PARTIAL",
+      "owner": "SHARED",
+      "evidence": [
+        "evaluation/mvp-initial-175-policy-v1.json",
+        "scripts/prepare_mvp_initial_review_package.py",
+        "tests/evaluation/test_prepare_mvp_initial_review_package.py",
+        "docs/FORMAL_RETRIEVAL_EVALUATION_V1.md"
+      ]
+    },
+    {
       "id": "formal_local_retrieval_runner",
       "status": "READY",
       "owner": "A",

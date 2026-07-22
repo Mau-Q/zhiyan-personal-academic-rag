@@ -19,7 +19,7 @@
 
 ## 当前状态
 
-当前总体状态为 `SOURCE_PHASE_0_IN_PROGRESS / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / RISK_BASED_TESTING_READY / REMOTE_RETRIEVAL_BASELINE_READY`。仓库已形成本地 PDF 到非流式 Answer API 的可审计最小链路，完成本地 BGE-M3/RRF 与 500 题四路检索基线；远程 PostgreSQL、Elasticsearch、Milvus 和 BGE-M3 已完成受限回环工程冒烟，ES/Milvus/RRF 固定 Canary 分别为 `14/15 / 12/15 / 14/15`，RRF 未超过 ES。真实生成模型、完整去重/多样性、性能验收和原方案人工口径仍未完成。
+当前总体状态为 `SOURCE_PHASE_0_IN_PROGRESS / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_REVIEW_READY / REMOTE_RETRIEVAL_BASELINE_READY`。仓库已形成本地 PDF 到非流式 Answer API 的可审计最小链路，完成本地 BGE-M3/RRF 与 500 题四路工程检索基线；远程 ES/Milvus/RRF 固定 Canary 分别为 `14/15 / 12/15 / 14/15`，RRF 未超过 ES。按最新最高方案已从 500 题候选池确定性选出 175 题 MVP 初始人工校验队列，当前真实人工进度为 `0/175`。在该集完成人工校验和 ES/Milvus 单路 Baseline 前，不增加重排、真实 LLM 或更复杂检索。
 
 - GitHub：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 - 最高方案追踪：[`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md)

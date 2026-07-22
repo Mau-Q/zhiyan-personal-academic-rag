@@ -1,0 +1,33 @@
+{
+  "schema_version": "mvp_initial_review_policy_v1",
+  "policy_id": "local-3-paper-mvp-initial-175-v1",
+  "seed": 20260722,
+  "target_size": 175,
+  "split_quotas": {
+    "dev": 105,
+    "test": 35,
+    "acceptance": 35
+  },
+  "category_quotas": {
+    "exact_lookup": 30,
+    "single_document_fact": 50,
+    "semantic_rewrite": 30,
+    "comparison": 20,
+    "evidence_boundary": 25,
+    "security": 20
+  },
+  "category_split_quotas": {
+    "exact_lookup": {"dev": 18, "test": 6, "acceptance": 6},
+    "single_document_fact": {"dev": 30, "test": 10, "acceptance": 10},
+    "semantic_rewrite": {"dev": 18, "test": 6, "acceptance": 6},
+    "comparison": {"dev": 12, "test": 4, "acceptance": 4},
+    "evidence_boundary": {"dev": 15, "test": 5, "acceptance": 5},
+    "security": {"dev": 12, "test": 4, "acceptance": 4}
+  },
+  "selection_rules": {
+    "one_item_per_leakage_group": true,
+    "all_decisions_start_pending": true,
+    "all_selected_items_require_human_review": true,
+    "acceptance_blind": true
+  }
+}

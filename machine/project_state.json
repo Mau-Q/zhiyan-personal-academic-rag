@@ -6,8 +6,8 @@
   "visibility": "PRIVATE",
   "source_authority": {
     "title": "个人学术空间RAG问答系统建设与测试方案_副本.md",
-    "sha256": "ae2ea50d200c74e4c85595afaa5316e6cabd9d782dcc9e4a9ed673891bd9430e",
-    "line_count": 2074,
+    "sha256": "8f5c0c4c5f4eb403100aaebb528c969a58a740964b32f5493f00d848b29c0fc5",
+    "line_count": 661,
     "traceability_doc": "docs/REQUIREMENTS_TRACEABILITY.md",
     "source_phase": {
       "id": "phase-0",
@@ -34,11 +34,12 @@
   },
   "execution_boundaries": {
     "local_rag": "REPO_MINIMAL_CHAIN_COMPLETE_WITH_REAL_BGE_M3_RRF_AND_FAKE_LLM",
-    "evaluation": "AI_AUDITED_ENGINEERING_500_FOUR_BACKEND_BASELINE_READY_HUMAN_REVIEW_PENDING",
+    "evaluation": "MVP_INITIAL_175_SELECTED_HUMAN_DECISIONS_0_OF_175_ENGINEERING_500_RETAINED",
     "evaluation_generation": "QWEN3_7_PLUS_NON_THINKING_500_COMPLETE_FAILURES_0",
     "evaluation_candidate_qa": "FORMAL_DRAFT_CONTRACT_500_PASS_CONFLICT_REVIEW_25_PENDING",
     "evaluation_dataset": "SOURCE_FROZEN_316_CHUNKS_ITEMS_500_GPT_ASSISTED",
     "evaluation_review": "EXTERNAL_AI_AUDIT_213_COMPLETE_HUMAN_DECISIONS_0_RECONCILED_DRAFT_58",
+    "mvp_initial_review": "SELECTED_175_DEV_105_TEST_35_ACCEPTANCE_35_HUMAN_DECISIONS_0_OF_175",
     "evaluation_500_retrieval": "LOCAL_FOUR_BACKEND_500_COMPLETE_DEV_TEST_METRICS_READY",
     "evaluation_canary": "LOCAL_3_PAPER_READY_WITH_VECTOR_12_OF_15_AND_RRF_15_OF_15",
     "remote_host": "WINDOWS11_I7_12700K_64GB_RTX4090_WSL2_DOCKER_READY",

@@ -2,7 +2,7 @@
 
 ## Status
 
-`SOURCE_PHASE_0_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / RISK_BASED_TESTING_READY / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN`
+`SOURCE_PHASE_0_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_REVIEW_READY / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN`
 
 Phase ID：`source-phase0-foundation-in-progress`
 
@@ -55,7 +55,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 确认《个人学术空间 RAG 问答系统建设与测试方案》为最高层需求、目标架构和验收依据；
 - 建立 12 项需求追踪和方案阶段 0～5 完成度映射；
 - 明确仓库 `M0/M1` 为内部工程里程碑，当前最高方案阶段 0 仍为 `IN_PROGRESS`；
-- 将 3 论文 15 题定位为快速工程 Canary，不代替 200～500 条初始评测和 800～1500 条正式验收规模。
+- 将 3 论文 15 题定位为快速工程 Canary，不代替 150～250 条人工校验 MVP 初始集、约 500 条稳定迭代集和 800～1500 条正式验收集。
 - 使用本机 Ollama `bge-m3:latest` 为同一 316 个 Chunk 建立 1024 维真实向量索引，固定模型 digest、源 Chunk 指纹、模板、维度和归一化身份；
 - 冻结当前 Canary 的向量阈值 `0.50`：无证据最高分 `0.425643`，可回答目标最低分 `0.585648`；
 - 固定同一 15 题运行向量单路，结果为 12/15，其中可回答 6/9、无证据 3/3、越权 3/3，未修改题目、页码或 `top_k=3` 制造通过；
@@ -106,13 +106,17 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 由于最小远程 RRF 未超过 ES，保留适配器与真实失败，不调参、不晋级默认策略、不增加重排。
 - 新增候选接口、配置、融合与 Harness 针对性测试后，全仓 142 项测试及 Harness 8 项检查通过。
 - Makefile 已跨平台固定 `.venv/bin/python` 或 `.venv/Scripts/python.exe`；所有仓库门禁不再使用系统 `python3`，虚拟环境缺失时失败关闭，不会把依赖缺失误报为源码失败。
+- 最高方案已重构为 661 行，SHA-256 为 `8f5c0c4c5f4eb403100aaebb528c969a58a740964b32f5493f00d848b29c0fc5`；阶段 0 初始集改为 150～250 条真实人工校验样本，现有 500 题改为候选池/稳定迭代证据。
+- 已按固定策略从现有 500 题选出 175 题 MVP 初始队列：精确查找 30、单文档事实 50、语义改写 30、比较 20、证据边界 25、安全 20；`dev/test/acceptance=105/35/35`，175 个泄漏组互不重复。
+- 人工决策模板的 175 个结论和 1050 个检查项全部保持 `PENDING`；当前真实进度为 `0/175`，未将 GPT 初标或外部 AI 审计计为人工校验。
+- 新增 175 题策略、生成器和针对性测试后，全仓 145 项测试及 Harness 8 项检查通过。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：风险驱动人工确认、原方案双人工标注、正式范围/SLO、PostgreSQL 应用接入、远程 500 题重跑、真实生成模型和性能验收；
+- 未完成能力：175 题真实人工校验、同集 ES/Milvus 单路 Baseline、正式范围/SLO、PostgreSQL 应用接入、真实生成模型和性能验收；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -130,7 +134,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 - `git diff --check` 必须通过；
 - 不得出现被跟踪的 `runtime/`、PDF、`.env`、数据或存储目录；
 - 仓库状态、能力清单和本文件必须一致。
-- 最高方案文件名、`2074` 行与 SHA-256 必须在需求追踪和机器状态中一致；
+- 最高方案文件名、`661` 行与 SHA-256 必须在需求追踪和机器状态中一致；
 - 不得将仓库 `M0_COMPLETE`、15 题 Canary 或 Fake LLM 写成最高方案阶段 0/2 已完成。
 
 ## Git
@@ -143,16 +147,14 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 ## Current boundary
 
-当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；近期评测执行边界为 `AI_AUDITED_ENGINEERING_ITEMS_500 / FOUR_BACKENDS_500_COMPLETE / REMOTE_ES_CANARY_14_OF_15 / REMOTE_MILVUS_CANARY_12_OF_15 / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / HUMAN_DECISIONS_0_OF_213`，原方案执行边界为 `SOURCE_FORMAL_DOUBLE_HUMAN_PENDING`。AI 复核、Canary 和 Fake LLM 不证明人工验收、真实生成模型、生产参数或性能目标已完成。运行时私有数据继续不进入 Git。
+当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；评测执行边界为 `MVP_INITIAL_175_SELECTED_HUMAN_DECISIONS_0_OF_175 / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_ES_CANARY_14_OF_15 / REMOTE_MILVUS_CANARY_12_OF_15 / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。AI 复核、Canary 和 Fake LLM 不证明人工验收、真实生成模型、生产参数或性能目标已完成。运行时私有数据继续不进入 Git。
 
 ## Next gate
 
-1. **共享范围与评测线：** 保留 AI 工程集与人工验收的独立记账；不恢复日常全量双人工；
-2. **A 本地工程线：** 500 题四路对比与远程 15 题 RRF 验证已完成；RRF 未超过 ES，暂缓重排和进一步调参；
-3. **B 远程基础设施线：** 主机、PostgreSQL、Elasticsearch、Milvus 和 BGE-M3 工程基线已闭环；保持回环监听和数据盘持久化边界；
-4. **真实检索接入：** Elasticsearch、Milvus 与 RRF 的远程 316 Chunk/15 题 Canary 已完成并如实保留 `14/15 / 12/15 / 14/15`；单路失败互补未转化为融合后净增益，本轮检索复杂度升级到此停止；
-5. A 已完成同一 Canary 的词项、SQLite BM25、向量和混合检索比较；真实 LLM 仍放在扩展评测和远程检索证据链稳定后单独接入；
-6. GPT 辅助 500 题只用于近期工程决策；只有恢复原方案双人工验收口径，并让范围、正式评测、真实 ES/Milvus 基线和模型资源选型都形成证据后，才能按最高方案关闭阶段 0。
+1. **人工校验：** 只填写已生成的 175 题决策文件，完成逐题问题/范围、可答性、相关性、Claim–Evidence、答案点和引用检查；当前 `0/175`；
+2. **单路 Baseline：** 人工校验完成后，对同一冻结 175 题先跑 ES only 和 Milvus only，分类报告真实失败；
+3. **增强决策：** 只根据人工校验 Baseline 的主要失败类型决定是否进入阶段 3；当前不重跑远程 500 题，不增加重排、真实 LLM、HyDE、multi-query、multi-hop 或在线 NLI，不调 RRF；
+4. **已有证据：** 500 题四路结果和远程 `14/15 / 12/15 / 14/15` Canary 继续保留，不作为 175 题人工校验的替代。
 
 ## Prohibited shortcuts
 

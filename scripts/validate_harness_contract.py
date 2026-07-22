@@ -103,8 +103,8 @@ def check_project_state() -> None:
         raise ValueError("project_state current_phase must be READY")
     if source_authority != {
         "title": "个人学术空间RAG问答系统建设与测试方案_副本.md",
-        "sha256": "ae2ea50d200c74e4c85595afaa5316e6cabd9d782dcc9e4a9ed673891bd9430e",
-        "line_count": 2074,
+        "sha256": "8f5c0c4c5f4eb403100aaebb528c969a58a740964b32f5493f00d848b29c0fc5",
+        "line_count": 661,
         "traceability_doc": "docs/REQUIREMENTS_TRACEABILITY.md",
         "source_phase": {"id": "phase-0", "status": "IN_PROGRESS"},
     }:
