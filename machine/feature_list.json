@@ -227,6 +227,15 @@
       ]
     },
     {
+      "id": "mvp_175_remote_single_backend_baselines",
+      "status": "READY",
+      "owner": "SHARED",
+      "evidence": [
+        "docs/FORMAL_RETRIEVAL_EVALUATION_V1.md",
+        "docs/CURRENT_PHASE.md"
+      ]
+    },
+    {
       "id": "formal_local_retrieval_runner",
       "status": "READY",
       "owner": "A",

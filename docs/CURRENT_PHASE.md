@@ -55,7 +55,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 确认《个人学术空间 RAG 问答系统建设与测试方案》为最高层需求、目标架构和验收依据；
 - 建立 12 项需求追踪和方案阶段 0～5 完成度映射；
 - 明确仓库 `M0/M1` 为内部工程里程碑，当前最高方案阶段 0 仍为 `IN_PROGRESS`；
-- 将 3 论文 15 题定位为快速工程 Canary，不代替 150～250 条人工校验 MVP 初始集、约 500 条稳定迭代集和 800～1500 条正式验收集。
+- 将 3 论文 15 题定位为快速工程 Canary，不代替固定 175 题 MVP 初始集、约 500 条稳定迭代集和 800～1500 条正式验收集。
 - 使用本机 Ollama `bge-m3:latest` 为同一 316 个 Chunk 建立 1024 维真实向量索引，固定模型 digest、源 Chunk 指纹、模板、维度和归一化身份；
 - 冻结当前 Canary 的向量阈值 `0.50`：无证据最高分 `0.425643`，可回答目标最低分 `0.585648`；
 - 固定同一 15 题运行向量单路，结果为 12/15，其中可回答 6/9、无证据 3/3、越权 3/3，未修改题目、页码或 `top_k=3` 制造通过；
@@ -106,7 +106,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 由于最小远程 RRF 未超过 ES，保留适配器与真实失败，不调参、不晋级默认策略、不增加重排。
 - 新增候选接口、配置、融合与 Harness 针对性测试后，全仓 142 项测试及 Harness 8 项检查通过。
 - Makefile 已跨平台固定 `.venv/bin/python` 或 `.venv/Scripts/python.exe`；所有仓库门禁不再使用系统 `python3`，虚拟环境缺失时失败关闭，不会把依赖缺失误报为源码失败。
-- 最高方案已重构为 661 行，SHA-256 为 `8f5c0c4c5f4eb403100aaebb528c969a58a740964b32f5493f00d848b29c0fc5`；阶段 0 初始集改为 150～250 条真实人工校验样本，现有 500 题改为候选池/稳定迭代证据。
+- 最高方案已同步上游为 725 行，SHA-256 为 `43fd5d4af4d38884c2449b9ff39fcee537cf27af5a7a700747a932be5f74dc78`；业务范围收敛为个人文献库，知识来源仅为上传论文和收藏后入个人库的论文，并将 175 题写为固定 MVP 初始资产。
 - 已按固定策略从现有 500 题选出 175 题 MVP 初始队列：精确查找 30、单文档事实 50、语义改写 30、比较 20、证据边界 25、安全 20；`dev/test/acceptance=105/35/35`，175 个泄漏组互不重复。
 - 人工决策模板的 175 个结论和 1050 个检查项全部保持 `PENDING`；当前真实进度为 `0/175`，未将 GPT 初标或外部 AI 审计计为人工校验。
 - 新增 175 题策略、生成器和针对性测试后，全仓 145 项测试及 Harness 8 项检查通过。
@@ -128,7 +128,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：无证据校准、安全策略层及其错误合同、正式范围/SLO、PostgreSQL 应用接入、真实生成模型和性能验收；
+- 未完成能力：三种 Chunk 受控 Baseline、单用户正式范围/资源/SLO、`owner_id` 与 `paper_id ↔ document_id` 目标合同、PostgreSQL 生命周期接入、无证据校准、安全策略层、真实生成模型和性能验收；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -146,7 +146,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 - `git diff --check` 必须通过；
 - 不得出现被跟踪的 `runtime/`、PDF、`.env`、数据或存储目录；
 - 仓库状态、能力清单和本文件必须一致。
-- 最高方案文件名、`661` 行与 SHA-256 必须在需求追踪和机器状态中一致；
+- 最高方案文件名、`725` 行与 SHA-256 必须在需求追踪和机器状态中一致；
 - 不得将仓库 `M0_COMPLETE`、15 题 Canary 或 Fake LLM 写成最高方案阶段 0/2 已完成。
 
 ## Git
@@ -163,10 +163,10 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 ## Next gate
 
-1. **基线冻结：** 保留 ES/Milvus 两路报告、哈希、固定参数和真实失败，不改题、不改标签、不调参；
-2. **边界分流：** 后续单独定义无证据校准门禁与有害/敏感请求拒答合同，不把 `RAG_FORBIDDEN_SCOPE` 同时当作内容安全错误；
-3. **增强决策：** 当前不跑 175 题 RRF，不重跑远程 500 题，不增加重排、真实 LLM、HyDE、multi-query、multi-hop 或在线 NLI，不调 RRF；
-4. **阶段 0 收口：** 冻结目标语料量、峰值并发、硬件预算和 SLO，再决定是否开始下一阶段。
+1. **基线冻结：** 保留 175 题 ES 85/175、Milvus 109/175 的报告、哈希、固定参数和真实失败，不重跑、不改题、不改标签、不调参；
+2. **Chunk Baseline：** 使用同一源快照和检索配置对比 `fixed_boundary_v1`、`paragraph_sentence_v1` 和 `section_parent_child_v1`，补齐可归因的切片证据；
+3. **阶段 0 范围收口：** 冻结单用户目标语料量、峰值并发、硬件预算和 Baseline 后 SLO；
+4. **边界与复杂度：** 记录无证据校准和安全策略层缺口，但当前不跑 175 题 RRF、不重跑远程 500 题、不增加重排、真实 LLM、HyDE、multi-query、multi-hop 或在线 NLI。
 
 ## Prohibited shortcuts
 

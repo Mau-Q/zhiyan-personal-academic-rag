@@ -1,11 +1,11 @@
 # 智研个人学术空间 RAG 问答系统
 
-本仓库用于建设面向个人论文、个人文献库、研究目录及授权公共知识库的证据约束型 RAG 问答系统。
+本仓库用于建设面向个人论文、个人文献库和研究目录的证据约束型 RAG 问答系统。公共文献检索库只是收藏论文的上游来源，不参与个人 RAG 的在线联合召回。
 
 系统必须完成以下可审计链路：
 
 ```text
-授权文献范围
+当前用户与个人库范围
 → PDF 入库与版本管理
 → 章节、页码和 Chunk
 → Elasticsearch + Milvus 混合检索
@@ -19,7 +19,7 @@
 
 ## 当前状态
 
-当前总体状态为 `SOURCE_PHASE_0_IN_PROGRESS / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / REMOTE_RETRIEVAL_BASELINE_READY`。仓库已形成本地 PDF 到非流式 Answer API 的可审计最小链路，完成本地 BGE-M3/RRF 与 500 题四路工程检索基线；远程 ES/Milvus/RRF 固定 Canary 分别为 `14/15 / 12/15 / 14/15`，RRF 未超过 ES。按最新最高方案已从 500 题候选池选出并完成 175/175 题 MVP 初始人工校验，其中 166 条原样通过、9 条修订标签、4 条完成专家签署。下一门禁是同一冻结集的 ES-only 和 Milvus-only Baseline；在结果出来前不增加重排、真实 LLM 或更复杂检索。
+当前总体状态为 `SOURCE_PHASE_0_IN_PROGRESS / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE`。仓库已形成本地 PDF 到非流式 Answer API 的可审计最小链路，完成本地 BGE-M3/RRF 与 500 题四路工程检索基线；远程 ES/Milvus/RRF 固定 Canary 分别为 `14/15 / 12/15 / 14/15`，RRF 未超过 ES。固定 175 题已完成 175/175 人工校验，同集 ES 与 Milvus 严格通过数分别为 `85/175` 和 `109/175`。当前冻结真实失败，不跑 175 题 RRF、不调参、不增加重排或真实 LLM；阶段 0 剩余门禁是三种 Chunk 受控 Baseline 和单用户范围/资源/SLO 冻结。
 
 - GitHub：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 - 最高方案追踪：[`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md)
@@ -85,6 +85,8 @@ make contract-test
 ```
 
 该命令只处理有文本层的本地 PDF，不调用网络、OCR、远程模型、数据库或向量库。完整边界见 [`docs/LOCAL_PDF_INGESTION.md`](docs/LOCAL_PDF_INGESTION.md)。
+
+上述命令展示当前可运行的 V1 legacy 合同，其 `tenant_id/visibility` 不是最新最高方案的目标权限语义。目标合同将在阶段 1 以服务端 `owner_id` 和个人库范围替换，本次状态同步不改动运行接口。
 
 真实 TRACER PDF 的本地解析与 Answer API 结果见 [`docs/LOCAL_PDF_CANARY.md`](docs/LOCAL_PDF_CANARY.md)。仓库只记录身份、命令和验收结论，不保存 PDF 或真实 Chunk 输出。
 
