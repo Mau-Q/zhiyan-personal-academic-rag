@@ -102,7 +102,8 @@ Phase ID：`source-phase0-foundation-in-progress`
 - Milvus 向量适配器已实现：固定源 Chunk、Embedding 模型 digest、维度、COSINE、HNSW 工程参数和严格 Collection Schema；服务端 ACL 与应用侧二次授权、漂移失败关闭、Answer API 和评测 Harness Fixture 测试通过。远程 316 Chunk 固定 15 题结果为 12/15（可回答 6/9、无证据 3/3、越权 3/3），与本地精确向量基线一致；3 个缺失目标页如实保留，HNSW 参数仍是工程基线而非生产最终值。
 - 固化 Elasticsearch/Milvus 共用的 `backend/rank/score/chunk` 候选接口和无密钥 `remote_retrieval_config_v1`；非法结果、分数和身份漂移失败关闭；
 - 基于 ES 唯一失败与 Milvus 3 个失败完全互补的现有证据，实现最小 ES+Milvus RRF：双路候选 20、`k=60`、最终 `top_k=3`，不直接比较异构原始分数；本地 Fixture Answer API 与 Harness 已通过，远程 15 题 RRF Canary 待执行，未宣称 15/15。
-- 新增候选接口、配置、融合与 Harness 针对性测试后，全仓 141 项测试及 Harness 8 项检查通过。
+- 新增候选接口、配置、融合与 Harness 针对性测试后，全仓 142 项测试及 Harness 8 项检查通过。
+- Makefile 已跨平台固定 `.venv/bin/python` 或 `.venv/Scripts/python.exe`；所有仓库门禁不再使用系统 `python3`，虚拟环境缺失时失败关闭，不会把依赖缺失误报为源码失败。
 
 ## 输入
 
@@ -114,7 +115,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 ## 验收
 
-- `python3 scripts/validate_harness_contract.py` 必须通过；
+- `make harness-validate` 必须通过，且必须由 Makefile 强制使用项目 `.venv`；
 - `make test` 必须覆盖合同、入库、检索、RAG、API、评测和仓库 Harness；
 - 本地三论文 Harness 必须通过 15/15，且三类结果分别达到 9/9、3/3、3/3；
 - `make sqlite-fts-fixture-smoke` 必须通过 6/6；

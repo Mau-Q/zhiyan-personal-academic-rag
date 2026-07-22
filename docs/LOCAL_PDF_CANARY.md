@@ -11,7 +11,7 @@
 ## 入库命令
 
 ```bash
-python3 -m backend.ingestion.cli \
+.venv/bin/python -m backend.ingestion.cli \
   --pdf <local-pdf-path> \
   --expected-sha256 3e7e4628ffadc9183e85341b3a88050c3b58a06dec02926c8f2028b55879d6ea \
   --document-id doc_arxiv_2602.11409 \

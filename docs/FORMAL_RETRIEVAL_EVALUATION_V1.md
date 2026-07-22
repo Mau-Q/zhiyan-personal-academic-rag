@@ -191,7 +191,7 @@ make formal-evaluation-fixture
 验证真实数据集是否达到锁定条件：
 
 ```bash
-python3 -m backend.evaluation.formal_corpus \
+.venv/bin/python -m backend.evaluation.formal_corpus \
   --manifest runtime/evaluation/formal-retrieval-v1/manifest.json \
   --require-lock-ready
 ```
@@ -199,7 +199,7 @@ python3 -m backend.evaluation.formal_corpus \
 验证 GPT 辅助 500 题是否达到近期门禁：
 
 ```bash
-python3 -m backend.evaluation.formal_corpus \
+.venv/bin/python -m backend.evaluation.formal_corpus \
   --manifest runtime/evaluation/formal-retrieval-v1/manifest.json \
   --require-engineering-ready
 ```
@@ -209,7 +209,7 @@ python3 -m backend.evaluation.formal_corpus \
 比较多个检索运行：
 
 ```bash
-python3 -m backend.evaluation.retrieval_metrics \
+.venv/bin/python -m backend.evaluation.retrieval_metrics \
   --manifest runtime/evaluation/formal-retrieval-v1/manifest.json \
   --run sqlite_fts5=runtime/evaluation/formal-retrieval-v1/sqlite.jsonl \
   --run local_vector=runtime/evaluation/formal-retrieval-v1/vector.jsonl \

@@ -23,6 +23,31 @@ class RepositoryHarnessTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
         self.assertIn("HARNESS_CONTRACT PASS", completed.stdout)
 
+    def test_makefile_pins_all_repository_commands_to_project_virtualenv(self):
+        makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+        self.assertIn("PROJECT_PYTHON := .venv/bin/python", makefile)
+        self.assertIn("PROJECT_PYTHON := .venv/Scripts/python.exe", makefile)
+        self.assertIn("$(error Project virtualenv is missing", makefile)
+        self.assertNotRegex(makefile, r"(?m)^\tpython3(?:\s|$)")
+
+        agent_entry = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("make harness-validate", agent_entry)
+        self.assertNotIn("python3 scripts/validate_harness_contract.py", agent_entry)
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            missing_environment = subprocess.run(
+                ["make", "-f", str(ROOT / "Makefile"), "harness-validate"],
+                cwd=temporary_directory,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        self.assertNotEqual(missing_environment.returncode, 0)
+        self.assertIn(
+            "Project virtualenv is missing",
+            missing_environment.stdout + missing_environment.stderr,
+        )
+
     def test_phase_schema_and_template_are_draft_2020_12_valid(self):
         schema = json.loads(
             (ROOT / "machine" / "phase_result.schema.json").read_text(encoding="utf-8")

@@ -7,14 +7,14 @@
 ## 运行
 
 ```bash
-python3 -m backend.rag.fixture_consumer \
+.venv/bin/python -m backend.rag.fixture_consumer \
   --question "How are candidates combined before reranking?"
 ```
 
 无证据示例：
 
 ```bash
-python3 -m backend.rag.fixture_consumer \
+.venv/bin/python -m backend.rag.fixture_consumer \
   --question "What is the measured ocean temperature?"
 ```
 

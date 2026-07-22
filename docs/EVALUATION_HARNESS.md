@@ -18,7 +18,7 @@ Harness 也支持 `--retrieval-backend sqlite_fts5 --index <path>`。此时报�
 
 远程 Milvus/BGE-M3 使用 `--retrieval-backend milvus_vector`，并显式提供 `--milvus-uri` 与 `--milvus-collection`。报告边界为 `REMOTE_API_MILVUS_BGE_M3_FAKE_LLM`；Collection、源 Chunk 和模型身份漂移时失败关闭。参数与命令见 [Milvus 向量检索适配器](MILVUS_RETRIEVAL.md)。
 
-远程 ES + Milvus 最小 RRF 使用 `--retrieval-backend remote_rrf --remote-config <path>`。报告固定输出配置 Schema、Index、Collection、模型身份、阈值与 RRF 参数，详见 [Elasticsearch + Milvus 最小 RRF](REMOTE_RRF_RETRIEVAL.md)。
+远程 ES + Milvus 最小 RRF 后端读取版本化配置，报告固定输出配置 Schema、Index、Collection、模型身份、阈值与 RRF 参数，详见 [Elasticsearch + Milvus 最小 RRF](REMOTE_RRF_RETRIEVAL.md)。
 
 本地 BGE-M3 与 RRF 的固定三论文结果、模型 digest 和阈值依据见 [本地真实向量与 RRF 混合检索基线](LOCAL_VECTOR_RRF_RETRIEVAL.md)。
 
@@ -45,7 +45,7 @@ make evaluation-smoke
 也可以显式指定输入：
 
 ```bash
-python3 -m backend.evaluation.harness \
+.venv/bin/python -m backend.evaluation.harness \
   --cases evaluation/suites/fixture-smoke-v1.jsonl \
   --chunks fixtures/chunks-v1.json \
   --scope fixtures/authorized-scope-v1.json \

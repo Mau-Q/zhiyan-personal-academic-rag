@@ -18,8 +18,10 @@
 
 ```bash
 git status -sb
-python3 scripts/validate_harness_contract.py
+make harness-validate
 ```
+
+`Makefile` 强制使用仓库 `.venv`；不得用系统 `python3` 直接运行仓库门禁。虚拟环境不存在时应明确失败，不回退到系统解释器。
 
 若 Harness 校验失败，先修复仓库状态或明确报告阻塞，不绕过校验继续扩大范围。
 
@@ -48,7 +50,7 @@ python3 scripts/validate_harness_contract.py
 普通低风险任务至少执行：
 
 ```bash
-python3 scripts/validate_harness_contract.py
+make harness-validate
 # 运行与改动直接相关的测试目标；阶段、合同或跨模块变更运行 make test
 git diff --check
 ```

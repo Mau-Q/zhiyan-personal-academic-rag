@@ -54,10 +54,9 @@
 
 ## 合同验证
 
-本地需要 Python 3.11+ 和 `jsonschema`：
+本地需要已安装项目依赖的 `.venv`。Makefile 会强制使用该虚拟环境，不会回退到系统 Python：
 
 ```bash
-python3 -m pip install 'jsonschema>=4.23,<5'
 make contract-test
 ```
 
@@ -66,7 +65,7 @@ make contract-test
 ## 成员 A 在线 Fixture 消费者
 
 ```bash
-python3 -m backend.rag.fixture_consumer \
+.venv/bin/python -m backend.rag.fixture_consumer \
   --question "How are candidates combined before reranking?"
 ```
 
@@ -75,7 +74,7 @@ python3 -m backend.rag.fixture_consumer \
 ## 本地 PDF 入库
 
 ```bash
-python3 -m backend.ingestion.cli \
+.venv/bin/python -m backend.ingestion.cli \
   --pdf /local/path/paper.pdf \
   --document-id doc_local_001 \
   --tenant-id tenant_fixture \
@@ -92,7 +91,7 @@ python3 -m backend.ingestion.cli \
 ## 仓库 Harness
 
 ```bash
-python3 scripts/validate_harness_contract.py
+make harness-validate
 ```
 
 仓库 Harness 固化当前阶段、产品决策、执行边界和完成门禁。`AGENTS.md` 是成员与自动化工具的入口，`machine/` 保存机器可读状态，具体阶段运行结果只写入被忽略的 `runtime/phases/`。架构说明见 [`docs/HARNESS_ARCHITECTURE.md`](docs/HARNESS_ARCHITECTURE.md)。

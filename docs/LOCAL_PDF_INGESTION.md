@@ -15,7 +15,7 @@
 ## 命令
 
 ```bash
-python3 -m backend.ingestion.cli \
+.venv/bin/python -m backend.ingestion.cli \
   --pdf /local/path/paper.pdf \
   --expected-sha256 <catalog-sha256> \
   --document-id doc_local_001 \

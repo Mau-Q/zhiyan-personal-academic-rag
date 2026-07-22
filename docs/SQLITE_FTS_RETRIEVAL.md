@@ -29,11 +29,11 @@ make sqlite-fts-fixture-smoke
 也可以分步执行：
 
 ```bash
-python3 -m backend.retrieval.sqlite_fts build \
+.venv/bin/python -m backend.retrieval.sqlite_fts build \
   --chunks fixtures/chunks-v1.json \
   --output runtime/evaluation/fixture-sqlite-fts-v1.sqlite
 
-python3 -m backend.evaluation.harness \
+.venv/bin/python -m backend.evaluation.harness \
   --cases evaluation/suites/fixture-sqlite-fts-v1.jsonl \
   --chunks fixtures/chunks-v1.json \
   --scope fixtures/authorized-scope-v1.json \

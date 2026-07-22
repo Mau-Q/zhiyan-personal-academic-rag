@@ -21,5 +21,6 @@
 | PD-017 | SUPERSEDED_BY_PD-018 | 后续阶段采用风险驱动的最小充分测试；默认建立 80 题工程基线 | 用户澄清降复杂度针对人工评审流程，不降低 500 题覆盖规模 |
 | PD-018 | ACCEPTED | 保留 500 题，GPT 承担候选生成和低风险初标；低风险 `dev/test` 人工抽检 10%～20%，Acceptance 单人确认，冲突才仲裁，专业高难题才专家复核 | 保留覆盖与统计稳定性，降低双人工、全量仲裁和泛化专家评审成本；原方案双人工口径仍单独记账 |
 | PD-019 | ACCEPTED | 固化 ES/Milvus 带名次与原始分数的共用候选接口和无密钥配置；基于固定 Canary 失败完全互补的证据实现最小远程 RRF | 融合只使用名次，不直接比较 BM25/COSINE 原始分数；本地 Fixture 就绪不等于远程 RRF Canary 完成 |
+| PD-020 | ACCEPTED | 仓库门禁统一由 Makefile 强制使用项目 `.venv`，禁止静默回退到系统 Python | macOS 使用 `.venv/bin/python`，Windows 使用 `.venv/Scripts/python.exe`；虚拟环境缺失时明确失败 |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。

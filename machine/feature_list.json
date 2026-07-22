@@ -17,7 +17,12 @@
       "id": "repository_harness",
       "status": "READY",
       "owner": "A",
-      "evidence": ["AGENTS.md", "scripts/validate_harness_contract.py"]
+      "evidence": [
+        "AGENTS.md",
+        "Makefile",
+        "scripts/validate_harness_contract.py",
+        "tests/harness/test_repository_harness.py"
+      ]
     },
     {
       "id": "stage_zero_contracts",
