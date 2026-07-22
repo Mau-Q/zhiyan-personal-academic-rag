@@ -48,6 +48,17 @@ class RepositoryHarnessTests(unittest.TestCase):
             missing_environment.stdout + missing_environment.stderr,
         )
 
+    def test_github_actions_builds_the_required_project_virtualenv(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "contracts.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("run: python -m venv .venv", workflow)
+        self.assertIn(
+            "run: .venv/bin/python -m pip install '.[dev]'",
+            workflow,
+        )
+        self.assertNotIn("run: python -m pip install '.[dev]'", workflow)
+
     def test_phase_schema_and_template_are_draft_2020_12_valid(self):
         schema = json.loads(
             (ROOT / "machine" / "phase_result.schema.json").read_text(encoding="utf-8")

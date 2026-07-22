@@ -43,7 +43,9 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+      - name: Create project virtualenv
+        run: python -m venv .venv
       - name: Install runtime and test dependencies
-        run: python -m pip install '.[dev]'
+        run: .venv/bin/python -m pip install '.[dev]'
       - name: Validate repository Harness and core system
         run: make test
