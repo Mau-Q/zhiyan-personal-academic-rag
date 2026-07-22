@@ -78,6 +78,10 @@ Expected report schema is `stage1_remote_canary_report_v2`. Required fields incl
 `runtime_snapshot_cleanup_proven=true`, `inactive_visibility_proven=true`, and
 `inactive_answer_api_status=403`. `resumed_from_ready=true` is expected when the
 same Run ID continues after a previous failure between READY and inactivation.
+When real generation is enabled, both calls must independently pass the Answer API
+and citation gates and return the same Citation set. The report records this as
+`generation_stable_replay=true`; `generation_byte_stable_replay` separately records
+whether the natural-language answers were byte-identical and is not a hard gate.
 Synthetic Canary IDs and snapshot hashes are safe
 to return; object paths and Chunk payloads are not included.
 

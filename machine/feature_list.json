@@ -454,7 +454,7 @@
     },
     {
       "id": "phase2_model_selection",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "SHARED",
       "evidence": [
         "evaluation/generation/phase2-model-selection-v1.json",

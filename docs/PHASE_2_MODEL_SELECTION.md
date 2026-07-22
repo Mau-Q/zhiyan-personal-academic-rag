@@ -38,6 +38,18 @@ Gate 直接复用 `OllamaGenerationProvider` 的 `/api/tags` 身份检查和 `/a
 
 v1 首次远程运行暴露了评测器假失败：`qwen3:14b` 对证据不足问题两次诊断回答完全一致，均为“提供的证据中没有提及本研究的资助机构”，引用 `[1]` 正确且没有外推；v1 固定短语表漏掉“没有提及/未提及”。v2 保留 v1 基础 Evidence 和原始运行证据，只以版本化覆盖补充等价拒答措辞，并把稳定性定义修正为“两次均通过相同确定性门禁”。
 
+## 远程 v2 结果与决策
+
+用户在 Windows 远程主机对提交 `ebb12c410fa93102b2a28cdc0bae3f33cc11ea9d` 执行冻结 v2 Gate，结果为 `PASS / PROMOTE_QWEN3_14B`：
+
+- `qwen3:14b`：硬门禁通过，`4/4`；
+- `llama3.2:latest`：硬门禁未通过，`2/4`；
+- 候选资格：`true`；
+- 稳定错误码：`NONE`；
+- 脱敏报告 SHA-256：`21C27EAE18848962FC25A879AC620F989F4DD9690C6EB67A10236BE71DAF788B`。
+
+因此阶段 2 的冻结生成模型晋级为 `qwen3:14b@bdbd181c33f2ed1b31c972991882db3cf4d192569092138a7d29e973cd9debe8`，`llama3.2:latest` 保留为已有远程 READY 证据的回退基线。本报告只证明固定公开 Evidence/Prompt 的模型选型，不证明 Qwen 已通过 PostgreSQL READY + ES/Milvus RRF 端到端闭环；后者必须使用新 Run ID 独立验证。
+
 ## 运行
 
 macOS/Linux 可执行：

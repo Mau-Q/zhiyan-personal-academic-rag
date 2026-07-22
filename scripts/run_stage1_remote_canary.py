@@ -69,7 +69,6 @@ _SANITIZED_RUNTIME_CODES = frozenset(
         "REAL_GENERATION_REPLAY_FAILED_CLOSED",
         "REAL_GENERATION_REPLAY_CITATION_MAPPING_FAILED",
         "REAL_GENERATION_REPLAY_CITATION_GATE_FAILED",
-        "REAL_GENERATION_REPLAY_ANSWER_MISMATCH",
         "REAL_GENERATION_REPLAY_CITATION_MISMATCH",
         "CLEANUP_DID_NOT_COMPLETE",
         "RUNTIME_SNAPSHOT_CLEANUP_FAILED",
@@ -189,6 +188,16 @@ def _require_answer_api_gate(
         raise RuntimeError(
             f"REAL_GENERATION_{generation_phase}_CITATION_GATE_FAILED"
         )
+
+
+def _generation_replay_byte_stable(
+    initial_payload: dict[str, object],
+    replay_payload: dict[str, object],
+) -> bool:
+    """Require the same validated citations; return answer byte stability."""
+    if replay_payload.get("citations") != initial_payload.get("citations"):
+        raise RuntimeError("REAL_GENERATION_REPLAY_CITATION_MISMATCH")
+    return replay_payload.get("answer") == initial_payload.get("answer")
 
 
 def main() -> int:
@@ -381,6 +390,7 @@ def main() -> int:
             generation_enabled=generation_provider is not None,
         )
         generation_stable_replay = False
+        generation_byte_stable_replay = False
         if generation_provider is not None:
             replay_response = answer_client.post(
                 "/api/v1/rag/answers",
@@ -397,10 +407,10 @@ def main() -> int:
                 generation_enabled=True,
                 replay=True,
             )
-            if replay_payload.get("answer") != answer_payload.get("answer"):
-                raise RuntimeError("REAL_GENERATION_REPLAY_ANSWER_MISMATCH")
-            if replay_payload.get("citations") != answer_payload.get("citations"):
-                raise RuntimeError("REAL_GENERATION_REPLAY_CITATION_MISMATCH")
+            generation_byte_stable_replay = _generation_replay_byte_stable(
+                answer_payload,
+                replay_payload,
+            )
             generation_stable_replay = True
 
         scheduler = PersistentIndexCleanupScheduler(repository)
@@ -493,6 +503,11 @@ def main() -> int:
                 else None
             ),
             "generation_stable_replay": generation_stable_replay,
+            "generation_byte_stable_replay": (
+                generation_byte_stable_replay
+                if generation_provider is not None
+                else None
+            ),
             "inactivation_reason": inactivation.reason.value,
             "cleanup_jobs_succeeded": len(cleanup_results),
             "runtime_snapshot_cleanup_proven": True,

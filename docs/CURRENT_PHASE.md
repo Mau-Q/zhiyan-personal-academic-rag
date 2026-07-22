@@ -161,15 +161,16 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 - 已接入可选的真实 Ollama 生成器，不改变现有 Fake 默认路径和 RAG Answer 公共合同；生成器只消费检索后 Evidence，模型摘要、Prompt 和解码固定，模型漂移、非法 JSON、无引用或引用越界均失败关闭为 `DEGRADED` 证据卡。
 - 本机 `llama3.2:latest@a80c4f17acd5...b8b72` 真实模型 Canary 已通过：两次回答稳定、引用编号有效、无证据不调用模型、越权范围保持 403；执行边界为公开 Fixture Evidence，不冒充远程 PostgreSQL/ES/Milvus 实跑。
 - 用户在远程提交 `91aca5a` 使用同一冻结模型摘要完成 READY 真实生成恢复闭环：PostgreSQL READY + ES/Milvus RRF 返回 3 条 Evidence，Answer API `COMPLETED`、引用编号校验和两次稳定回放均通过；随后删除后 403 与 ES/Milvus/运行快照 3 项清理通过，稳定错误码为 `NONE`。脱敏报告 SHA-256 为 `E2231FADABB368209F976B2BAB99F4E1D841ACB3053C45A07B1ADDC7B386E937`，报告未保存回答或 Chunk 正文。
-- 已冻结独立模型选型 Harness：回退基线为 `llama3.2:latest@a80c4f17...b8b72`，唯一候选为 `qwen3:14b@bdbd181c...debe8`；两者直接调用同一 Ollama API，复用同一 Prompt、Schema、解码和四组公开中文科研 Evidence。候选仅在引用、稳定回放、必须回答点和禁止主张全部无回归时晋级；远程实跑待用户执行。
-- 模型选型 v1 远程运行完整，但“证据不足”用例被过窄短语表误判：后续公开 Fixture 诊断证明 Qwen 两次均稳定回答“证据中没有提及资助机构”并引用 `[1]`。v1 结果保留为评测器缺陷证据；v2 不改 Evidence/Prompt/模型，只补充等价拒答措辞，并将字节一致降为观测项、两次确定性门禁均通过作为稳定性条件，远程 v2 重跑待执行。
+- 已冻结独立模型选型 Harness：回退基线为 `llama3.2:latest@a80c4f17...b8b72`，唯一候选为 `qwen3:14b@bdbd181c...debe8`；两者直接调用同一 Ollama API，复用同一 Prompt、Schema、解码和四组公开中文科研 Evidence，不连接或修改检索基础设施。
+- 模型选型 v1 的“证据不足”用例被过窄短语表误判；v2 保留原 Evidence/Prompt/模型，只补充等价拒答措辞，并将字节一致降为观测项、两次确定性门禁均通过作为稳定性条件。用户已在提交 `ebb12c4` 完成远程 v2：Qwen `4/4`、llama3.2 `2/4`，结果 `PASS / PROMOTE_QWEN3_14B / NONE`，脱敏报告 SHA-256 为 `21C27EAE18848962FC25A879AC620F989F4DD9690C6EB67A10236BE71DAF788B`。
+- READY Canary 的真实生成稳定回放同步采用相同边界：两次 Answer API 调用必须分别完成引用门禁并返回相同 Citation 集合；答案是否逐字一致单独记录为 `generation_byte_stable_replay`，不作为自然语言模型硬门禁。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：阶段 2 的固定普通科研问答验收包与模型选型、真实 Reranker 消融、正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层；
+- 未完成能力：`qwen3:14b` 的远程 READY 端到端闭环、阶段 2 固定普通科研问答验收包、真实 Reranker 消融、正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -206,12 +207,12 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1 已完成，阶段 2 仍为 `IN_PROGRESS`。评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / REMOTE_READY_REAL_OLLAMA_GENERATION_PASS`。远程 v2 已证明 PDF/Chunk 持久化、PostgreSQL READY、ES/Milvus 物理路由、Answer API Evidence、真实生成稳定回放、失败恢复、删除后 403 和三路清理；运行时私有数据与报告继续只保留在被忽略的 `runtime/`。固定普通科研问答验收包、独立模型选型和真实 Reranker 消融仍未完成。
+最高方案阶段 0、阶段 1 已完成，阶段 2 仍为 `IN_PROGRESS`。评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / REMOTE_READY_LLAMA3_2_GENERATION_PASS / QWEN3_14B_MODEL_SELECTION_PROMOTED`。远程 v2 已证明 PDF/Chunk 持久化、PostgreSQL READY、ES/Milvus 物理路由、Answer API Evidence、llama3.2 真实生成稳定回放、失败恢复、删除后 403 和三路清理；独立模型选型已证明 Qwen 在固定公开 Evidence 上 `4/4` 晋级。运行时私有数据与报告继续只保留在被忽略的 `runtime/`。Qwen READY 端到端闭环、固定普通科研问答验收包和真实 Reranker 消融仍未完成。
 
 ## Next gate
 
-1. **独立模型选型 Gate：** v2 Harness 与候选身份已冻结；由用户在同一 Ollama 服务重跑 `llama3.2:latest` 和 `qwen3:14b`，根据两次确定性无回归门禁作出晋级/回退决定；
-2. **阶段 2 验收包：** 在指定文档与普通学术问答上记录真实生成、引用、ACL、版本和定位的稳定回放，并保持 Hybrid 14/15 未胜 ES 的原始结论；
+1. **Qwen READY 端到端 Gate：** 使用新 Run ID 和冻结摘要，在现有 PostgreSQL READY + ES/Milvus RRF 链路验证 `qwen3:14b` 两次独立引用门禁、删除后 403 与三路清理；不修改检索参数；
+2. **阶段 2 验收包：** 在指定文档与普通学术问答上记录真实生成、引用、ACL、版本和定位的门禁稳定回放，并保持 Hybrid 14/15 未胜 ES 的原始结论；
 3. **Reranker 独立 Gate：** 只有冻结 Baseline 出现可测排序缺口时，才单独验证一个 Cross-Encoder；不与生成、模型选型、MinIO、OCR 或性能变量混改。
 
 ## Prohibited shortcuts

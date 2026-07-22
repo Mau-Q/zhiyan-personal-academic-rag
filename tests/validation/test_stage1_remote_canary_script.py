@@ -9,6 +9,7 @@ from backend.ingestion.persistent import RuntimeSnapshotPersistenceError
 from scripts.run_stage1_remote_canary import (
     EXPECTED_CLEANUP_JOBS,
     REPORT_SCHEMA_VERSION,
+    _generation_replay_byte_stable,
     _require_answer_api_gate,
     _sanitized_error_code,
     build_parser,
@@ -162,6 +163,23 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
             },
             generation_enabled=True,
         )
+
+    def test_generation_replay_records_non_byte_stable_valid_answers(self):
+        self.assertFalse(
+            _generation_replay_byte_stable(
+                {"answer": "证据未提及资助机构。[1]", "citations": [1]},
+                {"answer": "提供的证据没有说明资助机构。[1]", "citations": [1]},
+            )
+        )
+
+    def test_generation_replay_requires_same_validated_citations(self):
+        with self.assertRaisesRegex(
+            RuntimeError, "^REAL_GENERATION_REPLAY_CITATION_MISMATCH$"
+        ):
+            _generation_replay_byte_stable(
+                {"answer": "结论。[1]", "citations": [1]},
+                {"answer": "结论。[2]", "citations": [2]},
+            )
 
 
 if __name__ == "__main__":
