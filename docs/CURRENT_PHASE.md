@@ -161,6 +161,7 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 - 已接入可选的真实 Ollama 生成器，不改变现有 Fake 默认路径和 RAG Answer 公共合同；生成器只消费检索后 Evidence，模型摘要、Prompt 和解码固定，模型漂移、非法 JSON、无引用或引用越界均失败关闭为 `DEGRADED` 证据卡。
 - 本机 `llama3.2:latest@a80c4f17acd5...b8b72` 真实模型 Canary 已通过：两次回答稳定、引用编号有效、无证据不调用模型、越权范围保持 403；执行边界为公开 Fixture Evidence，不冒充远程 PostgreSQL/ES/Milvus 实跑。
 - 用户在远程提交 `91aca5a` 使用同一冻结模型摘要完成 READY 真实生成恢复闭环：PostgreSQL READY + ES/Milvus RRF 返回 3 条 Evidence，Answer API `COMPLETED`、引用编号校验和两次稳定回放均通过；随后删除后 403 与 ES/Milvus/运行快照 3 项清理通过，稳定错误码为 `NONE`。脱敏报告 SHA-256 为 `E2231FADABB368209F976B2BAB99F4E1D841ACB3053C45A07B1ADDC7B386E937`，报告未保存回答或 Chunk 正文。
+- 已冻结独立模型选型 Harness：回退基线为 `llama3.2:latest@a80c4f17...b8b72`，唯一候选为 `qwen3:14b@bdbd181c...debe8`；两者直接调用同一 Ollama API，复用同一 Prompt、Schema、解码和四组公开中文科研 Evidence。候选仅在引用、稳定回放、必须回答点和禁止主张全部无回归时晋级；远程实跑待用户执行。
 
 ## 输入
 
@@ -208,7 +209,7 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 
 ## Next gate
 
-1. **独立模型选型 Gate：** 固定同一 Evidence、Prompt、结构化输出和解码边界，只比较 `llama3.2:latest` 与一个 7B～14B 中文科研指令候选；允许直接调用模型服务 API，但不得修改检索参数或同时引入第二个候选；
+1. **独立模型选型 Gate：** Harness 与候选身份已冻结；由用户在同一 Ollama 服务运行 `llama3.2:latest` 和 `qwen3:14b`，根据确定性无回归门禁作出晋级/回退决定；
 2. **阶段 2 验收包：** 在指定文档与普通学术问答上记录真实生成、引用、ACL、版本和定位的稳定回放，并保持 Hybrid 14/15 未胜 ES 的原始结论；
 3. **Reranker 独立 Gate：** 只有冻结 Baseline 出现可测排序缺口时，才单独验证一个 Cross-Encoder；不与生成、模型选型、MinIO、OCR 或性能变量混改。
 

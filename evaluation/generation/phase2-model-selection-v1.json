@@ -1,0 +1,123 @@
+{
+  "schema_version": "phase2_model_selection_cases_v1",
+  "suite_id": "phase2-qwen3-14b-vs-llama3.2-v1",
+  "language": "zh-CN",
+  "evidence_origin": "PUBLIC_SYNTHETIC_ACADEMIC_FIXTURE",
+  "cases": [
+    {
+      "case_id": "zh.method.sample-and-validation",
+      "question": "该研究纳入了多少样本，并采用什么验证方法评估模型？",
+      "evidence": [
+        {
+          "document_id": "doc_public_method_001",
+          "version_id": "version_public_method_001",
+          "chunk_id": "chunk_public_method_001",
+          "section_path": "2 方法 > 2.1 研究对象",
+          "page_start": 3,
+          "page_end": 3,
+          "quote": "研究连续纳入240名受试者，其中训练集180名，独立外部测试集60名。"
+        },
+        {
+          "document_id": "doc_public_method_001",
+          "version_id": "version_public_method_001",
+          "chunk_id": "chunk_public_method_002",
+          "section_path": "2 方法 > 2.4 统计分析",
+          "page_start": 5,
+          "page_end": 5,
+          "quote": "模型开发阶段采用五折交叉验证，并在独立外部测试集上报告最终性能。"
+        }
+      ],
+      "required_citation_ids": [1, 2],
+      "required_any_term_groups": [
+        ["240"],
+        ["五折", "5折"],
+        ["外部测试集"]
+      ],
+      "forbidden_terms": ["随机森林", "1000名"]
+    },
+    {
+      "case_id": "zh.results.model-comparison",
+      "question": "在同一测试集上，模型A与模型B的AUROC和灵敏度分别是多少，哪个模型更高？",
+      "evidence": [
+        {
+          "document_id": "doc_public_results_001",
+          "version_id": "version_public_results_001",
+          "chunk_id": "chunk_public_results_001",
+          "section_path": "3 结果 > 3.2 模型A",
+          "page_start": 7,
+          "page_end": 7,
+          "quote": "在同一独立测试集上，模型A的AUROC为0.84，灵敏度为0.78。"
+        },
+        {
+          "document_id": "doc_public_results_001",
+          "version_id": "version_public_results_001",
+          "chunk_id": "chunk_public_results_002",
+          "section_path": "3 结果 > 3.3 模型B",
+          "page_start": 8,
+          "page_end": 8,
+          "quote": "在同一独立测试集上，模型B的AUROC为0.89，灵敏度为0.80。"
+        }
+      ],
+      "required_citation_ids": [1, 2],
+      "required_any_term_groups": [
+        ["0.84"],
+        ["0.78"],
+        ["0.89"],
+        ["0.80"],
+        ["模型B", "B模型"]
+      ],
+      "forbidden_terms": ["0.98", "模型A显著优于"]
+    },
+    {
+      "case_id": "zh.evidence.conflict",
+      "question": "主要终点的观察窗口是多少周？如果证据存在差异，请明确说明。",
+      "evidence": [
+        {
+          "document_id": "doc_public_conflict_001",
+          "version_id": "version_public_conflict_001",
+          "chunk_id": "chunk_public_conflict_001",
+          "section_path": "摘要 > 方法",
+          "page_start": 1,
+          "page_end": 1,
+          "quote": "摘要将主要终点定义为治疗后12周的症状改善。"
+        },
+        {
+          "document_id": "doc_public_conflict_001",
+          "version_id": "version_public_conflict_001",
+          "chunk_id": "chunk_public_conflict_002",
+          "section_path": "补充方案 > 修订记录",
+          "page_start": 14,
+          "page_end": 14,
+          "quote": "修订后的研究方案把主要终点观察窗口改为16周，最终分析按16周执行。"
+        }
+      ],
+      "required_citation_ids": [1, 2],
+      "required_any_term_groups": [
+        ["12周"],
+        ["16周"],
+        ["差异", "不一致", "冲突"]
+      ],
+      "forbidden_terms": ["两份证据完全一致"]
+    },
+    {
+      "case_id": "zh.evidence.insufficient",
+      "question": "这项研究由哪个机构资助？",
+      "evidence": [
+        {
+          "document_id": "doc_public_limit_001",
+          "version_id": "version_public_limit_001",
+          "chunk_id": "chunk_public_limit_001",
+          "section_path": "2 方法 > 2.2 研究设计",
+          "page_start": 4,
+          "page_end": 4,
+          "quote": "本研究采用随机、双盲、安慰剂对照设计，并在三个中心开展。"
+        }
+      ],
+      "required_citation_ids": [1],
+      "required_any_term_groups": [
+        ["未提供", "未说明", "无法确定", "证据不足", "没有说明"]
+      ],
+      "forbidden_terms": ["国家自然科学基金", "科技部", "制药公司资助"]
+    }
+  ]
+}

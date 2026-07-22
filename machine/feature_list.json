@@ -451,6 +451,17 @@
         "docs/PHASE_2_GAP_FREEZE.md",
         "docs/CURRENT_PHASE.md"
       ]
+    },
+    {
+      "id": "phase2_model_selection",
+      "status": "PARTIAL",
+      "owner": "SHARED",
+      "evidence": [
+        "evaluation/generation/phase2-model-selection-v1.json",
+        "scripts/run_phase2_model_selection.py",
+        "tests/evaluation/test_phase2_model_selection.py",
+        "docs/PHASE_2_MODEL_SELECTION.md"
+      ]
     }
   ]
 }

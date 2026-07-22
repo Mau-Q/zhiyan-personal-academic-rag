@@ -8,7 +8,7 @@ ifeq ($(wildcard $(PROJECT_PYTHON)),)
 $(error Project virtualenv is missing at $(PROJECT_PYTHON); create .venv and install the project dependencies first)
 endif
 
-.PHONY: harness-validate harness-test contract-test storage-test ingestion-test retrieval-test rag-test api-test evaluation-test validation-test stage1-local-canary real-generation-canary evaluation-contract-check formal-evaluation-fixture evaluation-smoke sqlite-fts-fixture-smoke vector-fixture-smoke rrf-fixture-smoke test
+.PHONY: harness-validate harness-test contract-test storage-test ingestion-test retrieval-test rag-test api-test evaluation-test validation-test stage1-local-canary real-generation-canary phase2-model-selection evaluation-contract-check formal-evaluation-fixture evaluation-smoke sqlite-fts-fixture-smoke vector-fixture-smoke rrf-fixture-smoke test
 
 harness-validate:
 	$(PROJECT_PYTHON) scripts/validate_harness_contract.py
@@ -55,6 +55,9 @@ stage1-local-canary:
 
 real-generation-canary:
 	$(PROJECT_PYTHON) scripts/run_local_real_generation_canary.py
+
+phase2-model-selection:
+	$(PROJECT_PYTHON) scripts/run_phase2_model_selection.py
 
 evaluation-contract-check:
 	$(PROJECT_PYTHON) scripts/export_evaluation_contracts.py --check
