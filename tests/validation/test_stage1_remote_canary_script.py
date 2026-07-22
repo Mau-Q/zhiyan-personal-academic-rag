@@ -11,10 +11,12 @@ from pathlib import Path
 from backend.ingestion.persistent import RuntimeSnapshotPersistenceError
 from backend.rag.generation import GenerationServiceError
 from scripts.run_stage1_remote_canary import (
+    AcademicQaGateError,
     EXPECTED_CLEANUP_JOBS,
     REPOSITORY_ROOT,
     REPORT_SCHEMA_VERSION,
     _ObservedGenerationProvider,
+    _build_failure_report,
     _generation_replay_byte_stable,
     _load_academic_question_suite,
     _require_academic_answer_identity_and_location,
@@ -91,6 +93,8 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
         }
         _require_academic_answer_identity_and_location(
             payload,
+            case_id="qa.case1",
+            generation_phase="initial",
             document_id="doc_1",
             document_version_id="version_1",
             required_page_ranges=((4, 4),),
@@ -98,6 +102,8 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "ACADEMIC_QA_LOCATION_GATE_FAILED"):
             _require_academic_answer_identity_and_location(
                 payload,
+                case_id="qa.case1",
+                generation_phase="initial",
                 document_id="doc_1",
                 document_version_id="version_1",
                 required_page_ranges=((8, 8),),
@@ -105,10 +111,66 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "ACADEMIC_QA_EVIDENCE_IDENTITY_FAILED"):
             _require_academic_answer_identity_and_location(
                 payload,
+                case_id="qa.case1",
+                generation_phase="initial",
                 document_id="doc_1",
                 document_version_id="version_2",
                 required_page_ranges=((3, 3),),
             )
+
+    def test_academic_location_failure_exposes_only_case_and_page_ranges(self):
+        payload = {
+            "evidence": [
+                {
+                    "document_id": "doc_1",
+                    "version_id": "version_1",
+                    "page_start": 7,
+                    "page_end": 8,
+                    "text": "private evidence must not enter the diagnostic",
+                },
+                {
+                    "document_id": "doc_1",
+                    "version_id": "version_1",
+                    "page_start": 2,
+                    "page_end": 2,
+                },
+            ]
+        }
+
+        with self.assertRaises(AcademicQaGateError) as raised:
+            _require_academic_answer_identity_and_location(
+                payload,
+                case_id="qa.case1",
+                generation_phase="replay",
+                document_id="doc_1",
+                document_version_id="version_1",
+                required_page_ranges=((4, 4),),
+            )
+
+        error = raised.exception
+        self.assertEqual(_sanitized_error_code(error), "ACADEMIC_QA_LOCATION_GATE_FAILED")
+        self.assertEqual(
+            error.sanitized_detail(),
+            {
+                "case_id": "qa.case1",
+                "generation_phase": "replay",
+                "required_page_ranges": [{"page_start": 4, "page_end": 4}],
+                "observed_evidence_page_ranges": [
+                    {"page_start": 2, "page_end": 2},
+                    {"page_start": 7, "page_end": 8},
+                ],
+            },
+        )
+        self.assertNotIn("private", json.dumps(error.sanitized_detail()))
+        self.assertNotIn("document_id", error.sanitized_detail())
+
+        report = _build_failure_report("phase2_qa_01", error)
+        self.assertEqual(report["status"], "FAIL")
+        self.assertEqual(report["error_code"], "ACADEMIC_QA_LOCATION_GATE_FAILED")
+        self.assertEqual(report["academic_qa_failure"], error.sanitized_detail())
+        serialized = json.dumps(report)
+        self.assertNotIn("private evidence", serialized)
+        self.assertNotIn("document_id", serialized)
 
     def test_academic_suite_requires_real_generation_identity_before_services(self):
         result = subprocess.run(

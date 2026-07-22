@@ -122,6 +122,47 @@ class AcademicQuestionSuite:
     cases: tuple[AcademicQuestionCase, ...]
 
 
+class AcademicQaGateError(RuntimeError):
+    """Carry only allowlisted case and page-range diagnostics into a failure report."""
+
+    def __init__(
+        self,
+        code: str,
+        *,
+        case_id: str,
+        generation_phase: str,
+        required_page_ranges: Sequence[tuple[int, int]],
+        observed_page_ranges: Sequence[tuple[int, int]],
+    ) -> None:
+        if code not in {
+            "ACADEMIC_QA_EVIDENCE_IDENTITY_FAILED",
+            "ACADEMIC_QA_LOCATION_GATE_FAILED",
+        }:
+            raise ValueError("academic QA gate error code is not allowlisted")
+        if generation_phase not in {"initial", "replay"}:
+            raise ValueError("academic QA generation phase is not allowlisted")
+        self.code = code
+        self.case_id = case_id
+        self.generation_phase = generation_phase
+        self.required_page_ranges = tuple(required_page_ranges)
+        self.observed_page_ranges = tuple(observed_page_ranges)
+        super().__init__(code)
+
+    def sanitized_detail(self) -> dict[str, object]:
+        def serialize(values: Sequence[tuple[int, int]]) -> list[dict[str, int]]:
+            return [
+                {"page_start": page_start, "page_end": page_end}
+                for page_start, page_end in values
+            ]
+
+        return {
+            "case_id": self.case_id,
+            "generation_phase": self.generation_phase,
+            "required_page_ranges": serialize(self.required_page_ranges),
+            "observed_evidence_page_ranges": serialize(self.observed_page_ranges),
+        }
+
+
 class _ObservedGenerationProvider:
     """Capture only an allowlisted failure code for the private Canary report."""
 
@@ -199,6 +240,18 @@ def _write_report(path: Path, payload: dict[str, object]) -> None:
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+
+
+def _build_failure_report(run_id: str, exc: Exception) -> dict[str, object]:
+    failure: dict[str, object] = {
+        "schema_version": REPORT_SCHEMA_VERSION,
+        "status": "FAIL",
+        "run_id": run_id,
+        "error_code": _sanitized_error_code(exc),
+    }
+    if isinstance(exc, AcademicQaGateError):
+        failure["academic_qa_failure"] = exc.sanitized_detail()
+    return failure
 
 
 def _load_academic_question_suite(
@@ -279,6 +332,8 @@ def _load_academic_question_suite(
 
 
 def _sanitized_error_code(exc: Exception) -> str:
+    if isinstance(exc, AcademicQaGateError):
+        return exc.code
     if isinstance(exc, RuntimeSnapshotPersistenceError):
         return exc.code
     if type(exc) is RuntimeError and str(exc) in _SANITIZED_RUNTIME_CODES:
@@ -350,28 +405,65 @@ def _generation_replay_byte_stable(
 def _require_academic_answer_identity_and_location(
     payload: dict[str, object],
     *,
+    case_id: str,
+    generation_phase: str,
     document_id: str,
     document_version_id: str,
     required_page_ranges: Sequence[tuple[int, int]],
 ) -> None:
     evidence = payload.get("evidence")
+    evidence_values = (
+        evidence
+        if isinstance(evidence, list) and all(isinstance(value, dict) for value in evidence)
+        else []
+    )
+    observed_page_ranges = tuple(
+        sorted(
+            {
+                (value["page_start"], value["page_end"])
+                for value in evidence_values
+                if isinstance(value.get("page_start"), int)
+                and not isinstance(value.get("page_start"), bool)
+                and isinstance(value.get("page_end"), int)
+                and not isinstance(value.get("page_end"), bool)
+            }
+        )
+    )
     if not isinstance(evidence, list) or not all(isinstance(value, dict) for value in evidence):
-        raise RuntimeError("ACADEMIC_QA_EVIDENCE_IDENTITY_FAILED")
+        raise AcademicQaGateError(
+            "ACADEMIC_QA_EVIDENCE_IDENTITY_FAILED",
+            case_id=case_id,
+            generation_phase=generation_phase,
+            required_page_ranges=required_page_ranges,
+            observed_page_ranges=observed_page_ranges,
+        )
     if any(
         value.get("document_id") != document_id
         or value.get("version_id") != document_version_id
-        for value in evidence
+        for value in evidence_values
     ):
-        raise RuntimeError("ACADEMIC_QA_EVIDENCE_IDENTITY_FAILED")
+        raise AcademicQaGateError(
+            "ACADEMIC_QA_EVIDENCE_IDENTITY_FAILED",
+            case_id=case_id,
+            generation_phase=generation_phase,
+            required_page_ranges=required_page_ranges,
+            observed_page_ranges=observed_page_ranges,
+        )
     for page_start, page_end in required_page_ranges:
         if not any(
             isinstance(value.get("page_start"), int)
             and isinstance(value.get("page_end"), int)
             and value["page_start"] <= page_end
             and value["page_end"] >= page_start
-            for value in evidence
+            for value in evidence_values
         ):
-            raise RuntimeError("ACADEMIC_QA_LOCATION_GATE_FAILED")
+            raise AcademicQaGateError(
+                "ACADEMIC_QA_LOCATION_GATE_FAILED",
+                case_id=case_id,
+                generation_phase=generation_phase,
+                required_page_ranges=required_page_ranges,
+                observed_page_ranges=observed_page_ranges,
+            )
 
 
 def _run_academic_question_case(
@@ -400,6 +492,8 @@ def _run_academic_question_case(
     )
     _require_academic_answer_identity_and_location(
         payload,
+        case_id=case.case_id,
+        generation_phase="initial",
         document_id=document_id,
         document_version_id=document_version_id,
         required_page_ranges=case.required_page_ranges,
@@ -420,6 +514,8 @@ def _run_academic_question_case(
         )
         _require_academic_answer_identity_and_location(
             replay_payload,
+            case_id=case.case_id,
+            generation_phase="replay",
             document_id=document_id,
             document_version_id=document_version_id,
             required_page_ranges=case.required_page_ranges,
@@ -792,12 +888,7 @@ def main() -> int:
         print(json.dumps(payload, ensure_ascii=False))
         return 0
     except Exception as exc:
-        failure = {
-            "schema_version": REPORT_SCHEMA_VERSION,
-            "status": "FAIL",
-            "run_id": args.run_id,
-            "error_code": _sanitized_error_code(exc),
-        }
+        failure = _build_failure_report(args.run_id, exc)
         _write_report(args.output, failure)
         print(json.dumps(failure), file=sys.stderr)
         return 1
