@@ -11,8 +11,9 @@
 - `document_id` 全局唯一，`(owner_id, paper_id)` 联合唯一；
 - `owner_id/paper_id/document_id/source_type` 由数据库触发器阻止原地修改；
 - 相同内容快照和解析版本重放时返回同一 `document_version_id`；
-- 入库任务按 `(owner_id, idempotency_key)` 幂等，同一 Key 不得换绑版本；
+- 版本和入库任务在同一事务内绑定；任务按 `(owner_id, idempotency_key)` 幂等，同一 Key 不得换绑版本或内容；
 - 生命周期使用修订号 Compare-and-Swap，陈旧并发更新失效关闭；
+- `PROCESSING` 允许通过新修订号记录解析和 Chunk 进度，但不因局部完成变为可检索；
 - 解析、Chunk 和向量时间齐全，且 ES/Milvus 均为 `READY` 时才能进入 `READY`；
 - 删除、撤权或过期版本先进入终态 `INACTIVE`；在线查询始终带 `owner_id AND is_active=true`。
 
@@ -47,6 +48,6 @@ Remove-Item Env:DATABASE_URL
 ## 后续门禁
 
 1. 用户在隔离的远程 PostgreSQL 上应用迁移并返回脱敏输出；
-2. 将 PDF 入库编排接到本事实源，而不是直接产生可检索 Chunk；
+2. 在远程 PostgreSQL 上复测本地已完成的持久化 PDF 准备编排；
 3. 实现 ES/Milvus 状态对账与单侧写入失败补偿；
 4. 完成删除/撤权先失效、再异步物理清理的远程故障验证。

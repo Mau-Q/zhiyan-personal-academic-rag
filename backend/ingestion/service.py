@@ -80,6 +80,8 @@ def ingest_pdf_bytes(
     expected_sha256: str | None = None,
     allow_parse_review: bool = False,
     embedding_version: str = DEFAULT_EMBEDDING_VERSION,
+    version_id: str | None = None,
+    is_active: bool = True,
     parser: PypdfTextParser | None = None,
 ) -> IngestionResult:
     """Create deterministic ChunkRecordV1 objects without network or remote services."""
@@ -121,7 +123,7 @@ def ingest_pdf_bytes(
     except SplitterError as exc:
         raise PdfIngestionError(exc.code, str(exc)) from exc
 
-    version_id = f"version_{parsed.pdf_sha256[:24]}"
+    resolved_version_id = version_id or f"version_{parsed.pdf_sha256[:24]}"
     config_hash = strategy_config_hash(strategy)
     chunk_ids: list[str] = []
     chunk_blocks: list[list[ParsedBlock]] = []
@@ -135,7 +137,7 @@ def ingest_pdf_bytes(
         chunk_blocks.append(blocks)
         identity = {
             "document_id": document_id,
-            "version_id": version_id,
+            "version_id": resolved_version_id,
             "strategy": strategy,
             "config_hash": config_hash,
             "source_text_sha256": parsed.source_text_sha256,
@@ -154,14 +156,14 @@ def ingest_pdf_bytes(
                 ChunkRecordV1(
                     chunk_id=chunk_ids[index],
                     document_id=document_id,
-                    version_id=version_id,
+                    version_id=resolved_version_id,
                     text=chunk.text,
                     section_path=_section_path(blocks, chunk.section_name),
                     page_start=min(page_numbers),
                     page_end=max(page_numbers),
                     parent_chunk_id=_parent_chunk_id(
                         document_id=document_id,
-                        version_id=version_id,
+                        version_id=resolved_version_id,
                         strategy=strategy,
                         parent_source_id=chunk.parent_source_id,
                     ),
@@ -172,12 +174,12 @@ def ingest_pdf_bytes(
                     library_scope_ids=library_scope_ids,
                     parse_version=PARSE_VERSION,
                     embedding_version=embedding_version,
-                    is_active=True,
+                    is_active=is_active,
                 )
             )
         return IngestionResult(
             document_id=document_id,
-            version_id=version_id,
+            version_id=resolved_version_id,
             pdf_sha256=parsed.pdf_sha256,
             source_text_sha256=parsed.source_text_sha256,
             parse_status=parsed.parse_status,

@@ -295,6 +295,17 @@
       ]
     },
     {
+      "id": "persistent_pdf_ingestion_preparation",
+      "status": "PARTIAL",
+      "owner": "A",
+      "evidence": [
+        "backend/ingestion/persistent.py",
+        "backend/ingestion/service.py",
+        "tests/ingestion/test_persistent_ingestion.py",
+        "docs/LOCAL_PDF_INGESTION.md"
+      ]
+    },
+    {
       "id": "postgresql_fact_source",
       "status": "PARTIAL",
       "owner": "A",

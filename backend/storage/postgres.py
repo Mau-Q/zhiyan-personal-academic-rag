@@ -204,6 +204,25 @@ class PostgresFactRepository:
         source_snapshot_sha256: str,
         parse_version: str,
     ) -> DocumentVersionLifecycleV1:
+        return self._register_version(
+            owner_id=owner_id,
+            document_id=document_id,
+            content_sha256=content_sha256,
+            source_snapshot_sha256=source_snapshot_sha256,
+            parse_version=parse_version,
+            commit_transaction=True,
+        )
+
+    def _register_version(
+        self,
+        *,
+        owner_id: str,
+        document_id: str,
+        content_sha256: str,
+        source_snapshot_sha256: str,
+        parse_version: str,
+        commit_transaction: bool,
+    ) -> DocumentVersionLifecycleV1:
         """Create one immutable content version, idempotent for the same source identity."""
 
         now = self.clock()
@@ -289,7 +308,8 @@ class PostgresFactRepository:
                     "document does not exist in the authenticated owner scope"
                 )
             version = _version_from_row(row)
-            self._commit()
+            if commit_transaction:
+                self._commit()
             return version
         except Exception:
             self._rollback()
@@ -302,6 +322,23 @@ class PostgresFactRepository:
         document_id: str,
         document_version_id: str,
         idempotency_key: str,
+    ) -> IngestionJobV1:
+        return self._register_ingestion_job(
+            owner_id=owner_id,
+            document_id=document_id,
+            document_version_id=document_version_id,
+            idempotency_key=idempotency_key,
+            commit_transaction=True,
+        )
+
+    def _register_ingestion_job(
+        self,
+        *,
+        owner_id: str,
+        document_id: str,
+        document_version_id: str,
+        idempotency_key: str,
+        commit_transaction: bool,
     ) -> IngestionJobV1:
         """Persist one replay-safe ingestion job per owner and idempotency key."""
 
@@ -343,8 +380,43 @@ class PostgresFactRepository:
                 raise IdentityConflictError(
                     "idempotency key is already bound to a different document version"
                 )
-            self._commit()
+            if commit_transaction:
+                self._commit()
             return job
+        except Exception:
+            self._rollback()
+            raise
+
+    def register_version_and_ingestion_job(
+        self,
+        *,
+        owner_id: str,
+        document_id: str,
+        content_sha256: str,
+        source_snapshot_sha256: str,
+        parse_version: str,
+        idempotency_key: str,
+    ) -> tuple[DocumentVersionLifecycleV1, IngestionJobV1]:
+        """Atomically bind one idempotency key to one immutable content version."""
+
+        try:
+            version = self._register_version(
+                owner_id=owner_id,
+                document_id=document_id,
+                content_sha256=content_sha256,
+                source_snapshot_sha256=source_snapshot_sha256,
+                parse_version=parse_version,
+                commit_transaction=False,
+            )
+            job = self._register_ingestion_job(
+                owner_id=owner_id,
+                document_id=document_id,
+                document_version_id=version.document_version_id,
+                idempotency_key=idempotency_key,
+                commit_transaction=False,
+            )
+            self._commit()
+            return version, job
         except Exception:
             self._rollback()
             raise
@@ -393,7 +465,16 @@ class PostgresFactRepository:
                 raise ConcurrentLifecycleUpdateError(
                     "document lifecycle revision changed before update"
                 )
-            if target_status not in ALLOWED_LIFECYCLE_TRANSITIONS[current.lifecycle_status]:
+            is_processing_progress = (
+                current.lifecycle_status is LifecycleStatus.PROCESSING
+                and target_status is LifecycleStatus.PROCESSING
+                and bool(patch)
+            )
+            if (
+                target_status
+                not in ALLOWED_LIFECYCLE_TRANSITIONS[current.lifecycle_status]
+                and not is_processing_progress
+            ):
                 raise LifecycleTransitionError(
                     "transition "
                     f"{current.lifecycle_status.value} -> {target_status.value} "

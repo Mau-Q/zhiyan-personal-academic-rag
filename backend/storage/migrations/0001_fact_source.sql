@@ -141,15 +141,23 @@ BEGIN
             USING ERRCODE = '40001';
     END IF;
 
-    transition_allowed := CASE OLD.lifecycle_status
-        WHEN 'REGISTERED' THEN NEW.lifecycle_status IN ('PROCESSING', 'INACTIVE')
-        WHEN 'PROCESSING' THEN NEW.lifecycle_status IN ('REVIEW', 'READY', 'FAILED', 'INACTIVE')
-        WHEN 'REVIEW' THEN NEW.lifecycle_status IN ('PROCESSING', 'FAILED', 'INACTIVE')
-        WHEN 'READY' THEN NEW.lifecycle_status = 'INACTIVE'
-        WHEN 'FAILED' THEN NEW.lifecycle_status IN ('PROCESSING', 'INACTIVE')
-        WHEN 'INACTIVE' THEN FALSE
-        ELSE FALSE
-    END;
+    IF NEW.lifecycle_status = OLD.lifecycle_status THEN
+        -- PROCESSING progress revisions record parse/chunk/index milestones without
+        -- pretending that a lifecycle transition occurred.
+        transition_allowed := OLD.lifecycle_status = 'PROCESSING';
+    ELSE
+        transition_allowed := CASE OLD.lifecycle_status
+            WHEN 'REGISTERED' THEN NEW.lifecycle_status IN ('PROCESSING', 'INACTIVE')
+            WHEN 'PROCESSING' THEN NEW.lifecycle_status IN (
+                'REVIEW', 'READY', 'FAILED', 'INACTIVE'
+            )
+            WHEN 'REVIEW' THEN NEW.lifecycle_status IN ('PROCESSING', 'FAILED', 'INACTIVE')
+            WHEN 'READY' THEN NEW.lifecycle_status = 'INACTIVE'
+            WHEN 'FAILED' THEN NEW.lifecycle_status IN ('PROCESSING', 'INACTIVE')
+            WHEN 'INACTIVE' THEN FALSE
+            ELSE FALSE
+        END;
+    END IF;
     IF NOT transition_allowed THEN
         RAISE EXCEPTION 'invalid lifecycle transition: % -> %',
             OLD.lifecycle_status, NEW.lifecycle_status

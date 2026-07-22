@@ -188,6 +188,7 @@ class PostgreSQLMigrationTests(unittest.TestCase):
         self.assertIn("elasticsearch_state = 'READY'", sql)
         self.assertIn("milvus_state = 'READY'", sql)
         self.assertIn("invalid lifecycle transition", sql)
+        self.assertIn("OLD.lifecycle_status = 'PROCESSING'", sql)
         self.assertIn("UNIQUE (owner_id, idempotency_key)", sql)
 
     def test_migration_is_idempotent_and_detects_checksum_drift(self):
@@ -297,6 +298,36 @@ class PostgresFactRepositoryTests(unittest.TestCase):
             )
         self.assertEqual(connection.rollback_count, 1)
 
+    def test_version_and_job_registration_commit_atomically(self):
+        success = ScriptedConnection(version_row(), job_row())
+        version, job = self.repository(success).register_version_and_ingestion_job(
+            owner_id="owner_001",
+            document_id="doc_existing",
+            content_sha256="a" * 64,
+            source_snapshot_sha256="b" * 64,
+            parse_version="pypdf_text_v1",
+            idempotency_key="upload_request_001",
+        )
+
+        self.assertEqual(version.document_version_id, job.document_version_id)
+        self.assertEqual(success.commit_count, 1)
+
+        conflict = ScriptedConnection(
+            version_row(),
+            job_row(document_version_id="document_version_other"),
+        )
+        with self.assertRaises(IdentityConflictError):
+            self.repository(conflict).register_version_and_ingestion_job(
+                owner_id="owner_001",
+                document_id="doc_existing",
+                content_sha256="a" * 64,
+                source_snapshot_sha256="b" * 64,
+                parse_version="pypdf_text_v1",
+                idempotency_key="upload_request_001",
+            )
+        self.assertEqual(conflict.commit_count, 0)
+        self.assertGreaterEqual(conflict.rollback_count, 1)
+
     def test_ready_transition_requires_both_indexes_and_all_lineage_times(self):
         processing = version_row(lifecycle_status="PROCESSING")
         ready = version_row(
@@ -357,6 +388,34 @@ class PostgresFactRepositoryTests(unittest.TestCase):
             )
         self.assertEqual(len(connection.executions), 1)
         self.assertEqual(connection.rollback_count, 1)
+
+    def test_processing_progress_records_lineage_without_becoming_active(self):
+        processing = version_row(lifecycle_status="PROCESSING")
+        progressed = version_row(
+            lifecycle_revision=2,
+            lifecycle_status="PROCESSING",
+            parse_finish_time=NOW,
+            chunk_splitter_time=NOW,
+            chunk_create_time=NOW,
+            chunk_gen_time=NOW,
+        )
+        connection = ScriptedConnection(processing, progressed)
+        result = self.repository(connection).transition_version(
+            owner_id="owner_001",
+            document_version_id="document_version_existing",
+            expected_revision=1,
+            target_status=LifecycleStatus.PROCESSING,
+            updates={
+                "parse_finish_time": NOW,
+                "chunk_splitter_time": NOW,
+                "chunk_create_time": NOW,
+                "chunk_gen_time": NOW,
+            },
+        )
+
+        self.assertEqual(result.lifecycle_status, LifecycleStatus.PROCESSING)
+        self.assertFalse(result.is_active)
+        self.assertIsNone(result.vector_index_time)
 
     def test_invalid_or_stale_transition_fails_closed(self):
         invalid = ScriptedConnection(version_row())
