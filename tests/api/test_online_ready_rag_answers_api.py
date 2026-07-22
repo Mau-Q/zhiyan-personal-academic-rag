@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from backend.api.app import create_app
+from backend.rag.generation import GenerationModelIdentity, GenerationResult
 from backend.retrieval.online import (
     OnlineScopeForbiddenError,
     OnlineVisibilityUnavailableError,
@@ -36,6 +37,26 @@ class FakeOnlineRetriever:
                 "page_end": 1,
             }
         ]
+
+
+class FakeRealGenerationProvider:
+    def __init__(self) -> None:
+        self.identity = GenerationModelIdentity(
+            provider="test",
+            model="real-model-v1",
+            digest="a" * 64,
+        )
+        self.calls = []
+
+    def configured_identity(self):
+        return self.identity
+
+    def generate(self, question, evidence):
+        self.calls.append((question, evidence))
+        return GenerationResult(
+            answer="The READY evidence supports this answer [1].",
+            identity=self.identity,
+        )
 
 
 class OnlineReadyRagAnswersApiTests(unittest.TestCase):
@@ -95,6 +116,38 @@ class OnlineReadyRagAnswersApiTests(unittest.TestCase):
     def test_online_backend_requires_server_identity_and_route_resolver(self):
         with self.assertRaisesRegex(ValueError, "authenticated_owner_id"):
             create_app(retrieval_backend="online_remote_rrf")
+
+    def test_real_generation_consumes_only_ready_revalidated_evidence(self):
+        retriever = FakeOnlineRetriever()
+        generator = FakeRealGenerationProvider()
+        client = TestClient(
+            create_app(
+                chunks_path=ROOT / "fixtures" / "must-not-be-loaded.json",
+                scope_path=ROOT / "fixtures" / "must-not-be-loaded-scope.json",
+                retrieval_backend="online_remote_rrf",
+                authenticated_owner_id=OWNER_ID,
+                online_rrf_retriever=retriever,
+                generation_provider=generator,
+            )
+        )
+
+        response = client.post(
+            "/api/v1/rag/answers",
+            json={
+                "question": "How are candidates combined?",
+                "document_ids": ["doc_fixture_001"],
+                "stream": False,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "COMPLETED")
+        self.assertEqual(
+            response.json()["answer"],
+            "The READY evidence supports this answer [1].",
+        )
+        self.assertIn("CITATION_IDS_VALIDATED", response.json()["warnings"][0])
+        self.assertEqual(generator.calls[0][1][0]["chunk_id"], "chunk_persisted_001")
 
 
 if __name__ == "__main__":

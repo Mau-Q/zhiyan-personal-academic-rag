@@ -8,6 +8,7 @@ import os
 import re
 import sys
 import urllib.parse
+from dataclasses import asdict
 from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
@@ -15,6 +16,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from backend.api.app import create_app
+from backend.rag.generation import OllamaGenerationProvider
 from backend.ingestion.cleanup import (
     PersistentIndexCleanupScheduler,
     PersistentIndexCleanupWorker,
@@ -85,6 +87,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--es-index-prefix", default="zhiyan-stage1-canary")
     parser.add_argument("--milvus-collection-prefix", default="zhiyan_stage1_canary")
+    parser.add_argument("--generation-model")
+    parser.add_argument("--generation-model-digest")
     return parser
 
 
@@ -147,6 +151,12 @@ def main() -> int:
     if "canary" not in args.es_index_prefix or "canary" not in args.milvus_collection_prefix:
         print('{"status":"REFUSED","error_code":"CANARY_PREFIX_REQUIRED"}', file=sys.stderr)
         return 2
+    if bool(args.generation_model) != bool(args.generation_model_digest):
+        print(
+            '{"status":"REFUSED","error_code":"GENERATION_IDENTITY_INCOMPLETE"}',
+            file=sys.stderr,
+        )
+        return 2
     try:
         _validate_output_path(args.output)
     except ValueError:
@@ -187,6 +197,18 @@ def main() -> int:
                 "OLLAMA_URL",
                 _environment("OLLAMA_URL", "http://127.0.0.1:11434"),
             ),
+        )
+        generation_provider = (
+            OllamaGenerationProvider(
+                model=args.generation_model,
+                expected_digest=args.generation_model_digest,
+                base_url=_loopback_endpoint(
+                    "OLLAMA_URL",
+                    _environment("OLLAMA_URL", "http://127.0.0.1:11434"),
+                ),
+            )
+            if args.generation_model is not None
+            else None
         )
         milvus = MilvusVersionIndexWriter(
             collection_prefix=args.milvus_collection_prefix,
@@ -281,6 +303,7 @@ def main() -> int:
                 retrieval_backend="online_remote_rrf",
                 authenticated_owner_id=owner_id,
                 online_rrf_retriever=online_retriever,
+                generation_provider=generation_provider,
             )
         )
         answer_response = answer_client.post(
@@ -296,8 +319,34 @@ def main() -> int:
             answer_response.status_code != 200
             or answer_payload.get("status") != "COMPLETED"
             or not answer_payload.get("evidence")
+            or (
+                generation_provider is not None
+                and not any(
+                    "CITATION_IDS_VALIDATED" in warning
+                    for warning in answer_payload.get("warnings", [])
+                )
+            )
         ):
             raise RuntimeError("PERSISTED_SNAPSHOT_ANSWER_API_FAILED")
+        generation_stable_replay = False
+        if generation_provider is not None:
+            replay_response = answer_client.post(
+                "/api/v1/rag/answers",
+                json={
+                    "question": source_chunks[0].text[:4000],
+                    "document_ids": [version.document_id],
+                    "stream": False,
+                },
+            )
+            replay_payload = replay_response.json()
+            generation_stable_replay = (
+                replay_response.status_code == 200
+                and replay_payload.get("status") == "COMPLETED"
+                and replay_payload.get("answer") == answer_payload.get("answer")
+                and replay_payload.get("citations") == answer_payload.get("citations")
+            )
+            if not generation_stable_replay:
+                raise RuntimeError("PERSISTED_SNAPSHOT_ANSWER_API_FAILED")
 
         scheduler = PersistentIndexCleanupScheduler(repository)
         inactivation = inactivate_and_schedule_cleanup(
@@ -372,6 +421,23 @@ def main() -> int:
             "ready_reconciliation": ready_report.model_dump(),
             "answer_api_status": answer_payload["status"],
             "answer_api_evidence_count": len(answer_payload["evidence"]),
+            "answer_generation_boundary": (
+                generation_provider.configured_identity().execution_boundary
+                if generation_provider is not None
+                else "ONLINE_POSTGRES_READY_ES_MILVUS_RRF_FAKE_LLM"
+            ),
+            "answer_citation_ids_validated": generation_provider is not None,
+            "answer_sha256": (
+                sha256(answer_payload["answer"].encode("utf-8")).hexdigest()
+                if generation_provider is not None
+                else None
+            ),
+            "generation_identity": (
+                asdict(generation_provider.configured_identity())
+                if generation_provider is not None
+                else None
+            ),
+            "generation_stable_replay": generation_stable_replay,
             "inactivation_reason": inactivation.reason.value,
             "cleanup_jobs_succeeded": len(cleanup_results),
             "runtime_snapshot_cleanup_proven": True,

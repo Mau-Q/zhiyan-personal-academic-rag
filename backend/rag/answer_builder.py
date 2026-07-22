@@ -11,7 +11,7 @@ from typing import Any
 JsonObject = dict[str, Any]
 
 
-def _request_identity(
+def request_identity(
     question: str, scope: Mapping[str, Any], execution_boundary: str
 ) -> tuple[str, str]:
     canonical_scope = json.dumps(scope, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -31,7 +31,7 @@ def build_answer(
     no_evidence_warning: str,
     answer_prefix: str,
 ) -> JsonObject:
-    request_id, trace_id = _request_identity(question, scope, execution_boundary)
+    request_id, trace_id = request_identity(question, scope, execution_boundary)
     if not chunks:
         return {
             "request_id": request_id,

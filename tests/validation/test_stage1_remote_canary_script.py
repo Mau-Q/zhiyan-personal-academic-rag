@@ -77,6 +77,33 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
         )
         self.assertEqual(_sanitized_error_code(ValueError("secret")), "ValueError")
 
+    def test_generation_model_and_digest_must_be_supplied_together(self):
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/run_stage1_remote_canary.py",
+                "--pdf",
+                "does-not-exist.pdf",
+                "--expected-sha256",
+                "0" * 64,
+                "--run-id",
+                "canary_001",
+                "--confirm",
+                "RUN_ISOLATED_STAGE1_CANARY",
+                "--output",
+                "runtime/should-not-exist.json",
+                "--generation-model",
+                "llama3.2:latest",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("GENERATION_IDENTITY_INCOMPLETE", result.stderr)
+        self.assertNotIn("does-not-exist", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

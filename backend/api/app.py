@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from backend.api.models import ErrorV1, RagAnswerRequestV1, RagAnswerV1
 from backend.rag.elasticsearch_consumer import answer_elasticsearch_question
 from backend.rag.fixture_consumer import answer_fixture_question
+from backend.rag.generation import GenerationProvider, apply_real_generation
 from backend.rag.milvus_consumer import answer_milvus_question
 from backend.rag.online_consumer import answer_online_ready_question
 from backend.rag.remote_hybrid_consumer import answer_remote_rrf_question
@@ -97,6 +98,7 @@ def create_app(
     remote_retrieval_config: RemoteRetrievalConfigV1 | None = None,
     authenticated_owner_id: str | None = None,
     online_rrf_retriever: OnlineVersionRrfRetriever | None = None,
+    generation_provider: GenerationProvider | None = None,
 ) -> FastAPI:
     chunks = [] if retrieval_backend == "online_remote_rrf" else load_chunks(chunks_path)
     sqlite_index: SQLiteFtsIndex | None = None
@@ -219,10 +221,15 @@ def create_app(
         ),
     }
     boundary = boundaries[retrieval_backend]
+    if generation_provider is not None:
+        boundary = (
+            f"{boundary.removesuffix(' with Fake LLM')} with "
+            f"{generation_provider.configured_identity().execution_boundary}"
+        )
     app = FastAPI(
         title="智研个人学术空间 RAG API",
         version="0.1.0",
-        description=f"{boundary}; no remote model is used.",
+        description=boundary,
     )
     app.state.chunks_path = chunks_path
     app.state.scope_path = scope_path
@@ -238,6 +245,7 @@ def create_app(
     app.state.remote_top_k = remote_top_k
     app.state.authenticated_owner_id = authenticated_owner_id
     app.state.online_rrf_retriever = online_rrf_retriever
+    app.state.generation_provider = generation_provider
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request_handler(
@@ -364,6 +372,13 @@ def create_app(
             )
         else:
             answer = answer_fixture_question(payload.question, effective_scope, chunks)
+        if app.state.generation_provider is not None:
+            answer = apply_real_generation(
+                payload.question,
+                effective_scope,
+                answer,
+                app.state.generation_provider,
+            )
         return RagAnswerV1.model_validate(answer)
 
     return app

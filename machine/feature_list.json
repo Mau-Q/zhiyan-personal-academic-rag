@@ -429,10 +429,26 @@
       ]
     },
     {
+      "id": "local_real_generation",
+      "status": "READY",
+      "owner": "A",
+      "evidence": [
+        "backend/rag/generation.py",
+        "scripts/run_local_real_generation_canary.py",
+        "tests/rag/test_generation.py",
+        "tests/api/test_online_ready_rag_answers_api.py",
+        "docs/PHASE_2_GAP_FREEZE.md"
+      ]
+    },
+    {
       "id": "real_model_integration",
       "status": "PARTIAL",
       "owner": "SHARED",
-      "evidence": ["docs/REMOTE_RETRIEVAL_BASELINE.md", "docs/CURRENT_PHASE.md"]
+      "evidence": [
+        "backend/rag/generation.py",
+        "docs/PHASE_2_GAP_FREEZE.md",
+        "docs/CURRENT_PHASE.md"
+      ]
     }
   ]
 }
