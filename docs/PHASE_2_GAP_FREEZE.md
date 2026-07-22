@@ -64,13 +64,12 @@ make real-generation-canary
 
 Qwen READY 首次运行以 `PERSISTED_SNAPSHOT_ANSWER_HTTP_FAILED` 失败；同 Run ID 恢复已越过该边界并进入生成，稳定分类最终定位为 `REAL_GENERATION_INITIAL_OLLAMA_ANSWER_JSON_INVALID`。显式 `think=false` 后，用户在提交 `43dc5b4` 以原 Run ID 完成 retry3：PostgreSQL READY + ES/Milvus RRF 返回 3 条 Evidence，Qwen Answer API `COMPLETED`，身份摘要、引用编号、两次稳定回放、删除后 403 和三路清理均通过，字节回放本次也一致；报告 SHA-256 为 `0CB1B569D8A782FC526266E1A7193EF6299B66D5DBC72DCC989FDB951B8A1160`，稳定错误码为 `NONE`。
 
-同提交的模型选型 v3 因冲突用例没有逐字出现“差异/不一致/冲突”而报告 `KEEP_LLAMA3_2`，但两次诊断均包含 `12周`、`16周` 与引用 `[1][2]`，生成、身份和禁词门禁全部通过。v4 只把该假阴性改为“两项冲突值 + 两条来源引用”的结构门禁；不修改模型、Prompt、Schema、解码或检索，必须独立远程重跑后再确认最终晋级决策。
+同提交的模型选型 v3 因冲突用例没有逐字出现“差异/不一致/冲突”而报告 `KEEP_LLAMA3_2`，但两次诊断均包含 `12周`、`16周` 与引用 `[1][2]`，生成、身份和禁词门禁全部通过。v4 只把该假阴性改为“两项冲突值 + 两条来源引用”的结构门禁；不修改模型、Prompt、Schema、解码或检索。用户在提交 `063236a` 完成远程 v4：Qwen `4/4`、llama3.2 `3/4`，结果 `PASS / PROMOTE_QWEN3_14B / NONE`，报告 SHA-256 为 `E031B1B4532571850FD4527D4930E80A3C144074DBB55F8055A54A51EDB7E038`。v3 原始假阴性报告继续保留。
 
 ## 4. 阶段 2 剩余差距
 
-- 以修正后的 v4 结构语义门禁重跑固定四题模型选型，保留 v3 假阴性原始报告；
 - 在冻结的指定文档与普通学术问答样本上记录真实生成、引用、版本和定位结果；
 - 如要满足“固定 Reranker 增益验证”的字面退出条件，需先出现可测排序缺口，再单独接入一个 Cross-Encoder 做保留/回退实验；当前不得与生成变量一起引入；
 - Claim 语义支持、冲突处理、正式 MinIO、OCR 和目标规模性能继续由各自后续 Gate 跟踪。
 
-阶段 2 因此仍为 `IN_PROGRESS/PARTIAL`。llama3.2 与 Qwen 的远程 READY 真实生成闭环均已完成；Qwen 最终晋级仍待 v4 固定四题远程结果。后续不把它与 Reranker、MinIO/OCR 或性能变量混合。
+阶段 2 因此仍为 `IN_PROGRESS/PARTIAL`。llama3.2 与 Qwen 的远程 READY 真实生成闭环、Qwen 最终晋级均已完成；固定普通科研问答验收包和真实 Reranker 消融仍未完成。后续不把它们与 MinIO/OCR 或性能变量混合。

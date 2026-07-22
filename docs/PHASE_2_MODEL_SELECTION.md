@@ -56,6 +56,19 @@ Qwen READY 的稳定分类进一步定位为 `REAL_GENERATION_INITIAL_OLLAMA_ANS
 
 v4 因此把冲突用例冻结为结构语义门禁：两个互斥时间点和两条来源引用必须同时存在，仍保留禁词、身份、两次独立门禁与回答哈希；不要求某个表面连接词。基础 Evidence、问题、模型、Prompt、Schema、解码和检索均不改变。v3 原始结果继续保留，v4 必须形成新的远程报告，不得覆盖旧报告。
 
+## 远程 v4 最终结果
+
+用户在 Windows 远程主机对提交 `063236aa30ee7140a85bd5c7c305e4a0918dfc23` 执行 v4，结果为 `PASS / PROMOTE_QWEN3_14B`：
+
+- `qwen3:14b`：硬门禁通过，`4/4`；
+- `llama3.2:latest`：硬门禁未通过，`3/4`；
+- 候选资格：`true`；
+- `think=false`，检索参数未改变；
+- 稳定错误码：`NONE`；
+- 脱敏报告 SHA-256：`E031B1B4532571850FD4527D4930E80A3C144074DBB55F8055A54A51EDB7E038`。
+
+因此最终生成模型保持晋级为 `qwen3:14b@bdbd181c33f2ed1b31c972991882db3cf4d192569092138a7d29e973cd9debe8`，`llama3.2:latest` 保留为回退模型。v3 的 `3/4 / KEEP_LLAMA3_2` 假阴性报告继续保留，不被 v4 覆盖。
+
 ## 运行
 
 macOS/Linux 可执行：

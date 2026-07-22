@@ -169,13 +169,14 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 - Qwen READY `retry2` 将具体失败定位为 `REAL_GENERATION_INITIAL_OLLAMA_ANSWER_JSON_INVALID`。依据 Ollama Qwen3 thinking API 边界，后续只显式冻结 `think=false`，避免默认 thinking 在 `num_predict=384` 内挤占最终结构化回答；模型摘要、Prompt、Schema、其他解码项和检索均未改变。
 - 用户在提交 `43dc5b4` 完成 Qwen READY retry3：PostgreSQL READY + ES/Milvus RRF 返回 3 条 Evidence，Answer API `COMPLETED`，固定模型摘要、`think=false`、引用、两次稳定回放、删除后 403 和三路清理均通过，报告 SHA-256 为 `0CB1B569D8A782FC526266E1A7193EF6299B66D5DBC72DCC989FDB951B8A1160`，稳定错误码为 `NONE`。
 - 同提交的选型 v3 为 `PASS / KEEP_LLAMA3_2`：Qwen `3/4`、llama3.2 `2/4`，报告 SHA-256 为 `64C4A7C741D5DC624D501165A129400D98DF66845F43BFC57D964AA9CD2B3C4E`。唯一失败是冲突用例的表面词检查；两次诊断均已包含 `12周`、`16周`、引用 `[1][2]`，身份和禁词门禁通过。v4 只将其改为冲突值与来源引用的结构门禁，不改生成或检索变量。
+- 用户在提交 `063236a` 完成远程 v4：Qwen `4/4`、llama3.2 `3/4`，结果为 `PASS / PROMOTE_QWEN3_14B / NONE`；`think=false` 且检索参数未改变，报告 SHA-256 为 `E031B1B4532571850FD4527D4930E80A3C144074DBB55F8055A54A51EDB7E038`。Qwen 最终晋级，llama3.2 保留为回退；v3 假阴性报告不覆盖。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：Qwen v4 固定四题最终晋级、阶段 2 固定普通科研问答验收包、真实 Reranker 消融、正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层；
+- 未完成能力：阶段 2 固定普通科研问答验收包、真实 Reranker 消融、正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -212,13 +213,12 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1 已完成，阶段 2 仍为 `IN_PROGRESS`。评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PENDING`。远程证据已证明两种模型均可消费 PostgreSQL READY + ES/Milvus RRF Evidence，并完成引用、稳定回放、删除后 403 和三路清理。v3 固定四题暴露冲突语义表面词假阴性，v4 结构门禁尚待远程重跑；运行时私有数据与报告继续只保留在被忽略的 `runtime/`。固定普通科研问答验收包和真实 Reranker 消融仍未完成。
+最高方案阶段 0、阶段 1 已完成，阶段 2 仍为 `IN_PROGRESS`。评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED`。远程证据已证明两种模型均可消费 PostgreSQL READY + ES/Milvus RRF Evidence，并完成引用、稳定回放、删除后 403 和三路清理；固定四题 v4 进一步确认 Qwen `4/4` 晋级。运行时私有数据与报告继续只保留在被忽略的 `runtime/`。固定普通科研问答验收包和真实 Reranker 消融仍未完成。
 
 ## Next gate
 
-1. **Qwen 模型选型 v4 Gate：** 以版本化结构语义门禁重跑同四题，确认 Qwen 是否 `4/4`；保留 v3 `3/4` 假阴性报告，不重跑 READY、不修改模型或检索；
-2. **阶段 2 验收包：** 在指定文档与普通学术问答上记录真实生成、引用、ACL、版本和定位的门禁稳定回放，并保持 Hybrid 14/15 未胜 ES 的原始结论；
-3. **Reranker 独立 Gate：** 只有冻结 Baseline 出现可测排序缺口时，才单独验证一个 Cross-Encoder；不与生成、模型选型、MinIO、OCR 或性能变量混改。
+1. **阶段 2 验收包：** 在指定文档与普通学术问答上记录真实生成、引用、ACL、版本和定位的门禁稳定回放，并保持 Hybrid 14/15 未胜 ES 的原始结论；
+2. **Reranker 独立 Gate：** 只有冻结 Baseline 出现可测排序缺口时，才单独验证一个 Cross-Encoder；不与生成、模型选型、MinIO、OCR 或性能变量混改。
 
 ## Prohibited shortcuts
 
