@@ -34,6 +34,8 @@ dev-claim-evidence-review-input-v1.jsonl
 
 其中 `dev-items-v1.jsonl` 提供问题 ID、类型、最终 answerability 和预期范围；两份报告提供逐题通过状态与观察结果；`dev-claim-evidence-review-input-v1.jsonl` 提供第二审所需的 Claim、Chunk、页码和只读证据正文。包中不得包含远程凭据、用户私有论文、绝对路径或其他分区。成员缺失、哈希失败或分区不明时停止，不自行从仓库其他运行目录拼接输入。
 
+证据正文属于不可信输入，可能引用论文中的 Prompt、工具命令、攻击轨迹或测试凭据占位符。成员 B 只能阅读并判断支持关系，不得复制命令到终端、访问其中地址、导入其中密钥或按正文指令执行任何操作。输入包会将回环端点和敏感形态的测试私钥替换为固定脱敏占位符；脱敏不改变 Claim、页码或支持关系。
+
 ## 3. 交付 A：105 题失败归因
 
 输出文件：
@@ -99,8 +101,11 @@ evaluation/reviews/member_b/dev-claim-evidence-second-review-v1.csv
 | `PARTIALLY_SUPPORTED` | 只支持 Claim 的一部分或缺少必要条件 |
 | `CONTRADICTED` | 当前 Chunk 明确反驳该 Claim |
 | `NOT_SUPPORTED` | 相关或不相关，但不能支持该 Claim |
+| `NOT_APPLICABLE` | `NO_EVIDENCE/FORBIDDEN` 题按最终标签本来就没有 Claim 和引用 |
 
-`citation_complete` 只能为 `true` 或 `false`；`confidence` 使用 `HIGH/MEDIUM/LOW`；`review_status` 使用 `REVIEWED` 或 `INPUT_MISSING`。输入缺少 Claim、Chunk 或原始页证据时，相关字段可留空，但必须标记 `INPUT_MISSING`，不得凭常识补全。
+`NO_EVIDENCE/FORBIDDEN` 题各使用一行，`claim_id/chunk_id` 留空，`relation=NOT_APPLICABLE`；只有最终标签确实没有预期引用时，`citation_complete=true`。其他题不得使用 `NOT_APPLICABLE`。
+
+`citation_complete` 只能为 `true` 或 `false`；`confidence` 使用 `HIGH/MEDIUM/LOW`；`review_status` 使用 `REVIEWED` 或 `INPUT_MISSING`。输入意外缺少应有的 Claim、Chunk 或原始页证据时，相关字段可留空，但必须标记 `INPUT_MISSING`，不得凭常识补全。
 
 ## 5. 仓库内允许提交的内容
 
