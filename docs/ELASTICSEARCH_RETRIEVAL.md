@@ -46,6 +46,4 @@ $py = ".\.venv\Scripts\python.exe"
 
 ## 下一门禁
 
-1. 下个工作日开始 Milvus 适配器；
-2. 使用同一 316 Chunk、15 题和 ACL 单独验证 Milvus；
-3. Milvus 单路证据稳定后再接真实 ES + Milvus RRF，不提前增加重排。
+Milvus 单路已完成 `12/15`。ES 与 Milvus 候选接口、无密钥配置和最小 RRF 已在本地 Fixture 固化；下一门禁是使用现有远程索引运行固定 15 题，见 [Elasticsearch + Milvus 最小 RRF](REMOTE_RRF_RETRIEVAL.md)。

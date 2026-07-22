@@ -106,6 +106,19 @@
       ]
     },
     {
+      "id": "remote_rrf_hybrid_adapter",
+      "status": "PARTIAL",
+      "owner": "A",
+      "evidence": [
+        "backend/retrieval/results.py",
+        "backend/retrieval/remote_config.py",
+        "backend/retrieval/remote_hybrid.py",
+        "backend/evaluation/harness.py",
+        "tests/retrieval/test_remote_retrieval.py",
+        "docs/REMOTE_RRF_RETRIEVAL.md"
+      ]
+    },
+    {
       "id": "formal_retrieval_evaluation_framework",
       "status": "READY",
       "owner": "A",

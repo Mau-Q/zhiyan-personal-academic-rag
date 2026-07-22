@@ -36,10 +36,17 @@ class MilvusVectorRetrievalTests(unittest.TestCase):
         )
 
     def test_retrieve_pushes_acl_filter_and_defensively_filters_hits(self):
+        ranking = self.index.search(
+            "How are candidates combined?", self.scope, self.provider,
+            expected_chunks=self.chunks,
+        )
         results = self.index.retrieve(
             "How are candidates combined?", self.scope, self.provider,
             expected_chunks=self.chunks,
         )
+        self.assertEqual((ranking[0].backend, ranking[0].rank, ranking[0].score), (
+            "milvus_dense_bge_m3", 1, 0.9,
+        ))
         self.assertEqual(results[0]["chunk_id"], "chunk_fixture_001")
         self.assertIn('tenant_id == "tenant_fixture"', self.transport.last_filter)
         self.assertIn("array_contains_any", self.transport.last_filter)

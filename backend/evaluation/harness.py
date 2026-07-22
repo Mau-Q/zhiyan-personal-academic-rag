@@ -22,12 +22,17 @@ from pydantic import (
 from backend.api.app import DEFAULT_CHUNKS_PATH, DEFAULT_SCOPE_PATH, create_app
 from backend.rag.elasticsearch_consumer import ELASTICSEARCH_EXECUTION_BOUNDARY
 from backend.rag.milvus_consumer import MILVUS_EXECUTION_BOUNDARY
+from backend.rag.remote_hybrid_consumer import REMOTE_RRF_EXECUTION_BOUNDARY
 from backend.rag.sqlite_fts_consumer import SQLITE_FTS_EXECUTION_BOUNDARY
 from backend.rag.vector_consumer import RRF_EXECUTION_BOUNDARY, VECTOR_EXECUTION_BOUNDARY
 from backend.retrieval.embedding import EmbeddingProvider
 from backend.retrieval.elasticsearch import ElasticsearchTransport
 from backend.retrieval.hybrid import DEFAULT_CANDIDATE_K, DEFAULT_RRF_K
 from backend.retrieval.milvus import MilvusTransport
+from backend.retrieval.remote_config import (
+    RemoteRetrievalConfigV1,
+    load_remote_retrieval_config,
+)
 from backend.retrieval.vector import DEFAULT_VECTOR_MIN_SCORE
 
 
@@ -42,6 +47,7 @@ RetrievalBackend = Literal[
     "local_rrf",
     "elasticsearch_bm25",
     "milvus_vector",
+    "remote_rrf",
 ]
 
 CaseId = Annotated[
@@ -264,6 +270,7 @@ def run_suite(
     milvus_uri: str = "http://127.0.0.1:19530",
     milvus_collection: str | None = None,
     milvus_transport: MilvusTransport | None = None,
+    remote_retrieval_config: RemoteRetrievalConfigV1 | None = None,
 ) -> dict[str, Any]:
     """Run cases through the production-shaped local API adapter."""
 
@@ -285,6 +292,7 @@ def run_suite(
         milvus_uri=milvus_uri,
         milvus_collection=milvus_collection,
         milvus_transport=milvus_transport,
+        remote_retrieval_config=remote_retrieval_config,
     )
     client = TestClient(application)
     vector_metadata = (
@@ -318,23 +326,43 @@ def run_suite(
             "local_rrf": RRF_EXECUTION_BOUNDARY,
             "elasticsearch_bm25": ELASTICSEARCH_EXECUTION_BOUNDARY,
             "milvus_vector": MILVUS_EXECUTION_BOUNDARY,
+            "remote_rrf": REMOTE_RRF_EXECUTION_BOUNDARY,
         }[retrieval_backend],
         "retrieval_backend": retrieval_backend,
         "retrieval_configuration": {
-            "top_k": 3,
+            "top_k": remote_retrieval_config.fusion.top_k
+            if retrieval_backend == "remote_rrf" and remote_retrieval_config is not None
+            else 3,
             "embedding_model": embedding_model
             if retrieval_backend in ("local_vector", "local_rrf", "milvus_vector")
+            else remote_retrieval_config.milvus.embedding_model
+            if retrieval_backend == "remote_rrf" and remote_retrieval_config is not None
             else None,
             "embedding_model_digest": retrieval_metadata.get("embedding_model_digest"),
             "embedding_dimension": int(retrieval_metadata["embedding_dimension"])
             if retrieval_metadata
             else None,
             "source_chunks_sha256": retrieval_metadata.get("source_chunks_sha256"),
-            "vector_min_score": vector_min_score
+            "vector_min_score": remote_retrieval_config.fusion.vector_min_score
+            if retrieval_backend == "remote_rrf" and remote_retrieval_config is not None
+            else vector_min_score
             if retrieval_backend in ("local_vector", "local_rrf", "milvus_vector")
             else None,
-            "candidate_k": candidate_k if retrieval_backend == "local_rrf" else None,
-            "rrf_k": rrf_k if retrieval_backend == "local_rrf" else None,
+            "candidate_k": remote_retrieval_config.fusion.candidate_k
+            if retrieval_backend == "remote_rrf" and remote_retrieval_config is not None
+            else candidate_k if retrieval_backend == "local_rrf" else None,
+            "rrf_k": remote_retrieval_config.fusion.rrf_k
+            if retrieval_backend == "remote_rrf" and remote_retrieval_config is not None
+            else rrf_k if retrieval_backend == "local_rrf" else None,
+            "configuration_schema_version": remote_retrieval_config.schema_version
+            if retrieval_backend == "remote_rrf" and remote_retrieval_config is not None
+            else None,
+            "elasticsearch_index": remote_retrieval_config.elasticsearch.index
+            if retrieval_backend == "remote_rrf" and remote_retrieval_config is not None
+            else elasticsearch_index if retrieval_backend == "elasticsearch_bm25" else None,
+            "milvus_collection": remote_retrieval_config.milvus.collection
+            if retrieval_backend == "remote_rrf" and remote_retrieval_config is not None
+            else milvus_collection if retrieval_backend == "milvus_vector" else None,
         },
         "summary": {
             "total": len(results),
@@ -364,6 +392,7 @@ def build_parser() -> argparse.ArgumentParser:
             "local_rrf",
             "elasticsearch_bm25",
             "milvus_vector",
+            "remote_rrf",
         ),
         default="lexical_overlap",
     )
@@ -380,6 +409,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--elasticsearch-index", default=None)
     parser.add_argument("--milvus-uri", default="http://127.0.0.1:19530")
     parser.add_argument("--milvus-collection", default=None)
+    parser.add_argument("--remote-config", type=Path, default=None)
     return parser
 
 
@@ -387,6 +417,11 @@ def main() -> int:
     args = build_parser().parse_args()
     try:
         cases = load_cases(args.cases)
+        remote_retrieval_config = (
+            load_remote_retrieval_config(args.remote_config)
+            if args.remote_config is not None
+            else None
+        )
         report = run_suite(
             cases,
             chunks_path=args.chunks,
@@ -404,6 +439,7 @@ def main() -> int:
             elasticsearch_index=args.elasticsearch_index,
             milvus_uri=args.milvus_uri,
             milvus_collection=args.milvus_collection,
+            remote_retrieval_config=remote_retrieval_config,
         )
     except (OSError, ValueError, ValidationError, json.JSONDecodeError) as exc:
         print(f"evaluation harness input error: {exc}", file=sys.stderr)

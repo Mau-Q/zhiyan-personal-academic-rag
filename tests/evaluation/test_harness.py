@@ -8,10 +8,12 @@ from pathlib import Path
 from backend.evaluation.harness import DEFAULT_CASES_PATH, load_cases, run_suite
 from backend.rag.elasticsearch_consumer import ELASTICSEARCH_EXECUTION_BOUNDARY
 from backend.rag.milvus_consumer import MILVUS_EXECUTION_BOUNDARY
+from backend.rag.remote_hybrid_consumer import REMOTE_RRF_EXECUTION_BOUNDARY
 from backend.rag.sqlite_fts_consumer import SQLITE_FTS_EXECUTION_BOUNDARY
 from backend.rag.vector_consumer import RRF_EXECUTION_BOUNDARY, VECTOR_EXECUTION_BOUNDARY
 from backend.retrieval.fixture import load_chunks
 from backend.retrieval.milvus import MilvusVectorIndex
+from backend.retrieval.remote_config import RemoteRetrievalConfigV1
 from backend.retrieval.sqlite_fts import chunks_fingerprint
 from backend.retrieval.sqlite_fts import SQLiteFtsIndex
 from backend.retrieval.vector import LocalVectorIndex
@@ -68,7 +70,7 @@ class EvaluationHarnessTests(unittest.TestCase):
                     }
                 if path.endswith("/_count"):
                     return {"count": len(chunks)}
-                return {"hits": {"hits": [{"_source": chunks[0]}]}}
+                return {"hits": {"hits": [{"_score": 1.0, "_source": chunks[0]}]}}
 
         case = load_cases(SQLITE_CASES_PATH)[0].model_copy(deep=True)
         case.expected.required_warnings = ["REMOTE_ELASTICSEARCH_BM25_FAKE_LLM"]
@@ -82,6 +84,63 @@ class EvaluationHarnessTests(unittest.TestCase):
 
         self.assertEqual(report["summary"]["passed"], 1)
         self.assertEqual(report["execution_boundary"], ELASTICSEARCH_EXECUTION_BOUNDARY)
+
+    def test_answerable_case_runs_through_remote_rrf_backend(self):
+        chunks = load_chunks(ROOT / "fixtures" / "chunks-v1.json")
+        provider = FakeEmbeddingProvider()
+        milvus_transport = FakeMilvusTransport()
+        MilvusVectorIndex("fixture_chunks_v1", milvus_transport).build(chunks, provider)
+
+        class FakeElasticsearchTransport:
+            def request(self, method, path, *, body=None, content_type="application/json"):
+                del method, body, content_type
+                if path.endswith("/_mapping"):
+                    return {
+                        "fixture-chunks-v1": {
+                            "mappings": {
+                                "_meta": {
+                                    "schema_version": "elasticsearch_bm25_index_v1",
+                                    "retrieval_backend": "elasticsearch_bm25",
+                                    "text_analyzer": "standard",
+                                    "query_mode": "multi_match_or",
+                                    "section_path_boost": "2.0",
+                                    "source_chunks_sha256": chunks_fingerprint(chunks),
+                                    "chunk_count": str(len(chunks)),
+                                }
+                            }
+                        }
+                    }
+                if path.endswith("/_count"):
+                    return {"count": len(chunks)}
+                return {"hits": {"hits": [{"_score": 1.0, "_source": chunks[0]}]}}
+
+        config = RemoteRetrievalConfigV1.model_validate({
+            "schema_version": "remote_retrieval_config_v1",
+            "elasticsearch": {"index": "fixture-chunks-v1"},
+            "milvus": {
+                "collection": "fixture_chunks_v1",
+                "embedding_model": "semantic-fixture-v1",
+            },
+            "fusion": {"top_k": 3, "candidate_k": 20, "rrf_k": 60},
+        })
+        case = load_cases(SQLITE_CASES_PATH)[0].model_copy(deep=True)
+        case.expected.required_warnings = ["REMOTE_ES_MILVUS_RRF_BGE_M3_FAKE_LLM"]
+        report = run_suite(
+            [case],
+            suite_id="fixture-remote-rrf-v1",
+            retrieval_backend="remote_rrf",
+            elasticsearch_transport=FakeElasticsearchTransport(),
+            milvus_transport=milvus_transport,
+            embedding_provider=provider,
+            remote_retrieval_config=config,
+        )
+
+        self.assertEqual(report["summary"]["passed"], 1)
+        self.assertEqual(report["execution_boundary"], REMOTE_RRF_EXECUTION_BOUNDARY)
+        self.assertEqual(
+            report["retrieval_configuration"]["configuration_schema_version"],
+            "remote_retrieval_config_v1",
+        )
 
     def test_checked_in_fixture_suite_passes_all_three_categories(self):
         report = run_suite(load_cases(DEFAULT_CASES_PATH), suite_id="fixture-smoke-v1")

@@ -1,0 +1,20 @@
+{
+  "schema_version": "remote_retrieval_config_v1",
+  "elasticsearch": {
+    "url": "http://127.0.0.1:9200",
+    "index": "zhiyan-canary-chunks-v1",
+    "timeout_seconds": 30.0
+  },
+  "milvus": {
+    "uri": "http://127.0.0.1:19530",
+    "collection": "zhiyan_canary_chunks_v1",
+    "embedding_model": "bge-m3:latest",
+    "embedding_base_url": "http://127.0.0.1:11434"
+  },
+  "fusion": {
+    "top_k": 3,
+    "candidate_k": 20,
+    "rrf_k": 60,
+    "vector_min_score": 0.5
+  }
+}

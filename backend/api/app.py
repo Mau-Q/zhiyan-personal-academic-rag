@@ -13,6 +13,7 @@ from backend.api.models import ErrorV1, RagAnswerRequestV1, RagAnswerV1
 from backend.rag.elasticsearch_consumer import answer_elasticsearch_question
 from backend.rag.fixture_consumer import answer_fixture_question
 from backend.rag.milvus_consumer import answer_milvus_question
+from backend.rag.remote_hybrid_consumer import answer_remote_rrf_question
 from backend.rag.sqlite_fts_consumer import answer_sqlite_fts_question
 from backend.rag.vector_consumer import answer_rrf_question, answer_vector_question
 from backend.retrieval.embedding import EmbeddingProvider, OllamaEmbeddingProvider
@@ -28,6 +29,8 @@ from backend.retrieval.hybrid import (
     LocalRrfHybridRetriever,
 )
 from backend.retrieval.milvus import MilvusTransport, MilvusVectorIndex, PymilvusTransport
+from backend.retrieval.remote_config import RemoteRetrievalConfigV1
+from backend.retrieval.remote_hybrid import RemoteRrfHybridRetriever
 from backend.retrieval.sqlite_fts import SQLiteFtsIndex
 from backend.retrieval.vector import DEFAULT_VECTOR_MIN_SCORE, LocalVectorIndex
 
@@ -42,6 +45,7 @@ RetrievalBackend = Literal[
     "local_rrf",
     "elasticsearch_bm25",
     "milvus_vector",
+    "remote_rrf",
 ]
 
 
@@ -83,6 +87,7 @@ def create_app(
     milvus_uri: str = "http://127.0.0.1:19530",
     milvus_collection: str | None = None,
     milvus_transport: MilvusTransport | None = None,
+    remote_retrieval_config: RemoteRetrievalConfigV1 | None = None,
 ) -> FastAPI:
     chunks = load_chunks(chunks_path)
     sqlite_index: SQLiteFtsIndex | None = None
@@ -90,6 +95,8 @@ def create_app(
     hybrid_retriever: LocalRrfHybridRetriever | None = None
     elasticsearch_bm25_index: ElasticsearchBm25Index | None = None
     milvus_vector_index: MilvusVectorIndex | None = None
+    remote_rrf_retriever: RemoteRrfHybridRetriever | None = None
+    remote_top_k = 3
     if retrieval_backend in ("sqlite_fts5", "local_rrf"):
         if index_path is None:
             raise ValueError(f"index_path is required for {retrieval_backend} retrieval")
@@ -139,6 +146,42 @@ def create_app(
         milvus_vector_index = MilvusVectorIndex(milvus_collection, milvus_transport)
         milvus_vector_index.verify_source(chunks)
         milvus_vector_index.verify_provider(embedding_provider)
+    elif retrieval_backend == "remote_rrf":
+        if remote_retrieval_config is None:
+            raise ValueError("remote_retrieval_config is required for remote_rrf retrieval")
+        elasticsearch_config = remote_retrieval_config.elasticsearch
+        milvus_config = remote_retrieval_config.milvus
+        fusion_config = remote_retrieval_config.fusion
+        if elasticsearch_transport is None:
+            elasticsearch_transport = UrllibElasticsearchTransport(
+                base_url=elasticsearch_config.url,
+                timeout_seconds=elasticsearch_config.timeout_seconds,
+            )
+        elasticsearch_bm25_index = ElasticsearchBm25Index(
+            elasticsearch_config.index, elasticsearch_transport
+        )
+        elasticsearch_bm25_index.verify_source(chunks)
+        if embedding_provider is None:
+            embedding_provider = OllamaEmbeddingProvider(
+                model=milvus_config.embedding_model,
+                base_url=milvus_config.embedding_base_url,
+            )
+        if milvus_transport is None:
+            milvus_transport = PymilvusTransport(uri=milvus_config.uri)
+        milvus_vector_index = MilvusVectorIndex(
+            milvus_config.collection, milvus_transport
+        )
+        milvus_vector_index.verify_source(chunks)
+        milvus_vector_index.verify_provider(embedding_provider)
+        remote_rrf_retriever = RemoteRrfHybridRetriever(
+            elasticsearch_bm25_index,
+            milvus_vector_index,
+            embedding_provider,
+            candidate_k=fusion_config.candidate_k,
+            rrf_k=fusion_config.rrf_k,
+            vector_min_score=fusion_config.vector_min_score,
+        )
+        remote_top_k = fusion_config.top_k
     elif retrieval_backend not in ("lexical_overlap", "sqlite_fts5", "local_vector"):
         raise ValueError(f"unsupported retrieval backend: {retrieval_backend}")
 
@@ -149,6 +192,7 @@ def create_app(
         "local_rrf": "local SQLite FTS5 plus dense RRF retrieval with Fake LLM",
         "elasticsearch_bm25": "remote Elasticsearch BM25 retrieval with Fake LLM",
         "milvus_vector": "remote Milvus/BGE-M3 vector retrieval with Fake LLM",
+        "remote_rrf": "remote Elasticsearch plus Milvus RRF retrieval with Fake LLM",
     }
     boundary = boundaries[retrieval_backend]
     app = FastAPI(
@@ -166,6 +210,8 @@ def create_app(
     app.state.hybrid_retriever = hybrid_retriever
     app.state.elasticsearch_bm25_index = elasticsearch_bm25_index
     app.state.milvus_vector_index = milvus_vector_index
+    app.state.remote_rrf_retriever = remote_rrf_retriever
+    app.state.remote_top_k = remote_top_k
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request_handler(
@@ -204,7 +250,15 @@ def create_app(
             )
 
         effective_scope = _narrow_scope(base_scope, payload.document_ids)
-        if app.state.retrieval_backend == "elasticsearch_bm25":
+        if app.state.retrieval_backend == "remote_rrf":
+            answer = answer_remote_rrf_question(
+                payload.question,
+                effective_scope,
+                chunks,
+                app.state.remote_rrf_retriever,
+                top_k=app.state.remote_top_k,
+            )
+        elif app.state.retrieval_backend == "elasticsearch_bm25":
             answer = answer_elasticsearch_question(
                 payload.question,
                 effective_scope,

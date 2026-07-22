@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sys
 import urllib.error
@@ -14,6 +15,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from backend.retrieval.fixture import is_chunk_authorized, load_chunks, load_scope
+from backend.retrieval.results import RankedChunk, chunks_only, validate_ranking
 from backend.retrieval.sqlite_fts import chunks_fingerprint
 
 
@@ -318,14 +320,14 @@ class ElasticsearchBm25Index:
             )
         return metadata
 
-    def retrieve(
+    def search(
         self,
         question: str,
         scope: Mapping[str, Any],
         *,
         top_k: int = 3,
         expected_chunks: Sequence[Mapping[str, Any]] | None = None,
-    ) -> list[JsonObject]:
+    ) -> list[RankedChunk]:
         if not question.strip():
             raise ValueError("question must not be blank")
         if top_k < 1:
@@ -358,12 +360,50 @@ class ElasticsearchBm25Index:
         hit_list = hits.get("hits") if isinstance(hits, dict) else None
         if not isinstance(hit_list, list):
             raise ElasticsearchIndexNotReadyError("Elasticsearch search response is invalid")
-        results: list[JsonObject] = []
+        scored: list[tuple[float, JsonObject]] = []
         for hit in hit_list:
             source = hit.get("_source") if isinstance(hit, dict) else None
-            if isinstance(source, dict) and is_chunk_authorized(source, scope):
-                results.append(dict(source))
-        return results[:top_k]
+            score = hit.get("_score") if isinstance(hit, dict) else None
+            if not isinstance(source, dict) or not isinstance(score, (int, float)):
+                raise ElasticsearchIndexNotReadyError(
+                    "Elasticsearch search hit violates ranked candidate interface"
+                )
+            numeric_score = float(score)
+            if not math.isfinite(numeric_score):
+                raise ElasticsearchIndexNotReadyError(
+                    "Elasticsearch search score must be finite"
+                )
+            if is_chunk_authorized(source, scope):
+                scored.append((numeric_score, dict(source)))
+        scored.sort(key=lambda item: (-item[0], str(item[1]["chunk_id"])))
+        ranking = [
+            RankedChunk(
+                backend=RETRIEVAL_BACKEND,
+                rank=rank,
+                score=score,
+                chunk=chunk,
+            )
+            for rank, (score, chunk) in enumerate(scored[:top_k], 1)
+        ]
+        validate_ranking(ranking, expected_backend=RETRIEVAL_BACKEND)
+        return ranking
+
+    def retrieve(
+        self,
+        question: str,
+        scope: Mapping[str, Any],
+        *,
+        top_k: int = 3,
+        expected_chunks: Sequence[Mapping[str, Any]] | None = None,
+    ) -> list[JsonObject]:
+        return chunks_only(
+            self.search(
+                question,
+                scope,
+                top_k=top_k,
+                expected_chunks=expected_chunks,
+            )
+        )
 
 
 def _build_parser() -> argparse.ArgumentParser:

@@ -39,7 +39,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | SR-04 | Elasticsearch 论文级和 Chunk 级 BM25 | `PARTIAL` | 远程 ES 9.4.3；严格 Mapping、ACL、BM25 适配器；316 Chunk 固定 Canary 14/15，拒答与越权 6/6 | 中文分词选型、生产别名和性能基线未实现 |
 | SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `PARTIAL` | 本地精确向量基线；远程 Milvus 2.6.18 + BGE-M3；应用适配器固定源/模型身份、ACL、COSINE 与 HNSW 工程参数；316 Chunk 固定 Canary 12/15，拒答与越权 6/6 | 远程 500 题、参数调优和性能基线未完成 |
 | SR-06 | 规范化、指代消解、意图路由、查询改写和拆解 | `NOT_STARTED` | API 问题输入合同 | 结构化路由、回退、实体保持和多轮未实现 |
-| SR-07 | ES/Milvus 并行、RRF、去重、多样性、Cross-Encoder 重排 | `PARTIAL` | 本地 SQLite BM25 + BGE-M3 RRF 15/15 | 真实 ES/Milvus 并行、去重/多样性、重排和扩展消融未实现 |
+| SR-07 | ES/Milvus 并行、RRF、去重、多样性、Cross-Encoder 重排 | `PARTIAL` | 本地 SQLite BM25 + BGE-M3 RRF 15/15；ES/Milvus 统一候选接口、版本化配置和最小远程 RRF 适配器 Fixture 就绪 | 真实远程 RRF Canary、去重/多样性、重排和扩展消融未完成 |
 | SR-08 | 证据上下文、真实 LLM、强制引用、校验与拒答 | `PARTIAL` | Evidence/Citation、`NO_EVIDENCE`、Fake LLM Answer API | 真实模型、主张支持校验和冲突处理未实现 |
 | SR-09 | 问答 API、SSE、Evidence API、Agent Evidence API 和原文定位 | `PARTIAL` | 非流式 Answer API、SSE 文件合同、PDF 页码 | SSE 运行、Evidence API、Agent API 和鉴权预览未实现 |
 | SR-10 | Trace、反馈、指标、告警和运营闭环 | `PARTIAL` | Trace 合同与评测报告结构 | 持久化、反馈 API、看板、告警和难例回流未实现 |

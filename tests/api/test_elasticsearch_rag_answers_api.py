@@ -36,7 +36,7 @@ class FakeElasticsearchTransport:
         if path.endswith("/_count"):
             return {"count": len(self.chunks)}
         if path.endswith("/_search"):
-            return {"hits": {"hits": [{"_source": self.chunks[0]}]}}
+            return {"hits": {"hits": [{"_score": 1.0, "_source": self.chunks[0]}]}}
         raise AssertionError(path)
 
 
@@ -75,4 +75,3 @@ class ElasticsearchRagAnswersApiTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -14,6 +14,7 @@ from typing import Any, Protocol
 
 from backend.retrieval.embedding import EmbeddingProvider, OllamaEmbeddingProvider
 from backend.retrieval.fixture import is_chunk_authorized, load_chunks, load_scope
+from backend.retrieval.results import RankedChunk, chunks_only, validate_ranking
 from backend.retrieval.sqlite_fts import chunks_fingerprint
 
 
@@ -408,7 +409,7 @@ class MilvusVectorIndex:
             )
         return metadata
 
-    def retrieve(
+    def search(
         self,
         question: str,
         scope: Mapping[str, Any],
@@ -417,7 +418,7 @@ class MilvusVectorIndex:
         top_k: int = 3,
         min_score: float = DEFAULT_VECTOR_MIN_SCORE,
         expected_chunks: Sequence[Mapping[str, Any]] | None = None,
-    ) -> list[JsonObject]:
+    ) -> list[RankedChunk]:
         if not question.strip():
             raise ValueError("question must not be blank")
         if top_k < 1 or not -1.0 <= min_score <= 1.0:
@@ -434,17 +435,60 @@ class MilvusVectorIndex:
             filter_expression=_authorization_filter(scope),
             limit=top_k,
         )
-        first = hits[0] if isinstance(hits, list) and hits else []
+        if (
+            not isinstance(hits, list)
+            or len(hits) != 1
+            or not isinstance(hits[0], list)
+        ):
+            raise MilvusIndexNotReadyError("Milvus search response is invalid")
+        first = hits[0]
         results: list[tuple[float, JsonObject]] = []
         for hit in first:
             entity = hit.get("entity") if isinstance(hit, Mapping) else None
             payload = entity.get("payload") if isinstance(entity, Mapping) else None
             score = hit.get("distance") if isinstance(hit, Mapping) else None
-            if isinstance(payload, dict) and isinstance(score, (int, float)):
-                if float(score) >= min_score and is_chunk_authorized(payload, scope):
-                    results.append((float(score), dict(payload)))
+            if not isinstance(payload, dict) or not isinstance(score, (int, float)):
+                raise MilvusIndexNotReadyError(
+                    "Milvus search hit violates ranked candidate interface"
+                )
+            numeric_score = float(score)
+            if not math.isfinite(numeric_score):
+                raise MilvusIndexNotReadyError("Milvus search score must be finite")
+            if numeric_score >= min_score and is_chunk_authorized(payload, scope):
+                results.append((numeric_score, dict(payload)))
         results.sort(key=lambda item: (-item[0], item[1]["chunk_id"]))
-        return [chunk for _, chunk in results[:top_k]]
+        ranking = [
+            RankedChunk(
+                backend=RETRIEVAL_BACKEND,
+                rank=rank,
+                score=score,
+                chunk=chunk,
+            )
+            for rank, (score, chunk) in enumerate(results[:top_k], 1)
+        ]
+        validate_ranking(ranking, expected_backend=RETRIEVAL_BACKEND)
+        return ranking
+
+    def retrieve(
+        self,
+        question: str,
+        scope: Mapping[str, Any],
+        provider: EmbeddingProvider,
+        *,
+        top_k: int = 3,
+        min_score: float = DEFAULT_VECTOR_MIN_SCORE,
+        expected_chunks: Sequence[Mapping[str, Any]] | None = None,
+    ) -> list[JsonObject]:
+        return chunks_only(
+            self.search(
+                question,
+                scope,
+                provider,
+                top_k=top_k,
+                min_score=min_score,
+                expected_chunks=expected_chunks,
+            )
+        )
 
 
 def _build_parser() -> argparse.ArgumentParser:

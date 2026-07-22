@@ -63,12 +63,18 @@ class ElasticsearchRetrievalTests(unittest.TestCase):
 
     def test_query_contains_server_side_acl_and_returns_only_authorized_chunks(self):
         self.transport.search_hits = [
-            {"_source": self.chunks[0]},
-            {"_source": self.chunks[2]},
+            {"_score": 1.25, "_source": self.chunks[0]},
+            {"_score": 0.75, "_source": self.chunks[2]},
         ]
+        ranking = self.index.search(
+            "hybrid retrieval", self.scope, expected_chunks=self.chunks
+        )
         results = self.index.retrieve(
             "hybrid retrieval", self.scope, expected_chunks=self.chunks
         )
+        self.assertEqual((ranking[0].backend, ranking[0].rank, ranking[0].score), (
+            "elasticsearch_bm25", 1, 1.25,
+        ))
         self.assertEqual([chunk["chunk_id"] for chunk in results], ["chunk_fixture_001"])
         search = next(call for call in self.transport.calls if call[1].endswith("/_search"))
         payload = json.loads(search[2].decode("utf-8"))
@@ -87,7 +93,7 @@ class ElasticsearchRetrievalTests(unittest.TestCase):
             self.index.inspect()
 
     def test_invalid_scope_builds_match_none_filter(self):
-        self.transport.search_hits = [{"_source": self.chunks[0]}]
+        self.transport.search_hits = [{"_score": 1.0, "_source": self.chunks[0]}]
         results = self.index.retrieve("hybrid", {"tenant_id": "tenant_fixture"})
         self.assertEqual(results, [])
         search = next(call for call in self.transport.calls if call[1].endswith("/_search"))
@@ -96,6 +102,13 @@ class ElasticsearchRetrievalTests(unittest.TestCase):
             {"match_all": {}},
             payload["query"]["bool"]["filter"][0]["bool"]["must_not"],
         )
+
+    def test_malformed_ranked_hit_fails_closed(self):
+        self.transport.search_hits = [{"_source": self.chunks[0]}]
+        with self.assertRaisesRegex(
+            ElasticsearchIndexNotReadyError, "ranked candidate interface"
+        ):
+            self.index.search("hybrid", self.scope)
 
     def test_cli_converts_fixture_arguments_to_paths(self):
         with patch(

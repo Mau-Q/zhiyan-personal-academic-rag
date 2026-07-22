@@ -53,4 +53,4 @@ Windows PowerShell 5.1 发送非 ASCII JSON 时必须显式传入 UTF-8 字节�
 - 生产 HNSW/IVF、阈值、批大小和资源参数冻结；
 - 真实生成 LLM 接入。
 
-下一门禁是先固化 Elasticsearch `14/15` 与 Milvus `12/15` 的远程结果接口；仅当对比证据表明有必要时，再单独验证 ES+Milvus RRF，不同时接入真实 LLM、重排或生产调参。
+Elasticsearch/Milvus 候选接口与无密钥配置已固化。现有结果显示 ES 的唯一失败与 Milvus 的 3 个失败完全互补，因此最小 ES+Milvus RRF 已完成本地 Fixture 验证。下一门禁只是远程 15 题 RRF 实跑，不同时接入真实 LLM、重排、500 题远程全量或生产调参。
