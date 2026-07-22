@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mau-Q/zhiyan-personal-academic-rag/contracts/document-version-lifecycle-v1.schema.json",
+  "title": "DocumentVersionLifecycleV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "paper_id",
+    "document_id",
+    "owner_id",
+    "document_version_id",
+    "content_sha256",
+    "source_snapshot_sha256",
+    "parse_version",
+    "lifecycle_revision",
+    "lifecycle_status",
+    "parse_finish_time",
+    "chunk_splitter_time",
+    "chunk_create_time",
+    "chunk_gen_time",
+    "vector_index_time",
+    "index_states",
+    "delete_time",
+    "chunk_expire_time",
+    "last_access_time",
+    "last_refresh_time",
+    "failure_code",
+    "updated_at"
+  ],
+  "properties": {
+    "schema_version": {"const": "document_version_lifecycle_v1"},
+    "paper_id": {"$ref": "#/$defs/id"},
+    "document_id": {"$ref": "#/$defs/id"},
+    "owner_id": {"$ref": "#/$defs/id"},
+    "document_version_id": {"$ref": "#/$defs/id"},
+    "content_sha256": {"$ref": "#/$defs/sha256"},
+    "source_snapshot_sha256": {"$ref": "#/$defs/sha256"},
+    "parse_version": {"$ref": "#/$defs/id"},
+    "lifecycle_revision": {"type": "integer", "minimum": 1},
+    "lifecycle_status": {
+      "enum": ["REGISTERED", "PROCESSING", "REVIEW", "READY", "FAILED", "INACTIVE"]
+    },
+    "parse_finish_time": {"$ref": "#/$defs/nullable_date_time"},
+    "chunk_splitter_time": {"$ref": "#/$defs/nullable_date_time"},
+    "chunk_create_time": {"$ref": "#/$defs/nullable_date_time"},
+    "chunk_gen_time": {"$ref": "#/$defs/nullable_date_time"},
+    "vector_index_time": {"$ref": "#/$defs/nullable_date_time"},
+    "index_states": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["elasticsearch_chunks", "milvus_vectors"],
+      "properties": {
+        "elasticsearch_chunks": {"enum": ["PENDING", "READY", "FAILED"]},
+        "milvus_vectors": {"enum": ["PENDING", "READY", "FAILED"]}
+      }
+    },
+    "delete_time": {"$ref": "#/$defs/nullable_date_time"},
+    "chunk_expire_time": {"$ref": "#/$defs/nullable_date_time"},
+    "last_access_time": {"$ref": "#/$defs/nullable_date_time"},
+    "last_refresh_time": {"$ref": "#/$defs/nullable_date_time"},
+    "failure_code": {"$ref": "#/$defs/nullable_id"},
+    "updated_at": {"type": "string", "format": "date-time"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"lifecycle_status": {"const": "READY"}}},
+      "then": {
+        "properties": {
+          "parse_finish_time": {"type": "string", "format": "date-time"},
+          "chunk_splitter_time": {"type": "string", "format": "date-time"},
+          "chunk_create_time": {"type": "string", "format": "date-time"},
+          "chunk_gen_time": {"type": "string", "format": "date-time"},
+          "vector_index_time": {"type": "string", "format": "date-time"},
+          "index_states": {
+            "properties": {
+              "elasticsearch_chunks": {"const": "READY"},
+              "milvus_vectors": {"const": "READY"}
+            }
+          },
+          "delete_time": {"type": "null"},
+          "chunk_expire_time": {"type": "null"},
+          "failure_code": {"type": "null"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"lifecycle_status": {"const": "FAILED"}}},
+      "then": {"properties": {"failure_code": {"$ref": "#/$defs/id"}}}
+    },
+    {
+      "if": {
+        "properties": {"lifecycle_status": {"not": {"const": "INACTIVE"}}}
+      },
+      "then": {
+        "properties": {
+          "delete_time": {"type": "null"},
+          "chunk_expire_time": {"type": "null"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"lifecycle_status": {"const": "INACTIVE"}}},
+      "then": {
+        "anyOf": [
+          {"properties": {"delete_time": {"type": "string", "format": "date-time"}}},
+          {
+            "properties": {
+              "chunk_expire_time": {"type": "string", "format": "date-time"}
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "nullable_id": {
+      "oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]
+    },
+    "nullable_date_time": {
+      "oneOf": [
+        {"type": "string", "format": "date-time"},
+        {"type": "null"}
+      ]
+    }
+  }
+}

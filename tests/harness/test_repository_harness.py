@@ -96,8 +96,9 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(authority["line_count"], 725)
         self.assertEqual(
-            authority["source_phase"], {"id": "phase-0", "status": "IN_PROGRESS"}
+            authority["source_phase"], {"id": "phase-1", "status": "IN_PROGRESS"}
         )
+        self.assertEqual(authority["completed_source_phases"], ["phase-0"])
         traceability = ROOT / authority["traceability_doc"]
         self.assertTrue(traceability.is_file())
 

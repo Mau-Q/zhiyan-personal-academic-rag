@@ -39,7 +39,7 @@ Manifest、样本、标注和运行结果分别由以下合同约束：
 JSON Schema 由 Pydantic 模型机械导出，使用以下命令检查漂移：
 
 ```bash
-python3 scripts/export_evaluation_contracts.py --check
+make evaluation-contract-check
 ```
 
 真实问题、私有 Chunk、标注记录和盲测集只进入被 Git 忽略的 `runtime/evaluation/formal-retrieval-v1/`。Git 只保存合同、工具、说明和合成 Fixture。
@@ -249,4 +249,4 @@ make formal-evaluation-fixture
 1. 175 题已完成人工校验，分类、拆分、泄漏组、修订后正式合同和专家签署均通过；
 2. ES only/Milvus only 已完成 175/175，报告、参数、哈希和真实失败已冻结；
 3. 现有 500 题四路结果和 213 题 AI 审计只作为工程证据，不冒充 175 题的人工结论；
-4. 当前不跑 175 题 RRF，不实现重排、真实 LLM、HyDE、multi-query、multi-hop、在线 NLI 或远程 500 题全量跑测；阶段 0 范围与 SLO 已冻结，下一步只冻结 PostgreSQL 数据身份适配与上游生命周期语义。
+4. 当前不跑 175 题 RRF，不实现重排、真实 LLM、HyDE、multi-query、multi-hop、在线 NLI 或远程 500 题全量跑测；阶段 0 已完成，下一步按冻结合同实现 PostgreSQL 事实源与索引生命周期闭环。

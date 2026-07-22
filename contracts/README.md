@@ -7,6 +7,9 @@
 - `ChunkRecordV1`：成员 B 产出，成员 A 消费；
 - `AuthorizedScopeV1`：服务端计算的授权范围；
 - `IndexVersionV1`：可被在线查询链路消费的索引版本；
+- `DocumentIdentityV1`：按 `owner_id` 隔离的 `paper_id ↔ document_id` 显式映射目标合同；
+- `DocumentVersionLifecycleV1`：文档版本、双索引 READY 门禁、软删除与刷新目标合同；
+- `data-identity-lifecycle-v1.json`：身份唯一性、状态迁移、活动派生和索引事实源的机器策略；
 - `RagAnswerV1`：非流式回答、证据、引用和拒答结果；
 - `TraceV1`：不包含模型私有推理过程的阶段追踪记录；
 - `openapi.json`：首个非流式问答接口和错误响应；
@@ -28,5 +31,5 @@
 
 ```bash
 make contract-test
-python3 scripts/export_evaluation_contracts.py --check
+make evaluation-contract-check
 ```

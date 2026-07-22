@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mau-Q/zhiyan-personal-academic-rag/contracts/document-identity-v1.schema.json",
+  "title": "DocumentIdentityV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "paper_id",
+    "document_id",
+    "owner_id",
+    "source_type",
+    "mapping_version",
+    "source_created_time",
+    "source_updated_time"
+  ],
+  "properties": {
+    "schema_version": {"const": "document_identity_v1"},
+    "paper_id": {"$ref": "#/$defs/id"},
+    "document_id": {"$ref": "#/$defs/id"},
+    "owner_id": {"$ref": "#/$defs/id"},
+    "source_type": {"enum": ["uploaded", "collected"]},
+    "mapping_version": {"$ref": "#/$defs/id"},
+    "source_created_time": {"type": "string", "format": "date-time"},
+    "source_updated_time": {"type": "string", "format": "date-time"}
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    }
+  }
+}

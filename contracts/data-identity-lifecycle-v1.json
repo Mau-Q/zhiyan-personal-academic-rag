@@ -1,0 +1,74 @@
+{
+  "schema_version": "data_identity_lifecycle_policy_v1",
+  "status": "FROZEN_TARGET_NOT_RUNTIME_INTEGRATED",
+  "source_of_truth": "POSTGRESQL",
+  "identity_mapping": {
+    "physical_id": "paper_id",
+    "rag_logical_id": "document_id",
+    "mapping_scope": "OWNER_SCOPED",
+    "unique_constraints": [
+      ["document_id"],
+      ["owner_id", "paper_id"]
+    ],
+    "bidirectional_lookup_requires_owner_id": true,
+    "immutable_fields": [
+      "owner_id",
+      "paper_id",
+      "document_id",
+      "source_type"
+    ],
+    "client_trusted_fields": [],
+    "external_ids_do_not_replace_mapping": true
+  },
+  "version_identity": {
+    "logical_field": "document_version_id",
+    "legacy_chunk_field": "version_id",
+    "content_change_creates_new_version": true,
+    "historical_version_ids_are_never_reused": true
+  },
+  "lifecycle": {
+    "statuses": [
+      "REGISTERED",
+      "PROCESSING",
+      "REVIEW",
+      "READY",
+      "FAILED",
+      "INACTIVE"
+    ],
+    "allowed_transitions": {
+      "REGISTERED": ["PROCESSING", "INACTIVE"],
+      "PROCESSING": ["REVIEW", "READY", "FAILED", "INACTIVE"],
+      "REVIEW": ["PROCESSING", "FAILED", "INACTIVE"],
+      "READY": ["INACTIVE"],
+      "FAILED": ["PROCESSING", "INACTIVE"],
+      "INACTIVE": []
+    },
+    "online_eligible_status": "READY",
+    "ready_requires": [
+      "parse_finish_time",
+      "chunk_splitter_time",
+      "chunk_create_time",
+      "chunk_gen_time",
+      "vector_index_time",
+      "elasticsearch_chunks=READY",
+      "milvus_vectors=READY",
+      "delete_time=null",
+      "chunk_expire_time=null",
+      "failure_code=null"
+    ],
+    "derived_index_is_active": "lifecycle_status=READY AND delete_time IS NULL AND chunk_expire_time IS NULL",
+    "inactivation_order": [
+      "COMMIT_POSTGRESQL_INACTIVE_STATE",
+      "INVALIDATE_QUERY_AND_CACHE",
+      "ASYNC_PHYSICAL_INDEX_CLEANUP"
+    ],
+    "inactive_version_is_terminal": true,
+    "refresh_with_content_change_creates_new_version": true
+  },
+  "index_boundary": {
+    "elasticsearch_and_milvus_are_rebuildable": true,
+    "indexes_must_not_write_business_truth_back": true,
+    "query_filter_requires": ["owner_id", "is_active"],
+    "ready_requires_both_indexes": true
+  }
+}

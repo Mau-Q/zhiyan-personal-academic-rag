@@ -19,7 +19,7 @@
 
 ## 当前状态
 
-当前总体状态为 `SOURCE_PHASE_0_IN_PROGRESS / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE`。远程 ES/Milvus/RRF 固定 Canary 分别为 `14/15 / 12/15 / 14/15`，固定 175 题的 ES/Milvus 严格通过数为 `85/175 / 109/175`；三种 Chunk 策略的 SQLite BM25/BGE-M3 均为 `15/15 / 12/15`，没有总体胜者。阶段 0 已冻结 500 篇标称、1000 篇验证上界、0.2 QPS、问答并发 2、入库并发 1、单台既有主机预算及后续 SLO 目标；这些性能值尚待实测。阶段 0 最后还需冻结 PostgreSQL `owner_id`、`paper_id ↔ document_id`、文档版本与删除语义，不跑 175 题 RRF、不调参、不增加重排或真实 LLM。
+当前总体状态为 `SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_IN_PROGRESS / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE`。远程 ES/Milvus/RRF 固定 Canary 分别为 `14/15 / 12/15 / 14/15`，固定 175 题的 ES/Milvus 严格通过数为 `85/175 / 109/175`；三种 Chunk 策略的 SQLite BM25/BGE-M3 均为 `15/15 / 12/15`，没有总体胜者。阶段 0 已冻结范围/资源/SLO，以及按 `owner_id` 隔离的 `paper_id ↔ document_id`、版本、双索引 READY 和删除/撤权语义；阶段 1 才接入 PostgreSQL 运行时和索引对账。当前不跑 175 题 RRF、不调参、不增加重排或真实 LLM。
 
 - GitHub：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 - 最高方案追踪：[`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md)

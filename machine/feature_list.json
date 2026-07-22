@@ -9,7 +9,7 @@
     },
     {
       "id": "source_phase_zero_foundation",
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "owner": "SHARED",
       "evidence": [
         "docs/REQUIREMENTS_TRACEABILITY.md",
@@ -25,6 +25,18 @@
         "machine/phase_zero_scope_resource_slo.json",
         "docs/PHASE_0_SCOPE_RESOURCE_SLO.md",
         "tests/harness/test_repository_harness.py"
+      ]
+    },
+    {
+      "id": "data_identity_lifecycle_contract",
+      "status": "READY",
+      "owner": "SHARED",
+      "evidence": [
+        "contracts/data-identity-lifecycle-v1.json",
+        "contracts/data-identity-lifecycle-v1.md",
+        "contracts/schemas/document-identity-v1.schema.json",
+        "contracts/schemas/document-version-lifecycle-v1.schema.json",
+        "tests/contracts/test_contracts.py"
       ]
     },
     {

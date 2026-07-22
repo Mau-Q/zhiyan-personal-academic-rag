@@ -2,9 +2,9 @@
 
 ## Status
 
-`SOURCE_PHASE_0_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN`
+`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN`
 
-Phase ID：`source-phase0-foundation-in-progress`
+Phase ID：`source-phase1-data-index-minimal-loop-in-progress`
 
 ## Completed
 
@@ -128,13 +128,16 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 冻结检索 P95 300 ms、P99 500 ms、TTFT P95 3 s、完整回答 P95 10 s、端到端 P99 15 s 及权限/引用硬门禁；这些是待阶段 1 实测的目标，不是当前达标结果。
 - 范围/资源/SLO 子门禁完成；方案阶段 0 仍需冻结数据身份适配和上游生命周期目标语义。
 - 新增范围/资源/SLO 机器门禁后，全仓 155 项测试及 Harness 9 项检查通过。
+- 冻结 `DocumentIdentityV1`、`DocumentVersionLifecycleV1` 和机器策略：映射按 `owner_id` 隔离，`document_id` 与 `(owner_id, paper_id)` 分别唯一，内容变化创建新 `document_version_id`。
+- 冻结生命周期状态机与 READY 硬门禁：解析、Chunk、ES 和 Milvus 必须全部完成，删除/过期版本先在 PostgreSQL 失效，再清缓存并异步清理索引。
+- 数据身份与生命周期合同新增 3 项语义测试后，全仓 158 项测试及 Harness 9 项检查通过；方案阶段 0 完成，当前进入阶段 1。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：`owner_id` 与 `paper_id ↔ document_id` 目标合同、上游生命周期语义、PostgreSQL 生命周期接入、目标规模性能验收、无证据校准、安全策略层和真实生成模型；
+- 未完成能力：PostgreSQL 表与身份适配器、持久化幂等任务、ES/Milvus 状态对账与撤权清理、目标规模性能验收、无证据校准、安全策略层和真实生成模型；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -146,7 +149,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 - `make vector-fixture-smoke` 和 `make rrf-fixture-smoke` 必须分别通过 6/6；
 - 本地三论文向量基线必须如实记录 12/15，RRF 必须通过 15/15；
 - `make formal-evaluation-fixture` 必须通过，且公开 4 条 Fixture 必须保持 `engineering_ready=false / lock_ready=false`；
-- `python3 scripts/export_evaluation_contracts.py --check` 必须通过；
+- `make evaluation-contract-check` 必须通过；
 - GPT 标注必须携带模型身份、Prompt 版本和温度，且不得担任仲裁或专家；
 - 一致低风险题不得因流程惯性强制增加仲裁，Acceptance 与高风险题不得取消人工复核；
 - `git diff --check` 必须通过；
@@ -154,7 +157,8 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 仓库状态、能力清单和本文件必须一致。
 - 最高方案文件名、`725` 行与 SHA-256 必须在需求追踪和机器状态中一致；
 - `machine/phase_zero_scope_resource_slo.json` 必须通过仓库 Harness，且冻结目标不得写成已实测 SLO；
-- 不得将仓库 `M0_COMPLETE`、范围/SLO 冻结、15 题 Canary 或 Fake LLM 写成最高方案阶段 0/2 已完成。
+- 数据身份/生命周期合同必须通过 JSON Schema 与失败关闭语义测试；
+- 不得将目标合同写成 PostgreSQL、索引对账或删除闭环已实现，不得将 Fake LLM 写成最高方案阶段 2 已完成。
 
 ## Git
 
@@ -166,14 +170,14 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 ## Current boundary
 
-最高方案阶段 0 仍为进行中。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。范围、资源和 SLO 已冻结为后续验收输入，但数据身份/生命周期目标合同、目标规模性能、真实生成模型和 PostgreSQL 运行时接入尚未完成。运行时私有数据继续不进入 Git。
+最高方案阶段 0 已完成，当前进入阶段 1。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。范围、资源、SLO 与数据身份/生命周期目标均已冻结，但 PostgreSQL 运行时、索引对账、目标规模性能和真实生成模型尚未完成。运行时私有数据继续不进入 Git。
 
 ## Next gate
 
-1. **数据合同冻结：** 明确 PostgreSQL `owner_id`、`paper_id ↔ document_id`、文档版本、上游时间戳和软删除字段/状态机，不破坏现有 V1 API；
-2. **阶段 1 交接：** 合同冻结后再实现上传/收藏论文的可重放 Outbox/幂等入库和 ES/Milvus 状态对账；
-3. **性能后置：** 只有数据与索引闭环具备后，才按 500/1000 篇目标规模和冻结流量运行性能验收；
-4. **边界与复杂度：** 当前不跑 175 题 RRF、不重跑远程 500 题、不增加重排、真实 LLM、HyDE、multi-query、multi-hop 或在线 NLI。
+1. **PostgreSQL 最小事实源：** 按冻结合同建立 documents/document_versions 与持久化任务状态，服务端产生 `owner_id` 范围；
+2. **索引闭环：** 实现可重放幂等入库、ES/Milvus 状态对账和删除/撤权先失效后清理；
+3. **兼容迁移：** 将 legacy `version_id/tenant_id` 适配到目标 `document_version_id/owner_id`，不破坏现有 V1 Answer API；
+4. **性能与复杂度：** 闭环完成后再按冻结规模验收性能；当前不跑 175 题 RRF、不增加重排或真实 LLM。
 
 ## Prohibited shortcuts
 

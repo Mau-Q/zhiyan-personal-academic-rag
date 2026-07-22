@@ -1,5 +1,6 @@
 import json
 import unittest
+from copy import deepcopy
 from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
@@ -32,6 +33,8 @@ class ContractTests(unittest.TestCase):
             "chunk-record-v1.schema.json": "chunk-record-v1.json",
             "authorized-scope-v1.schema.json": "authorized-scope-v1.json",
             "index-version-v1.schema.json": "index-version-v1.json",
+            "document-identity-v1.schema.json": "document-identity-v1.json",
+            "document-version-lifecycle-v1.schema.json": "document-version-lifecycle-v1.json",
             "rag-answer-v1.schema.json": "rag-answer-v1.json",
             "trace-v1.schema.json": "trace-v1.json",
             "retrieval-evaluation-item-v1.schema.json": "retrieval-evaluation-item-v1.json",
@@ -80,6 +83,58 @@ class ContractTests(unittest.TestCase):
             if next_id is not None:
                 self.assertIn(next_id, by_id)
                 self.assertEqual(by_id[next_id]["previous_chunk_id"], chunk["chunk_id"])
+
+    def test_document_identity_policy_is_owner_scoped_and_immutable(self):
+        policy = load_json(ROOT / "contracts" / "data-identity-lifecycle-v1.json")
+        mapping = policy["identity_mapping"]
+
+        self.assertEqual(policy["source_of_truth"], "POSTGRESQL")
+        self.assertEqual(mapping["mapping_scope"], "OWNER_SCOPED")
+        self.assertEqual(
+            mapping["unique_constraints"], [["document_id"], ["owner_id", "paper_id"]]
+        )
+        self.assertTrue(mapping["bidirectional_lookup_requires_owner_id"])
+        self.assertEqual(mapping["client_trusted_fields"], [])
+        self.assertEqual(
+            set(mapping["immutable_fields"]),
+            {"owner_id", "paper_id", "document_id", "source_type"},
+        )
+        self.assertEqual(
+            policy["lifecycle"]["allowed_transitions"]["READY"], ["INACTIVE"]
+        )
+
+    def test_ready_lifecycle_requires_both_indexes_and_no_soft_delete(self):
+        payload = load_json(EXAMPLES / "document-version-lifecycle-v1.json")
+        validator = self.validator("document-version-lifecycle-v1.schema.json")
+        validator.validate(payload)
+
+        missing_vector = deepcopy(payload)
+        missing_vector["index_states"]["milvus_vectors"] = "PENDING"
+        self.assertTrue(list(validator.iter_errors(missing_vector)))
+
+        deleted_ready = deepcopy(payload)
+        deleted_ready["delete_time"] = "2026-07-22T00:03:00Z"
+        self.assertTrue(list(validator.iter_errors(deleted_ready)))
+
+    def test_inactive_and_failed_lifecycle_states_fail_closed(self):
+        payload = load_json(EXAMPLES / "document-version-lifecycle-v1.json")
+        validator = self.validator("document-version-lifecycle-v1.schema.json")
+
+        inactive = deepcopy(payload)
+        inactive["lifecycle_status"] = "INACTIVE"
+        self.assertTrue(list(validator.iter_errors(inactive)))
+        inactive["delete_time"] = "2026-07-22T00:03:00Z"
+        validator.validate(inactive)
+
+        processing_deleted = deepcopy(inactive)
+        processing_deleted["lifecycle_status"] = "PROCESSING"
+        self.assertTrue(list(validator.iter_errors(processing_deleted)))
+
+        failed = deepcopy(payload)
+        failed["lifecycle_status"] = "FAILED"
+        self.assertTrue(list(validator.iter_errors(failed)))
+        failed["failure_code"] = "RAG_INDEX_NOT_READY"
+        validator.validate(failed)
 
     def test_sample_catalog_contains_metadata_only(self):
         catalog = load_json(ROOT / "fixtures" / "sample-corpus-v1.json")
