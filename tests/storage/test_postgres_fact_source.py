@@ -299,8 +299,16 @@ class PostgreSQLMigrationTests(unittest.TestCase):
         self.assertIn("runtime snapshot deletion requires an INACTIVE version", snapshot_sql)
         self.assertIn("UNIQUE (document_version_id, chunk_ordinal)", snapshot_sql)
 
+        object_key_fix_sql = (
+            ROOT / "backend/storage/migrations/0005_pdf_object_key_constraint.sql"
+        ).read_text(encoding="utf-8")
+        self.assertIn("DROP CONSTRAINT IF EXISTS", object_key_fix_sql)
+        self.assertIn("length(object_key) BETWEEN 1 AND 512", object_key_fix_sql)
+        self.assertIn("[a-z0-9._/-]*", object_key_fix_sql)
+        self.assertNotIn("{0,511}", object_key_fix_sql)
+
     def test_migration_is_idempotent_and_detects_checksum_drift(self):
-        first = ScriptedConnection(*([None] * 13))
+        first = ScriptedConnection(*([None] * 16))
         self.assertTrue(apply_fact_source_migration(first))
         self.assertEqual(first.commit_count, 1)
         self.assertEqual(first.rollback_count, 0)
@@ -312,6 +320,7 @@ class PostgreSQLMigrationTests(unittest.TestCase):
             {"sha256": migration_sha256("0002_cleanup_queue")},
             {"sha256": migration_sha256("0003_online_ready_visibility")},
             {"sha256": migration_sha256("0004_runtime_snapshots")},
+            {"sha256": migration_sha256("0005_pdf_object_key_constraint")},
         )
         self.assertFalse(apply_fact_source_migration(unchanged))
         self.assertEqual(unchanged.commit_count, 1)
@@ -324,6 +333,9 @@ class PostgreSQLMigrationTests(unittest.TestCase):
             None,
             {"sha256": migration_sha256("0003_online_ready_visibility")},
             {"sha256": migration_sha256("0004_runtime_snapshots")},
+            None,
+            None,
+            None,
         )
         self.assertTrue(apply_fact_source_migration(later_only))
         self.assertEqual(later_only.commit_count, 1)

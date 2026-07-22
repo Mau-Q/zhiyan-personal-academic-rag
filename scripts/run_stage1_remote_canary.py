@@ -27,7 +27,10 @@ from backend.ingestion.index_lifecycle import (
     publish_prepared_indexes,
 )
 from backend.ingestion.milvus_writer import MilvusVersionIndexWriter
-from backend.ingestion.persistent import prepare_and_persist_pdf_ingestion
+from backend.ingestion.persistent import (
+    RuntimeSnapshotPersistenceError,
+    prepare_and_persist_pdf_ingestion,
+)
 from backend.retrieval.elasticsearch import UrllibElasticsearchTransport
 from backend.retrieval.embedding import OllamaEmbeddingProvider
 from backend.retrieval.milvus import PymilvusTransport
@@ -100,6 +103,12 @@ def _write_report(path: Path, payload: dict[str, object]) -> None:
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+
+
+def _sanitized_error_code(exc: Exception) -> str:
+    if isinstance(exc, RuntimeSnapshotPersistenceError):
+        return exc.code
+    return type(exc).__name__
 
 
 def main() -> int:
@@ -326,7 +335,7 @@ def main() -> int:
             "schema_version": REPORT_SCHEMA_VERSION,
             "status": "FAIL",
             "run_id": args.run_id,
-            "error_code": type(exc).__name__,
+            "error_code": _sanitized_error_code(exc),
         }
         _write_report(args.output, failure)
         print(json.dumps(failure), file=sys.stderr)

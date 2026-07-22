@@ -4,9 +4,11 @@ import subprocess
 import sys
 import unittest
 
+from backend.ingestion.persistent import RuntimeSnapshotPersistenceError
 from scripts.run_stage1_remote_canary import (
     EXPECTED_CLEANUP_JOBS,
     REPORT_SCHEMA_VERSION,
+    _sanitized_error_code,
     build_parser,
 )
 
@@ -56,6 +58,18 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("EXPLICIT_CONFIRMATION_REQUIRED", result.stderr)
         self.assertNotIn("does-not-exist", result.stderr)
+
+    def test_snapshot_failure_uses_stable_sanitized_error_code(self):
+        error = RuntimeSnapshotPersistenceError(
+            "CHUNK_SNAPSHOT_PERSIST_FAILED",
+            "safe outer message",
+        )
+
+        self.assertEqual(
+            _sanitized_error_code(error),
+            "CHUNK_SNAPSHOT_PERSIST_FAILED",
+        )
+        self.assertEqual(_sanitized_error_code(ValueError("secret")), "ValueError")
 
 
 if __name__ == "__main__":

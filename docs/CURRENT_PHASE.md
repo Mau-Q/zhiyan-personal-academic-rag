@@ -153,13 +153,14 @@ Phase ID：`source-phase1-data-index-minimal-loop-in-progress`
 - 远程脱敏报告 SHA-256：成功闭环 `D824BB4848050B20E4CB747BEC8F56D9B2F703F22991F06DAC89B912DF865DA0`，预期失败 `2AE22BBEA0E59FEB578129630916FDDD2672708BEC7BBB47A4DB57B8C42EAEF1`，同 ID 恢复 `5E365EE3D1B2B50A57B73DA3C9D003033FA18701209EBA9424B4E8AB593A66A7`；远程工作树干净，凭据已从 PowerShell 环境清除，报告保留在被忽略的 `runtime/`。
 - 完成本地 PDF/Chunk 运行存储：`filesystem_v1` 以不透明确定性键原子保存并重开校验 PDF，PostgreSQL `0004` 注册对象定位和不可变 Chunk 快照，重放核对完整快照指纹；不新增依赖、不把 PDF 字节写入 PostgreSQL。
 - 完成持久化快照 Answer API 闭环：在线模式不再加载 Fixture Chunk/Scope，只按 PostgreSQL READY 版本加载 Chunk，并在检索后重验事实源；失效后返回 403，ES、Milvus 和运行快照三项物理清理共用持久租约、重试与恢复。
+- 远程 v2 首次运行在 PDF 对象注册处以 SQLSTATE `2201B` 失败，未进入 ES/Milvus 发布；根因是 `0004` 的对象键正则使用 PostgreSQL 不支持的 `{0,511}` 重复上限。本地追加 `0005` 迁移，以长度检查加无上界字符集正则修复，并保留 `0004` 校验和不变。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：新增 `0004` 和持久化快照 Answer API 的远程 v2 实跑、正式 MinIO 适配、OCR、目标规模性能验收、无证据校准、安全策略层和真实生成模型；
+- 未完成能力：远程应用 `0005` 并用原 Run ID 完成持久化快照 Answer API v2 重放、正式 MinIO 适配、OCR、目标规模性能验收、无证据校准、安全策略层和真实生成模型；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收

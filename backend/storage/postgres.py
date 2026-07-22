@@ -34,6 +34,9 @@ MIGRATION_PATHS = {
     "0002_cleanup_queue": MIGRATIONS_DIR / "0002_cleanup_queue.sql",
     "0003_online_ready_visibility": MIGRATIONS_DIR / "0003_online_ready_visibility.sql",
     "0004_runtime_snapshots": MIGRATIONS_DIR / "0004_runtime_snapshots.sql",
+    "0005_pdf_object_key_constraint": (
+        MIGRATIONS_DIR / "0005_pdf_object_key_constraint.sql"
+    ),
 }
 MIGRATION_PATH = MIGRATION_PATHS["0001_fact_source"]
 LIFECYCLE_MUTABLE_FIELDS = frozenset(

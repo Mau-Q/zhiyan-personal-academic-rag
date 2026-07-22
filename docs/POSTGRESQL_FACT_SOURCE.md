@@ -4,7 +4,7 @@
 
 阶段 1 已建立 PostgreSQL Schema、延迟加载的 `psycopg` 适配器和独立测试。PostgreSQL 是 `owner_id`、文档映射、内容版本、Chunk 快照、生命周期与入库/清理任务的唯一事实源；PDF 字节保存在独立对象根目录，Elasticsearch 和 Milvus 仍然是可重建派生索引。
 
-远程 PostgreSQL 18.4 已通过 `0001`～`0003` 迁移和基础设施生命周期 Canary。新增 `0004_runtime_snapshots.sql`、持久化 Chunk 在线加载和 Answer API v2 Canary 目前只有本地证据，等待用户远程应用和实跑。
+远程 PostgreSQL 18.4 已通过 `0001`～`0003` 迁移和基础设施生命周期 Canary。远程首次应用 `0004_runtime_snapshots.sql` 后，v2 Canary 在首条 PDF 对象注册处暴露 PostgreSQL 正则重复上限：`{0,511}` 触发 SQLSTATE `2201B`。本地以追加迁移 `0005_pdf_object_key_constraint.sql` 改为独立长度门禁和无上界字符集正则，不改写已应用的 `0004`；等待用户应用 `0005` 并使用原 Run ID 重放。
 
 ## 已实现的硬约束
 
@@ -28,6 +28,7 @@
 - 清理队列迁移：`backend/storage/migrations/0002_cleanup_queue.sql`；
 - 在线唯一活动版本迁移：`backend/storage/migrations/0003_online_ready_visibility.sql`；
 - PDF 对象注册与 Chunk 快照迁移：`backend/storage/migrations/0004_runtime_snapshots.sql`；
+- PDF 对象键约束修复迁移：`backend/storage/migrations/0005_pdf_object_key_constraint.sql`；
 - PDF 对象后端：`backend/storage/pdf_objects.py`；
 - 迁移器：`python -m backend.storage.migrate`；
 - 仓储适配器：`backend/storage/postgres.py`；
