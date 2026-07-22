@@ -3,7 +3,7 @@ from __future__ import annotations
 import tomllib
 import unittest
 from collections import deque
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +15,8 @@ from backend.storage.migrate import (
     migration_sha256,
 )
 from backend.storage.models import (
+    CleanupJobStatus,
+    CleanupJobV1,
     DocumentIdentityV1,
     DocumentVersionLifecycleV1,
     IndexState,
@@ -137,6 +139,28 @@ def job_row(**updates: Any) -> dict[str, Any]:
     return row
 
 
+def cleanup_row(**updates: Any) -> dict[str, Any]:
+    row = {
+        "cleanup_id": "cleanup_existing",
+        "backend": "elasticsearch_chunks",
+        "owner_id": "owner_001",
+        "document_id": "doc_existing",
+        "document_version_id": "document_version_existing",
+        "status": "PENDING",
+        "attempt_count": 0,
+        "max_attempts": 5,
+        "next_attempt_at": NOW,
+        "lease_token": None,
+        "lease_expires_at": None,
+        "failure_code": None,
+        "created_at": NOW,
+        "updated_at": NOW,
+        "completed_at": None,
+    }
+    row.update(updates)
+    return row
+
+
 class StorageModelTests(unittest.TestCase):
     def test_identity_requires_timezone_and_ordered_source_times(self):
         with self.assertRaises(ValidationError):
@@ -171,6 +195,18 @@ class StorageModelTests(unittest.TestCase):
                 {**base, "lifecycle_status": "INACTIVE"}
             )
 
+    def test_cleanup_state_requires_lease_failure_and_terminal_consistency(self):
+        with self.assertRaises(ValidationError):
+            CleanupJobV1.model_validate(
+                cleanup_row(status="RUNNING", attempt_count=1)
+            )
+        with self.assertRaises(ValidationError):
+            CleanupJobV1.model_validate(cleanup_row(status="RETRY"))
+        with self.assertRaises(ValidationError):
+            CleanupJobV1.model_validate(
+                cleanup_row(status="SUCCEEDED", attempt_count=1)
+            )
+
 
 class PostgreSQLMigrationTests(unittest.TestCase):
     def test_migration_is_declared_as_package_data(self):
@@ -192,16 +228,38 @@ class PostgreSQLMigrationTests(unittest.TestCase):
         self.assertIn("OLD.lifecycle_status = 'PROCESSING'", sql)
         self.assertIn("UNIQUE (owner_id, idempotency_key)", sql)
 
+        cleanup_sql = (
+            ROOT / "backend/storage/migrations/0002_cleanup_queue.sql"
+        ).read_text(encoding="utf-8")
+        self.assertIn("rag_index_cleanup_jobs", cleanup_sql)
+        self.assertIn("UNIQUE (backend, owner_id, document_id, document_version_id)", cleanup_sql)
+        self.assertIn("status = 'RUNNING'", cleanup_sql)
+        self.assertIn("completed_at IS NOT NULL", cleanup_sql)
+
     def test_migration_is_idempotent_and_detects_checksum_drift(self):
-        first = ScriptedConnection(None, None, None, None)
+        first = ScriptedConnection(*([None] * 7))
         self.assertTrue(apply_fact_source_migration(first))
         self.assertEqual(first.commit_count, 1)
         self.assertEqual(first.rollback_count, 0)
         self.assertTrue(all(cursor.closed for cursor in first.cursors))
 
-        unchanged = ScriptedConnection(None, {"sha256": migration_sha256()})
+        unchanged = ScriptedConnection(
+            None,
+            {"sha256": migration_sha256("0001_fact_source")},
+            {"sha256": migration_sha256("0002_cleanup_queue")},
+        )
         self.assertFalse(apply_fact_source_migration(unchanged))
         self.assertEqual(unchanged.commit_count, 1)
+
+        second_only = ScriptedConnection(
+            None,
+            {"sha256": migration_sha256("0001_fact_source")},
+            None,
+            None,
+            None,
+        )
+        self.assertTrue(apply_fact_source_migration(second_only))
+        self.assertEqual(second_only.commit_count, 1)
 
         drifted = ScriptedConnection(None, {"sha256": "0" * 64})
         with self.assertRaises(MigrationDriftError):
@@ -597,6 +655,101 @@ class PostgresFactRepositoryTests(unittest.TestCase):
                 status=IngestionJobStatus.FAILED,
             )
         self.assertFalse(connection.executions)
+
+    def test_cleanup_enqueue_is_idempotent_and_requires_inactive_truth(self):
+        connection = ScriptedConnection(cleanup_row())
+        result = self.repository(connection).enqueue_cleanup(
+            backend="elasticsearch_chunks",
+            owner_id="owner_001",
+            document_id="doc_existing",
+            document_version_id="document_version_existing",
+        )
+
+        self.assertEqual(result.status, CleanupJobStatus.PENDING)
+        query = connection.executions[0][0]
+        self.assertIn("lifecycle_status = 'INACTIVE'", query)
+        self.assertIn("ON CONFLICT", query)
+        self.assertEqual(connection.commit_count, 1)
+
+        drifted = ScriptedConnection(cleanup_row(max_attempts=3))
+        with self.assertRaisesRegex(IdentityConflictError, "retry policy"):
+            self.repository(drifted).enqueue_cleanup(
+                backend="elasticsearch_chunks",
+                owner_id="owner_001",
+                document_id="doc_existing",
+                document_version_id="document_version_existing",
+                max_attempts=5,
+            )
+        self.assertEqual(drifted.rollback_count, 1)
+
+        missing = ScriptedConnection(None)
+        with self.assertRaisesRegex(IdentityConflictError, "INACTIVE"):
+            self.repository(missing).enqueue_cleanup(
+                backend="milvus_vectors",
+                owner_id="owner_001",
+                document_id="doc_existing",
+                document_version_id="document_version_existing",
+            )
+        self.assertEqual(missing.rollback_count, 1)
+
+    def test_cleanup_claim_recovers_expired_leases_and_uses_skip_locked(self):
+        running = cleanup_row(
+            status="RUNNING",
+            attempt_count=1,
+            lease_token="cleanup_lease_candidate",
+            lease_expires_at=NOW + timedelta(minutes=5),
+        )
+        connection = ScriptedConnection(None, running)
+
+        result = self.repository(connection).claim_cleanup(lease_seconds=300)
+
+        self.assertEqual(result.status, CleanupJobStatus.RUNNING)
+        self.assertEqual(result.lease_token, "cleanup_lease_candidate")
+        self.assertIn("recover_expired", connection.executions[0][0])
+        self.assertIn("FOR UPDATE SKIP LOCKED", connection.executions[1][0])
+        self.assertEqual(connection.commit_count, 1)
+
+        idle = ScriptedConnection(None, None)
+        self.assertIsNone(self.repository(idle).claim_cleanup())
+        self.assertEqual(idle.commit_count, 1)
+
+    def test_cleanup_completion_and_failure_require_exact_lease(self):
+        succeeded = cleanup_row(
+            status="SUCCEEDED",
+            attempt_count=1,
+            completed_at=NOW,
+        )
+        success_connection = ScriptedConnection(succeeded)
+        result = self.repository(success_connection).complete_cleanup(
+            cleanup_id="cleanup_existing",
+            lease_token="cleanup_lease_001",
+        )
+        self.assertEqual(result.status, CleanupJobStatus.SUCCEEDED)
+        self.assertIn("lease_token = %(lease_token)s", success_connection.executions[0][0])
+
+        retry = cleanup_row(
+            status="RETRY",
+            attempt_count=1,
+            failure_code="ELASTICSEARCH_CHUNKS_DELETE_FAILED",
+            next_attempt_at=NOW + timedelta(seconds=30),
+        )
+        retry_connection = ScriptedConnection(retry)
+        failed = self.repository(retry_connection).record_cleanup_failure(
+            cleanup_id="cleanup_existing",
+            lease_token="cleanup_lease_001",
+            failure_code="ELASTICSEARCH_CHUNKS_DELETE_FAILED",
+            retry_at=NOW + timedelta(seconds=30),
+        )
+        self.assertEqual(failed.status, CleanupJobStatus.RETRY)
+        self.assertIn("attempt_count >= max_attempts", retry_connection.executions[0][0])
+
+        stale = ScriptedConnection(None)
+        with self.assertRaisesRegex(IdentityConflictError, "stale"):
+            self.repository(stale).complete_cleanup(
+                cleanup_id="cleanup_existing",
+                lease_token="cleanup_lease_stale",
+            )
+        self.assertEqual(stale.rollback_count, 1)
 
 
 if __name__ == "__main__":

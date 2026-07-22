@@ -50,6 +50,14 @@ class IngestionJobStatus(StrEnum):
     FAILED = "FAILED"
 
 
+class CleanupJobStatus(StrEnum):
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    RETRY = "RETRY"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+
+
 ALLOWED_LIFECYCLE_TRANSITIONS: dict[LifecycleStatus, frozenset[LifecycleStatus]] = {
     LifecycleStatus.REGISTERED: frozenset(
         {LifecycleStatus.PROCESSING, LifecycleStatus.INACTIVE}
@@ -215,4 +223,61 @@ class IngestionJobV1(StorageModel):
     def failed_job_requires_code(self) -> "IngestionJobV1":
         if self.status is IngestionJobStatus.FAILED and self.failure_code is None:
             raise ValueError("FAILED ingestion job requires failure_code")
+        return self
+
+
+class CleanupJobV1(StorageModel):
+    cleanup_id: ContractId
+    backend: Literal["elasticsearch_chunks", "milvus_vectors"]
+    owner_id: ContractId
+    document_id: ContractId
+    document_version_id: ContractId
+    status: CleanupJobStatus
+    attempt_count: int = Field(ge=0)
+    max_attempts: int = Field(ge=1, le=100)
+    next_attempt_at: datetime
+    lease_token: ContractId | None = None
+    lease_expires_at: datetime | None = None
+    failure_code: ContractId | None = None
+    created_at: datetime
+    updated_at: datetime
+    completed_at: datetime | None = None
+
+    @field_validator(
+        "next_attempt_at",
+        "lease_expires_at",
+        "created_at",
+        "updated_at",
+        "completed_at",
+    )
+    @classmethod
+    def timestamps_require_timezone(
+        cls, value: datetime | None, info
+    ) -> datetime | None:
+        return _require_timezone(value, info.field_name)
+
+    @model_validator(mode="after")
+    def cleanup_state_is_replay_safe(self) -> "CleanupJobV1":
+        is_running = self.status is CleanupJobStatus.RUNNING
+        if is_running != (
+            self.lease_token is not None and self.lease_expires_at is not None
+        ):
+            raise ValueError("RUNNING cleanup requires an exclusive lease")
+        if self.status in {CleanupJobStatus.RETRY, CleanupJobStatus.FAILED}:
+            if self.failure_code is None:
+                raise ValueError("RETRY or FAILED cleanup requires failure_code")
+        elif self.failure_code is not None:
+            raise ValueError("only RETRY or FAILED cleanup may retain failure_code")
+        terminal = self.status in {
+            CleanupJobStatus.SUCCEEDED,
+            CleanupJobStatus.FAILED,
+        }
+        if terminal != (self.completed_at is not None):
+            raise ValueError("terminal cleanup state must match completed_at")
+        if self.attempt_count > self.max_attempts:
+            raise ValueError("cleanup attempt_count exceeds max_attempts")
+        if self.status is CleanupJobStatus.PENDING and self.attempt_count != 0:
+            raise ValueError("PENDING cleanup must not have attempts")
+        if is_running and self.attempt_count < 1:
+            raise ValueError("RUNNING cleanup requires at least one attempt")
         return self

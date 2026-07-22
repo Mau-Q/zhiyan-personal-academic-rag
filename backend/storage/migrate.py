@@ -6,7 +6,7 @@ import argparse
 import os
 from hashlib import sha256
 
-from backend.storage.postgres import Connection, MIGRATION_PATH, connect_postgres
+from backend.storage.postgres import Connection, MIGRATION_PATHS, connect_postgres
 
 
 MIGRATION_ID = "0001_fact_source"
@@ -23,42 +23,48 @@ class MigrationDriftError(RuntimeError):
     """Raised when an applied migration no longer matches repository bytes."""
 
 
-def migration_bytes() -> bytes:
-    return MIGRATION_PATH.read_bytes()
+def migration_bytes(migration_id: str = MIGRATION_ID) -> bytes:
+    try:
+        path = MIGRATION_PATHS[migration_id]
+    except KeyError as exc:
+        raise ValueError(f"unknown PostgreSQL migration: {migration_id}") from exc
+    return path.read_bytes()
 
 
-def migration_sha256() -> str:
-    return sha256(migration_bytes()).hexdigest()
+def migration_sha256(migration_id: str = MIGRATION_ID) -> str:
+    return sha256(migration_bytes(migration_id)).hexdigest()
 
 
 def apply_fact_source_migration(connection: Connection) -> bool:
     """Apply once and return True; return False when the same checksum is present."""
 
-    checksum = migration_sha256()
     cursor = connection.cursor()
     try:
         cursor.execute(BOOTSTRAP_SQL)
-        cursor.execute(
-            """SELECT sha256 FROM rag_schema_migrations
-               WHERE migration_id = %(migration_id)s""",
-            {"migration_id": MIGRATION_ID},
-        )
-        existing = cursor.fetchone()
-        if existing is not None:
-            if existing["sha256"] != checksum:
-                raise MigrationDriftError(
-                    "applied PostgreSQL migration checksum differs from repository bytes"
-                )
-            connection.commit()
-            return False
-        cursor.execute(migration_bytes().decode("utf-8"))
-        cursor.execute(
-            """INSERT INTO rag_schema_migrations (migration_id, sha256)
-               VALUES (%(migration_id)s, %(sha256)s)""",
-            {"migration_id": MIGRATION_ID, "sha256": checksum},
-        )
+        applied = False
+        for migration_id in MIGRATION_PATHS:
+            checksum = migration_sha256(migration_id)
+            cursor.execute(
+                """SELECT sha256 FROM rag_schema_migrations
+                   WHERE migration_id = %(migration_id)s""",
+                {"migration_id": migration_id},
+            )
+            existing = cursor.fetchone()
+            if existing is not None:
+                if existing["sha256"] != checksum:
+                    raise MigrationDriftError(
+                        "applied PostgreSQL migration checksum differs from repository bytes"
+                    )
+                continue
+            cursor.execute(migration_bytes(migration_id).decode("utf-8"))
+            cursor.execute(
+                """INSERT INTO rag_schema_migrations (migration_id, sha256)
+                   VALUES (%(migration_id)s, %(sha256)s)""",
+                {"migration_id": migration_id, "sha256": checksum},
+            )
+            applied = True
         connection.commit()
-        return True
+        return applied
     except Exception:
         connection.rollback()
         raise

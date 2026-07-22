@@ -21,11 +21,13 @@
 ## 仓库入口
 
 - SQL：`backend/storage/migrations/0001_fact_source.sql`；
+- 清理队列迁移：`backend/storage/migrations/0002_cleanup_queue.sql`；
 - 迁移器：`python -m backend.storage.migrate`；
 - 仓储适配器：`backend/storage/postgres.py`；
 - 双索引生命周期协调：`backend/ingestion/index_lifecycle.py`；
 - Elasticsearch 隐藏版本索引写入器：`backend/ingestion/elasticsearch_writer.py`；
 - Milvus 脱离在线路由的版本写入器：`backend/ingestion/milvus_writer.py`；
+- 持久化物理清理调度与 Worker：`backend/ingestion/cleanup.py`；
 - 运行时模型：`backend/storage/models.py`；
 - 本地门禁：`make storage-test`。
 
@@ -53,6 +55,6 @@ Remove-Item Env:DATABASE_URL
 
 1. 用户在隔离的远程 PostgreSQL 上应用迁移并返回脱敏输出；
 2. 在远程 PostgreSQL 上复测本地已完成的持久化 PDF 准备编排；
-3. 在远程 Elasticsearch/Milvus 复测本地版本写入器，并实现持久化清理队列；
+3. 在远程 Elasticsearch/Milvus 复测本地版本写入器、清理租约恢复和物理删除；
 4. 将在线 Answer API 切换到 PostgreSQL READY 可见性门禁；
 5. 完成单侧失败补偿与删除/撤权先失效、再异步物理清理的远程故障验证。

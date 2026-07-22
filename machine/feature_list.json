@@ -356,6 +356,19 @@
       ]
     },
     {
+      "id": "persistent_index_cleanup",
+      "status": "PARTIAL",
+      "owner": "A",
+      "evidence": [
+        "backend/ingestion/cleanup.py",
+        "backend/storage/migrations/0002_cleanup_queue.sql",
+        "backend/storage/postgres.py",
+        "tests/ingestion/test_cleanup.py",
+        "tests/storage/test_postgres_fact_source.py",
+        "docs/LOCAL_PDF_INGESTION.md"
+      ]
+    },
+    {
       "id": "remote_host_readiness",
       "status": "READY",
       "owner": "USER",

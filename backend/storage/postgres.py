@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Mapping
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Protocol, cast
 from uuid import uuid4
 
 from backend.storage.models import (
     ALLOWED_LIFECYCLE_TRANSITIONS,
+    CleanupJobStatus,
+    CleanupJobV1,
     DocumentIdentityV1,
     DocumentVersionLifecycleV1,
     IndexStatesV1,
@@ -20,7 +23,12 @@ from backend.storage.models import (
 
 
 JsonObject = dict[str, Any]
-MIGRATION_PATH = Path(__file__).with_name("migrations") / "0001_fact_source.sql"
+MIGRATIONS_DIR = Path(__file__).with_name("migrations")
+MIGRATION_PATHS = {
+    "0001_fact_source": MIGRATIONS_DIR / "0001_fact_source.sql",
+    "0002_cleanup_queue": MIGRATIONS_DIR / "0002_cleanup_queue.sql",
+}
+MIGRATION_PATH = MIGRATION_PATHS["0001_fact_source"]
 LIFECYCLE_MUTABLE_FIELDS = frozenset(
     {
         "parse_finish_time",
@@ -36,6 +44,7 @@ LIFECYCLE_MUTABLE_FIELDS = frozenset(
         "failure_code",
     }
 )
+_CONTRACT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 
 
 class Cursor(Protocol):
@@ -110,6 +119,10 @@ def _job_from_row(row: Mapping[str, Any]) -> IngestionJobV1:
     return IngestionJobV1.model_validate(dict(row))
 
 
+def _cleanup_from_row(row: Mapping[str, Any]) -> CleanupJobV1:
+    return CleanupJobV1.model_validate(dict(row))
+
+
 class PostgresFactRepository:
     """Small transactional repository; PostgreSQL remains the only business truth."""
 
@@ -131,6 +144,13 @@ class PostgresFactRepository:
         try:
             cursor.execute(query, params)
             return cursor.fetchone()
+        finally:
+            cursor.close()
+
+    def _execute_no_result(self, query: str, params: Mapping[str, Any]) -> None:
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute(query, params)
         finally:
             cursor.close()
 
@@ -736,6 +756,240 @@ class PostgresFactRepository:
                 )
             self._commit()
             return version, job
+        except Exception:
+            self._rollback()
+            raise
+
+    def enqueue_cleanup(
+        self,
+        *,
+        backend: str,
+        owner_id: str,
+        document_id: str,
+        document_version_id: str,
+        max_attempts: int = 5,
+    ) -> CleanupJobV1:
+        """Idempotently persist cleanup only for an already-INACTIVE version."""
+
+        now = self.clock()
+        candidate = CleanupJobV1(
+            cleanup_id=self.id_factory("cleanup"),
+            backend=backend,
+            owner_id=owner_id,
+            document_id=document_id,
+            document_version_id=document_version_id,
+            status=CleanupJobStatus.PENDING,
+            attempt_count=0,
+            max_attempts=max_attempts,
+            next_attempt_at=now,
+            created_at=now,
+            updated_at=now,
+        )
+        try:
+            row = self._execute_one(
+                """-- enqueue_index_cleanup_v1
+                INSERT INTO rag_index_cleanup_jobs (
+                    cleanup_id, backend, owner_id, document_id,
+                    document_version_id, status, attempt_count, max_attempts,
+                    next_attempt_at, created_at, updated_at
+                )
+                SELECT %(cleanup_id)s, %(backend)s, v.owner_id, v.document_id,
+                       v.document_version_id, 'PENDING', 0, %(max_attempts)s,
+                       %(next_attempt_at)s, %(created_at)s, %(updated_at)s
+                FROM rag_document_versions AS v
+                WHERE v.owner_id = %(owner_id)s
+                  AND v.document_id = %(document_id)s
+                  AND v.document_version_id = %(document_version_id)s
+                  AND v.lifecycle_status = 'INACTIVE'
+                ON CONFLICT (backend, owner_id, document_id, document_version_id)
+                DO UPDATE SET updated_at = rag_index_cleanup_jobs.updated_at
+                RETURNING cleanup_id, backend, owner_id, document_id,
+                          document_version_id, status, attempt_count, max_attempts,
+                          next_attempt_at, lease_token, lease_expires_at,
+                          failure_code, created_at, updated_at, completed_at
+                """,
+                candidate.model_dump(),
+            )
+            if row is None:
+                raise IdentityConflictError(
+                    "cleanup requires an INACTIVE version in the authenticated owner scope"
+                )
+            job = _cleanup_from_row(row)
+            if (
+                job.backend != candidate.backend
+                or job.owner_id != candidate.owner_id
+                or job.document_id != candidate.document_id
+                or job.document_version_id != candidate.document_version_id
+                or job.max_attempts != candidate.max_attempts
+            ):
+                raise IdentityConflictError(
+                    "cleanup identity or retry policy does not match the request"
+                )
+            self._commit()
+            return job
+        except Exception:
+            self._rollback()
+            raise
+
+    def claim_cleanup(self, *, lease_seconds: int = 300) -> CleanupJobV1 | None:
+        """Recover expired leases and claim one due cleanup with SKIP LOCKED."""
+
+        if lease_seconds < 1:
+            raise ValueError("cleanup lease_seconds must be positive")
+        now = self.clock()
+        try:
+            self._execute_no_result(
+                """-- recover_expired_index_cleanup_leases_v1
+                UPDATE rag_index_cleanup_jobs SET
+                    status = CASE
+                        WHEN attempt_count >= max_attempts THEN 'FAILED'
+                        ELSE 'RETRY'
+                    END,
+                    next_attempt_at = %(now)s,
+                    lease_token = NULL,
+                    lease_expires_at = NULL,
+                    failure_code = 'CLEANUP_LEASE_EXPIRED',
+                    updated_at = %(now)s,
+                    completed_at = CASE
+                        WHEN attempt_count >= max_attempts THEN %(now)s
+                        ELSE NULL
+                    END
+                WHERE status = 'RUNNING'
+                  AND lease_expires_at <= %(now)s
+                """,
+                {"now": now},
+            )
+            row = self._execute_one(
+                """-- claim_due_index_cleanup_v1
+                WITH candidate AS (
+                    SELECT cleanup_id
+                    FROM rag_index_cleanup_jobs
+                    WHERE status IN ('PENDING', 'RETRY')
+                      AND next_attempt_at <= %(now)s
+                    ORDER BY next_attempt_at, created_at, cleanup_id
+                    FOR UPDATE SKIP LOCKED
+                    LIMIT 1
+                )
+                UPDATE rag_index_cleanup_jobs AS jobs SET
+                    status = 'RUNNING',
+                    attempt_count = jobs.attempt_count + 1,
+                    lease_token = %(lease_token)s,
+                    lease_expires_at = %(lease_expires_at)s,
+                    failure_code = NULL,
+                    updated_at = %(now)s,
+                    completed_at = NULL
+                FROM candidate
+                WHERE jobs.cleanup_id = candidate.cleanup_id
+                RETURNING jobs.cleanup_id, jobs.backend, jobs.owner_id,
+                          jobs.document_id, jobs.document_version_id, jobs.status,
+                          jobs.attempt_count, jobs.max_attempts, jobs.next_attempt_at,
+                          jobs.lease_token, jobs.lease_expires_at, jobs.failure_code,
+                          jobs.created_at, jobs.updated_at, jobs.completed_at
+                """,
+                {
+                    "now": now,
+                    "lease_token": self.id_factory("cleanup_lease"),
+                    "lease_expires_at": now + timedelta(seconds=lease_seconds),
+                },
+            )
+            self._commit()
+            return None if row is None else _cleanup_from_row(row)
+        except Exception:
+            self._rollback()
+            raise
+
+    def complete_cleanup(
+        self, *, cleanup_id: str, lease_token: str
+    ) -> CleanupJobV1:
+        """Complete only the exact currently leased cleanup attempt."""
+
+        now = self.clock()
+        try:
+            row = self._execute_one(
+                """-- complete_index_cleanup_v1
+                UPDATE rag_index_cleanup_jobs SET
+                    status = 'SUCCEEDED',
+                    lease_token = NULL,
+                    lease_expires_at = NULL,
+                    failure_code = NULL,
+                    updated_at = %(now)s,
+                    completed_at = %(now)s
+                WHERE cleanup_id = %(cleanup_id)s
+                  AND status = 'RUNNING'
+                  AND lease_token = %(lease_token)s
+                RETURNING cleanup_id, backend, owner_id, document_id,
+                          document_version_id, status, attempt_count, max_attempts,
+                          next_attempt_at, lease_token, lease_expires_at,
+                          failure_code, created_at, updated_at, completed_at
+                """,
+                {
+                    "cleanup_id": cleanup_id,
+                    "lease_token": lease_token,
+                    "now": now,
+                },
+            )
+            if row is None:
+                raise IdentityConflictError("cleanup lease is stale or does not exist")
+            job = _cleanup_from_row(row)
+            self._commit()
+            return job
+        except Exception:
+            self._rollback()
+            raise
+
+    def record_cleanup_failure(
+        self,
+        *,
+        cleanup_id: str,
+        lease_token: str,
+        failure_code: str,
+        retry_at: datetime,
+    ) -> CleanupJobV1:
+        """Persist retry or terminal failure without exposing raw exception text."""
+
+        if not _CONTRACT_ID_PATTERN.fullmatch(failure_code):
+            raise ValueError("cleanup failure_code must be a stable contract ID")
+        if retry_at.tzinfo is None or retry_at.utcoffset() is None:
+            raise ValueError("cleanup retry_at must include a timezone")
+        now = self.clock()
+        try:
+            row = self._execute_one(
+                """-- record_index_cleanup_failure_v1
+                UPDATE rag_index_cleanup_jobs SET
+                    status = CASE
+                        WHEN attempt_count >= max_attempts THEN 'FAILED'
+                        ELSE 'RETRY'
+                    END,
+                    next_attempt_at = %(retry_at)s,
+                    lease_token = NULL,
+                    lease_expires_at = NULL,
+                    failure_code = %(failure_code)s,
+                    updated_at = %(now)s,
+                    completed_at = CASE
+                        WHEN attempt_count >= max_attempts THEN %(now)s
+                        ELSE NULL
+                    END
+                WHERE cleanup_id = %(cleanup_id)s
+                  AND status = 'RUNNING'
+                  AND lease_token = %(lease_token)s
+                RETURNING cleanup_id, backend, owner_id, document_id,
+                          document_version_id, status, attempt_count, max_attempts,
+                          next_attempt_at, lease_token, lease_expires_at,
+                          failure_code, created_at, updated_at, completed_at
+                """,
+                {
+                    "cleanup_id": cleanup_id,
+                    "lease_token": lease_token,
+                    "failure_code": failure_code,
+                    "retry_at": retry_at,
+                    "now": now,
+                },
+            )
+            if row is None:
+                raise IdentityConflictError("cleanup lease is stale or does not exist")
+            job = _cleanup_from_row(row)
+            self._commit()
+            return job
         except Exception:
             self._rollback()
             raise
