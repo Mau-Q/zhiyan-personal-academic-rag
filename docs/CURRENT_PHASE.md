@@ -160,13 +160,14 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 - 已对照最高方案第 10.3 节冻结阶段 2 差距：Hybrid 已实现但远程 Canary 无增益，Reranker 保持 `DEFER_RERANK` 且不冒充真实模型验证，引用/ACL/版本/定位门禁与 Claim 语义支持边界分开记账。
 - 已接入可选的真实 Ollama 生成器，不改变现有 Fake 默认路径和 RAG Answer 公共合同；生成器只消费检索后 Evidence，模型摘要、Prompt 和解码固定，模型漂移、非法 JSON、无引用或引用越界均失败关闭为 `DEGRADED` 证据卡。
 - 本机 `llama3.2:latest@a80c4f17acd5...b8b72` 真实模型 Canary 已通过：两次回答稳定、引用编号有效、无证据不调用模型、越权范围保持 403；执行边界为公开 Fixture Evidence，不冒充远程 PostgreSQL/ES/Milvus 实跑。
+- 用户在远程提交 `91aca5a` 使用同一冻结模型摘要完成 READY 真实生成恢复闭环：PostgreSQL READY + ES/Milvus RRF 返回 3 条 Evidence，Answer API `COMPLETED`、引用编号校验和两次稳定回放均通过；随后删除后 403 与 ES/Milvus/运行快照 3 项清理通过，稳定错误码为 `NONE`。脱敏报告 SHA-256 为 `E2231FADABB368209F976B2BAB99F4E1D841ACB3053C45A07B1ADDC7B386E937`，报告未保存回答或 Chunk 正文。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：阶段 2 的远程 READY 真实生成与完整 MVP 回放、真实 Reranker 消融、正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层；
+- 未完成能力：阶段 2 的固定普通科研问答验收包与模型选型、真实 Reranker 消融、正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -203,13 +204,13 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1 已完成，阶段 2 仍为 `IN_PROGRESS`。评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / LOCAL_PUBLIC_FIXTURE_REAL_OLLAMA_GENERATION_READY`。远程 v2 已证明 PDF/Chunk 持久化、PostgreSQL READY、ES/Milvus 物理路由、Answer API Evidence、失败恢复、删除后 403 和三路清理；真实生成目前只在本机公开 Fixture Evidence 上运行，远程 READY + 真实模型尚未验证。运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
+最高方案阶段 0、阶段 1 已完成，阶段 2 仍为 `IN_PROGRESS`。评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / REMOTE_READY_REAL_OLLAMA_GENERATION_PASS`。远程 v2 已证明 PDF/Chunk 持久化、PostgreSQL READY、ES/Milvus 物理路由、Answer API Evidence、真实生成稳定回放、失败恢复、删除后 403 和三路清理；运行时私有数据与报告继续只保留在被忽略的 `runtime/`。固定普通科研问答验收包、独立模型选型和真实 Reranker 消融仍未完成。
 
 ## Next gate
 
-1. **远程 READY 真实生成：** 由用户在既有 4090 环境用冻结模型摘要运行隔离 Canary，复用 PostgreSQL READY + ES/Milvus RRF Evidence，不修改检索参数；
+1. **独立模型选型 Gate：** 固定同一 Evidence、Prompt、结构化输出和解码边界，只比较 `llama3.2:latest` 与一个 7B～14B 中文科研指令候选；允许直接调用模型服务 API，但不得修改检索参数或同时引入第二个候选；
 2. **阶段 2 验收包：** 在指定文档与普通学术问答上记录真实生成、引用、ACL、版本和定位的稳定回放，并保持 Hybrid 14/15 未胜 ES 的原始结论；
-3. **Reranker 独立 Gate：** 只有冻结 Baseline 出现可测排序缺口时，才单独验证一个 Cross-Encoder；不与生成、MinIO、OCR 或性能变量混改。
+3. **Reranker 独立 Gate：** 只有冻结 Baseline 出现可测排序缺口时，才单独验证一个 Cross-Encoder；不与生成、模型选型、MinIO、OCR 或性能变量混改。
 
 ## Prohibited shortcuts
 

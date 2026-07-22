@@ -58,11 +58,13 @@ make real-generation-canary
 
 公开 Fixture 的真实模型 Canary 证明生成变量可运行，但不冒充远程 PostgreSQL/ES/Milvus 实跑。源码已把同一生成器注入点接在 `online_remote_rrf` 返回的 READY Evidence 之后，并由专项测试证明生成器不能先于在线检索和权限门禁消费内容。
 
+远程恢复闭环已由用户在提交 `91aca5a` 完成：同一冻结模型摘要消费 PostgreSQL READY + ES/Milvus RRF 返回的 3 条 Evidence，Answer API 为 `COMPLETED`，引用编号校验与两次稳定回放通过；随后删除后 403、ES/Milvus/运行快照 3 项清理通过。脱敏报告 SHA-256 为 `E2231FADABB368209F976B2BAB99F4E1D841ACB3053C45A07B1ADDC7B386E937`，稳定错误码为 `NONE`，报告不含回答或 Chunk 正文。
+
 ## 4. 阶段 2 剩余差距
 
-- 在用户操作的远程环境中，用扩展后的隔离 Stage 1 Canary 和同一模型摘要，对 PostgreSQL READY + ES/Milvus RRF Evidence 完成两次稳定真实回放；报告只新增生成身份、回答哈希和引用门禁，不保存回答正文；
+- 用冻结 Evidence、Prompt、结构化输出和解码参数建立独立模型选型 Gate，只比较当前 `llama3.2:latest` 与一个 7B～14B 中文科研指令候选；可直接调用模型服务 API，但不得改动检索参数或同时比较多个候选；
 - 在冻结的指定文档与普通学术问答样本上记录真实生成、引用、版本和定位结果；
 - 如要满足“固定 Reranker 增益验证”的字面退出条件，需先出现可测排序缺口，再单独接入一个 Cross-Encoder 做保留/回退实验；当前不得与生成变量一起引入；
 - Claim 语义支持、冲突处理、正式 MinIO、OCR 和目标规模性能继续由各自后续 Gate 跟踪。
 
-阶段 2 因此仍为 `IN_PROGRESS/PARTIAL`，本 Gate 只把“没有真实生成模型”推进为“本地真实生成已验证，远程 READY 闭环待用户执行”。
+阶段 2 因此仍为 `IN_PROGRESS/PARTIAL`。远程 READY 真实生成闭环已经完成；下一步只推进单变量模型选型与固定普通科研问答验收，不把它们与 Reranker、MinIO/OCR 或性能变量混合。

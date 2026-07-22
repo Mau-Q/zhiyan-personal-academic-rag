@@ -442,10 +442,12 @@
     },
     {
       "id": "real_model_integration",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "SHARED",
       "evidence": [
         "backend/rag/generation.py",
+        "scripts/run_stage1_remote_canary.py",
+        "tests/validation/test_stage1_remote_canary_script.py",
         "docs/PHASE_2_GAP_FREEZE.md",
         "docs/CURRENT_PHASE.md"
       ]
