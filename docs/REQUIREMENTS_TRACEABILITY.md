@@ -34,17 +34,17 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | ID | 最高方案要求 | 当前状态 | 已有证据 | 关键缺口 |
 |---|---|---|---|---|
 | SR-01 | 冻结个人库知识源、用户范围、语料量、并发、硬件预算和 SLO | `COMPLETE` | `machine/phase_zero_scope_resource_slo.json`：500 篇标称/1000 篇验证上界、0.2 QPS、问答并发 2、入库并发 1、单台既有主机预算及阶段 1 SLO；`docs/PHASE_0_SCOPE_RESOURCE_SLO.md` | 数值已冻结为阶段 1 验收目标，但目标规模性能、真实 LLM 延迟和 PostgreSQL `owner_id` 生命周期仍待实测，不冒充已达标 |
-| SR-02 | PostgreSQL 作为 `owner_id`、主键适配和生命周期唯一事实源 | `PARTIAL` | `backend/storage/` 已实现 PostgreSQL Schema、owner-scoped 映射、幂等版本/任务、生命周期 CAS、清理租约和单活动版本约束；本地 PDF 准备、双索引结果、物理清理及 Answer API READY 门禁已接入 | 远程 PostgreSQL 尚未应用迁移或实跑；PDF/Chunk 运行存储和真实在线权限复测尚未完成 |
-| SR-03 | PDF/OCR、章节页码、三种 Chunk Baseline、版本和幂等入库 | `PARTIAL` | 三种切片策略已完成同源受控对比；本地持久化准备、双索引协调、ES/Milvus 版本写入及持久化清理已覆盖 PDF SHA、owner 映射、原子版本/任务绑定、页码、Chunk 进度、重放和单侧失败恢复 | 远程 PostgreSQL/ES/Milvus 实跑、PDF/Chunk 运行存储、OCR、MinIO 和物理删除故障验证未完成 |
-| SR-04 | Elasticsearch 论文级和 Chunk 级 BM25 | `PARTIAL` | 远程 ES 9.4.3；严格 Mapping、ACL、BM25 适配器；316 Chunk Canary 14/15；175 题严格通过 85/175；本地隐藏版本写入器及 PostgreSQL READY 物理路由支持身份、数量、活动状态和候选复核 | 新写入器与在线路由远程复测、中文分词选型和性能基线未完成 |
-| SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `PARTIAL` | 本地精确向量基线；远程 Milvus 2.6.18 + BGE-M3；固定源/模型身份、COSINE 和 HNSW 工程参数；316 Chunk Canary 12/15；175 题严格通过 109/175；本地版本写入器、清理 Worker 和 PostgreSQL READY 多 Collection 路由支持身份、模型、向量及活动状态复核 | 新写入器、物理清理与在线路由远程复测和性能基线未完成；不以远程 500 题或调参作为当前门禁 |
+| SR-02 | PostgreSQL 作为 `owner_id`、主键适配和生命周期唯一事实源 | `PARTIAL` | `backend/storage/` 已实现 Schema、owner-scoped 映射、幂等版本/任务、生命周期 CAS、清理租约和单活动版本约束；远程 PostgreSQL 18.4 已在 `5de784c` 应用三个迁移并通过 READY、INACTIVE、清理和迁移重放 | PDF/Chunk 运行存储和基于持久化快照的远程在线权限复测尚未完成 |
+| SR-03 | PDF/OCR、章节页码、三种 Chunk Baseline、版本和幂等入库 | `PARTIAL` | 三种切片策略已完成同源受控对比；本地合同覆盖 PDF SHA、owner 映射、原子版本/任务绑定、页码、Chunk 进度和重放；远程合成 PDF 4 Chunk 已通过 PostgreSQL/ES/Milvus 发布、单侧失败重放和物理删除 | PDF/Chunk 运行存储、OCR 与 MinIO 正式接入未完成 |
+| SR-04 | Elasticsearch 论文级和 Chunk 级 BM25 | `PARTIAL` | 远程 ES 9.4.3；严格 Mapping、ACL、BM25 适配器；316 Chunk Canary 14/15；175 题严格通过 85/175；版本写入器已在远程通过隐藏 Index 发布、READY 身份对账、失败后重用和物理删除 | 基于持久化快照的 Answer API 在线复测、中文分词选型和性能基线未完成 |
+| SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `PARTIAL` | 本地精确向量基线；远程 Milvus 2.6.18 + BGE-M3；316 Chunk Canary 12/15；175 题严格通过 109/175；版本 Collection 已在远程通过模型/向量/活动身份对账、失败恢复和物理删除 | 基于持久化快照的 Answer API 在线复测和性能基线未完成；不以远程 500 题或调参作为当前门禁 |
 | SR-06 | 基础规范化和最小路由；改写、多查询和多跳按失败后置 | `PARTIAL` | API 问题输入合同与默认检索链路 | 最小路由合同尚未冻结；高级能力继续保持后置 |
 | SR-07 | ES/Milvus 并行、RRF、去重、多样性、Cross-Encoder 重排 | `PARTIAL` | 本地 SQLite BM25 + BGE-M3 RRF 15/15；ES/Milvus 统一候选接口、版本化配置与远程 RRF Canary 14/15，与 ES 单路持平 | 去重/多样性、重排和扩展消融未完成；当前无净增益，暂缓增加复杂度 |
 | SR-08 | 证据上下文、真实 LLM、强制引用、校验与拒答 | `PARTIAL` | Evidence/Citation、`NO_EVIDENCE`、Fake LLM Answer API | 真实模型、主张支持校验和冲突处理未实现 |
 | SR-09 | 问答 API、SSE、内部 Evidence 合同和鉴权原文定位 | `PARTIAL` | 非流式 Answer API、SSE 文件合同、PDF 页码 | SSE 运行、独立 Evidence 消费和鉴权预览未实现；对外 Agent Evidence API 保持后置 |
 | SR-10 | Trace、反馈、指标、告警和运营闭环 | `PARTIAL` | Trace 合同与评测报告结构 | 持久化、反馈 API、看板、告警和难例回流未实现 |
 | SR-11 | 固定 175 题 MVP 初始集、约 500 条稳定迭代集、800～1500 条正式验收集 | `PARTIAL` | 175 题已按 `105/35/35` 拆分完成人工校验，166 条原样通过、9 条修订、4 条专家签署；ES 85/175、Milvus 109/175；500 题四路工程结果保留 | 无证据校准和安全策略层缺口需分流；800～1500 题正式独立盲测尚未进入 |
-| SR-12 | 性能、容量、故障、安全、灰度和回滚 | `NOT_STARTED` | 本地单元/合同/权限边界测试 | 远程资源、目标规模压测、故障注入、专项安全与发布未验收 |
+| SR-12 | 性能、容量、故障、安全、灰度和回滚 | `PARTIAL` | 本地单元/合同/权限边界测试；远程已验证 Embedding 单侧不可达时不进入 READY，同 Run ID 恢复后双索引对账与物理清理成功 | 目标规模压测、更完整的故障矩阵、专项安全、灰度和发布回滚未验收 |
 
 `COMPLETE`、`PARTIAL`、`NOT_STARTED` 均按最高方案的完整口径判断，不用仓库内部里程碑结果替代。
 
@@ -53,7 +53,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | 方案阶段 | 当前判断 | 说明 |
 |---|---|---|
 | 阶段 0：范围与 Baseline | `COMPLETE` | 175 题人工校验、ES/Milvus 同集单路 Baseline、三种 Chunk 受控 Baseline、单用户范围/资源/SLO 及数据身份/生命周期目标合同均已冻结；冻结目标不等于运行时达标 |
-| 阶段 1：数据与索引最小闭环 | `IN_PROGRESS` | 本地 PostgreSQL Schema、幂等 PDF 准备、双索引状态协调、ES/Milvus 版本写入、持久化物理清理及在线 READY 权限门禁已实现；远程迁移/实跑、运行存储和真实故障验收未完成 |
+| 阶段 1：数据与索引最小闭环 | `IN_PROGRESS` | PostgreSQL 迁移、幂等 PDF 准备、ES/Milvus 版本写入、READY 对账、单侧失败重放、失效与物理清理已在远程合成 Canary 实跑通过；PDF/Chunk 运行存储和基于持久化快照的远程 Answer API 仍未完成 |
 | 阶段 2：基础 RAG MVP | `PARTIAL` | 非流式 API、Evidence、拒答和远程 RRF Canary 可运行，但仍无真实生成模型、完整去重/多样性和生产验收 |
 | 阶段 3：针对失败类型增强 | `NOT_STARTED` | 待基于人工校验 Baseline 的真实失败决定是否引入改写、拆解、去重、多样性或重排 |
 | 阶段 4：Claim–Evidence 可靠性 | `NOT_STARTED` | 尚未建立结构化 Claim、Claim–Evidence 映射及确定性支持检查 |
@@ -63,7 +63,6 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 
 方案阶段 1 的下一门禁是：
 
-1. **PostgreSQL 最小事实源：** 本地 Schema、适配器和原子任务状态已完成；由用户在隔离远程 PostgreSQL 应用迁移并返回脱敏证据；
-2. **索引闭环：** 本地可重放准备、状态协调、ES/Milvus 版本写入、持久化清理、PostgreSQL READY 多版本在线路由及三库对账已完成；固定本地 Canary 与一次性远程验证包已就绪，下一步由用户远程执行并返回脱敏证据；
-3. **兼容边界：** 现有 `ChunkRecordV1.version_id` 由适配层映射到 `document_version_id`，不破坏 V1 Answer API；
-4. **性能后置：** 闭环完成后再按 500/1000 篇冻结规模执行容量和延迟验收；当前仍不增加 RRF 调参、重排或真实 LLM。
+1. **运行存储：** 远程事实源与双索引生命周期已验收；下一步冻结并实现 PDF 原文对象和 Chunk 快照的最小持久化合同；
+2. **在线实跑：** 运行存储就绪后，使用持久化快照复测 Answer API 的 PostgreSQL READY 权限、ES/Milvus 检索、删除/撤权和对账；
+3. **性能后置：** 数据与索引最小闭环完成后再按 500/1000 篇冻结规模执行容量和延迟验收；当前仍不增加 RRF 调参、重排或真实 LLM。

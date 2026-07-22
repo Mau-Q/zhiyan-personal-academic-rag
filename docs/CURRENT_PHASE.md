@@ -148,13 +148,16 @@ Phase ID：`source-phase1-data-index-minimal-loop-in-progress`
 - 完成本地在线 READY 可见性闭环：PostgreSQL 约束同一 owner/document 只有一个活动版本；Answer API 从服务端鉴权 owner 解析 `READY` 文档版本，逐版本核验确定性 ES Index、Milvus Collection、模型和活动 Chunk，再跨多版本统一 RRF。任何事实源、路由或候选身份无法证明时沿现有 403 合同失败关闭。
 - 完成阶段 1 本地集成对账门禁：对指定 owner/document 精确核对 PostgreSQL `READY`、源快照身份、ES 物理 Index 和 Milvus 物理 Collection，任一侧缺失或漂移整体失败关闭；固定 `make stage1-local-canary` 覆盖 50 项相关闭环测试。
 - 形成一次性远程验证包：用户在隔离远程主机按版本化清单执行迁移、双索引发布、READY 对账、删除失效、两个物理清理任务和单侧失败重放；报告不包含凭据、PDF/Chunk 正文或端点。
+- 用户已在远程提交 `5de784c` 执行阶段 1 基础设施 Canary：PostgreSQL 三个迁移首次 `APPLIED`、重放 `UNCHANGED`，合成 PDF 生成 4 个 Chunk，PostgreSQL `READY` 与 ES/Milvus 物理路由对账 `PASS`，删除后两个清理任务成功且在线不可见。
+- 同一远程 Canary 已验证单侧失败恢复：暂时使 Embedding 端点不可达后脚本以 `IndexLifecycleError` 和退出码 1 失败，PostgreSQL 查询证明版本未进入 `READY`；恢复端点并使用相同 Run ID 重放后整体 `PASS`，不停止稳定服务。
+- 远程脱敏报告 SHA-256：成功闭环 `D824BB4848050B20E4CB747BEC8F56D9B2F703F22991F06DAC89B912DF865DA0`，预期失败 `2AE22BBEA0E59FEB578129630916FDDD2672708BEC7BBB47A4DB57B8C42EAEF1`，同 ID 恢复 `5E365EE3D1B2B50A57B73DA3C9D003033FA18701209EBA9424B4E8AB593A66A7`；远程工作树干净，凭据已从 PowerShell 环境清除，报告保留在被忽略的 `runtime/`。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：远程 PostgreSQL 迁移与持久化 PDF 实跑、PDF/Chunk 运行存储、ES/Milvus 版本写入/物理清理/在线路由远程复测、目标规模性能验收、无证据校准、安全策略层和真实生成模型；
+- 未完成能力：PDF/Chunk 运行存储、基于持久化快照的远程 Answer API 实跑、OCR、目标规模性能验收、无证据校准、安全策略层和真实生成模型；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -190,14 +193,13 @@ Phase ID：`source-phase1-data-index-minimal-loop-in-progress`
 
 ## Current boundary
 
-最高方案阶段 0 已完成，当前进入阶段 1。当前最宽本地问答执行边界扩展为 `LOCAL_POSTGRES_READY_ROUTED_ES_MILVUS_RRF_FAKE_LLM`；评测执行边界仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。PostgreSQL 最小事实源、持久化 PDF 准备、双索引生命周期协调、ES/Milvus 版本写入器、持久化物理清理、在线 READY 权限路由及本地集成对账已就绪，远程验证包已准备但未执行；远程迁移/实跑、PDF/Chunk 运行存储、目标规模性能和真实生成模型尚未完成。运行时私有数据继续不进入 Git。
+最高方案阶段 0 已完成，当前仍为阶段 1 `IN_PROGRESS`。评测执行边界仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。PostgreSQL 迁移、owner-scoped 事实源、合成 PDF 持久化准备、ES/Milvus 版本写入、READY 对账、失败重放、删除失效和物理清理已在指定远程提交实跑通过；但 PDF/Chunk 运行存储和基于持久化快照的远程 Answer API 尚未完成，不以一次合成 Canary 冒充整个阶段 1 完成。运行时私有数据继续不进入 Git。
 
 ## Next gate
 
-1. **用户远程验证：** 本地集成对账、固定 Canary 和版本化验证包已完成；下一步由用户按 `deploy/remote/stage1-validation/README.md` 在隔离远程主机一次执行迁移、成功闭环和单侧失败重放，并返回脱敏 JSON 与 SHA-256；
-2. **阶段判定：** 根据远程原始证据判定 PostgreSQL、ES、Milvus、READY、失效和物理清理；远程证据返回前不宣称阶段 1 完成；
-3. **兼容迁移：** 持久化准备已将 `document_version_id/owner_id` 适配到 legacy Chunk 字段；在线 Answer API 已保持 V1 请求/响应合同并切换到 PostgreSQL READY 权限门禁；
-4. **性能与复杂度：** 闭环完成后再按冻结规模验收性能；当前不跑 175 题 RRF、不增加重排或真实 LLM。
+1. **PDF/Chunk 运行存储：** 冻结最小存储身份、原文对象、Chunk 快照、owner/version 谱系、幂等和删除合同，完成一个可审计的持久化闭环；
+2. **在线可见性实跑：** 在持久化快照上复用已验证的 PostgreSQL READY 与物理路由，执行远程 Answer API 检索、删除/撤权后不可见和对账；
+3. **阶段判定：** 只有运行存储与在线实跑证据回收后才重新判定阶段 1；性能仍按冻结规模后置，当前不增加 RRF 调参、重排或真实 LLM。
 
 ## Prohibited shortcuts
 

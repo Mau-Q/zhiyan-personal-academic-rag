@@ -296,7 +296,7 @@
     },
     {
       "id": "persistent_pdf_ingestion_preparation",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "A",
       "evidence": [
         "backend/ingestion/persistent.py",
@@ -307,7 +307,7 @@
     },
     {
       "id": "postgresql_fact_source",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "A",
       "evidence": [
         "backend/storage/models.py",
@@ -320,7 +320,7 @@
     },
     {
       "id": "dual_index_lifecycle_coordination",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "A",
       "evidence": [
         "backend/ingestion/index_lifecycle.py",
@@ -332,7 +332,7 @@
     },
     {
       "id": "elasticsearch_version_writer",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "A",
       "evidence": [
         "backend/ingestion/elasticsearch_writer.py",
@@ -344,7 +344,7 @@
     },
     {
       "id": "milvus_version_writer",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "A",
       "evidence": [
         "backend/ingestion/milvus_writer.py",
@@ -357,7 +357,7 @@
     },
     {
       "id": "persistent_index_cleanup",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "A",
       "evidence": [
         "backend/ingestion/cleanup.py",
@@ -384,7 +384,7 @@
     },
     {
       "id": "stage1_reconciliation_and_remote_canary",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "A",
       "evidence": [
         "backend/validation/stage1.py",
