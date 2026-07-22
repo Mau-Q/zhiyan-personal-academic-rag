@@ -57,6 +57,20 @@ _SANITIZED_RUNTIME_CODES = frozenset(
         "READY_REPLAY_IDENTITY_MISMATCH",
         "READY_REPLAY_PDF_OBJECT_MISSING",
         "PERSISTED_SNAPSHOT_ANSWER_API_FAILED",
+        "PERSISTED_SNAPSHOT_ANSWER_HTTP_FAILED",
+        "PERSISTED_SNAPSHOT_ANSWER_NOT_COMPLETED",
+        "PERSISTED_SNAPSHOT_ANSWER_EVIDENCE_MISSING",
+        "REAL_GENERATION_INITIAL_FAILED_CLOSED",
+        "REAL_GENERATION_INITIAL_CITATION_MAPPING_FAILED",
+        "REAL_GENERATION_INITIAL_CITATION_GATE_FAILED",
+        "REAL_GENERATION_REPLAY_HTTP_FAILED",
+        "REAL_GENERATION_REPLAY_NOT_COMPLETED",
+        "REAL_GENERATION_REPLAY_EVIDENCE_MISSING",
+        "REAL_GENERATION_REPLAY_FAILED_CLOSED",
+        "REAL_GENERATION_REPLAY_CITATION_MAPPING_FAILED",
+        "REAL_GENERATION_REPLAY_CITATION_GATE_FAILED",
+        "REAL_GENERATION_REPLAY_ANSWER_MISMATCH",
+        "REAL_GENERATION_REPLAY_CITATION_MISMATCH",
         "CLEANUP_DID_NOT_COMPLETE",
         "RUNTIME_SNAPSHOT_CLEANUP_FAILED",
         "INACTIVE_VERSION_REMAINED_VISIBLE",
@@ -129,6 +143,52 @@ def _sanitized_error_code(exc: Exception) -> str:
     if type(exc) is RuntimeError and str(exc) in _SANITIZED_RUNTIME_CODES:
         return str(exc)
     return type(exc).__name__
+
+
+def _warnings_contain(payload: dict[str, object], suffix: str) -> bool:
+    warnings = payload.get("warnings")
+    return isinstance(warnings, list) and any(
+        isinstance(warning, str) and warning.endswith(suffix) for warning in warnings
+    )
+
+
+def _require_answer_api_gate(
+    *,
+    status_code: int,
+    payload: dict[str, object],
+    generation_enabled: bool,
+    replay: bool = False,
+) -> None:
+    if replay:
+        prefix = "REAL_GENERATION_REPLAY"
+    else:
+        prefix = "PERSISTED_SNAPSHOT_ANSWER"
+    if status_code != 200:
+        raise RuntimeError(f"{prefix}_HTTP_FAILED")
+    if payload.get("status") != "COMPLETED":
+        if generation_enabled and _warnings_contain(
+            payload, "_FAILED_CLOSED_EVIDENCE_ONLY"
+        ):
+            generation_phase = "REPLAY" if replay else "INITIAL"
+            raise RuntimeError(f"REAL_GENERATION_{generation_phase}_FAILED_CLOSED")
+        if generation_enabled and _warnings_contain(
+            payload, "_CITATION_MAPPING_FAILED_CLOSED"
+        ):
+            generation_phase = "REPLAY" if replay else "INITIAL"
+            raise RuntimeError(
+                f"REAL_GENERATION_{generation_phase}_CITATION_MAPPING_FAILED"
+            )
+        raise RuntimeError(f"{prefix}_NOT_COMPLETED")
+    evidence = payload.get("evidence")
+    if not isinstance(evidence, list) or not evidence:
+        raise RuntimeError(f"{prefix}_EVIDENCE_MISSING")
+    if generation_enabled and not _warnings_contain(
+        payload, "_CITATION_IDS_VALIDATED"
+    ):
+        generation_phase = "REPLAY" if replay else "INITIAL"
+        raise RuntimeError(
+            f"REAL_GENERATION_{generation_phase}_CITATION_GATE_FAILED"
+        )
 
 
 def main() -> int:
@@ -315,19 +375,11 @@ def main() -> int:
             },
         )
         answer_payload = answer_response.json()
-        if (
-            answer_response.status_code != 200
-            or answer_payload.get("status") != "COMPLETED"
-            or not answer_payload.get("evidence")
-            or (
-                generation_provider is not None
-                and not any(
-                    "CITATION_IDS_VALIDATED" in warning
-                    for warning in answer_payload.get("warnings", [])
-                )
-            )
-        ):
-            raise RuntimeError("PERSISTED_SNAPSHOT_ANSWER_API_FAILED")
+        _require_answer_api_gate(
+            status_code=answer_response.status_code,
+            payload=answer_payload,
+            generation_enabled=generation_provider is not None,
+        )
         generation_stable_replay = False
         if generation_provider is not None:
             replay_response = answer_client.post(
@@ -339,14 +391,17 @@ def main() -> int:
                 },
             )
             replay_payload = replay_response.json()
-            generation_stable_replay = (
-                replay_response.status_code == 200
-                and replay_payload.get("status") == "COMPLETED"
-                and replay_payload.get("answer") == answer_payload.get("answer")
-                and replay_payload.get("citations") == answer_payload.get("citations")
+            _require_answer_api_gate(
+                status_code=replay_response.status_code,
+                payload=replay_payload,
+                generation_enabled=True,
+                replay=True,
             )
-            if not generation_stable_replay:
-                raise RuntimeError("PERSISTED_SNAPSHOT_ANSWER_API_FAILED")
+            if replay_payload.get("answer") != answer_payload.get("answer"):
+                raise RuntimeError("REAL_GENERATION_REPLAY_ANSWER_MISMATCH")
+            if replay_payload.get("citations") != answer_payload.get("citations"):
+                raise RuntimeError("REAL_GENERATION_REPLAY_CITATION_MISMATCH")
+            generation_stable_replay = True
 
         scheduler = PersistentIndexCleanupScheduler(repository)
         inactivation = inactivate_and_schedule_cleanup(

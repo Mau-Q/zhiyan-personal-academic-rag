@@ -9,6 +9,7 @@ from backend.ingestion.persistent import RuntimeSnapshotPersistenceError
 from scripts.run_stage1_remote_canary import (
     EXPECTED_CLEANUP_JOBS,
     REPORT_SCHEMA_VERSION,
+    _require_answer_api_gate,
     _sanitized_error_code,
     build_parser,
 )
@@ -79,6 +80,12 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
             ),
             "PERSISTED_SNAPSHOT_ANSWER_API_FAILED",
         )
+        self.assertEqual(
+            _sanitized_error_code(
+                RuntimeError("REAL_GENERATION_INITIAL_FAILED_CLOSED")
+            ),
+            "REAL_GENERATION_INITIAL_FAILED_CLOSED",
+        )
         self.assertEqual(_sanitized_error_code(ValueError("secret")), "ValueError")
 
     def test_generation_model_and_digest_must_be_supplied_together(self):
@@ -107,6 +114,54 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("GENERATION_IDENTITY_INCOMPLETE", result.stderr)
         self.assertNotIn("does-not-exist", result.stderr)
+
+    def test_generation_failure_is_classified_without_exposing_warning(self):
+        with self.assertRaisesRegex(
+            RuntimeError, "^REAL_GENERATION_INITIAL_FAILED_CLOSED$"
+        ):
+            _require_answer_api_gate(
+                status_code=200,
+                payload={
+                    "status": "DEGRADED",
+                    "evidence": [{"evidence_id": "evidence_001"}],
+                    "warnings": [
+                        "REAL_GENERATION_OLLAMA_LLAMA3_2_LATEST_"
+                        "A80C4F17ACD5_ACADEMIC_EVIDENCE_ANSWER_V1_"
+                        "FAILED_CLOSED_EVIDENCE_ONLY"
+                    ],
+                },
+                generation_enabled=True,
+            )
+
+    def test_generation_replay_citation_gate_has_stable_error_code(self):
+        with self.assertRaisesRegex(
+            RuntimeError, "^REAL_GENERATION_REPLAY_CITATION_GATE_FAILED$"
+        ):
+            _require_answer_api_gate(
+                status_code=200,
+                payload={
+                    "status": "COMPLETED",
+                    "evidence": [{"evidence_id": "evidence_001"}],
+                    "warnings": ["UNEXPECTED_WARNING"],
+                },
+                generation_enabled=True,
+                replay=True,
+            )
+
+    def test_generation_gate_accepts_completed_validated_evidence(self):
+        _require_answer_api_gate(
+            status_code=200,
+            payload={
+                "status": "COMPLETED",
+                "evidence": [{"evidence_id": "evidence_001"}],
+                "warnings": [
+                    "REAL_GENERATION_OLLAMA_LLAMA3_2_LATEST_"
+                    "A80C4F17ACD5_ACADEMIC_EVIDENCE_ANSWER_V1_"
+                    "CITATION_IDS_VALIDATED"
+                ],
+            },
+            generation_enabled=True,
+        )
 
 
 if __name__ == "__main__":
