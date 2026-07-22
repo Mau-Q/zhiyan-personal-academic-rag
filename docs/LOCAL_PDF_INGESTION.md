@@ -58,10 +58,12 @@
 
 删除、撤权和过期使用 `inactivate_and_schedule_cleanup`：先提交 PostgreSQL `INACTIVE`，再失效查询可见性、将两路索引标记为非活动，最后分别排入异步物理清理。后续清理失败只会形成待处理结果，不会回滚事实源或重新激活版本。
 
-Elasticsearch 侧已实现 `ElasticsearchVersionIndexWriter`：物理索引名由 owner/version 身份哈希确定，不暴露原始 ID；首次写入创建严格 Mapping 和隐藏物理索引，重放时核对 owner、document、version、源 Chunk 指纹、数量及 Mapping，允许补齐部分写入但拒绝来源、配置、外来 Chunk 或超量漂移。激活、失活和物理删除均再次核对 owner/version 身份。该写入器不会创建在线 Alias，因此本地激活不等于在线可检索。
+Elasticsearch 侧已实现 `ElasticsearchVersionIndexWriter`：物理索引名由 owner/version 身份哈希确定，不暴露原始 ID；首次写入创建严格 Mapping 和隐藏物理索引，重放时核对 owner、document、version、源 Chunk 指纹、数量及 Mapping，允许补齐部分写入但拒绝来源、配置、外来 Chunk 或超量漂移。激活、失活和物理删除均再次核对 owner/version 身份。在线路由不依赖独立 Alias 真相，而是在 PostgreSQL 返回精确 `READY` 版本后再次核验隐藏物理索引的身份、数量和全部活动状态。
 
-Milvus 侧已实现 `MilvusVersionIndexWriter`：每个 owner/version 使用身份哈希确定且未接入在线路由的独立 Collection；描述固定源 Chunk、Embedding provider/model/digest、维度、COSINE/HNSW 参数和完整向量指纹。完整重放只核验已有 payload 与向量，不重复调用 Embedding；部分写恢复先重新计算预期向量并核验已有行，再只 Upsert 缺失行。激活/失活同步更新标量字段和完整 payload，物理删除再次核验 Collection 身份。
+Milvus 侧已实现 `MilvusVersionIndexWriter`：每个 owner/version 使用身份哈希确定的独立 Collection；描述固定源 Chunk、Embedding provider/model/digest、维度、COSINE/HNSW 参数和完整向量指纹。完整重放只核验已有 payload 与向量，不重复调用 Embedding；部分写恢复先重新计算预期向量并核验已有行，再只 Upsert 缺失行。激活/失活同步更新标量字段和完整 payload，物理删除再次核验 Collection 身份。在线路由再次核验 Collection 身份、Embedding 模型和全部活动行。
 
 持久化物理清理由 `PersistentIndexCleanupScheduler` 和 `PersistentIndexCleanupWorker` 完成。`0002_cleanup_queue.sql` 只允许已进入 `INACTIVE` 的 owner/document/version 入队；同一后端与版本幂等复用同一任务。Worker 先恢复过期租约，再通过 `FOR UPDATE SKIP LOCKED` 独占一项到期任务，成功后提交 `SUCCEEDED`，失败时仅记录稳定错误码并按有界指数退避进入 `RETRY`，达到最大次数后进入 `FAILED`。删除已经不存在的物理对象仍按成功处理；结果持久化失败则保留租约，等待过期恢复，不会重新激活事实源。
 
-当前尚未连接远程 PostgreSQL、Elasticsearch、Milvus 或 Embedding 服务，未实现在线 Alias/Collection 与 READY 路由或 Answer API 的 PostgreSQL 可见性门禁，也没有将任何真实版本提升为 `READY`。
+`PostgresReadyRouteResolver` 只接收 PostgreSQL `READY + is_active` 版本，并要求请求中的每个 `document_id` 都属于服务端鉴权 owner；`OnlineVersionRrfRetriever` 对每个 READY 版本选择确定性 ES Index 与 Milvus Collection，逐路再次注入 owner、document 和 `is_active` 过滤，再按后端局部名次统一 RRF。Answer API 的 `online_remote_rrf` 装配只接受服务端 `authenticated_owner_id`，PostgreSQL、物理路由或候选身份任一无法证明时返回现有 403 合同，不回退到静态 Fixture 权限。
+
+当前尚未连接远程 PostgreSQL、Elasticsearch、Milvus 或 Embedding 服务，也没有将任何真实版本提升为 `READY`。本地在线门禁仍依赖调用方提供与版本指纹一致的 Chunk 快照；PDF/Chunk 运行存储和真实服务复测继续待远程集成 Gate。

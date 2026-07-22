@@ -16,18 +16,21 @@
 - `PROCESSING` 允许通过新修订号记录解析和 Chunk 进度，但不因局部完成变为可检索；
 - 索引失败状态与任务失败在同一事务内提交，双索引成功后的 `READY` 与任务 `SUCCEEDED` 也原子提交；
 - 解析、Chunk 和向量时间齐全，且 ES/Milvus 均为 `READY` 时才能进入 `READY`；
-- 删除、撤权或过期版本先进入终态 `INACTIVE`；在线查询始终带 `owner_id AND is_active=true`。
+- 删除、撤权或过期版本先进入终态 `INACTIVE`；在线查询始终带 `owner_id AND is_active=true`；
+- 同一 owner/document 最多一个活动版本；在线解析显式要求 PostgreSQL `READY`、双索引 `READY`、未删除且未过期。
 
 ## 仓库入口
 
 - SQL：`backend/storage/migrations/0001_fact_source.sql`；
 - 清理队列迁移：`backend/storage/migrations/0002_cleanup_queue.sql`；
+- 在线唯一活动版本迁移：`backend/storage/migrations/0003_online_ready_visibility.sql`；
 - 迁移器：`python -m backend.storage.migrate`；
 - 仓储适配器：`backend/storage/postgres.py`；
 - 双索引生命周期协调：`backend/ingestion/index_lifecycle.py`；
 - Elasticsearch 隐藏版本索引写入器：`backend/ingestion/elasticsearch_writer.py`；
 - Milvus 脱离在线路由的版本写入器：`backend/ingestion/milvus_writer.py`；
 - 持久化物理清理调度与 Worker：`backend/ingestion/cleanup.py`；
+- PostgreSQL READY 在线路由：`backend/retrieval/online.py`；
 - 运行时模型：`backend/storage/models.py`；
 - 本地门禁：`make storage-test`。
 
@@ -56,5 +59,5 @@ Remove-Item Env:DATABASE_URL
 1. 用户在隔离的远程 PostgreSQL 上应用迁移并返回脱敏输出；
 2. 在远程 PostgreSQL 上复测本地已完成的持久化 PDF 准备编排；
 3. 在远程 Elasticsearch/Milvus 复测本地版本写入器、清理租约恢复和物理删除；
-4. 将在线 Answer API 切换到 PostgreSQL READY 可见性门禁；
+4. 在真实服务上复测 Answer API 的 PostgreSQL READY 可见性和多版本路由；
 5. 完成单侧失败补偿与删除/撤权先失效、再异步物理清理的远程故障验证。

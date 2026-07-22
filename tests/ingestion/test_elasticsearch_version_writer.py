@@ -282,6 +282,32 @@ class ElasticsearchVersionIndexWriterTests(unittest.TestCase):
             )
         )
 
+    def test_online_route_requires_every_owned_chunk_to_be_active(self):
+        self.stage()
+        name = self.writer.physical_index_name(
+            owner_id=OWNER_ID,
+            document_version_id=VERSION_ID,
+        )
+        self.writer.activate_version(
+            owner_id=OWNER_ID,
+            document_version_id=VERSION_ID,
+        )
+
+        route = self.writer.verify_online_version(
+            owner_id=OWNER_ID,
+            document_id=DOCUMENT_ID,
+            document_version_id=VERSION_ID,
+        )
+
+        self.assertEqual(route, name)
+        self.transport.indexes[name]["docs"]["chunk_001"]["is_active"] = False
+        with self.assertRaisesRegex(ElasticsearchIndexNotReadyError, "fully active"):
+            self.writer.verify_online_version(
+                owner_id=OWNER_ID,
+                document_id=DOCUMENT_ID,
+                document_version_id=VERSION_ID,
+            )
+
     def test_invalid_or_active_chunks_fail_before_transport_mutation(self):
         self.chunks[0]["is_active"] = True
 

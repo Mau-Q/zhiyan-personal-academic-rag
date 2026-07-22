@@ -166,6 +166,58 @@ class ElasticsearchVersionIndexWriter:
             is_active=True,
         )
 
+    def verify_online_version(
+        self,
+        *,
+        owner_id: str,
+        document_id: str,
+        document_version_id: str,
+    ) -> str:
+        """Return the physical route only when every owned Chunk is active."""
+
+        index_name = self.physical_index_name(
+            owner_id=owner_id,
+            document_version_id=document_version_id,
+        )
+        if not self.transport.index_exists(index_name):
+            raise ElasticsearchIndexNotReadyError(
+                "Elasticsearch online version index does not exist"
+            )
+        metadata = self._inspect_identity(
+            index_name=index_name,
+            owner_id=owner_id,
+            document_id=document_id,
+            document_version_id=document_version_id,
+        )
+        expected_count = int(metadata["chunk_count"])
+        self._verify_owned_count(
+            index_name=index_name,
+            owner_id=owner_id,
+            document_id=document_id,
+            document_version_id=document_version_id,
+            expected_count=expected_count,
+            allow_incomplete=False,
+        )
+        active_count = self._count(
+            index_name=index_name,
+            query={
+                "bool": {
+                    "filter": [
+                        *self._identity_query(
+                            owner_id=owner_id,
+                            document_version_id=document_version_id,
+                        )["bool"]["filter"],
+                        {"term": {"is_active": True}},
+                    ]
+                }
+            },
+        )
+        if active_count != expected_count:
+            raise ElasticsearchIndexNotReadyError(
+                "Elasticsearch online version is not fully active"
+            )
+        return index_name
+
     def deactivate_version(self, *, owner_id: str, document_version_id: str) -> None:
         index_name = self.physical_index_name(
             owner_id=owner_id,

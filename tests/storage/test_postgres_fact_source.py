@@ -28,6 +28,7 @@ from backend.storage.postgres import (
     ConcurrentLifecycleUpdateError,
     IdentityConflictError,
     LifecycleTransitionError,
+    PostgresFactSourceError,
     PostgresFactRepository,
 )
 
@@ -52,6 +53,11 @@ class ScriptedCursor:
         self.current_result = result
 
     def fetchone(self):
+        return self.current_result
+
+    def fetchall(self):
+        if not isinstance(self.current_result, list):
+            raise AssertionError("scripted fetchall result must be a list")
         return self.current_result
 
     def close(self) -> None:
@@ -236,8 +242,14 @@ class PostgreSQLMigrationTests(unittest.TestCase):
         self.assertIn("status = 'RUNNING'", cleanup_sql)
         self.assertIn("completed_at IS NOT NULL", cleanup_sql)
 
+        online_sql = (
+            ROOT / "backend/storage/migrations/0003_online_ready_visibility.sql"
+        ).read_text(encoding="utf-8")
+        self.assertIn("UNIQUE INDEX", online_sql)
+        self.assertIn("WHERE is_active = TRUE", online_sql)
+
     def test_migration_is_idempotent_and_detects_checksum_drift(self):
-        first = ScriptedConnection(*([None] * 7))
+        first = ScriptedConnection(*([None] * 10))
         self.assertTrue(apply_fact_source_migration(first))
         self.assertEqual(first.commit_count, 1)
         self.assertEqual(first.rollback_count, 0)
@@ -247,19 +259,21 @@ class PostgreSQLMigrationTests(unittest.TestCase):
             None,
             {"sha256": migration_sha256("0001_fact_source")},
             {"sha256": migration_sha256("0002_cleanup_queue")},
+            {"sha256": migration_sha256("0003_online_ready_visibility")},
         )
         self.assertFalse(apply_fact_source_migration(unchanged))
         self.assertEqual(unchanged.commit_count, 1)
 
-        second_only = ScriptedConnection(
+        later_only = ScriptedConnection(
             None,
             {"sha256": migration_sha256("0001_fact_source")},
             None,
             None,
             None,
+            {"sha256": migration_sha256("0003_online_ready_visibility")},
         )
-        self.assertTrue(apply_fact_source_migration(second_only))
-        self.assertEqual(second_only.commit_count, 1)
+        self.assertTrue(apply_fact_source_migration(later_only))
+        self.assertEqual(later_only.commit_count, 1)
 
         drifted = ScriptedConnection(None, {"sha256": "0" * 64})
         with self.assertRaises(MigrationDriftError):
@@ -645,6 +659,61 @@ class PostgresFactRepositoryTests(unittest.TestCase):
         self.assertIn("owner_id = %(owner_id)s", query)
         self.assertIn("is_active = TRUE", query)
         self.assertEqual(params["owner_id"], "owner_001")
+
+    def test_online_scope_resolves_only_ready_owner_versions(self):
+        ready = version_row(
+            lifecycle_status="READY",
+            parse_finish_time=NOW,
+            chunk_splitter_time=NOW,
+            chunk_create_time=NOW,
+            chunk_gen_time=NOW,
+            vector_index_time=NOW,
+            elasticsearch_state="READY",
+            milvus_state="READY",
+            is_active=True,
+        )
+        connection = ScriptedConnection([ready])
+
+        versions = self.repository(connection).resolve_online_versions(
+            owner_id="owner_001",
+            document_ids=["doc_existing"],
+        )
+
+        self.assertEqual(
+            [version.document_version_id for version in versions],
+            ["document_version_existing"],
+        )
+        query, params = connection.executions[0]
+        self.assertIn("owner_id = %(owner_id)s", query)
+        self.assertIn("lifecycle_status = 'READY'", query)
+        self.assertIn("is_active = TRUE", query)
+        self.assertIn("elasticsearch_state = 'READY'", query)
+        self.assertIn("milvus_state = 'READY'", query)
+        self.assertIn("document_id = ANY", query)
+        self.assertEqual(params["document_ids"], ["doc_existing"])
+        self.assertEqual(connection.commit_count, 1)
+
+    def test_online_scope_rejects_duplicate_active_version_truth(self):
+        ready = version_row(
+            lifecycle_status="READY",
+            parse_finish_time=NOW,
+            chunk_splitter_time=NOW,
+            chunk_create_time=NOW,
+            chunk_gen_time=NOW,
+            vector_index_time=NOW,
+            elasticsearch_state="READY",
+            milvus_state="READY",
+            is_active=True,
+        )
+        duplicate = {**ready, "document_version_id": "document_version_duplicate"}
+        connection = ScriptedConnection([ready, duplicate])
+
+        with self.assertRaisesRegex(PostgresFactSourceError, "multiple active"):
+            self.repository(connection).resolve_online_versions(
+                owner_id="owner_001",
+            )
+
+        self.assertEqual(connection.rollback_count, 1)
 
     def test_failed_ingestion_job_requires_stable_error_code(self):
         connection = ScriptedConnection()

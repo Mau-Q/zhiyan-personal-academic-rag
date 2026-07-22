@@ -30,5 +30,6 @@
 | PD-026 | ACCEPTED | `paper_id ↔ document_id` 映射按 `owner_id` 隔离并显式存储；内容变化创建不可复用的 `document_version_id`；只有解析、Chunk、ES、Milvus 全部就绪且未删除/过期的版本才能 `READY` | 阶段 0 完成并进入阶段 1；现有 V1 字段保持兼容，PostgreSQL 表、适配器、索引对账和失效清理留在阶段 1 实现 |
 | PD-027 | ACCEPTED | 后续远程主机迁移、部署和验证改由用户亲自操作 | 代理准备版本化脚本和完整命令，只根据用户返回的脱敏原始输出判定；不再以成员 B 执行作为后续门禁 |
 | PD-028 | ACCEPTED | “下一步/进行/继续”默认完成一个端到端本地门禁并建立独立本地提交；只有用户显式授权时才推送 | 同一门禁内不重复确认；一次只改变一个主要边界；远程节点、破坏性动作、重大分叉、合同破坏或无关脏改动时停止自动推进；Actions 继续按风险条件检查 |
+| PD-029 | ACCEPTED | 阶段 1 在线路由以 PostgreSQL `READY` 解析每个文档版本的确定性 ES Index 与 Milvus Collection，不把外部 Alias 作为第二事实源 | ES Alias 可聚合多个 Index，但 Milvus Alias 只能指向一个 Collection；多文档请求按每版本双路召回后统一 RRF，任何 PostgreSQL、身份、活动状态或物理路由无法证明时失败关闭 |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。

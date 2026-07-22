@@ -369,6 +369,20 @@
       ]
     },
     {
+      "id": "online_ready_visibility",
+      "status": "PARTIAL",
+      "owner": "A",
+      "evidence": [
+        "backend/storage/migrations/0003_online_ready_visibility.sql",
+        "backend/storage/postgres.py",
+        "backend/retrieval/online.py",
+        "backend/api/app.py",
+        "tests/retrieval/test_online_visibility.py",
+        "tests/api/test_online_ready_rag_answers_api.py",
+        "docs/LOCAL_PDF_INGESTION.md"
+      ]
+    },
+    {
       "id": "remote_host_readiness",
       "status": "READY",
       "owner": "USER",

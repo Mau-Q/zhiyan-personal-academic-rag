@@ -13,6 +13,7 @@ from backend.api.models import ErrorV1, RagAnswerRequestV1, RagAnswerV1
 from backend.rag.elasticsearch_consumer import answer_elasticsearch_question
 from backend.rag.fixture_consumer import answer_fixture_question
 from backend.rag.milvus_consumer import answer_milvus_question
+from backend.rag.online_consumer import answer_online_ready_question
 from backend.rag.remote_hybrid_consumer import answer_remote_rrf_question
 from backend.rag.sqlite_fts_consumer import answer_sqlite_fts_question
 from backend.rag.vector_consumer import answer_rrf_question, answer_vector_question
@@ -29,6 +30,11 @@ from backend.retrieval.hybrid import (
     LocalRrfHybridRetriever,
 )
 from backend.retrieval.milvus import MilvusTransport, MilvusVectorIndex, PymilvusTransport
+from backend.retrieval.online import (
+    OnlineScopeForbiddenError,
+    OnlineVersionRrfRetriever,
+    OnlineVisibilityUnavailableError,
+)
 from backend.retrieval.remote_config import RemoteRetrievalConfigV1
 from backend.retrieval.remote_hybrid import RemoteRrfHybridRetriever
 from backend.retrieval.sqlite_fts import SQLiteFtsIndex
@@ -46,6 +52,7 @@ RetrievalBackend = Literal[
     "elasticsearch_bm25",
     "milvus_vector",
     "remote_rrf",
+    "online_remote_rrf",
 ]
 
 
@@ -88,6 +95,8 @@ def create_app(
     milvus_collection: str | None = None,
     milvus_transport: MilvusTransport | None = None,
     remote_retrieval_config: RemoteRetrievalConfigV1 | None = None,
+    authenticated_owner_id: str | None = None,
+    online_rrf_retriever: OnlineVersionRrfRetriever | None = None,
 ) -> FastAPI:
     chunks = load_chunks(chunks_path)
     sqlite_index: SQLiteFtsIndex | None = None
@@ -97,6 +106,12 @@ def create_app(
     milvus_vector_index: MilvusVectorIndex | None = None
     remote_rrf_retriever: RemoteRrfHybridRetriever | None = None
     remote_top_k = 3
+    if retrieval_backend == "online_remote_rrf":
+        if authenticated_owner_id is None or online_rrf_retriever is None:
+            raise ValueError(
+                "authenticated_owner_id and online_rrf_retriever are required "
+                "for online_remote_rrf retrieval"
+            )
     if retrieval_backend in ("sqlite_fts5", "local_rrf"):
         if index_path is None:
             raise ValueError(f"index_path is required for {retrieval_backend} retrieval")
@@ -182,7 +197,12 @@ def create_app(
             vector_min_score=fusion_config.vector_min_score,
         )
         remote_top_k = fusion_config.top_k
-    elif retrieval_backend not in ("lexical_overlap", "sqlite_fts5", "local_vector"):
+    elif retrieval_backend not in (
+        "lexical_overlap",
+        "sqlite_fts5",
+        "local_vector",
+        "online_remote_rrf",
+    ):
         raise ValueError(f"unsupported retrieval backend: {retrieval_backend}")
 
     boundaries = {
@@ -193,6 +213,10 @@ def create_app(
         "elasticsearch_bm25": "remote Elasticsearch BM25 retrieval with Fake LLM",
         "milvus_vector": "remote Milvus/BGE-M3 vector retrieval with Fake LLM",
         "remote_rrf": "remote Elasticsearch plus Milvus RRF retrieval with Fake LLM",
+        "online_remote_rrf": (
+            "PostgreSQL READY-gated versioned Elasticsearch plus Milvus RRF "
+            "retrieval with Fake LLM"
+        ),
     }
     boundary = boundaries[retrieval_backend]
     app = FastAPI(
@@ -212,6 +236,8 @@ def create_app(
     app.state.milvus_vector_index = milvus_vector_index
     app.state.remote_rrf_retriever = remote_rrf_retriever
     app.state.remote_top_k = remote_top_k
+    app.state.authenticated_owner_id = authenticated_owner_id
+    app.state.online_rrf_retriever = online_rrf_retriever
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request_handler(
@@ -237,20 +263,56 @@ def create_app(
     def create_rag_answer(payload: RagAnswerRequestV1) -> RagAnswerV1 | JSONResponse:
         chunks = load_chunks(app.state.chunks_path)
         base_scope = load_scope(app.state.scope_path)
-        authorized_document_ids = {
-            chunk["document_id"] for chunk in filter_authorized_chunks(chunks, base_scope)
-        }
         requested_document_ids = set(payload.document_ids)
-        if not requested_document_ids.issubset(authorized_document_ids):
-            return _error_response(
-                status_code=403,
-                code="RAG_FORBIDDEN_SCOPE",
-                message="请求包含未授权文档。",
-                retryable=False,
-            )
+        if app.state.retrieval_backend == "online_remote_rrf":
+            base_scope = {
+                **base_scope,
+                "user_id": app.state.authenticated_owner_id,
+                "tenant_id": app.state.authenticated_owner_id,
+                "include_public": False,
+                "document_ids": [],
+                "library_ids": [],
+                "folder_ids": [],
+            }
+        else:
+            authorized_document_ids = {
+                chunk["document_id"]
+                for chunk in filter_authorized_chunks(chunks, base_scope)
+            }
+            if not requested_document_ids.issubset(authorized_document_ids):
+                return _error_response(
+                    status_code=403,
+                    code="RAG_FORBIDDEN_SCOPE",
+                    message="请求包含未授权文档。",
+                    retryable=False,
+                )
 
         effective_scope = _narrow_scope(base_scope, payload.document_ids)
-        if app.state.retrieval_backend == "remote_rrf":
+        if app.state.retrieval_backend == "online_remote_rrf":
+            try:
+                answer = answer_online_ready_question(
+                    payload.question,
+                    effective_scope,
+                    chunks,
+                    app.state.online_rrf_retriever,
+                    owner_id=app.state.authenticated_owner_id,
+                    document_ids=payload.document_ids,
+                )
+            except OnlineScopeForbiddenError:
+                return _error_response(
+                    status_code=403,
+                    code="RAG_FORBIDDEN_SCOPE",
+                    message="请求包含未授权或未就绪文档。",
+                    retryable=False,
+                )
+            except OnlineVisibilityUnavailableError:
+                return _error_response(
+                    status_code=403,
+                    code="RAG_FORBIDDEN_SCOPE",
+                    message="请求范围当前无法由事实源验证。",
+                    retryable=True,
+                )
+        elif app.state.retrieval_backend == "remote_rrf":
             answer = answer_remote_rrf_question(
                 payload.question,
                 effective_scope,

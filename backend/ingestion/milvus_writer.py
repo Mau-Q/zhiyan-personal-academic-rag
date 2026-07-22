@@ -200,6 +200,38 @@ class MilvusVersionIndexWriter:
             is_active=True,
         )
 
+    def verify_online_version(
+        self,
+        *,
+        owner_id: str,
+        document_id: str,
+        document_version_id: str,
+    ) -> str:
+        """Return the collection route only when identity and active rows match."""
+
+        collection_name = self.physical_collection_name(
+            owner_id=owner_id,
+            document_version_id=document_version_id,
+        )
+        if not self.transport.has_collection(collection_name):
+            raise MilvusIndexNotReadyError(
+                "Milvus online version collection does not exist"
+            )
+        metadata = self._inspect_identity(
+            collection_name=collection_name,
+            owner_id=owner_id,
+            document_id=document_id,
+            document_version_id=document_version_id,
+            verify_provider=True,
+        )
+        self._verify_lifecycle_rows(
+            rows=self._query_rows(collection_name),
+            metadata=metadata,
+            allow_incomplete=False,
+            expected_active=True,
+        )
+        return collection_name
+
     def deactivate_version(self, *, owner_id: str, document_version_id: str) -> None:
         collection_name = self.physical_collection_name(
             owner_id=owner_id,

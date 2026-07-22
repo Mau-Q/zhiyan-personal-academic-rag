@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Protocol, cast
@@ -27,6 +27,7 @@ MIGRATIONS_DIR = Path(__file__).with_name("migrations")
 MIGRATION_PATHS = {
     "0001_fact_source": MIGRATIONS_DIR / "0001_fact_source.sql",
     "0002_cleanup_queue": MIGRATIONS_DIR / "0002_cleanup_queue.sql",
+    "0003_online_ready_visibility": MIGRATIONS_DIR / "0003_online_ready_visibility.sql",
 }
 MIGRATION_PATH = MIGRATION_PATHS["0001_fact_source"]
 LIFECYCLE_MUTABLE_FIELDS = frozenset(
@@ -50,6 +51,7 @@ _CONTRACT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 class Cursor(Protocol):
     def execute(self, query: str, params: object | None = None) -> Any: ...
     def fetchone(self) -> Mapping[str, Any] | None: ...
+    def fetchall(self) -> Sequence[Mapping[str, Any]]: ...
     def close(self) -> None: ...
 
 
@@ -151,6 +153,16 @@ class PostgresFactRepository:
         cursor = self.connection.cursor()
         try:
             cursor.execute(query, params)
+        finally:
+            cursor.close()
+
+    def _execute_all(
+        self, query: str, params: Mapping[str, Any]
+    ) -> tuple[Mapping[str, Any], ...]:
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute(query, params)
+            return tuple(cursor.fetchall())
         finally:
             cursor.close()
 
@@ -608,6 +620,59 @@ class PostgresFactRepository:
             )
             self._commit()
             return None if row is None else _version_from_row(row)
+        except Exception:
+            self._rollback()
+            raise
+
+    def resolve_online_versions(
+        self, *, owner_id: str, document_ids: Sequence[str] = ()
+    ) -> tuple[DocumentVersionLifecycleV1, ...]:
+        """Resolve only PostgreSQL-READY versions inside one authenticated owner."""
+
+        requested = tuple(document_ids)
+        if len(requested) > 1000:
+            raise ValueError("online document scope exceeds the phase-1 limit")
+        if len(requested) != len(set(requested)):
+            raise ValueError("online document scope contains duplicates")
+        if not _CONTRACT_ID_PATTERN.fullmatch(owner_id) or any(
+            not _CONTRACT_ID_PATTERN.fullmatch(document_id)
+            for document_id in requested
+        ):
+            raise ValueError("online owner or document identity is invalid")
+        try:
+            rows = self._execute_all(
+                """-- resolve_online_document_versions_v1
+                SELECT paper_id, document_id, owner_id, document_version_id,
+                       content_sha256, source_snapshot_sha256, parse_version,
+                       lifecycle_revision, lifecycle_status, parse_finish_time,
+                       chunk_splitter_time, chunk_create_time, chunk_gen_time,
+                       vector_index_time, elasticsearch_state, milvus_state,
+                       delete_time, chunk_expire_time, last_access_time,
+                       last_refresh_time, failure_code, updated_at, is_active
+                FROM rag_document_versions
+                WHERE owner_id = %(owner_id)s
+                  AND lifecycle_status = 'READY'
+                  AND is_active = TRUE
+                  AND delete_time IS NULL
+                  AND chunk_expire_time IS NULL
+                  AND elasticsearch_state = 'READY'
+                  AND milvus_state = 'READY'
+                  AND (
+                      cardinality(%(document_ids)s::text[]) = 0
+                      OR document_id = ANY(%(document_ids)s::text[])
+                  )
+                ORDER BY document_id, document_version_id
+                """,
+                {"owner_id": owner_id, "document_ids": list(requested)},
+            )
+            versions = tuple(_version_from_row(row) for row in rows)
+            document_keys = [version.document_id for version in versions]
+            if len(document_keys) != len(set(document_keys)):
+                raise PostgresFactSourceError(
+                    "multiple active versions violate online visibility truth"
+                )
+            self._commit()
+            return versions
         except Exception:
             self._rollback()
             raise
