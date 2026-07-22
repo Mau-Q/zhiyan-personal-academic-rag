@@ -35,3 +35,17 @@
 ## 可解释边界
 
 当前检索器是授权范围内的确定性词项重叠基线，回答由 Fake LLM 消费者按 Evidence 拼装。因此本结果只能证明：本地真实 PDF 可入库，词项检索可定位人工目标页，拒答和越权阻断按合同工作。下一阶段可以固定同一份本地题集，分别替换为向量、混合检索和重排，以避免同时改变题集和算法。
+
+## 三种 Chunk 受控 Baseline
+
+使用同一三篇 PDF、同一 15 题及页码目标、同一授权范围、`top_k=3`、SQLite FTS5/BM25 和本地 `bge-m3:latest` 完成三种策略对比。BGE-M3 digest 为 `7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab`，向量阈值保持 `0.5`，未修改题目、目标页、切片参数或检索参数。
+
+| 策略 | Chunk 数 | 长度中位数 | 跨页 Chunk | 父链接 Chunk | SQLite BM25 | BGE-M3 |
+|---|---:|---:|---:|---:|---:|---:|
+| `fixed_boundary_v1` | 279 | 1024 | 0 | 0 | 15/15 | 12/15 |
+| `paragraph_sentence_v1` | 316 | 1002 | 56 | 0 | 15/15 | 12/15 |
+| `section_parent_child_v1` | 316 | 1010 | 63 | 316 | 15/15 | 12/15 |
+
+三组 BM25 均为可回答 9/9、无证据 3/3、越权 3/3。三组 BGE-M3 均为可回答 6/9、无证据 3/3、越权 3/3；`fixed_boundary_v1` 额外命中 SciNet review methods 但漏掉 TRACER ingredients，两种结构化策略恰好相反。因此当前小样本只证明策略间存在局部互换，不证明任一策略总体更好。
+
+结论是保留三种可重放策略，不切换默认、不调参、不引入重排。完整 Chunk、索引和报告保留在被 Git 忽略的 `runtime/evaluation/local-3-paper-chunk-baseline-v1/`；汇总报告 SHA-256 为 `6edac6b48e80d160d5b32de87eec38d193e5060873cfbab2e99d4d13b18121c3`。

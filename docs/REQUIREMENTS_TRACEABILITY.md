@@ -35,7 +35,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 |---|---|---|---|---|
 | SR-01 | 冻结个人库知识源、用户范围、语料量、并发、硬件预算和 SLO | `PARTIAL` | 最高方案已冻结上传/收藏论文与个人库边界；`docs/STAGE_0_SCOPE.md`、3 论文 Canary | 单用户目标语料量、峰值并发、硬件预算和 Baseline 后 SLO 未冻结 |
 | SR-02 | PostgreSQL 作为 `owner_id`、主键适配和生命周期唯一事实源 | `NOT_STARTED` | 既有 Fixture ACL 和失败关闭规则 | 实际 Schema、`paper_id ↔ document_id`、`owner_id`、上游时间戳及软删除未接入；现有 V1 合同仍是 legacy 权限字段 |
-| SR-03 | PDF/OCR、章节页码、三种 Chunk Baseline、版本和幂等入库 | `PARTIAL` | 三种切片策略已实现；本地文本层 PDF、`ChunkRecordV1`、稳定 ID 和页码 | 同源受控 Chunk 消融、OCR、MinIO 入库资产和完整版本/删除链路未完成 |
+| SR-03 | PDF/OCR、章节页码、三种 Chunk Baseline、版本和幂等入库 | `PARTIAL` | 三种切片策略已实现并完成同源受控对比：每种 SQLite BM25 15/15、BGE-M3 12/15，无总体胜者；本地文本层 PDF、稳定 ID 和页码已验证 | OCR、MinIO 入库资产和完整版本/删除链路未完成；未因小样本持平切换默认策略 |
 | SR-04 | Elasticsearch 论文级和 Chunk 级 BM25 | `PARTIAL` | 远程 ES 9.4.3；严格 Mapping、ACL、BM25 适配器；316 Chunk Canary 14/15；175 题严格通过 85/175 | `owner_id/is_active` 目标字段迁移、中文分词选型、生产别名和性能基线未完成 |
 | SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `PARTIAL` | 本地精确向量基线；远程 Milvus 2.6.18 + BGE-M3；固定源/模型身份、COSINE 和 HNSW 工程参数；316 Chunk Canary 12/15；175 题严格通过 109/175 | `owner_id/is_active` 目标字段迁移、版本/删除对账和性能基线未完成；不以远程 500 题或调参作为当前门禁 |
 | SR-06 | 基础规范化和最小路由；改写、多查询和多跳按失败后置 | `PARTIAL` | API 问题输入合同与默认检索链路 | 最小路由合同尚未冻结；高级能力继续保持后置 |
@@ -52,7 +52,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 
 | 方案阶段 | 当前判断 | 说明 |
 |---|---|---|
-| 阶段 0：范围与 Baseline | `IN_PROGRESS` | 175 题人工校验及 ES/Milvus 同集单路 Baseline 已完成；三种 Chunk 受控 Baseline、单用户目标语料量、峰值并发、硬件预算和 SLO 仍未冻结 |
+| 阶段 0：范围与 Baseline | `IN_PROGRESS` | 175 题人工校验、ES/Milvus 同集单路 Baseline 和三种 Chunk 受控 Baseline 已完成；单用户目标语料量、峰值并发、硬件预算和 SLO 仍未冻结 |
 | 阶段 1：数据与索引最小闭环 | `PARTIAL` | 本地链路及远程 ES/Milvus/BGE-M3 应用 Canary 可用，PostgreSQL 仅完成主机基线；正式 Schema、Outbox 和完整生命周期未完成 |
 | 阶段 2：基础 RAG MVP | `PARTIAL` | 非流式 API、Evidence、拒答和远程 RRF Canary 可运行，但仍无真实生成模型、完整去重/多样性和生产验收 |
 | 阶段 3：针对失败类型增强 | `NOT_STARTED` | 待基于人工校验 Baseline 的真实失败决定是否引入改写、拆解、去重、多样性或重排 |
@@ -63,9 +63,8 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 
 方案阶段 0 的下一门禁是：
 
-1. **基线冻结：** 保留 175 题 ES 85/175、Milvus 109/175 的报告、哈希、固定参数和真实失败，不重跑、不改题、不改标签、不调参；
-2. **Chunk Baseline：** 在同一源快照和检索配置下对比 `fixed_boundary_v1`、`paragraph_sentence_v1` 和 `section_parent_child_v1`，只补齐阶段 0 的可归因证据；
-3. **范围收口：** 冻结单用户目标语料量、峰值并发、硬件预算和 Baseline 后 SLO；
-4. **复杂度门禁：** 当前不跑 175 题 RRF，不重跑远程 500 题，不增加重排、真实 LLM、HyDE、multi-query、multi-hop 或在线 NLI。
+1. **基线冻结：** 保留 175 题 ES 85/175、Milvus 109/175 及三种 Chunk 策略 `BM25 15/15 / BGE-M3 12/15` 的报告、哈希、固定参数和真实失败，不重跑、不改题、不改标签、不调参；
+2. **范围收口：** 冻结单用户目标语料量、峰值并发、硬件预算和 Baseline 后 SLO；
+3. **复杂度门禁：** 当前不跑 175 题 RRF，不重跑远程 500 题，不增加重排、真实 LLM、HyDE、multi-query、multi-hop 或在线 NLI。
 
-三种 Chunk Baseline 和范围/资源/SLO 未收口前，不得将阶段 0 标记为完成。
+范围/资源/SLO 未收口前，不得将阶段 0 标记为完成。

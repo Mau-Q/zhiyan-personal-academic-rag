@@ -24,6 +24,7 @@
 | PD-020 | ACCEPTED | 仓库门禁统一由 Makefile 强制使用项目 `.venv`，禁止静默回退到系统 Python | macOS 使用 `.venv/bin/python`，Windows 使用 `.venv/Scripts/python.exe`；虚拟环境缺失时明确失败 |
 | PD-021 | ACCEPTED | 远程 ES+Milvus RRF Canary 为 14/15，与 ES 单路持平；保留已验证适配器，不调参、不晋级默认策略、不增加重排 | Top-3 候选并集互补未转化为融合后净增益；唯一失败和冻结目标按真实结果保留 |
 | PD-022 | SUPERSEDED_BY_PD-023 | 按旧版最高方案将评测分为 150～250 条人工校验 MVP 初始集、约 500 条稳定迭代集和 800～1500 条正式验收集；MVP 从现有 500 题候选池确定性选出 175 条 | 人工谱系边界保留；初始集规模和当前门禁由 PD-023 替代 |
-| PD-023 | ACCEPTED | 最新最高方案只覆盖上传/收藏后进入个人库的论文，以 `owner_id` 为目标权限核心，并将 175 题固定为 MVP 初始资产 | 175 题人工校验及 ES/Milvus 单路 Baseline 已完成；阶段 0 只继续三种 Chunk Baseline 和范围/资源/SLO 收口，不跑 175 题 RRF、不增加重排或真实 LLM |
+| PD-023 | ACCEPTED | 最新最高方案只覆盖上传/收藏后进入个人库的论文，以 `owner_id` 为目标权限核心，并将 175 题固定为 MVP 初始资产 | 175 题人工校验及 ES/Milvus 单路 Baseline 已完成；当时阶段 0 的剩余项是三种 Chunk Baseline 和范围/资源/SLO 收口，不跑 175 题 RRF、不增加重排或真实 LLM |
+| PD-024 | ACCEPTED | 三种 Chunk 策略在同一三论文、15 题、`top_k=3`、SQLite BM25 和 BGE-M3 配置下完成受控对比 | 每种策略 BM25 15/15、BGE-M3 12/15，且失败集存在互换；不宣布胜者、不切换默认、不调参或引入重排 |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。

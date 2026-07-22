@@ -83,6 +83,17 @@
       ]
     },
     {
+      "id": "local_three_strategy_chunk_baseline",
+      "status": "READY",
+      "owner": "A",
+      "evidence": [
+        "evaluation/local-3-paper-chunk-baseline-v1.json",
+        "scripts/run_local_chunk_baseline.py",
+        "tests/evaluation/test_local_chunk_baseline.py",
+        "docs/LOCAL_3_PAPER_EVALUATION.md"
+      ]
+    },
+    {
       "id": "elasticsearch_bm25_adapter",
       "status": "READY",
       "owner": "A",

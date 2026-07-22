@@ -121,14 +121,16 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 两路整题同时通过 78 题、仅 ES 通过 7 题、仅 Milvus 通过 31 题、两路均未通过 59 题；在 138 道可回答合同中，仅 ES 通过 6 题，仅 Milvus 通过 31 题。
 - Milvus 是当前更强的单路召回基线，但两路都暴露无证据校准和安全策略层缺口；这两类失败不冒充纯召回失败。
 - 由于远程 RRF Canary 已证明融合未超过 ES，且本次 Top-3 互补严重倾向 Milvus，当前不跑 175 题 RRF、不调融合参数，保留既有适配器。
-- 新增输入包生成器和后端边界针对性测试后，全仓 149 项测试及 Harness 8 项检查通过。
+- 新增三策略 Baseline 针对性测试后，全仓 154 项测试及 Harness 8 项检查通过。
+- 完成三论文三种 Chunk 同源受控 Baseline：`fixed_boundary_v1` 产生 279 个 Chunk，`paragraph_sentence_v1` 与 `section_parent_child_v1` 各产生 316 个 Chunk；每种策略 SQLite BM25 均为 15/15、BGE-M3 均为 12/15，安全和无证据类均为 6/6；报告 SHA-256 为 `6edac6b48e80d160d5b32de87eec38d193e5060873cfbab2e99d4d13b18121c3`。
+- 三种 Chunk 策略总体持平；固定边界与结构化策略各有一道独有命中/漏召回，不换默认策略、不调参、不引入重排。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：三种 Chunk 受控 Baseline、单用户正式范围/资源/SLO、`owner_id` 与 `paper_id ↔ document_id` 目标合同、PostgreSQL 生命周期接入、无证据校准、安全策略层、真实生成模型和性能验收；
+- 未完成能力：单用户正式范围/资源/SLO、`owner_id` 与 `paper_id ↔ document_id` 目标合同、PostgreSQL 生命周期接入、无证据校准、安全策略层、真实生成模型和性能验收；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -159,14 +161,13 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 ## Current boundary
 
-当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。AI 复核、Canary 和 Fake LLM 不证明真实生成模型、生产参数或性能目标已完成。运行时私有数据继续不进入 Git。
+当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。AI 复核、Canary 和 Fake LLM 不证明真实生成模型、生产参数或性能目标已完成。运行时私有数据继续不进入 Git。
 
 ## Next gate
 
-1. **基线冻结：** 保留 175 题 ES 85/175、Milvus 109/175 的报告、哈希、固定参数和真实失败，不重跑、不改题、不改标签、不调参；
-2. **Chunk Baseline：** 使用同一源快照和检索配置对比 `fixed_boundary_v1`、`paragraph_sentence_v1` 和 `section_parent_child_v1`，补齐可归因的切片证据；
-3. **阶段 0 范围收口：** 冻结单用户目标语料量、峰值并发、硬件预算和 Baseline 后 SLO；
-4. **边界与复杂度：** 记录无证据校准和安全策略层缺口，但当前不跑 175 题 RRF、不重跑远程 500 题、不增加重排、真实 LLM、HyDE、multi-query、multi-hop 或在线 NLI。
+1. **基线冻结：** 保留 175 题 ES 85/175、Milvus 109/175 及三种 Chunk 策略 `BM25 15/15 / BGE-M3 12/15` 的报告、哈希、固定参数和真实失败，不重跑、不改题、不改标签、不调参；
+2. **阶段 0 范围收口：** 冻结单用户目标语料量、峰值并发、硬件预算和 Baseline 后 SLO；
+3. **边界与复杂度：** 记录无证据校准和安全策略层缺口，但当前不跑 175 题 RRF、不重跑远程 500 题、不增加重排、真实 LLM、HyDE、multi-query、multi-hop 或在线 NLI。
 
 ## Prohibited shortcuts
 
