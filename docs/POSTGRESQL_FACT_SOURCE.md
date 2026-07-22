@@ -2,9 +2,9 @@
 
 ## 当前边界
 
-阶段 1 的第一个本地实现已建立 PostgreSQL Schema、延迟加载的 `psycopg` 适配器和独立测试。PostgreSQL 是 `owner_id`、文档映射、内容版本、生命周期与入库任务的唯一事实源；Elasticsearch 和 Milvus 仍然是可重建派生索引。
+阶段 1 已建立 PostgreSQL Schema、延迟加载的 `psycopg` 适配器和独立测试。PostgreSQL 是 `owner_id`、文档映射、内容版本、Chunk 快照、生命周期与入库/清理任务的唯一事实源；PDF 字节保存在独立对象根目录，Elasticsearch 和 Milvus 仍然是可重建派生索引。
 
-当前只证明源码、SQL 迁移和失效关闭语义在本地可执行。远程 PostgreSQL 18.4 尚未应用该迁移，未可宣称阶段 1 事实源已远程验收。
+远程 PostgreSQL 18.4 已通过 `0001`～`0003` 迁移和基础设施生命周期 Canary。新增 `0004_runtime_snapshots.sql`、持久化 Chunk 在线加载和 Answer API v2 Canary 目前只有本地证据，等待用户远程应用和实跑。
 
 ## 已实现的硬约束
 
@@ -18,12 +18,17 @@
 - 解析、Chunk 和向量时间齐全，且 ES/Milvus 均为 `READY` 时才能进入 `READY`；
 - 删除、撤权或过期版本先进入终态 `INACTIVE`；在线查询始终带 `owner_id AND is_active=true`；
 - 同一 owner/document 最多一个活动版本；在线解析显式要求 PostgreSQL `READY`、双索引 `READY`、未删除且未过期。
+- PDF 对象注册和 Chunk 行按版本不可变；重放必须得到完全相同的对象身份和 Chunk 快照；
+- 在线 Answer API 只按 PostgreSQL 已解析的 READY 版本加载 Chunk，不读取 Fixture；
+- 运行快照物理删除只有在版本已 `INACTIVE` 后才允许，并与 ES/Milvus 共用持久清理租约、重试和恢复机制。
 
 ## 仓库入口
 
 - SQL：`backend/storage/migrations/0001_fact_source.sql`；
 - 清理队列迁移：`backend/storage/migrations/0002_cleanup_queue.sql`；
 - 在线唯一活动版本迁移：`backend/storage/migrations/0003_online_ready_visibility.sql`；
+- PDF 对象注册与 Chunk 快照迁移：`backend/storage/migrations/0004_runtime_snapshots.sql`；
+- PDF 对象后端：`backend/storage/pdf_objects.py`；
 - 迁移器：`python -m backend.storage.migrate`；
 - 仓储适配器：`backend/storage/postgres.py`；
 - 双索引生命周期协调：`backend/ingestion/index_lifecycle.py`；
@@ -56,8 +61,4 @@ Remove-Item Env:DATABASE_URL
 
 ## 后续门禁
 
-1. 用户在隔离的远程 PostgreSQL 上应用迁移并返回脱敏输出；
-2. 在远程 PostgreSQL 上复测本地已完成的持久化 PDF 准备编排；
-3. 在远程 Elasticsearch/Milvus 复测本地版本写入器、清理租约恢复和物理删除；
-4. 在真实服务上复测 Answer API 的 PostgreSQL READY 可见性和多版本路由；
-5. 完成单侧失败补偿与删除/撤权先失效、再异步物理清理的远程故障验证。
+用户在隔离远程主机应用 `0004`，再运行版本化 Stage 1 v2 Canary。必须同时返回：迁移 `APPLIED/UNCHANGED`、PDF 对象重开、Chunk 快照指纹、Answer API `COMPLETED` 与 Evidence、删除后 Answer API 403、ES/Milvus/运行快照三项清理成功。报告只返回脱敏身份和哈希，不返回 PDF/Chunk 正文、对象根目录或连接信息。

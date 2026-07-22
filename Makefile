@@ -42,6 +42,8 @@ validation-test:
 
 stage1-local-canary:
 	$(PROJECT_PYTHON) -m unittest -v \
+		tests.storage.test_pdf_object_store \
+		tests.storage.test_postgres_fact_source \
 		tests.ingestion.test_persistent_ingestion \
 		tests.ingestion.test_index_lifecycle \
 		tests.ingestion.test_elasticsearch_version_writer \

@@ -36,9 +36,9 @@
 
 项目不设置自动策略。首次单篇论文联调显式使用 `section_parent_child_v1`。
 
-## 阶段 1 持久化准备
+## 阶段 1 运行存储
 
-`backend.ingestion.persistent.prepare_persistent_pdf_ingestion` 将同一解析和 Chunk 实现接到 PostgreSQL 事实源：
+`backend.ingestion.persistent.prepare_and_persist_pdf_ingestion` 将同一解析和 Chunk 实现接到运行存储：
 
 ```text
 校验 PDF SHA-256
@@ -46,11 +46,13 @@
 → 原子绑定 document_version_id 与入库幂等 Key
 → REGISTERED/FAILED/REVIEW 进入 PROCESSING
 → 解析与 ChunkRecordV1
-→ 记录页码/Chunk 完成时间
+→ 以 owner/document/version 的不透明确定性对象键原子保存 PDF
+→ 将不可变 Chunk 快照和 PDF 对象定位注册到 PostgreSQL
+→ 重读并核对 PDF SHA-256、Chunk 数量和完整快照指纹
 → 保持 PROCESSING，等待 ES/Milvus 双索引
 ```
 
-该路径将 PostgreSQL `document_version_id` 写入现有 `ChunkRecordV1.version_id`，并固定将待索引 Chunk 输出为 `is_active=false`。只有后续 ES 和 Milvus 均就绪且事实源进入 `READY` 后，才能对在线检索可见。相同请求重放会复用映射、版本、任务和 Chunk ID；同一幂等 Key 换用另一 PDF 会在产生新版本前失效关闭。
+PDF 载荷保存在调用方配置的持久对象根目录，PostgreSQL 只保存对象键、哈希、大小和 Chunk 快照；不会把 PDF 字节塞入事实源。当前 `filesystem_v1` 是不新增依赖的 MVP 对象后端，正式 MinIO 适配仍独立保留。该路径将 PostgreSQL `document_version_id` 写入现有 `ChunkRecordV1.version_id`，并固定将待索引 Chunk 输出为 `is_active=false`。相同请求重放会复用映射、版本、任务、对象键和 Chunk ID；对象或 Chunk 载荷漂移会失败关闭。
 
 ## 双索引生命周期协调
 
@@ -62,8 +64,8 @@ Elasticsearch 侧已实现 `ElasticsearchVersionIndexWriter`：物理索引名�
 
 Milvus 侧已实现 `MilvusVersionIndexWriter`：每个 owner/version 使用身份哈希确定的独立 Collection；描述固定源 Chunk、Embedding provider/model/digest、维度、COSINE/HNSW 参数和完整向量指纹。完整重放只核验已有 payload 与向量，不重复调用 Embedding；部分写恢复先重新计算预期向量并核验已有行，再只 Upsert 缺失行。激活/失活同步更新标量字段和完整 payload，物理删除再次核验 Collection 身份。在线路由再次核验 Collection 身份、Embedding 模型和全部活动行。
 
-持久化物理清理由 `PersistentIndexCleanupScheduler` 和 `PersistentIndexCleanupWorker` 完成。`0002_cleanup_queue.sql` 只允许已进入 `INACTIVE` 的 owner/document/version 入队；同一后端与版本幂等复用同一任务。Worker 先恢复过期租约，再通过 `FOR UPDATE SKIP LOCKED` 独占一项到期任务，成功后提交 `SUCCEEDED`，失败时仅记录稳定错误码并按有界指数退避进入 `RETRY`，达到最大次数后进入 `FAILED`。删除已经不存在的物理对象仍按成功处理；结果持久化失败则保留租约，等待过期恢复，不会重新激活事实源。
+持久化物理清理由 `PersistentIndexCleanupScheduler` 和 `PersistentIndexCleanupWorker` 完成。`0002_cleanup_queue.sql` 与 `0004_runtime_snapshots.sql` 只允许已进入 `INACTIVE` 的 owner/document/version 入队；每次失效固定产生 ES、Milvus 和 `runtime_snapshot` 三项任务。运行快照任务先按 PostgreSQL 中的精确对象定位核验并删除 PDF，再删除 PostgreSQL Chunk 和对象注册；数据库触发器禁止在版本仍活动时清除。Worker 先恢复过期租约，再通过 `FOR UPDATE SKIP LOCKED` 独占一项到期任务，失败时仅记录稳定错误码并按有界指数退避进入 `RETRY`。删除已经不存在的物理对象仍按成功处理，不会重新激活事实源。
 
-`PostgresReadyRouteResolver` 只接收 PostgreSQL `READY + is_active` 版本，并要求请求中的每个 `document_id` 都属于服务端鉴权 owner；`OnlineVersionRrfRetriever` 对每个 READY 版本选择确定性 ES Index 与 Milvus Collection，逐路再次注入 owner、document 和 `is_active` 过滤，再按后端局部名次统一 RRF。Answer API 的 `online_remote_rrf` 装配只接受服务端 `authenticated_owner_id`，PostgreSQL、物理路由或候选身份任一无法证明时返回现有 403 合同，不回退到静态 Fixture 权限。
+`PostgresReadyRouteResolver` 只接收 PostgreSQL `READY + is_active` 版本，并要求请求中的每个 `document_id` 都属于服务端鉴权 owner；`OnlineVersionRrfRetriever` 随后按这些精确版本从 PostgreSQL 加载 Chunk 快照，再选择确定性 ES Index 与 Milvus Collection并统一 RRF。Answer API 的 `online_remote_rrf` 装配只接受服务端 `authenticated_owner_id`，不加载 Fixture Chunk 或 Fixture Scope；PostgreSQL 快照、物理路由或候选身份任一无法证明时返回现有 403 合同。
 
-当前尚未连接远程 PostgreSQL、Elasticsearch、Milvus 或 Embedding 服务，也没有将任何真实版本提升为 `READY`。本地在线门禁仍依赖调用方提供与版本指纹一致的 Chunk 快照；PDF/Chunk 运行存储和真实服务复测继续待远程集成 Gate。
+本地代码和专项门禁已覆盖 PDF 对象重开、Chunk 快照重放、READY-only 加载、持久化快照 Answer API、INACTIVE 后 403 以及三项可恢复物理清理。先前远程基础设施生命周期 Canary 已通过；新增的 `0004` 迁移和持久化 Answer API v2 Canary 仍需由用户在远程主机实跑，未回收该证据前不宣称整个阶段 1 完成。

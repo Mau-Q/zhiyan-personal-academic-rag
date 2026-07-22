@@ -21,25 +21,29 @@ class FakeOnlineRetriever:
         self.failure = failure
         self.calls = []
 
-    def retrieve(self, question, scope, chunks, **kwargs):
+    def retrieve(self, question, scope, **kwargs):
         self.calls.append((question, scope, kwargs))
         if self.failure is not None:
             raise self.failure
-        matching = [
-            chunk
-            for chunk in chunks
-            if chunk["tenant_id"] == kwargs["owner_id"]
-            and chunk["document_id"] in kwargs["document_ids"]
+        return [
+            {
+                "chunk_id": "chunk_persisted_001",
+                "document_id": kwargs["document_ids"][0],
+                "version_id": "version_persisted_001",
+                "text": "Persisted READY evidence",
+                "section_path": "Method",
+                "page_start": 1,
+                "page_end": 1,
+            }
         ]
-        return matching[: kwargs["top_k"]]
 
 
 class OnlineReadyRagAnswersApiTests(unittest.TestCase):
     def client(self, retriever: FakeOnlineRetriever) -> TestClient:
         return TestClient(
             create_app(
-                chunks_path=ROOT / "fixtures" / "chunks-v1.json",
-                scope_path=ROOT / "fixtures" / "authorized-scope-v1.json",
+                chunks_path=ROOT / "fixtures" / "must-not-be-loaded.json",
+                scope_path=ROOT / "fixtures" / "must-not-be-loaded-scope.json",
                 retrieval_backend="online_remote_rrf",
                 authenticated_owner_id=OWNER_ID,
                 online_rrf_retriever=retriever,

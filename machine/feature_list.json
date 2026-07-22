@@ -306,6 +306,21 @@
       ]
     },
     {
+      "id": "persistent_runtime_pdf_chunk_snapshot",
+      "status": "READY",
+      "owner": "A",
+      "evidence": [
+        "backend/storage/pdf_objects.py",
+        "backend/storage/migrations/0004_runtime_snapshots.sql",
+        "backend/storage/postgres.py",
+        "backend/ingestion/persistent.py",
+        "tests/storage/test_pdf_object_store.py",
+        "tests/storage/test_postgres_fact_source.py",
+        "tests/ingestion/test_persistent_ingestion.py",
+        "docs/LOCAL_PDF_INGESTION.md"
+      ]
+    },
+    {
       "id": "postgresql_fact_source",
       "status": "READY",
       "owner": "A",
@@ -362,6 +377,8 @@
       "evidence": [
         "backend/ingestion/cleanup.py",
         "backend/storage/migrations/0002_cleanup_queue.sql",
+        "backend/storage/migrations/0004_runtime_snapshots.sql",
+        "backend/storage/pdf_objects.py",
         "backend/storage/postgres.py",
         "tests/ingestion/test_cleanup.py",
         "tests/storage/test_postgres_fact_source.py",
@@ -374,6 +391,7 @@
       "owner": "A",
       "evidence": [
         "backend/storage/migrations/0003_online_ready_visibility.sql",
+        "backend/storage/migrations/0004_runtime_snapshots.sql",
         "backend/storage/postgres.py",
         "backend/retrieval/online.py",
         "backend/api/app.py",

@@ -17,6 +17,8 @@ from backend.storage.models import (
     IngestionJobStatus,
     IngestionJobV1,
     LifecycleStatus,
+    PdfObjectV1,
+    RuntimeSnapshotV1,
 )
 
 
@@ -32,12 +34,33 @@ class FactSourceRepository(Protocol):
     def update_ingestion_job(self, **kwargs: Any) -> IngestionJobV1: ...
 
 
+class PdfObjectStore(Protocol):
+    def put_pdf(self, pdf_bytes: bytes, **kwargs: Any) -> PdfObjectV1: ...
+
+
+class RuntimeSnapshotRepository(FactSourceRepository, Protocol):
+    def persist_runtime_snapshot(self, **kwargs: Any) -> RuntimeSnapshotV1: ...
+
+
 @dataclass(frozen=True)
 class PersistentIngestionPreparation:
     identity: DocumentIdentityV1
     version: DocumentVersionLifecycleV1
     job: IngestionJobV1
     ingestion: IngestionResult
+
+
+@dataclass(frozen=True)
+class PersistentRuntimeIngestion:
+    preparation: PersistentIngestionPreparation
+    pdf_object: PdfObjectV1
+    snapshot: RuntimeSnapshotV1
+
+
+class RuntimeSnapshotPersistenceError(RuntimeError):
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
 
 
 def _utc_now() -> datetime:
@@ -202,4 +225,68 @@ def prepare_persistent_pdf_ingestion(
         version=version,
         job=job,
         ingestion=ingestion,
+    )
+
+
+def prepare_and_persist_pdf_ingestion(
+    pdf_bytes: bytes,
+    *,
+    repository: RuntimeSnapshotRepository,
+    object_store: PdfObjectStore,
+    **kwargs: Any,
+) -> PersistentRuntimeIngestion:
+    """Prepare, persist, and verify one replay-safe PDF plus Chunk snapshot."""
+
+    preparation = prepare_persistent_pdf_ingestion(
+        pdf_bytes,
+        repository=repository,
+        **kwargs,
+    )
+    if (
+        preparation.version.lifecycle_status is not LifecycleStatus.PROCESSING
+        or preparation.ingestion.parse_status != "PASS"
+    ):
+        raise RuntimeSnapshotPersistenceError(
+            "RUNTIME_SNAPSHOT_NOT_PUBLISHABLE",
+            "only a PASS ingestion in PROCESSING may be persisted",
+        )
+    try:
+        pdf_object = object_store.put_pdf(
+            pdf_bytes,
+            owner_id=preparation.version.owner_id,
+            document_id=preparation.version.document_id,
+            document_version_id=preparation.version.document_version_id,
+            content_sha256=preparation.version.content_sha256,
+        )
+    except Exception as exc:
+        _record_failure(
+            repository,
+            version=preparation.version,
+            job=preparation.job,
+            failure_code="PDF_OBJECT_PERSIST_FAILED",
+        )
+        raise RuntimeSnapshotPersistenceError(
+            "PDF_OBJECT_PERSIST_FAILED",
+            "PDF object persistence failed closed",
+        ) from exc
+    try:
+        snapshot = repository.persist_runtime_snapshot(
+            pdf_object=pdf_object,
+            chunks=preparation.ingestion.chunks,
+        )
+    except Exception as exc:
+        _record_failure(
+            repository,
+            version=preparation.version,
+            job=preparation.job,
+            failure_code="CHUNK_SNAPSHOT_PERSIST_FAILED",
+        )
+        raise RuntimeSnapshotPersistenceError(
+            "CHUNK_SNAPSHOT_PERSIST_FAILED",
+            "Chunk snapshot persistence failed closed",
+        ) from exc
+    return PersistentRuntimeIngestion(
+        preparation=preparation,
+        pdf_object=pdf_object,
+        snapshot=snapshot,
     )

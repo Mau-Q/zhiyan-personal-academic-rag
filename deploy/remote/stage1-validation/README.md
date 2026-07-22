@@ -7,14 +7,14 @@ services.
 ## Scope and stop conditions
 
 The canary uses a dedicated `stage1_canary_<run-id>` owner, deterministic hidden
-Elasticsearch index, and detached Milvus collection. A successful run proves:
+Elasticsearch index, and detached Milvus collection. A v2 successful run proves:
 
-1. PostgreSQL migrations are present and the PDF creates one owner-scoped version;
-2. inactive Chunks are staged into both physical stores;
-3. both stores activate before PostgreSQL commits `READY`;
-4. reconciliation proves the exact PostgreSQL version and both physical routes;
-5. deletion makes PostgreSQL invisible first, then completes two physical cleanup jobs;
-6. the deleted document cannot be reconciled as online.
+1. all PostgreSQL migrations are present and the PDF creates one owner-scoped version;
+2. the PDF object reopens from an opaque persistent key and the exact Chunk snapshot reloads from PostgreSQL;
+3. inactive Chunks are staged into both physical stores before PostgreSQL commits `READY`;
+4. the Answer API reads the persisted READY snapshot and returns Evidence without Fixture Chunk or Scope files;
+5. deletion makes PostgreSQL invisible first, then completes ES, Milvus and runtime-snapshot cleanup jobs;
+6. the deleted document fails both reconciliation and the Answer API visibility check.
 
 Stop immediately if the repository commit is not the reviewed commit, any service
 is exposed beyond loopback, the PDF SHA-256 differs, migration drift is reported,
@@ -28,6 +28,7 @@ PDF text, Chunk text, IP addresses, or complete connection strings into chat.
 - Keep `DATABASE_URL` and optional `MILVUS_TOKEN` in environment variables.
 - `ELASTICSEARCH_URL`, `MILVUS_URI`, and `OLLAMA_URL` must point to loopback services.
 - Select one non-sensitive text PDF and independently calculate its SHA-256.
+- The default PDF object root is the ignored `runtime/stage1-pdf-objects` directory. Use `--pdf-object-root` only for a dedicated private persistent path; never return that path in chat.
 
 ## Ordered execution
 
@@ -71,18 +72,19 @@ locally and do not return the environment-variable assignment lines.
    Get-Content runtime\stage1-remote-validation\report.json
    ```
 
-Expected final fields are `status=PASS`, `cleanup_jobs_succeeded=2`, and
-`inactive_visibility_proven=true`. Physical route names and synthetic Canary IDs
-are safe to return; no Chunk payload is included.
+Expected report schema is `stage1_remote_canary_report_v2`. Required fields include
+`status=PASS`, `pdf_object_reopen_proven=true`, `answer_api_status=COMPLETED`,
+`answer_api_evidence_count>=1`, `cleanup_jobs_succeeded=3`,
+`runtime_snapshot_cleanup_proven=true`, `inactive_visibility_proven=true`, and
+`inactive_answer_api_status=403`. Synthetic Canary IDs and snapshot hashes are safe
+to return; object paths and Chunk payloads are not included.
 
 ## Replay and single-side failure check
 
-The main run already proves successful replay-safe lifecycle boundaries. To verify
-single-side recovery, use a fresh run ID, temporarily point `MILVUS_URI` at an
-unused loopback port, and run step 4 once. Expected result: `status=FAIL`; PostgreSQL
-must not expose the version as READY. Restore the correct loopback URI and repeat
-the exact same command and run ID. Expected result: `PASS`; Elasticsearch staging
-is reused, Milvus completes, and final cleanup succeeds.
+The earlier v1 run already proved single-side recovery. For the v2 Gate, one normal
+fresh run is sufficient unless the new migration, snapshot persistence, Answer API,
+or three-way cleanup reports a failure. Do not repeat the old fault simulation only
+to create redundant evidence.
 
 Do not simulate failure by stopping a stable service. Do not use a production owner,
 index prefix, collection prefix, PDF, or idempotency key.
@@ -90,7 +92,7 @@ index prefix, collection prefix, PDF, or idempotency key.
 ## Failure and rollback
 
 On any `FAIL`, preserve the sanitized JSON and stop. Do not manually delete database
-rows. Retry the same run ID only after correcting the classified dependency issue;
-the repository contracts are designed to resume partial staging. If retry cannot
-finish, return the report plus redacted service health output so a versioned cleanup
-procedure can be prepared. Manual database or wildcard index deletion is prohibited.
+rows or object files. The same run ID is replayable before `INACTIVE`; cleanup jobs
+remain leased and retryable after `INACTIVE`. Return the report plus redacted service
+health output so the exact recovery command can be selected. Manual database,
+object-path, or wildcard index deletion is prohibited.

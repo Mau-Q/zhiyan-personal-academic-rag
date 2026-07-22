@@ -25,6 +25,12 @@ class IndexBackend(StrEnum):
     MILVUS = "milvus_vectors"
 
 
+class CleanupBackend(StrEnum):
+    ELASTICSEARCH = "elasticsearch_chunks"
+    MILVUS = "milvus_vectors"
+    RUNTIME_SNAPSHOT = "runtime_snapshot"
+
+
 class InactivationReason(StrEnum):
     DELETE = "DELETE"
     REVOKE = "REVOKE"
@@ -42,7 +48,7 @@ class IndexWriteReceipt:
 
 @dataclass(frozen=True)
 class CleanupRequest:
-    backend: IndexBackend
+    backend: CleanupBackend
     owner_id: str
     document_id: str
     document_version_id: str
@@ -414,7 +420,7 @@ def inactivate_and_schedule_cleanup(
         except Exception:
             failures.append(f"{writer.backend.value}:deactivate")
         request = CleanupRequest(
-            backend=writer.backend,
+            backend=CleanupBackend(writer.backend.value),
             owner_id=version.owner_id,
             document_id=version.document_id,
             document_version_id=version.document_version_id,
@@ -424,6 +430,18 @@ def inactivate_and_schedule_cleanup(
             requests.append(request)
         except Exception:
             failures.append(f"{writer.backend.value}:enqueue_cleanup")
+
+    runtime_request = CleanupRequest(
+        backend=CleanupBackend.RUNTIME_SNAPSHOT,
+        owner_id=version.owner_id,
+        document_id=version.document_id,
+        document_version_id=version.document_version_id,
+    )
+    try:
+        cleanup.enqueue(runtime_request)
+        requests.append(runtime_request)
+    except Exception:
+        failures.append("runtime_snapshot:enqueue_cleanup")
 
     result = InactivationResult(
         version=version,

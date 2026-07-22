@@ -32,5 +32,6 @@
 | PD-028 | ACCEPTED | “下一步/进行/继续”默认完成一个端到端本地门禁并建立独立本地提交；只有用户显式授权时才推送 | 同一门禁内不重复确认；一次只改变一个主要边界；远程节点、破坏性动作、重大分叉、合同破坏或无关脏改动时停止自动推进；Actions 继续按风险条件检查 |
 | PD-029 | ACCEPTED | 阶段 1 在线路由以 PostgreSQL `READY` 解析每个文档版本的确定性 ES Index 与 Milvus Collection，不把外部 Alias 作为第二事实源 | ES Alias 可聚合多个 Index，但 Milvus Alias 只能指向一个 Collection；多文档请求按每版本双路召回后统一 RRF，任何 PostgreSQL、身份、活动状态或物理路由无法证明时失败关闭 |
 | PD-030 | ACCEPTED | 成员 B 在阶段 1 期间只通过独立 Draft PR 准备阶段 2～4 的 `dev` 评测候选标签，不再操作远程主机或修改核心链路 | 首个任务固定为 105 题失败归因和 30 题 Claim–Evidence 第二审；只提交 ID 与枚举，不接触 `test/acceptance`，PR 不自动成为最终真值或阶段完成证据 |
+| PD-031 | ACCEPTED | 阶段 1 MVP 使用可替换的 `filesystem_v1` 私有对象根目录保存 PDF，PostgreSQL 保存对象定位与不可变 Chunk 快照；正式 MinIO 适配保持独立 | 不新增对象存储 SDK 依赖，不把 PDF 字节塞入 PostgreSQL，也不把 Milvus 自带 MinIO 冒充应用对象存储；在线 Answer API 只消费 PostgreSQL READY 版本的持久化 Chunk 快照 |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。

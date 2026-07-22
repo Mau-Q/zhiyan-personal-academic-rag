@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Protocol
 
 from backend.ingestion.index_lifecycle import CleanupRequest, IndexBackend
-from backend.storage.models import CleanupJobStatus, CleanupJobV1
+from backend.storage.models import CleanupJobStatus, CleanupJobV1, PdfObjectV1
 
 
 class CleanupRepository(Protocol):
@@ -42,6 +42,20 @@ class VersionIndexCleaner(Protocol):
     backend: IndexBackend
 
     def delete_version(self, *, owner_id: str, document_version_id: str) -> bool: ...
+
+
+class RuntimeSnapshotCleanupRepository(Protocol):
+    def enqueue_cleanup(self, **kwargs: object) -> CleanupJobV1: ...
+    def get_inactive_pdf_object(
+        self, *, owner_id: str, document_version_id: str
+    ) -> PdfObjectV1 | None: ...
+    def purge_inactive_runtime_snapshot(
+        self, *, owner_id: str, document_version_id: str
+    ) -> None: ...
+
+
+class PdfObjectCleaner(Protocol):
+    def delete_pdf(self, pdf_object: PdfObjectV1) -> bool: ...
 
 
 @dataclass(frozen=True)
@@ -81,6 +95,35 @@ class PersistentIndexCleanupScheduler:
         )
 
 
+class PersistentRuntimeSnapshotCleaner:
+    """Delete the verified PDF first, then purge immutable PostgreSQL snapshots."""
+
+    backend = "runtime_snapshot"
+
+    def __init__(
+        self,
+        *,
+        repository: RuntimeSnapshotCleanupRepository,
+        pdf_objects: PdfObjectCleaner,
+    ) -> None:
+        self.repository = repository
+        self.pdf_objects = pdf_objects
+
+    def delete_version(self, *, owner_id: str, document_version_id: str) -> bool:
+        pdf_object = self.repository.get_inactive_pdf_object(
+            owner_id=owner_id,
+            document_version_id=document_version_id,
+        )
+        if pdf_object is None:
+            return False
+        existed = self.pdf_objects.delete_pdf(pdf_object)
+        self.repository.purge_inactive_runtime_snapshot(
+            owner_id=owner_id,
+            document_version_id=document_version_id,
+        )
+        return existed
+
+
 class PersistentIndexCleanupWorker:
     """Claim due cleanup jobs and delete only identity-pinned physical versions."""
 
@@ -90,6 +133,7 @@ class PersistentIndexCleanupWorker:
         repository: CleanupRepository,
         elasticsearch: VersionIndexCleaner,
         milvus: VersionIndexCleaner,
+        runtime_snapshot: PersistentRuntimeSnapshotCleaner,
         lease_seconds: int = 300,
         base_retry_seconds: int = 30,
         max_retry_seconds: int = 3600,
@@ -99,15 +143,18 @@ class PersistentIndexCleanupWorker:
             raise ValueError("elasticsearch cleaner has the wrong backend identity")
         if milvus.backend is not IndexBackend.MILVUS:
             raise ValueError("milvus cleaner has the wrong backend identity")
+        if runtime_snapshot.backend != "runtime_snapshot":
+            raise ValueError("runtime snapshot cleaner has the wrong backend identity")
         if lease_seconds < 1 or base_retry_seconds < 1:
             raise ValueError("cleanup lease and retry delays must be positive")
         if max_retry_seconds < base_retry_seconds:
             raise ValueError("cleanup max retry delay must cover the base delay")
         self.repository = repository
         self.cleaners = {
-            IndexBackend.ELASTICSEARCH: elasticsearch,
-            IndexBackend.MILVUS: milvus,
+            IndexBackend.ELASTICSEARCH.value: elasticsearch,
+            IndexBackend.MILVUS.value: milvus,
         }
+        self.cleaners[runtime_snapshot.backend] = runtime_snapshot
         self.lease_seconds = lease_seconds
         self.base_retry_seconds = base_retry_seconds
         self.max_retry_seconds = max_retry_seconds
@@ -119,15 +166,19 @@ class PersistentIndexCleanupWorker:
             return None
         if job.status is not CleanupJobStatus.RUNNING or job.lease_token is None:
             raise CleanupWorkerError("cleanup repository returned an unleased job")
-        backend = IndexBackend(job.backend)
-        cleaner = self.cleaners[backend]
+        try:
+            cleaner = self.cleaners[job.backend]
+        except KeyError as exc:
+            raise CleanupWorkerError(
+                "cleanup worker has no cleaner for the leased backend"
+            ) from exc
         try:
             existed = cleaner.delete_version(
                 owner_id=job.owner_id,
                 document_version_id=job.document_version_id,
             )
         except Exception:
-            failure_code = f"{backend.value.upper()}_DELETE_FAILED"
+            failure_code = f"{job.backend.upper()}_DELETE_FAILED"
             retry_at = self.clock() + timedelta(seconds=self._retry_delay(job))
             try:
                 failed = self.repository.record_cleanup_failure(

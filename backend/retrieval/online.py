@@ -11,6 +11,7 @@ from backend.retrieval.elasticsearch import ElasticsearchBm25Index, Elasticsearc
 from backend.retrieval.embedding import EmbeddingProvider
 from backend.retrieval.milvus import DEFAULT_VECTOR_MIN_SCORE, MilvusTransport, MilvusVectorIndex
 from backend.retrieval.results import RankedChunk, chunks_only, validate_ranking
+from backend.ingestion.models import ChunkRecordV1
 from backend.storage.models import DocumentVersionLifecycleV1, LifecycleStatus
 
 
@@ -45,6 +46,15 @@ class VersionRouteInspector(Protocol):
         document_id: str,
         document_version_id: str,
     ) -> str: ...
+
+
+class ReadyChunkSnapshotRepository(Protocol):
+    def load_online_chunks(
+        self,
+        *,
+        owner_id: str,
+        document_version_ids: Sequence[str],
+    ) -> tuple[ChunkRecordV1, ...]: ...
 
 
 @dataclass(frozen=True)
@@ -182,6 +192,7 @@ class OnlineVersionRrfRetriever:
         elasticsearch_transport: ElasticsearchTransport,
         milvus_transport: MilvusTransport,
         embedding_provider: EmbeddingProvider,
+        chunk_snapshots: ReadyChunkSnapshotRepository,
         candidate_k: int = 20,
         rrf_k: int = 60,
         vector_min_score: float = DEFAULT_VECTOR_MIN_SCORE,
@@ -194,6 +205,7 @@ class OnlineVersionRrfRetriever:
         self.elasticsearch_transport = elasticsearch_transport
         self.milvus_transport = milvus_transport
         self.embedding_provider = embedding_provider
+        self.chunk_snapshots = chunk_snapshots
         self.candidate_k = candidate_k
         self.rrf_k = rrf_k
         self.vector_min_score = vector_min_score
@@ -202,7 +214,6 @@ class OnlineVersionRrfRetriever:
         self,
         question: str,
         scope: Mapping[str, Any],
-        chunks: Sequence[Mapping[str, Any]],
         *,
         owner_id: str,
         document_ids: Sequence[str],
@@ -217,6 +228,25 @@ class OnlineVersionRrfRetriever:
         routes = self.resolver.resolve(owner_id=owner_id, document_ids=document_ids)
         rankings: list[list[RankedChunk]] = []
         try:
+            chunks = [
+                chunk.model_dump(mode="json")
+                for chunk in self.chunk_snapshots.load_online_chunks(
+                    owner_id=owner_id,
+                    document_version_ids=[
+                        route.document_version_id for route in routes
+                    ],
+                )
+            ]
+            expected_versions = {
+                route.document_version_id for route in routes
+            }
+            returned_versions = {str(chunk["version_id"]) for chunk in chunks}
+            if returned_versions != expected_versions or len(
+                {str(chunk["chunk_id"]) for chunk in chunks}
+            ) != len(chunks):
+                raise OnlineVisibilityUnavailableError(
+                    "persisted Chunk snapshot does not match READY routes"
+                )
             for route in routes:
                 expected_chunks = self._route_chunks(route=route, chunks=chunks)
                 route_scope = dict(scope)
@@ -263,7 +293,6 @@ class OnlineVersionRrfRetriever:
         self,
         question: str,
         scope: Mapping[str, Any],
-        chunks: Sequence[Mapping[str, Any]],
         *,
         owner_id: str,
         document_ids: Sequence[str],
@@ -273,7 +302,6 @@ class OnlineVersionRrfRetriever:
             self.search(
                 question,
                 scope,
-                chunks,
                 owner_id=owner_id,
                 document_ids=document_ids,
                 top_k=top_k,

@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import unittest
+import tempfile
 from datetime import datetime, timezone
 from hashlib import sha256
+from pathlib import Path
 from typing import Any
 
-from backend.ingestion.persistent import prepare_persistent_pdf_ingestion
+from backend.ingestion.persistent import (
+    prepare_and_persist_pdf_ingestion,
+    prepare_persistent_pdf_ingestion,
+)
 from backend.ingestion.service import PdfIngestionError
 from backend.storage.models import (
     ALLOWED_LIFECYCLE_TRANSITIONS,
@@ -15,7 +20,9 @@ from backend.storage.models import (
     IngestionJobStatus,
     IngestionJobV1,
     LifecycleStatus,
+    RuntimeSnapshotV1,
 )
+from backend.storage.pdf_objects import FilesystemPdfObjectStore
 from tests.ingestion.pdf_fixture import synthetic_text_pdf
 
 
@@ -39,6 +46,7 @@ class InMemoryFactSource:
         self.jobs: dict[tuple[str, str], IngestionJobV1] = {}
         self.calls: list[str] = []
         self.next_id = 1
+        self.snapshots: dict[str, RuntimeSnapshotV1] = {}
 
     def _id(self, prefix: str) -> str:
         value = f"{prefix}_{self.next_id:03d}"
@@ -224,6 +232,25 @@ class InMemoryFactSource:
         self.jobs[key] = updated
         return updated
 
+    def persist_runtime_snapshot(self, **kwargs: Any) -> RuntimeSnapshotV1:
+        self.calls.append("persist_runtime_snapshot")
+        pdf_object = kwargs["pdf_object"]
+        chunks = tuple(kwargs["chunks"])
+        snapshot = RuntimeSnapshotV1(
+            owner_id=pdf_object.owner_id,
+            document_id=pdf_object.document_id,
+            document_version_id=pdf_object.document_version_id,
+            pdf_object_key=pdf_object.object_key,
+            pdf_sha256=pdf_object.content_sha256,
+            chunk_count=len(chunks),
+            chunk_snapshot_sha256="c" * 64,
+        )
+        existing = self.snapshots.get(snapshot.document_version_id)
+        if existing is not None and existing != snapshot:
+            raise ValueError("snapshot identity drift")
+        self.snapshots[snapshot.document_version_id] = snapshot
+        return snapshot
+
 
 def prepare(repository: InMemoryFactSource, pdf_bytes: bytes = GOOD_PDF, **overrides):
     arguments = {
@@ -243,6 +270,32 @@ def prepare(repository: InMemoryFactSource, pdf_bytes: bytes = GOOD_PDF, **overr
 
 
 class PersistentIngestionTests(unittest.TestCase):
+    def test_pdf_and_chunks_are_persisted_before_index_publication(self):
+        repository = InMemoryFactSource()
+        with tempfile.TemporaryDirectory() as directory:
+            result = prepare_and_persist_pdf_ingestion(
+                GOOD_PDF,
+                repository=repository,
+                object_store=FilesystemPdfObjectStore(Path(directory)),
+                owner_id="owner_001",
+                paper_id="paper_001",
+                source_type="uploaded",
+                source_created_time=NOW,
+                source_updated_time=NOW,
+                idempotency_key="upload_001",
+                strategy="fixed_boundary_v1",
+                library_scope_ids=["personal_library_001"],
+                clock=lambda: NOW,
+            )
+
+            self.assertEqual(
+                result.snapshot.chunk_count,
+                len(result.preparation.ingestion.chunks),
+            )
+            self.assertEqual(result.pdf_object.content_sha256, sha256(GOOD_PDF).hexdigest())
+            self.assertIn("persist_runtime_snapshot", repository.calls)
+            self.assertTrue((Path(directory) / result.pdf_object.object_key).is_file())
+
     def test_success_is_versioned_owner_scoped_and_not_online_ready(self):
         repository = InMemoryFactSource()
         result = prepare(repository)

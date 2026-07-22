@@ -8,9 +8,10 @@ from backend.ingestion.cleanup import (
     CleanupWorkerError,
     PersistentIndexCleanupScheduler,
     PersistentIndexCleanupWorker,
+    PersistentRuntimeSnapshotCleaner,
 )
-from backend.ingestion.index_lifecycle import CleanupRequest, IndexBackend
-from backend.storage.models import CleanupJobStatus, CleanupJobV1
+from backend.ingestion.index_lifecycle import CleanupBackend, CleanupRequest, IndexBackend
+from backend.storage.models import CleanupJobStatus, CleanupJobV1, PdfObjectV1
 
 
 NOW = datetime(2026, 7, 22, 12, 0, tzinfo=timezone.utc)
@@ -18,17 +19,18 @@ NOW = datetime(2026, 7, 22, 12, 0, tzinfo=timezone.utc)
 
 def cleanup_job(
     *,
-    backend: IndexBackend = IndexBackend.ELASTICSEARCH,
+    backend: IndexBackend | str = IndexBackend.ELASTICSEARCH,
     status: CleanupJobStatus = CleanupJobStatus.PENDING,
     attempt_count: int = 0,
     max_attempts: int = 3,
     failure_code: str | None = None,
     completed_at: datetime | None = None,
 ) -> CleanupJobV1:
+    backend_value = backend.value if isinstance(backend, IndexBackend) else backend
     running = status is CleanupJobStatus.RUNNING
     return CleanupJobV1(
-        cleanup_id=f"cleanup_{backend.value}",
-        backend=backend.value,
+        cleanup_id=f"cleanup_{backend_value}",
+        backend=backend_value,
         owner_id="owner_001",
         document_id="document_001",
         document_version_id="document_version_001",
@@ -56,7 +58,7 @@ class FakeCleanupRepository:
 
     def enqueue_cleanup(self, **kwargs: Any) -> CleanupJobV1:
         self.enqueued.append(dict(kwargs))
-        return cleanup_job(backend=IndexBackend(kwargs["backend"]))
+        return cleanup_job(backend=kwargs["backend"])
 
     def claim_cleanup(self, *, lease_seconds: int = 300) -> CleanupJobV1 | None:
         del lease_seconds
@@ -116,7 +118,7 @@ class FakeCleanupRepository:
 
 
 class FakeCleaner:
-    def __init__(self, backend: IndexBackend, *, fail: bool = False) -> None:
+    def __init__(self, backend: IndexBackend | str, *, fail: bool = False) -> None:
         self.backend = backend
         self.fail = fail
         self.calls: list[tuple[str, str]] = []
@@ -130,17 +132,81 @@ class FakeCleaner:
 
 
 class PersistentCleanupTests(unittest.TestCase):
+    def test_runtime_snapshot_cleanup_is_persistent_and_ordered(self):
+        repository = FakeCleanupRepository()
+        scheduler = PersistentIndexCleanupScheduler(
+            repository,
+            max_attempts=7,
+        )
+        scheduler.enqueue(
+            CleanupRequest(
+                backend=CleanupBackend.RUNTIME_SNAPSHOT,
+                owner_id="owner_001",
+                document_id="document_001",
+                document_version_id="document_version_001",
+            )
+        )
+        self.assertEqual(repository.enqueued[0]["backend"], "runtime_snapshot")
+        self.assertEqual(repository.enqueued[0]["max_attempts"], 7)
+
+        class RuntimeRepository:
+            def __init__(self):
+                self.events = []
+                self.pdf = PdfObjectV1(
+                    owner_id="owner_001",
+                    document_id="document_001",
+                    document_version_id="document_version_001",
+                    object_key=f"pdf/v1/aa/{'a' * 64}/{'a' * 64}.pdf",
+                    storage_backend="filesystem_v1",
+                    content_sha256="a" * 64,
+                    size_bytes=10,
+                    stored_at=NOW,
+                )
+
+            def get_inactive_pdf_object(self, **kwargs):
+                self.events.append(("get", kwargs))
+                return self.pdf
+
+            def purge_inactive_runtime_snapshot(self, **kwargs):
+                self.events.append(("purge", kwargs))
+
+        class PdfObjects:
+            def __init__(self, events):
+                self.events = events
+
+            def delete_pdf(self, pdf_object):
+                self.events.append(("delete", pdf_object.object_key))
+                return True
+
+        runtime_repository = RuntimeRepository()
+        cleaner = PersistentRuntimeSnapshotCleaner(
+            repository=runtime_repository,
+            pdf_objects=PdfObjects(runtime_repository.events),
+        )
+        self.assertTrue(
+            cleaner.delete_version(
+                owner_id="owner_001",
+                document_version_id="document_version_001",
+            )
+        )
+        self.assertEqual(
+            [event[0] for event in runtime_repository.events],
+            ["get", "delete", "purge"],
+        )
+
     def worker(
         self,
         repository: FakeCleanupRepository,
         *,
         elasticsearch: FakeCleaner | None = None,
         milvus: FakeCleaner | None = None,
+        runtime_snapshot: FakeCleaner | None = None,
     ) -> PersistentIndexCleanupWorker:
         return PersistentIndexCleanupWorker(
             repository=repository,
             elasticsearch=elasticsearch or FakeCleaner(IndexBackend.ELASTICSEARCH),
             milvus=milvus or FakeCleaner(IndexBackend.MILVUS),
+            runtime_snapshot=runtime_snapshot or FakeCleaner("runtime_snapshot"),
             base_retry_seconds=30,
             max_retry_seconds=120,
             clock=lambda: NOW,
@@ -152,7 +218,7 @@ class PersistentCleanupTests(unittest.TestCase):
 
         scheduler.enqueue(
             CleanupRequest(
-                backend=IndexBackend.MILVUS,
+                backend=CleanupBackend.MILVUS,
                 owner_id="owner_001",
                 document_id="document_001",
                 document_version_id="document_version_001",
@@ -190,6 +256,27 @@ class PersistentCleanupTests(unittest.TestCase):
         self.assertEqual(
             repository.completed,
             [f"{claimed.cleanup_id}:{claimed.lease_token}"],
+        )
+
+    def test_runtime_snapshot_job_uses_the_same_lease_and_retry_worker(self):
+        claimed = cleanup_job(
+            backend="runtime_snapshot",
+            status=CleanupJobStatus.RUNNING,
+            attempt_count=1,
+        )
+        repository = FakeCleanupRepository([claimed])
+        repository.remember_claims([claimed])
+        runtime_snapshot = FakeCleaner("runtime_snapshot")
+
+        result = self.worker(
+            repository,
+            runtime_snapshot=runtime_snapshot,
+        ).run_once()
+
+        self.assertTrue(result.succeeded)
+        self.assertEqual(
+            runtime_snapshot.calls,
+            [("owner_001", "document_version_001")],
         )
 
     def test_already_missing_physical_object_is_idempotent_success(self):

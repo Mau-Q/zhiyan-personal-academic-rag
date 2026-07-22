@@ -17,7 +17,6 @@ ONLINE_NO_EVIDENCE_WARNING = "ONLINE_POSTGRES_READY_NO_EVIDENCE"
 def answer_online_ready_question(
     question: str,
     scope: Mapping[str, Any],
-    chunks: Sequence[Mapping[str, Any]],
     retriever: OnlineVersionRrfRetriever,
     *,
     owner_id: str,
@@ -27,7 +26,6 @@ def answer_online_ready_question(
     retrieved = retriever.retrieve(
         question,
         scope,
-        chunks,
         owner_id=owner_id,
         document_ids=document_ids,
         top_k=top_k,

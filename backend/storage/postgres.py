@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime, timedelta, timezone
@@ -19,7 +20,11 @@ from backend.storage.models import (
     IngestionJobStatus,
     IngestionJobV1,
     LifecycleStatus,
+    PdfObjectV1,
+    RuntimeSnapshotV1,
 )
+from backend.ingestion.models import ChunkRecordV1
+from backend.retrieval.sqlite_fts import chunks_fingerprint
 
 
 JsonObject = dict[str, Any]
@@ -28,6 +33,7 @@ MIGRATION_PATHS = {
     "0001_fact_source": MIGRATIONS_DIR / "0001_fact_source.sql",
     "0002_cleanup_queue": MIGRATIONS_DIR / "0002_cleanup_queue.sql",
     "0003_online_ready_visibility": MIGRATIONS_DIR / "0003_online_ready_visibility.sql",
+    "0004_runtime_snapshots": MIGRATIONS_DIR / "0004_runtime_snapshots.sql",
 }
 MIGRATION_PATH = MIGRATION_PATHS["0001_fact_source"]
 LIFECYCLE_MUTABLE_FIELDS = frozenset(
@@ -123,6 +129,22 @@ def _job_from_row(row: Mapping[str, Any]) -> IngestionJobV1:
 
 def _cleanup_from_row(row: Mapping[str, Any]) -> CleanupJobV1:
     return CleanupJobV1.model_validate(dict(row))
+
+
+def _pdf_object_from_row(row: Mapping[str, Any]) -> PdfObjectV1:
+    return PdfObjectV1.model_validate(dict(row))
+
+
+def _chunk_from_row(row: Mapping[str, Any], *, is_active: bool) -> ChunkRecordV1:
+    payload = dict(row)
+    libraries = payload.get("library_scope_ids")
+    if isinstance(libraries, str):
+        payload["library_scope_ids"] = json.loads(libraries)
+    payload["version_id"] = payload.pop("document_version_id")
+    payload["tenant_id"] = payload.pop("owner_id")
+    payload["is_active"] = is_active
+    payload.pop("chunk_ordinal", None)
+    return ChunkRecordV1.model_validate(payload)
 
 
 class PostgresFactRepository:
@@ -673,6 +695,288 @@ class PostgresFactRepository:
                 )
             self._commit()
             return versions
+        except Exception:
+            self._rollback()
+            raise
+
+    def persist_runtime_snapshot(
+        self,
+        *,
+        pdf_object: PdfObjectV1,
+        chunks: Sequence[ChunkRecordV1],
+    ) -> RuntimeSnapshotV1:
+        """Persist one immutable PDF registration and its exact inactive Chunk set."""
+
+        chunk_list = tuple(chunks)
+        if not chunk_list:
+            raise ValueError("runtime snapshot requires at least one Chunk")
+        if len({chunk.chunk_id for chunk in chunk_list}) != len(chunk_list):
+            raise ValueError("runtime snapshot contains duplicate Chunk IDs")
+        for chunk in chunk_list:
+            if (
+                chunk.tenant_id != pdf_object.owner_id
+                or chunk.document_id != pdf_object.document_id
+                or chunk.version_id != pdf_object.document_version_id
+                or chunk.is_active
+            ):
+                raise ValueError(
+                    "runtime snapshot Chunk identity must match the inactive PDF version"
+                )
+        candidate_payloads = [chunk.model_dump(mode="json") for chunk in chunk_list]
+        snapshot_sha256 = chunks_fingerprint(candidate_payloads)
+        try:
+            self._execute_no_result(
+                """-- persist_pdf_object_v1
+                INSERT INTO rag_pdf_objects (
+                    document_version_id, owner_id, document_id, object_key,
+                    storage_backend, content_sha256, size_bytes, media_type, stored_at
+                ) VALUES (
+                    %(document_version_id)s, %(owner_id)s, %(document_id)s,
+                    %(object_key)s, %(storage_backend)s, %(content_sha256)s,
+                    %(size_bytes)s, %(media_type)s, %(stored_at)s
+                )
+                ON CONFLICT (document_version_id) DO NOTHING
+                """,
+                pdf_object.model_dump(),
+            )
+            stored_pdf_row = self._execute_one(
+                """-- get_pdf_object_v1
+                SELECT owner_id, document_id, document_version_id, object_key,
+                       storage_backend, content_sha256, size_bytes, media_type, stored_at
+                FROM rag_pdf_objects
+                WHERE owner_id = %(owner_id)s
+                  AND document_version_id = %(document_version_id)s
+                """,
+                {
+                    "owner_id": pdf_object.owner_id,
+                    "document_version_id": pdf_object.document_version_id,
+                },
+            )
+            stored_pdf = (
+                None if stored_pdf_row is None else _pdf_object_from_row(stored_pdf_row)
+            )
+            if stored_pdf is None or stored_pdf.model_dump(
+                exclude={"stored_at"}
+            ) != pdf_object.model_dump(exclude={"stored_at"}):
+                raise IdentityConflictError(
+                    "persisted PDF object identity differs from the immutable request"
+                )
+
+            for ordinal, chunk in enumerate(chunk_list):
+                payload = chunk.model_dump(exclude={"version_id", "tenant_id", "is_active"})
+                payload.update(
+                    {
+                        "owner_id": chunk.tenant_id,
+                        "document_version_id": chunk.version_id,
+                        "chunk_ordinal": ordinal,
+                        "library_scope_ids": json.dumps(
+                            chunk.library_scope_ids,
+                            ensure_ascii=False,
+                            separators=(",", ":"),
+                        ),
+                    }
+                )
+                self._execute_no_result(
+                    """-- persist_chunk_snapshot_v1
+                    INSERT INTO rag_chunks (
+                        chunk_id, owner_id, document_id, document_version_id,
+                        chunk_ordinal, text, section_path, page_start, page_end,
+                        parent_chunk_id, previous_chunk_id, next_chunk_id, visibility,
+                        library_scope_ids, parse_version, embedding_version
+                    ) VALUES (
+                        %(chunk_id)s, %(owner_id)s, %(document_id)s,
+                        %(document_version_id)s, %(chunk_ordinal)s, %(text)s,
+                        %(section_path)s, %(page_start)s, %(page_end)s,
+                        %(parent_chunk_id)s, %(previous_chunk_id)s, %(next_chunk_id)s,
+                        %(visibility)s, %(library_scope_ids)s::jsonb,
+                        %(parse_version)s, %(embedding_version)s
+                    )
+                    ON CONFLICT (chunk_id) DO NOTHING
+                    """,
+                    payload,
+                )
+
+            stored_rows = self._execute_all(
+                """-- get_chunk_snapshot_v1
+                SELECT chunk_id, owner_id, document_id, document_version_id,
+                       chunk_ordinal, text, section_path, page_start, page_end,
+                       parent_chunk_id, previous_chunk_id, next_chunk_id, visibility,
+                       library_scope_ids, parse_version, embedding_version
+                FROM rag_chunks
+                WHERE owner_id = %(owner_id)s
+                  AND document_version_id = %(document_version_id)s
+                ORDER BY chunk_ordinal
+                """,
+                {
+                    "owner_id": pdf_object.owner_id,
+                    "document_version_id": pdf_object.document_version_id,
+                },
+            )
+            stored_chunks = tuple(
+                _chunk_from_row(row, is_active=False) for row in stored_rows
+            )
+            if stored_chunks != chunk_list:
+                raise IdentityConflictError(
+                    "persisted Chunk snapshot differs from the immutable request"
+                )
+            self._commit()
+            return RuntimeSnapshotV1(
+                owner_id=pdf_object.owner_id,
+                document_id=pdf_object.document_id,
+                document_version_id=pdf_object.document_version_id,
+                pdf_object_key=pdf_object.object_key,
+                pdf_sha256=pdf_object.content_sha256,
+                chunk_count=len(chunk_list),
+                chunk_snapshot_sha256=snapshot_sha256,
+            )
+        except Exception:
+            self._rollback()
+            raise
+
+    def load_online_chunks(
+        self,
+        *,
+        owner_id: str,
+        document_version_ids: Sequence[str],
+    ) -> tuple[ChunkRecordV1, ...]:
+        """Load only exact Chunk snapshots whose PostgreSQL versions are still READY."""
+
+        requested = tuple(document_version_ids)
+        if not requested or len(requested) > 1000:
+            if not requested:
+                return ()
+            raise ValueError("online Chunk snapshot scope exceeds the phase-1 limit")
+        if len(requested) != len(set(requested)) or not _CONTRACT_ID_PATTERN.fullmatch(
+            owner_id
+        ) or any(not _CONTRACT_ID_PATTERN.fullmatch(version_id) for version_id in requested):
+            raise ValueError("online Chunk snapshot identity is invalid")
+        try:
+            rows = self._execute_all(
+                """-- load_online_chunk_snapshot_v1
+                SELECT c.chunk_id, c.owner_id, c.document_id,
+                       c.document_version_id, c.chunk_ordinal, c.text,
+                       c.section_path, c.page_start, c.page_end, c.parent_chunk_id,
+                       c.previous_chunk_id, c.next_chunk_id, c.visibility,
+                       c.library_scope_ids, c.parse_version, c.embedding_version
+                FROM rag_chunks AS c
+                JOIN rag_document_versions AS v
+                  ON v.document_version_id = c.document_version_id
+                 AND v.owner_id = c.owner_id
+                 AND v.document_id = c.document_id
+                WHERE c.owner_id = %(owner_id)s
+                  AND c.document_version_id = ANY(%(document_version_ids)s::text[])
+                  AND v.lifecycle_status = 'READY'
+                  AND v.is_active = TRUE
+                  AND v.delete_time IS NULL
+                  AND v.chunk_expire_time IS NULL
+                ORDER BY c.document_version_id, c.chunk_ordinal
+                """,
+                {
+                    "owner_id": owner_id,
+                    "document_version_ids": list(requested),
+                },
+            )
+            chunks = tuple(_chunk_from_row(row, is_active=True) for row in rows)
+            returned_versions = {chunk.version_id for chunk in chunks}
+            if returned_versions != set(requested):
+                raise IdentityConflictError(
+                    "one or more READY versions have no exact persisted Chunk snapshot"
+                )
+            if len({chunk.chunk_id for chunk in chunks}) != len(chunks):
+                raise PostgresFactSourceError(
+                    "persisted online Chunk snapshot contains duplicate identities"
+                )
+            self._commit()
+            return chunks
+        except Exception:
+            self._rollback()
+            raise
+
+    def get_inactive_pdf_object(
+        self,
+        *,
+        owner_id: str,
+        document_version_id: str,
+    ) -> PdfObjectV1 | None:
+        """Return an object locator only after PostgreSQL has committed INACTIVE."""
+
+        try:
+            row = self._execute_one(
+                """-- get_inactive_pdf_object_v1
+                SELECT p.owner_id, p.document_id, p.document_version_id,
+                       p.object_key, p.storage_backend, p.content_sha256,
+                       p.size_bytes, p.media_type, p.stored_at
+                FROM rag_pdf_objects AS p
+                JOIN rag_document_versions AS v
+                  ON v.document_version_id = p.document_version_id
+                 AND v.owner_id = p.owner_id
+                 AND v.document_id = p.document_id
+                WHERE p.owner_id = %(owner_id)s
+                  AND p.document_version_id = %(document_version_id)s
+                  AND v.lifecycle_status = 'INACTIVE'
+                  AND v.is_active = FALSE
+                """,
+                {
+                    "owner_id": owner_id,
+                    "document_version_id": document_version_id,
+                },
+            )
+            self._commit()
+            return None if row is None else _pdf_object_from_row(row)
+        except Exception:
+            self._rollback()
+            raise
+
+    def purge_inactive_runtime_snapshot(
+        self,
+        *,
+        owner_id: str,
+        document_version_id: str,
+    ) -> None:
+        """Idempotently remove PostgreSQL snapshot rows for an INACTIVE version."""
+
+        try:
+            inactive = self._execute_one(
+                """-- verify_inactive_runtime_snapshot_purge_v1
+                SELECT TRUE AS inactive
+                FROM rag_document_versions
+                WHERE owner_id = %(owner_id)s
+                  AND document_version_id = %(document_version_id)s
+                  AND lifecycle_status = 'INACTIVE'
+                  AND is_active = FALSE
+                """,
+                {
+                    "owner_id": owner_id,
+                    "document_version_id": document_version_id,
+                },
+            )
+            if inactive is None:
+                raise IdentityConflictError(
+                    "runtime snapshot purge requires an INACTIVE owner version"
+                )
+            self._execute_no_result(
+                """-- purge_inactive_chunks_v1
+                DELETE FROM rag_chunks
+                WHERE owner_id = %(owner_id)s
+                  AND document_version_id = %(document_version_id)s
+                """,
+                {
+                    "owner_id": owner_id,
+                    "document_version_id": document_version_id,
+                },
+            )
+            self._execute_no_result(
+                """-- purge_inactive_pdf_registration_v1
+                DELETE FROM rag_pdf_objects
+                WHERE owner_id = %(owner_id)s
+                  AND document_version_id = %(document_version_id)s
+                """,
+                {
+                    "owner_id": owner_id,
+                    "document_version_id": document_version_id,
+                },
+            )
+            self._commit()
         except Exception:
             self._rollback()
             raise

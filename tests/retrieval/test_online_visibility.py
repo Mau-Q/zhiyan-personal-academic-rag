@@ -12,6 +12,7 @@ from backend.retrieval.online import (
     PostgresReadyRouteResolver,
 )
 from backend.retrieval.results import RankedChunk
+from backend.ingestion.models import ChunkRecordV1
 from backend.storage.models import (
     DocumentVersionLifecycleV1,
     IndexState,
@@ -192,7 +193,49 @@ class RankingTransport:
         self.expected = {}
 
 
+class FakeChunkSnapshots:
+    def __init__(self, chunks):
+        self.chunks = tuple(ChunkRecordV1.model_validate(item) for item in chunks)
+        self.calls = []
+
+    def load_online_chunks(self, **kwargs):
+        self.calls.append(kwargs)
+        return self.chunks
+
+
 class OnlineVersionRrfRetrieverTests(unittest.TestCase):
+    def test_persisted_snapshot_must_match_exact_ready_route_versions(self):
+        route = OnlineVersionRoute(
+            owner_id=OWNER_ID,
+            document_id="document_001",
+            document_version_id="version_001",
+            elasticsearch_index="es_version_001",
+            milvus_collection="milvus_version_001",
+        )
+        retriever = OnlineVersionRrfRetriever(
+            resolver=StaticResolver([route]),
+            elasticsearch_transport=RankingTransport({}),
+            milvus_transport=RankingTransport({}),
+            embedding_provider=FakeEmbeddingProvider(),
+            chunk_snapshots=FakeChunkSnapshots(
+                [
+                    chunk("document_001", "version_001", 1),
+                    chunk("document_002", "version_extra", 1),
+                ]
+            ),
+        )
+
+        with self.assertRaisesRegex(
+            OnlineVisibilityUnavailableError,
+            "does not match READY routes",
+        ):
+            retriever.retrieve(
+                "question",
+                {"user_id": OWNER_ID, "tenant_id": OWNER_ID},
+                owner_id=OWNER_ID,
+                document_ids=["document_001"],
+            )
+
     def test_fuses_multiple_ready_version_routes_without_static_index_names(self):
         first_route = OnlineVersionRoute(
             owner_id=OWNER_ID,
@@ -227,6 +270,7 @@ class OnlineVersionRrfRetrieverTests(unittest.TestCase):
             elasticsearch_transport=elasticsearch,
             milvus_transport=milvus,
             embedding_provider=FakeEmbeddingProvider(),
+            chunk_snapshots=FakeChunkSnapshots([first, second]),
         )
         scope = {
             "user_id": OWNER_ID,
@@ -245,7 +289,6 @@ class OnlineVersionRrfRetrieverTests(unittest.TestCase):
             results = retriever.retrieve(
                 "question",
                 scope,
-                [first, second],
                 owner_id=OWNER_ID,
                 document_ids=[],
                 top_k=2,
@@ -279,6 +322,7 @@ class OnlineVersionRrfRetrieverTests(unittest.TestCase):
             elasticsearch_transport=elasticsearch,
             milvus_transport=milvus,
             embedding_provider=FakeEmbeddingProvider(),
+            chunk_snapshots=FakeChunkSnapshots([expected]),
         )
         scope = {"user_id": OWNER_ID, "tenant_id": OWNER_ID}
 
@@ -290,7 +334,6 @@ class OnlineVersionRrfRetrieverTests(unittest.TestCase):
                 retriever.retrieve(
                     "question",
                     scope,
-                    [expected],
                     owner_id=OWNER_ID,
                     document_ids=["document_001"],
                 )
@@ -319,6 +362,7 @@ class OnlineVersionRrfRetrieverTests(unittest.TestCase):
             elasticsearch_transport=elasticsearch,
             milvus_transport=milvus,
             embedding_provider=FakeEmbeddingProvider(),
+            chunk_snapshots=FakeChunkSnapshots([expected]),
         )
         scope = {"user_id": OWNER_ID, "tenant_id": OWNER_ID}
 
@@ -333,7 +377,6 @@ class OnlineVersionRrfRetrieverTests(unittest.TestCase):
                 retriever.retrieve(
                     "question",
                     scope,
-                    [expected],
                     owner_id=OWNER_ID,
                     document_ids=["document_001"],
                 )

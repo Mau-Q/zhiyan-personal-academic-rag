@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from backend.ingestion.index_lifecycle import (
+    CleanupBackend,
     CleanupRequest,
     InactivationCleanupPendingError,
     InactivationReason,
@@ -217,14 +218,18 @@ class FakeCleanup:
         self,
         events: list[str],
         *,
-        fail_backend: IndexBackend | None = None,
+        fail_backend: CleanupBackend | None = None,
     ) -> None:
         self.events = events
         self.fail_backend = fail_backend
         self.requests: list[CleanupRequest] = []
 
     def enqueue(self, request: CleanupRequest) -> None:
-        label = "es" if request.backend is IndexBackend.ELASTICSEARCH else "milvus"
+        label = {
+            CleanupBackend.ELASTICSEARCH: "es",
+            CleanupBackend.MILVUS: "milvus",
+            CleanupBackend.RUNTIME_SNAPSHOT: "runtime",
+        }[request.backend]
         self.events.append(f"cleanup:{label}")
         if request.backend is self.fail_backend:
             raise RuntimeError("simulated cleanup enqueue failure")
@@ -426,13 +431,13 @@ class IndexLifecycleTests(unittest.TestCase):
         self.assertFalse(result.version.is_active)
         self.assertEqual(self.events[0], "repository:inactive")
         self.assertEqual(self.events[1], "visibility:invalidate")
-        self.assertEqual(len(result.cleanup_requests), 2)
+        self.assertEqual(len(result.cleanup_requests), 3)
 
     def test_downstream_cleanup_failure_never_reactivates_fact_source(self):
         published = self.publish()
         self.events.clear()
         self.elasticsearch.fail_deactivate = True
-        cleanup = FakeCleanup(self.events, fail_backend=IndexBackend.MILVUS)
+        cleanup = FakeCleanup(self.events, fail_backend=CleanupBackend.MILVUS)
 
         with self.assertRaises(InactivationCleanupPendingError) as captured:
             inactivate_and_schedule_cleanup(

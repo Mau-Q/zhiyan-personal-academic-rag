@@ -26,6 +26,14 @@ ContractId = Annotated[
     ),
 ]
 Sha256 = Annotated[str, StringConstraints(pattern=r"^[a-f0-9]{64}$")]
+ObjectKey = Annotated[
+    str,
+    StringConstraints(
+        min_length=1,
+        max_length=512,
+        pattern=r"^[a-z0-9][a-z0-9._/-]*$",
+    ),
+]
 
 
 class LifecycleStatus(StrEnum):
@@ -226,9 +234,44 @@ class IngestionJobV1(StorageModel):
         return self
 
 
+class PdfObjectV1(StorageModel):
+    """Immutable PDF object identity stored outside PostgreSQL payload rows."""
+
+    owner_id: ContractId
+    document_id: ContractId
+    document_version_id: ContractId
+    object_key: ObjectKey
+    storage_backend: Literal["filesystem_v1"]
+    content_sha256: Sha256
+    size_bytes: int = Field(ge=1)
+    media_type: Literal["application/pdf"] = "application/pdf"
+    stored_at: datetime
+
+    @field_validator("stored_at")
+    @classmethod
+    def stored_at_requires_timezone(cls, value: datetime) -> datetime:
+        return _require_timezone(value, "stored_at")  # type: ignore[return-value]
+
+
+class RuntimeSnapshotV1(StorageModel):
+    """Receipt for one immutable PDF object plus its exact Chunk snapshot."""
+
+    owner_id: ContractId
+    document_id: ContractId
+    document_version_id: ContractId
+    pdf_object_key: ObjectKey
+    pdf_sha256: Sha256
+    chunk_count: int = Field(ge=1)
+    chunk_snapshot_sha256: Sha256
+
+
 class CleanupJobV1(StorageModel):
     cleanup_id: ContractId
-    backend: Literal["elasticsearch_chunks", "milvus_vectors"]
+    backend: Literal[
+        "elasticsearch_chunks",
+        "milvus_vectors",
+        "runtime_snapshot",
+    ]
     owner_id: ContractId
     document_id: ContractId
     document_version_id: ContractId

@@ -23,7 +23,9 @@ from backend.storage.models import (
     IndexStatesV1,
     IngestionJobStatus,
     LifecycleStatus,
+    PdfObjectV1,
 )
+from backend.ingestion.models import ChunkRecordV1
 from backend.storage.postgres import (
     ConcurrentLifecycleUpdateError,
     IdentityConflictError,
@@ -167,6 +169,45 @@ def cleanup_row(**updates: Any) -> dict[str, Any]:
     return row
 
 
+def pdf_object_row(**updates: Any) -> dict[str, Any]:
+    row = {
+        "owner_id": "owner_001",
+        "document_id": "doc_existing",
+        "document_version_id": "document_version_existing",
+        "object_key": f"pdf/v1/aa/{'a' * 64}/{'a' * 64}.pdf",
+        "storage_backend": "filesystem_v1",
+        "content_sha256": "a" * 64,
+        "size_bytes": 128,
+        "media_type": "application/pdf",
+        "stored_at": NOW,
+    }
+    row.update(updates)
+    return row
+
+
+def chunk_row(**updates: Any) -> dict[str, Any]:
+    row = {
+        "chunk_id": "chunk_existing",
+        "owner_id": "owner_001",
+        "document_id": "doc_existing",
+        "document_version_id": "document_version_existing",
+        "chunk_ordinal": 0,
+        "text": "Persisted source evidence",
+        "section_path": "Method",
+        "page_start": 1,
+        "page_end": 1,
+        "parent_chunk_id": None,
+        "previous_chunk_id": None,
+        "next_chunk_id": None,
+        "visibility": "private",
+        "library_scope_ids": ["library_001"],
+        "parse_version": "pypdf_text_v1",
+        "embedding_version": "not_embedded_v1",
+    }
+    row.update(updates)
+    return row
+
+
 class StorageModelTests(unittest.TestCase):
     def test_identity_requires_timezone_and_ordered_source_times(self):
         with self.assertRaises(ValidationError):
@@ -248,8 +289,18 @@ class PostgreSQLMigrationTests(unittest.TestCase):
         self.assertIn("UNIQUE INDEX", online_sql)
         self.assertIn("WHERE is_active = TRUE", online_sql)
 
+        snapshot_sql = (
+            ROOT / "backend/storage/migrations/0004_runtime_snapshots.sql"
+        ).read_text(encoding="utf-8")
+        self.assertIn("rag_pdf_objects", snapshot_sql)
+        self.assertIn("rag_chunks", snapshot_sql)
+        self.assertIn("'runtime_snapshot'", snapshot_sql)
+        self.assertIn("runtime snapshot rows are immutable", snapshot_sql)
+        self.assertIn("runtime snapshot deletion requires an INACTIVE version", snapshot_sql)
+        self.assertIn("UNIQUE (document_version_id, chunk_ordinal)", snapshot_sql)
+
     def test_migration_is_idempotent_and_detects_checksum_drift(self):
-        first = ScriptedConnection(*([None] * 10))
+        first = ScriptedConnection(*([None] * 13))
         self.assertTrue(apply_fact_source_migration(first))
         self.assertEqual(first.commit_count, 1)
         self.assertEqual(first.rollback_count, 0)
@@ -260,6 +311,7 @@ class PostgreSQLMigrationTests(unittest.TestCase):
             {"sha256": migration_sha256("0001_fact_source")},
             {"sha256": migration_sha256("0002_cleanup_queue")},
             {"sha256": migration_sha256("0003_online_ready_visibility")},
+            {"sha256": migration_sha256("0004_runtime_snapshots")},
         )
         self.assertFalse(apply_fact_source_migration(unchanged))
         self.assertEqual(unchanged.commit_count, 1)
@@ -271,6 +323,7 @@ class PostgreSQLMigrationTests(unittest.TestCase):
             None,
             None,
             {"sha256": migration_sha256("0003_online_ready_visibility")},
+            {"sha256": migration_sha256("0004_runtime_snapshots")},
         )
         self.assertTrue(apply_fact_source_migration(later_only))
         self.assertEqual(later_only.commit_count, 1)
@@ -400,6 +453,56 @@ class PostgresFactRepositoryTests(unittest.TestCase):
             )
         self.assertEqual(conflict.commit_count, 0)
         self.assertGreaterEqual(conflict.rollback_count, 1)
+
+    def test_runtime_snapshot_is_exact_replay_safe_and_loads_only_ready_chunks(self):
+        pdf_object = PdfObjectV1.model_validate(pdf_object_row())
+        chunk = ChunkRecordV1.model_validate(
+            {
+                **{
+                    key: value
+                    for key, value in chunk_row().items()
+                    if key not in {"owner_id", "document_version_id", "chunk_ordinal"}
+                },
+                "version_id": "document_version_existing",
+                "tenant_id": "owner_001",
+                "is_active": False,
+            }
+        )
+        persist = ScriptedConnection(None, pdf_object_row(), None, [chunk_row()])
+        receipt = self.repository(persist).persist_runtime_snapshot(
+            pdf_object=pdf_object,
+            chunks=[chunk],
+        )
+
+        self.assertEqual(receipt.chunk_count, 1)
+        self.assertEqual(persist.commit_count, 1)
+        self.assertIn("ON CONFLICT (chunk_id) DO NOTHING", persist.executions[2][0])
+
+        online = ScriptedConnection([chunk_row()])
+        loaded = self.repository(online).load_online_chunks(
+            owner_id="owner_001",
+            document_version_ids=["document_version_existing"],
+        )
+        self.assertTrue(loaded[0].is_active)
+        self.assertEqual(loaded[0].text, chunk.text)
+        self.assertIn("v.lifecycle_status = 'READY'", online.executions[0][0])
+
+        inactive_lookup = ScriptedConnection(pdf_object_row())
+        inactive_pdf = self.repository(inactive_lookup).get_inactive_pdf_object(
+            owner_id="owner_001",
+            document_version_id="document_version_existing",
+        )
+        self.assertEqual(inactive_pdf, pdf_object)
+        self.assertIn("v.lifecycle_status = 'INACTIVE'", inactive_lookup.executions[0][0])
+
+        purge = ScriptedConnection({"inactive": True}, None, None)
+        self.repository(purge).purge_inactive_runtime_snapshot(
+            owner_id="owner_001",
+            document_version_id="document_version_existing",
+        )
+        self.assertEqual(purge.commit_count, 1)
+        self.assertIn("DELETE FROM rag_chunks", purge.executions[1][0])
+        self.assertIn("DELETE FROM rag_pdf_objects", purge.executions[2][0])
 
     def test_ready_transition_requires_both_indexes_and_all_lineage_times(self):
         processing = version_row(lifecycle_status="PROCESSING")

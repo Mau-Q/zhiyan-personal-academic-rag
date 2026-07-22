@@ -12,9 +12,13 @@ from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
 
+from fastapi.testclient import TestClient
+
+from backend.api.app import create_app
 from backend.ingestion.cleanup import (
     PersistentIndexCleanupScheduler,
     PersistentIndexCleanupWorker,
+    PersistentRuntimeSnapshotCleaner,
 )
 from backend.ingestion.elasticsearch_writer import ElasticsearchVersionIndexWriter
 from backend.ingestion.index_lifecycle import (
@@ -23,15 +27,22 @@ from backend.ingestion.index_lifecycle import (
     publish_prepared_indexes,
 )
 from backend.ingestion.milvus_writer import MilvusVersionIndexWriter
-from backend.ingestion.persistent import prepare_persistent_pdf_ingestion
+from backend.ingestion.persistent import prepare_and_persist_pdf_ingestion
 from backend.retrieval.elasticsearch import UrllibElasticsearchTransport
 from backend.retrieval.embedding import OllamaEmbeddingProvider
 from backend.retrieval.milvus import PymilvusTransport
+from backend.retrieval.online import (
+    OnlineVersionRrfRetriever,
+    PostgresReadyRouteResolver,
+)
+from backend.storage.pdf_objects import FilesystemPdfObjectStore
 from backend.storage.postgres import PostgresFactRepository, connect_postgres
 from backend.validation.stage1 import Stage1ReconciliationError, reconcile_ready_scope
 
 
 CONFIRMATION = "RUN_ISOLATED_STAGE1_CANARY"
+REPORT_SCHEMA_VERSION = "stage1_remote_canary_report_v2"
+EXPECTED_CLEANUP_JOBS = 3
 _RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,47}$")
 
 
@@ -50,6 +61,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--confirm", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--strategy", default="fixed_boundary_v1")
+    parser.add_argument(
+        "--pdf-object-root",
+        type=Path,
+        default=Path("runtime/stage1-pdf-objects"),
+    )
     parser.add_argument("--es-index-prefix", default="zhiyan-stage1-canary")
     parser.add_argument("--milvus-collection-prefix", default="zhiyan_stage1_canary")
     return parser
@@ -123,37 +139,42 @@ def main() -> int:
             _loopback_endpoint("DATABASE_URL", _environment("DATABASE_URL"))
         )
         repository = PostgresFactRepository(connection)
+        pdf_object_store = FilesystemPdfObjectStore(args.pdf_object_root)
+        elasticsearch_transport = UrllibElasticsearchTransport(
+            base_url=_loopback_endpoint(
+                "ELASTICSEARCH_URL",
+                _environment("ELASTICSEARCH_URL", "http://127.0.0.1:9200"),
+            )
+        )
         elasticsearch = ElasticsearchVersionIndexWriter(
             index_prefix=args.es_index_prefix,
-            transport=UrllibElasticsearchTransport(
-                base_url=_loopback_endpoint(
-                    "ELASTICSEARCH_URL",
-                    _environment("ELASTICSEARCH_URL", "http://127.0.0.1:9200"),
-                )
+            transport=elasticsearch_transport,
+        )
+        milvus_transport = PymilvusTransport(
+            uri=_loopback_endpoint(
+                "MILVUS_URI",
+                _environment("MILVUS_URI", "http://127.0.0.1:19530"),
+            )
+        )
+        embedding_provider = OllamaEmbeddingProvider(
+            model=_environment("OLLAMA_EMBED_MODEL", "bge-m3:latest"),
+            base_url=_loopback_endpoint(
+                "OLLAMA_URL",
+                _environment("OLLAMA_URL", "http://127.0.0.1:11434"),
             ),
         )
         milvus = MilvusVersionIndexWriter(
             collection_prefix=args.milvus_collection_prefix,
-            transport=PymilvusTransport(
-                uri=_loopback_endpoint(
-                    "MILVUS_URI",
-                    _environment("MILVUS_URI", "http://127.0.0.1:19530"),
-                )
-            ),
-            provider=OllamaEmbeddingProvider(
-                model=_environment("OLLAMA_EMBED_MODEL", "bge-m3:latest"),
-                base_url=_loopback_endpoint(
-                    "OLLAMA_URL",
-                    _environment("OLLAMA_URL", "http://127.0.0.1:11434"),
-                ),
-            ),
+            transport=milvus_transport,
+            provider=embedding_provider,
         )
         now = datetime.now(timezone.utc)
         owner_id = f"stage1_canary_{args.run_id}"
         paper_id = f"paper_{args.run_id}"
-        preparation = prepare_persistent_pdf_ingestion(
+        runtime_ingestion = prepare_and_persist_pdf_ingestion(
             pdf_bytes,
             repository=repository,
+            object_store=pdf_object_store,
             owner_id=owner_id,
             paper_id=paper_id,
             source_type="uploaded",
@@ -164,6 +185,12 @@ def main() -> int:
             library_scope_ids=[f"library_{args.run_id}"],
             expected_sha256=args.expected_sha256,
         )
+        preparation = runtime_ingestion.preparation
+        reopened_pdf = FilesystemPdfObjectStore(args.pdf_object_root).read_pdf(
+            runtime_ingestion.pdf_object
+        )
+        if reopened_pdf != pdf_bytes:
+            raise RuntimeError("PDF_OBJECT_REOPEN_FAILED")
         publication = publish_prepared_indexes(
             preparation,
             repository=repository,
@@ -177,6 +204,39 @@ def main() -> int:
             owner_id=owner_id,
             document_ids=[publication.version.document_id],
         )
+        online_retriever = OnlineVersionRrfRetriever(
+            resolver=PostgresReadyRouteResolver(
+                repository=repository,
+                elasticsearch=elasticsearch,
+                milvus=milvus,
+            ),
+            elasticsearch_transport=elasticsearch_transport,
+            milvus_transport=milvus_transport,
+            embedding_provider=embedding_provider,
+            chunk_snapshots=repository,
+        )
+        answer_client = TestClient(
+            create_app(
+                retrieval_backend="online_remote_rrf",
+                authenticated_owner_id=owner_id,
+                online_rrf_retriever=online_retriever,
+            )
+        )
+        answer_response = answer_client.post(
+            "/api/v1/rag/answers",
+            json={
+                "question": preparation.ingestion.chunks[0].text[:4000],
+                "document_ids": [publication.version.document_id],
+                "stream": False,
+            },
+        )
+        answer_payload = answer_response.json()
+        if (
+            answer_response.status_code != 200
+            or answer_payload.get("status") != "COMPLETED"
+            or not answer_payload.get("evidence")
+        ):
+            raise RuntimeError("PERSISTED_SNAPSHOT_ANSWER_API_FAILED")
 
         scheduler = PersistentIndexCleanupScheduler(repository)
         inactivation = inactivate_and_schedule_cleanup(
@@ -192,11 +252,20 @@ def main() -> int:
             repository=repository,
             elasticsearch=elasticsearch,
             milvus=milvus,
-        ).run_batch(max_jobs=2)
-        if len(cleanup_results) != 2 or not all(
+            runtime_snapshot=PersistentRuntimeSnapshotCleaner(
+                repository=repository,
+                pdf_objects=pdf_object_store,
+            ),
+        ).run_batch(max_jobs=EXPECTED_CLEANUP_JOBS)
+        if len(cleanup_results) != EXPECTED_CLEANUP_JOBS or not all(
             result.succeeded for result in cleanup_results
         ):
             raise RuntimeError("CLEANUP_DID_NOT_COMPLETE")
+        if repository.get_inactive_pdf_object(
+            owner_id=owner_id,
+            document_version_id=publication.version.document_version_id,
+        ) is not None:
+            raise RuntimeError("RUNTIME_SNAPSHOT_CLEANUP_FAILED")
         try:
             reconcile_ready_scope(
                 repository=repository,
@@ -211,9 +280,23 @@ def main() -> int:
             inactive_proven = False
         if not inactive_proven:
             raise RuntimeError("INACTIVE_VERSION_REMAINED_VISIBLE")
+        inactive_answer = answer_client.post(
+            "/api/v1/rag/answers",
+            json={
+                "question": "This deleted document must remain unavailable.",
+                "document_ids": [publication.version.document_id],
+                "stream": False,
+            },
+        )
+        inactive_answer_payload = inactive_answer.json()
+        if (
+            inactive_answer.status_code != 403
+            or inactive_answer_payload.get("code") != "RAG_FORBIDDEN_SCOPE"
+        ):
+            raise RuntimeError("INACTIVE_ANSWER_API_REMAINED_VISIBLE")
 
         payload: dict[str, object] = {
-            "schema_version": "stage1_remote_canary_report_v1",
+            "schema_version": REPORT_SCHEMA_VERSION,
             "status": "PASS",
             "run_id": args.run_id,
             "pdf_sha256": actual_sha256,
@@ -222,17 +305,25 @@ def main() -> int:
             "document_id": publication.version.document_id,
             "document_version_id": publication.version.document_version_id,
             "chunk_count": len(preparation.ingestion.chunks),
+            "runtime_snapshot_sha256": (
+                runtime_ingestion.snapshot.chunk_snapshot_sha256
+            ),
+            "pdf_object_reopen_proven": True,
             "ready_reconciliation": ready_report.model_dump(),
+            "answer_api_status": answer_payload["status"],
+            "answer_api_evidence_count": len(answer_payload["evidence"]),
             "inactivation_reason": inactivation.reason.value,
             "cleanup_jobs_succeeded": len(cleanup_results),
+            "runtime_snapshot_cleanup_proven": True,
             "inactive_visibility_proven": inactive_proven,
+            "inactive_answer_api_status": inactive_answer.status_code,
         }
         _write_report(args.output, payload)
         print(json.dumps(payload, ensure_ascii=False))
         return 0
     except Exception as exc:
         failure = {
-            "schema_version": "stage1_remote_canary_report_v1",
+            "schema_version": REPORT_SCHEMA_VERSION,
             "status": "FAIL",
             "run_id": args.run_id,
             "error_code": type(exc).__name__,

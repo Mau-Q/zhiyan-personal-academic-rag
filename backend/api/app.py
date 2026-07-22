@@ -98,7 +98,7 @@ def create_app(
     authenticated_owner_id: str | None = None,
     online_rrf_retriever: OnlineVersionRrfRetriever | None = None,
 ) -> FastAPI:
-    chunks = load_chunks(chunks_path)
+    chunks = [] if retrieval_backend == "online_remote_rrf" else load_chunks(chunks_path)
     sqlite_index: SQLiteFtsIndex | None = None
     vector_index: LocalVectorIndex | None = None
     hybrid_retriever: LocalRrfHybridRetriever | None = None
@@ -261,20 +261,24 @@ def create_app(
         },
     )
     def create_rag_answer(payload: RagAnswerRequestV1) -> RagAnswerV1 | JSONResponse:
-        chunks = load_chunks(app.state.chunks_path)
-        base_scope = load_scope(app.state.scope_path)
+        chunks = (
+            []
+            if app.state.retrieval_backend == "online_remote_rrf"
+            else load_chunks(app.state.chunks_path)
+        )
         requested_document_ids = set(payload.document_ids)
         if app.state.retrieval_backend == "online_remote_rrf":
             base_scope = {
-                **base_scope,
                 "user_id": app.state.authenticated_owner_id,
                 "tenant_id": app.state.authenticated_owner_id,
+                "acl_version": "postgres_ready_v1",
                 "include_public": False,
                 "document_ids": [],
                 "library_ids": [],
                 "folder_ids": [],
             }
         else:
+            base_scope = load_scope(app.state.scope_path)
             authorized_document_ids = {
                 chunk["document_id"]
                 for chunk in filter_authorized_chunks(chunks, base_scope)
@@ -293,7 +297,6 @@ def create_app(
                 answer = answer_online_ready_question(
                     payload.question,
                     effective_scope,
-                    chunks,
                     app.state.online_rrf_retriever,
                     owner_id=app.state.authenticated_owner_id,
                     document_ids=payload.document_ids,
