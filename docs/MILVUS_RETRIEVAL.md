@@ -12,6 +12,12 @@
 - Milvus 服务端先执行租户、可见性、文档/库范围和 `is_active` 过滤，返回后再复用应用授权判断；
 - Folder-only 范围当前无法由该 Schema 解析，按失败关闭处理。
 
+## 本地版本写入器
+
+`backend.ingestion.milvus_writer.MilvusVersionIndexWriter` 实现阶段 1 的版本化派生索引写入。每个 owner/version 对应一个身份哈希命名的独立 Collection，原始 ID 不进入 Collection 名；Collection 不会自动加入在线配置。描述除检索参数外还绑定 document/version、源 Chunk 指纹、数量和完整 float32 向量指纹。
+
+首次写入使用 Upsert 并强制 Chunk 保持非活动。完整重放验证 Schema、payload、模型身份和实际向量指纹，不重复调用 Embedding；部分写恢复先重新计算并验证已有向量，只补缺失主键。激活/失活同时更新 Milvus 标量与 payload 中的 `is_active`，删除前再次核验 Collection 身份。上述能力目前只通过本地确定性测试，尚未在远程 Milvus/BGE-M3 上复测，也没有接入在线 READY 路由。
+
 ## 工程基线参数
 
 - `FLOAT_VECTOR`，BGE-M3 为 1024 维；

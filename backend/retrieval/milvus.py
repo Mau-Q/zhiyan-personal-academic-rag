@@ -54,10 +54,20 @@ class MilvusTransport(Protocol):
         self, collection_name: str, *, dimension: int, description: str
     ) -> None: ...
     def insert(self, collection_name: str, data: list[JsonObject]) -> Mapping[str, Any]: ...
+    def upsert(self, collection_name: str, data: list[JsonObject]) -> Mapping[str, Any]: ...
     def flush(self, collection_name: str) -> None: ...
     def load_collection(self, collection_name: str) -> None: ...
+    def drop_collection(self, collection_name: str) -> None: ...
     def describe_collection(self, collection_name: str) -> Mapping[str, Any]: ...
     def get_collection_stats(self, collection_name: str) -> Mapping[str, Any]: ...
+    def query(
+        self,
+        collection_name: str,
+        *,
+        filter_expression: str,
+        output_fields: Sequence[str],
+        limit: int,
+    ) -> list[Mapping[str, Any]]: ...
     def search(
         self,
         collection_name: str,
@@ -131,17 +141,38 @@ class PymilvusTransport:
     def insert(self, collection_name: str, data: list[JsonObject]) -> Mapping[str, Any]:
         return self.client.insert(collection_name=collection_name, data=data)
 
+    def upsert(self, collection_name: str, data: list[JsonObject]) -> Mapping[str, Any]:
+        return self.client.upsert(collection_name=collection_name, data=data)
+
     def flush(self, collection_name: str) -> None:
         self.client.flush(collection_name=collection_name)
 
     def load_collection(self, collection_name: str) -> None:
         self.client.load_collection(collection_name=collection_name)
 
+    def drop_collection(self, collection_name: str) -> None:
+        self.client.drop_collection(collection_name=collection_name)
+
     def describe_collection(self, collection_name: str) -> Mapping[str, Any]:
         return self.client.describe_collection(collection_name=collection_name)
 
     def get_collection_stats(self, collection_name: str) -> Mapping[str, Any]:
         return self.client.get_collection_stats(collection_name=collection_name)
+
+    def query(
+        self,
+        collection_name: str,
+        *,
+        filter_expression: str,
+        output_fields: Sequence[str],
+        limit: int,
+    ) -> list[Mapping[str, Any]]:
+        return self.client.query(
+            collection_name=collection_name,
+            filter=filter_expression,
+            output_fields=list(output_fields),
+            limit=limit,
+        )
 
     def search(
         self,

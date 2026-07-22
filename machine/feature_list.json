@@ -343,6 +343,19 @@
       ]
     },
     {
+      "id": "milvus_version_writer",
+      "status": "PARTIAL",
+      "owner": "A",
+      "evidence": [
+        "backend/ingestion/milvus_writer.py",
+        "backend/retrieval/milvus.py",
+        "tests/ingestion/test_milvus_version_writer.py",
+        "tests/retrieval/test_milvus_retrieval.py",
+        "docs/MILVUS_RETRIEVAL.md",
+        "docs/LOCAL_PDF_INGESTION.md"
+      ]
+    },
+    {
       "id": "remote_host_readiness",
       "status": "READY",
       "owner": "USER",

@@ -1,6 +1,7 @@
 import json
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock
 
 from backend.retrieval.fixture import load_chunks, load_scope
 from backend.retrieval.milvus import (
@@ -8,6 +9,7 @@ from backend.retrieval.milvus import (
     HNSW_M,
     MilvusIndexNotReadyError,
     MilvusVectorIndex,
+    PymilvusTransport,
 )
 from tests.retrieval.fake_embedding import FakeEmbeddingProvider
 from tests.retrieval.fake_milvus import FakeMilvusTransport
@@ -87,6 +89,41 @@ class MilvusVectorRetrievalTests(unittest.TestCase):
     def test_invalid_collection_name_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "collection_name is invalid"):
             MilvusVectorIndex("invalid-name", FakeMilvusTransport())
+
+    def test_transport_forwards_version_lifecycle_operations(self):
+        transport = object.__new__(PymilvusTransport)
+        transport.client = MagicMock()
+        transport.client.upsert.return_value = {"upsert_count": 1}
+        transport.client.query.return_value = [{"chunk_id": "chunk_001"}]
+
+        self.assertEqual(
+            transport.upsert("version_collection", [{"chunk_id": "chunk_001"}]),
+            {"upsert_count": 1},
+        )
+        self.assertEqual(
+            transport.query(
+                "version_collection",
+                filter_expression="",
+                output_fields=["chunk_id"],
+                limit=16_000,
+            ),
+            [{"chunk_id": "chunk_001"}],
+        )
+        transport.drop_collection("version_collection")
+
+        transport.client.upsert.assert_called_once_with(
+            collection_name="version_collection",
+            data=[{"chunk_id": "chunk_001"}],
+        )
+        transport.client.query.assert_called_once_with(
+            collection_name="version_collection",
+            filter="",
+            output_fields=["chunk_id"],
+            limit=16_000,
+        )
+        transport.client.drop_collection.assert_called_once_with(
+            collection_name="version_collection"
+        )
 
 
 if __name__ == "__main__":
