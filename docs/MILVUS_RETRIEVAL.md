@@ -57,4 +57,4 @@
 
 Milvus 专用题目副本只调整预期执行边界告警，不修改问题、分类或目标证据。Collection 名不能复用已有名称，适配器不会覆盖现有 Collection。运行报告留在远程本机，不提交私有题目、Chunk、模型或凭据。
 
-与 Elasticsearch 共用的候选接口、版本化配置和最小 RRF 见 [Elasticsearch + Milvus 最小 RRF](REMOTE_RRF_RETRIEVAL.md)。当前只完成本地 Fixture 门禁，未宣称远程 RRF Canary 通过。
+与 Elasticsearch 共用的候选接口、版本化配置和最小 RRF 见 [Elasticsearch + Milvus 最小 RRF](REMOTE_RRF_RETRIEVAL.md)。远程 RRF Canary 已完成 `14/15`，与 ES 单路持平，未产生净增益。

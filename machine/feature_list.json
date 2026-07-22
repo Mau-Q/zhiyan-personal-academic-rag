@@ -112,7 +112,7 @@
     },
     {
       "id": "remote_rrf_hybrid_adapter",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "A",
       "evidence": [
         "backend/retrieval/results.py",

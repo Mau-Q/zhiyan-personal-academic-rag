@@ -46,4 +46,4 @@ $py = ".\.venv\Scripts\python.exe"
 
 ## 下一门禁
 
-Milvus 单路已完成 `12/15`。ES 与 Milvus 候选接口、无密钥配置和最小 RRF 已在本地 Fixture 固化；下一门禁是使用现有远程索引运行固定 15 题，见 [Elasticsearch + Milvus 最小 RRF](REMOTE_RRF_RETRIEVAL.md)。
+Milvus 单路已完成 `12/15`。ES 与 Milvus 候选接口、无密钥配置和最小 RRF 已固化；远程 RRF 同题 Canary 为 `14/15`，与 ES 持平，因此不为该失败调参或增加重排，见 [Elasticsearch + Milvus 最小 RRF](REMOTE_RRF_RETRIEVAL.md)。

@@ -2,11 +2,11 @@
 
 ## 决策依据
 
-固定 3 论文、15 题、`top_k=3` Canary 已显示两路失败互补：
+固定 3 论文、15 题、`top_k=3` Canary 在单路结果上显示失败互补：
 
 - Elasticsearch 为 `14/15`，唯一失败是 `local3.answerable.evmbench.modes`；与远程 Milvus 结果一致的本地精确 BGE-M3 在该题命中目标第 2 页；
 - Milvus 为 `12/15`，3 个缺失目标页的题都已被 Elasticsearch 命中；
-- 两路 Top-3 结果的证据并集因此覆盖 `15/15`，这只证明值得验证最小 RRF，不等于远程 RRF 已实跑 `15/15`。
+- 两路 Top-3 证据并集覆盖 `15/15`，因此值得实跑一次最小 RRF；并集覆盖不代表融合后的最终 Top-3 也会保留目标页。
 
 ## 固定结果接口
 
@@ -35,4 +35,11 @@ Elasticsearch 和 Milvus 适配器都先返回 `RankedChunk`：
 
 ## 远程验证边界
 
-当前只完成本地适配器、Fixture Answer API 和 Harness 验证。远程主机后续使用现有 Index、Collection、316 Chunk 和原 15 题；不改题目、目标页、`top_k`、阈值或 HNSW 参数，不同时加入重排、真实 LLM 或 500 题远程全量。具体操作命令在当次交互中一次性给全并分条展示，不写入长期文档。
+远程主机已使用现有 Index、Collection、316 Chunk 和原 15 题完成最小 RRF Canary：
+
+- 总结果 `14/15`：`ANSWERABLE 8/9`、`NO_EVIDENCE 3/3`、`FORBIDDEN 3/3`；
+- 唯一失败仍为 `local3.answerable.evmbench.modes`，缺少冻结目标 `doc_arxiv_2603_04915:2-2`；
+- 返回了同一论文的第 4/5 页证据，说明目标第 2 页虽出现在 Milvus 单路 Top-3，但在 RRF 最终 Top-3 中被两路共同支持的其他分块挤出；
+- 结果与 Elasticsearch `14/15` 持平，未产生净增益。
+
+因此最小远程 RRF 保留为已验证基线，不晋级为默认检索策略，也不为单个 Canary 失败修改题目、目标页、`top_k`、融合常数、阈值或 HNSW 参数。重排、真实 LLM 和远程 500 题全量继续暂缓。具体操作命令在当次交互中一次性给全并分条展示，不写入长期文档。

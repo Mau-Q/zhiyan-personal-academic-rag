@@ -22,5 +22,6 @@
 | PD-018 | ACCEPTED | 保留 500 题，GPT 承担候选生成和低风险初标；低风险 `dev/test` 人工抽检 10%～20%，Acceptance 单人确认，冲突才仲裁，专业高难题才专家复核 | 保留覆盖与统计稳定性，降低双人工、全量仲裁和泛化专家评审成本；原方案双人工口径仍单独记账 |
 | PD-019 | ACCEPTED | 固化 ES/Milvus 带名次与原始分数的共用候选接口和无密钥配置；基于固定 Canary 失败完全互补的证据实现最小远程 RRF | 融合只使用名次，不直接比较 BM25/COSINE 原始分数；本地 Fixture 就绪不等于远程 RRF Canary 完成 |
 | PD-020 | ACCEPTED | 仓库门禁统一由 Makefile 强制使用项目 `.venv`，禁止静默回退到系统 Python | macOS 使用 `.venv/bin/python`，Windows 使用 `.venv/Scripts/python.exe`；虚拟环境缺失时明确失败 |
+| PD-021 | ACCEPTED | 远程 ES+Milvus RRF Canary 为 14/15，与 ES 单路持平；保留已验证适配器，不调参、不晋级默认策略、不增加重排 | Top-3 候选并集互补未转化为融合后净增益；唯一失败和冻结目标按真实结果保留 |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。
