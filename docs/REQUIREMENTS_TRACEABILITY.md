@@ -37,7 +37,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | SR-02 | PostgreSQL 作为元数据、ACL 和生命周期唯一事实源 | `NOT_STARTED` | 合同与 Fixture 权限规则 | 真实 Schema、ACL 计算、时间戳和软删除未接入 |
 | SR-03 | PDF/OCR、章节页码、父子 Chunk、版本和幂等入库 | `PARTIAL` | 本地文本层 PDF、`ChunkRecordV1`、稳定 ID 和页码 | OCR、MinIO、Outbox、死信、完整版本/删除链路未实现 |
 | SR-04 | Elasticsearch 论文级和 Chunk 级 BM25 | `PARTIAL` | 远程 ES 9.4.3；严格 Mapping、ACL、BM25 适配器；316 Chunk 固定 Canary 14/15，拒答与越权 6/6 | 中文分词选型、生产别名和性能基线未实现 |
-| SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `PARTIAL` | 本地精确向量基线；远程 Milvus 2.6.18 + BGE-M3 冒烟；应用适配器已固定源/模型身份、ACL、COSINE 与 HNSW 工程参数 | 远程 316 Chunk/500 题、参数调优和性能基线未完成 |
+| SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `PARTIAL` | 本地精确向量基线；远程 Milvus 2.6.18 + BGE-M3；应用适配器固定源/模型身份、ACL、COSINE 与 HNSW 工程参数；316 Chunk 固定 Canary 12/15，拒答与越权 6/6 | 远程 500 题、参数调优和性能基线未完成 |
 | SR-06 | 规范化、指代消解、意图路由、查询改写和拆解 | `NOT_STARTED` | API 问题输入合同 | 结构化路由、回退、实体保持和多轮未实现 |
 | SR-07 | ES/Milvus 并行、RRF、去重、多样性、Cross-Encoder 重排 | `PARTIAL` | 本地 SQLite BM25 + BGE-M3 RRF 15/15 | 真实 ES/Milvus 并行、去重/多样性、重排和扩展消融未实现 |
 | SR-08 | 证据上下文、真实 LLM、强制引用、校验与拒答 | `PARTIAL` | Evidence/Citation、`NO_EVIDENCE`、Fake LLM Answer API | 真实模型、主张支持校验和冲突处理未实现 |
@@ -53,7 +53,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | 方案阶段 | 当前判断 | 说明 |
 |---|---|---|
 | 阶段 0：范围冻结与基线 | `IN_PROGRESS` | 有本地范围、500 题工程集和远程 CPU/内存/磁盘/GPU/服务工程基线，但风险人工确认、目标语料量、峰值并发和 SLO 仍未冻结 |
-| 阶段 1：数据与索引底座 | `PARTIAL` | 本地链路及远程 PostgreSQL/ES/Milvus/BGE-M3 冒烟可用，但应用接入、正式 Schema、Outbox 和完整生命周期未完成 |
+| 阶段 1：数据与索引底座 | `PARTIAL` | 本地链路及远程 ES/Milvus/BGE-M3 应用 Canary 可用，PostgreSQL 仅完成主机基线；正式 Schema、Outbox 和完整生命周期未完成 |
 | 阶段 2：基础 RAG MVP | `PARTIAL` | 非流式 API、Evidence、拒答和本地 RRF 可运行，但仍无真实生成模型与远程混合检索 |
 | 阶段 3：复杂科研问答 | `NOT_STARTED` | 暂未实现比较、多跳、时效、主张级校验和 Agent Evidence API |
 | 阶段 4：系统化评测、安全与性能 | `NOT_STARTED` | Harness 只是早期工具，尚未达到方案规模和验收门槛 |
@@ -65,6 +65,6 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 
 1. **范围与评测线（共享）：** 冻结目标语料量、峰值并发、硬件预算和 SLO；建立 500 条 GPT 辅助工程集，人工只确认 Acceptance、冲突、专业高难题和低风险抽检；
 2. **本地工程线（A）：** 已完成 BGE-M3/RRF、500 题四路对比和排名指标；dev/test 上向量与 RRF 优势不一致，重排继续暂缓；
-3. **远程基础设施线（B）：** Windows 11/i7-12700K/RTX 4090/64 GB 盘点与 PostgreSQL、Elasticsearch、Milvus、BGE-M3 工程冒烟已闭环；下一步转为真实检索适配器和固定语料验证。
+3. **远程基础设施线（B）：** Windows 11/i7-12700K/RTX 4090/64 GB 盘点与 PostgreSQL、Elasticsearch、Milvus、BGE-M3 工程基线已闭环；ES 14/15 与 Milvus 12/15 固定 Canary 已完成，后续保留 500 题、性能和生产参数验证。
 
 GPT 辅助 500 题通过不自动满足原方案的双人工口径，也不代表方案阶段 0 完成。只有明确恢复原方案验收口径，并让范围、正式评测、真实基础设施基线和资源选型共同形成可审计证据后，才能按最高方案关闭阶段 0。

@@ -2,7 +2,7 @@
 
 ## 当前边界
 
-该适配器把同一 `ChunkRecordV1`、授权范围和 Embedding 身份接入远程 Milvus。回答仍由 Fake LLM 生成，执行边界为 `REMOTE_API_MILVUS_BGE_M3_FAKE_LLM`。本地测试通过不代表远程 316 Chunk、500 题、性能或生产参数已经验收。
+该适配器把同一 `ChunkRecordV1`、授权范围和 Embedding 身份接入远程 Milvus。回答仍由 Fake LLM 生成，执行边界为 `REMOTE_API_MILVUS_BGE_M3_FAKE_LLM`。远程 316 Chunk/15 题 Canary 已完成；这不代表远程 500 题、性能或生产参数已经验收。
 
 ## 固定身份与失败关闭
 
@@ -20,7 +20,14 @@
 - `Strong` consistency，1 shard；
 - 默认最低分 `0.50`。
 
-这些参数只用于固定 Canary，尚未经过 316 Chunk/500 题、并发和资源测试，不能标记为生产最终值。
+这些参数只用于固定 Canary，已完成 316 Chunk 验证，但尚未经过 500 题、并发和资源测试，不能标记为生产最终值。
+
+## 远程 Canary 结果
+
+- 固定 15 题结果为 `12/15`：`ANSWERABLE 6/9`、`NO_EVIDENCE 3/3`、`FORBIDDEN 3/3`；
+- 结果与本地精确 BGE-M3 向量基线一致；
+- 3 个未通过项分别缺少冻结目标证据页 `doc_arxiv_2602_11409:6-6`、`doc_arxiv_2601_03260:8-8`、`doc_arxiv_2603_04915:5-5`；
+- 未通过项按真实召回缺口保留，不修改题目、目标页、阈值或 HNSW 参数追求满分。
 
 ## Windows PowerShell 远程验证
 
@@ -45,7 +52,7 @@
 运行同一 15 题 Harness：
 
 ```powershell
-& $py -m backend.evaluation.harness --cases "remote-es-canary-input-v1/cases-v1.jsonl" --chunks "remote-es-canary-input-v1/chunks-v1.json" --scope "remote-es-canary-input-v1/authorized-scope-v1.json" --suite-id "remote-milvus-canary-v1" --retrieval-backend "milvus_vector" --milvus-uri "http://127.0.0.1:19530" --milvus-collection "zhiyan_canary_chunks_v1" --embedding-model "bge-m3:latest" --output "remote-es-canary-input-v1/milvus-report.json"
+& $py -m backend.evaluation.harness --cases "remote-es-canary-input-v1/cases-milvus-v1.jsonl" --chunks "remote-es-canary-input-v1/chunks-v1.json" --scope "remote-es-canary-input-v1/authorized-scope-v1.json" --suite-id "remote-milvus-canary-v1" --retrieval-backend "milvus_vector" --milvus-uri "http://127.0.0.1:19530" --milvus-collection "zhiyan_canary_chunks_v1" --embedding-model "bge-m3:latest" --output "remote-es-canary-input-v1/milvus-report.json"
 ```
 
-Collection 名不能复用已有名称，适配器不会覆盖现有 Collection。运行报告留在远程本机，不提交私有题目、Chunk、模型或凭据。
+Milvus 专用题目副本只调整预期执行边界告警，不修改问题、分类或目标证据。Collection 名不能复用已有名称，适配器不会覆盖现有 Collection。运行报告留在远程本机，不提交私有题目、Chunk、模型或凭据。
