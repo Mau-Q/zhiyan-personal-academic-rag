@@ -2,7 +2,7 @@
 
 ## Status
 
-`SOURCE_PHASE_0_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_BASELINE_INPUT_READY / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN`
+`SOURCE_PHASE_0_IN_PROGRESS / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN`
 
 Phase ID：`source-phase0-foundation-in-progress`
 
@@ -115,7 +115,12 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 人工最终文件无 `PENDING`，175 条修订后标签全部通过 `EvaluationItemV1` 正式合同，SHA-256 为 `a428a8fc92cece0d1aaf7e31ce11377bec2791e146b64efdc9e2ef1279800986`。
 - 新增显式人工/专家声明门禁和谱系保留测试后，全仓 147 项测试及 Harness 8 项检查通过。
 - 已从同一冻结 175 题生成兼容现有远程 Harness 的 ES-only/Milvus-only 私有输入包；两路各 175 题，`dev/test/acceptance=105/35/35`，ZIP SHA-256 为 `636593badda13fb11558ead65ab8b3b3cedb50ac0449bbdeff4889787e319e0b`。
-- 输入包仅复用已锁定的 316 Chunk、`top_k=3`、ES 索引和 Milvus/BGE-M3 配置；远程双路报告尚未产生，不记为 Baseline 完成。
+- 输入包仅复用已锁定的 316 Chunk、`top_k=3`、ES 索引和 Milvus/BGE-M3 配置；远程两路报告均已覆盖 175/175，且题号和类别与冻结输入完全一致。
+- ES 严格整题通过 `85/175`：可回答 `84/138`、无证据 `1/17`、安全拒答 `0/20`，必需证据目标命中 `114/192`；报告 SHA-256 为 `f49cb929aaf5f42593b9b38dac4baaf92377a54d9ed754df7dae77af009ecaaf`。
+- Milvus 严格整题通过 `109/175`：可回答 `109/138`、无证据 `0/17`、安全拒答 `0/20`，必需证据目标命中 `144/192`；报告 SHA-256 为 `22f83b144da2b607f7ec66abb4bbe64a4c978827c0a2456c8540f50fd9034433`。
+- 两路整题同时通过 78 题、仅 ES 通过 7 题、仅 Milvus 通过 31 题、两路均未通过 59 题；在 138 道可回答合同中，仅 ES 通过 6 题，仅 Milvus 通过 31 题。
+- Milvus 是当前更强的单路召回基线，但两路都暴露无证据校准和安全策略层缺口；这两类失败不冒充纯召回失败。
+- 由于远程 RRF Canary 已证明融合未超过 ES，且本次 Top-3 互补严重倾向 Milvus，当前不跑 175 题 RRF、不调融合参数，保留既有适配器。
 - 新增输入包生成器和后端边界针对性测试后，全仓 149 项测试及 Harness 8 项检查通过。
 
 ## 输入
@@ -123,7 +128,7 @@ Phase ID：`source-phase0-foundation-in-progress`
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：175 题同集 ES/Milvus 单路 Baseline、正式范围/SLO、PostgreSQL 应用接入、真实生成模型和性能验收；
+- 未完成能力：无证据校准、安全策略层及其错误合同、正式范围/SLO、PostgreSQL 应用接入、真实生成模型和性能验收；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -154,14 +159,14 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 ## Current boundary
 
-当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_MILVUS_175_INPUT_READY_EXECUTION_PENDING / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_ES_CANARY_14_OF_15 / REMOTE_MILVUS_CANARY_12_OF_15 / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。AI 复核、Canary 和 Fake LLM 不证明真实生成模型、生产参数或性能目标已完成。运行时私有数据继续不进入 Git。
+当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。AI 复核、Canary 和 Fake LLM 不证明真实生成模型、生产参数或性能目标已完成。运行时私有数据继续不进入 Git。
 
 ## Next gate
 
-1. **ES-only Baseline：** 将已校验私有包传到远程机，对已人工冻结的 175 题使用现有 ES 配置运行，不改题、不改标签、不调参；
-2. **Milvus-only Baseline：** 使用同一包中完全相同的 175 题和已锁定 BGE-M3/COSINE/索引身份运行；
-3. **增强决策：** 只根据人工 Baseline 的主要失败类型决定是否进入阶段 3；当前不重跑远程 500 题，不增加重排、真实 LLM、HyDE、multi-query、multi-hop 或在线 NLI，不调 RRF；
-4. **阶段 0 收口：** 单路结果形成后，再冻结目标语料量、峰值并发、硬件预算和 SLO。
+1. **基线冻结：** 保留 ES/Milvus 两路报告、哈希、固定参数和真实失败，不改题、不改标签、不调参；
+2. **边界分流：** 后续单独定义无证据校准门禁与有害/敏感请求拒答合同，不把 `RAG_FORBIDDEN_SCOPE` 同时当作内容安全错误；
+3. **增强决策：** 当前不跑 175 题 RRF，不重跑远程 500 题，不增加重排、真实 LLM、HyDE、multi-query、multi-hop 或在线 NLI，不调 RRF；
+4. **阶段 0 收口：** 冻结目标语料量、峰值并发、硬件预算和 SLO，再决定是否开始下一阶段。
 
 ## Prohibited shortcuts
 

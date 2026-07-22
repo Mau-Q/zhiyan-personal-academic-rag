@@ -218,7 +218,7 @@
     },
     {
       "id": "mvp_175_remote_baseline_input",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "SHARED",
       "evidence": [
         "scripts/prepare_mvp_remote_baseline_package.py",
