@@ -77,6 +77,10 @@ class MilvusVectorRetrievalTests(unittest.TestCase):
         with self.assertRaisesRegex(MilvusIndexNotReadyError, "already exists"):
             self.index.build(self.chunks, self.provider)
 
+    def test_invalid_collection_name_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "collection_name is invalid"):
+            MilvusVectorIndex("invalid-name", FakeMilvusTransport())
+
 
 if __name__ == "__main__":
     unittest.main()

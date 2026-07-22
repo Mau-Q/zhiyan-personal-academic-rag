@@ -6,6 +6,7 @@ import argparse
 import json
 import math
 import os
+import re
 import sys
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
@@ -39,6 +40,7 @@ EXPECTED_FIELDS = {
     "is_active",
     "payload",
 }
+_COLLECTION_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,254}$")
 
 
 class MilvusIndexNotReadyError(ValueError):
@@ -292,7 +294,7 @@ def _authorization_filter(scope: Mapping[str, Any]) -> str:
 
 class MilvusVectorIndex:
     def __init__(self, collection_name: str, transport: MilvusTransport):
-        if not collection_name or len(collection_name) > 255:
+        if not _COLLECTION_NAME_PATTERN.fullmatch(collection_name):
             raise ValueError("Milvus collection_name is invalid")
         self.collection_name = collection_name
         self.transport = transport

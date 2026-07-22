@@ -33,19 +33,19 @@
 使用新的版本化 Collection 建立索引：
 
 ```powershell
-& $py -m backend.retrieval.milvus --uri "http://127.0.0.1:19530" --collection "zhiyan-canary-chunks-v1" --model "bge-m3:latest" build --chunks "remote-es-canary-input-v1/chunks-v1.json"
+& $py -m backend.retrieval.milvus --uri "http://127.0.0.1:19530" --collection "zhiyan_canary_chunks_v1" --model "bge-m3:latest" build --chunks "remote-es-canary-input-v1/chunks-v1.json"
 ```
 
 检查身份：
 
 ```powershell
-& $py -m backend.retrieval.milvus --uri "http://127.0.0.1:19530" --collection "zhiyan-canary-chunks-v1" --model "bge-m3:latest" inspect
+& $py -m backend.retrieval.milvus --uri "http://127.0.0.1:19530" --collection "zhiyan_canary_chunks_v1" --model "bge-m3:latest" inspect
 ```
 
 运行同一 15 题 Harness：
 
 ```powershell
-& $py -m backend.evaluation.harness --cases "remote-es-canary-input-v1/cases-v1.jsonl" --chunks "remote-es-canary-input-v1/chunks-v1.json" --scope "remote-es-canary-input-v1/authorized-scope-v1.json" --suite-id "remote-milvus-canary-v1" --retrieval-backend "milvus_vector" --milvus-uri "http://127.0.0.1:19530" --milvus-collection "zhiyan-canary-chunks-v1" --embedding-model "bge-m3:latest" --output "remote-es-canary-input-v1/milvus-report.json"
+& $py -m backend.evaluation.harness --cases "remote-es-canary-input-v1/cases-v1.jsonl" --chunks "remote-es-canary-input-v1/chunks-v1.json" --scope "remote-es-canary-input-v1/authorized-scope-v1.json" --suite-id "remote-milvus-canary-v1" --retrieval-backend "milvus_vector" --milvus-uri "http://127.0.0.1:19530" --milvus-collection "zhiyan_canary_chunks_v1" --embedding-model "bge-m3:latest" --output "remote-es-canary-input-v1/milvus-report.json"
 ```
 
 Collection 名不能复用已有名称，适配器不会覆盖现有 Collection。运行报告留在远程本机，不提交私有题目、Chunk、模型或凭据。
