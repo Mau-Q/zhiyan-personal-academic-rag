@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from backend.api.models import ErrorV1, RagAnswerRequestV1, RagAnswerV1
 from backend.rag.elasticsearch_consumer import answer_elasticsearch_question
 from backend.rag.fixture_consumer import answer_fixture_question
+from backend.rag.milvus_consumer import answer_milvus_question
 from backend.rag.sqlite_fts_consumer import answer_sqlite_fts_question
 from backend.rag.vector_consumer import answer_rrf_question, answer_vector_question
 from backend.retrieval.embedding import EmbeddingProvider, OllamaEmbeddingProvider
@@ -26,6 +27,7 @@ from backend.retrieval.hybrid import (
     DEFAULT_RRF_K,
     LocalRrfHybridRetriever,
 )
+from backend.retrieval.milvus import MilvusTransport, MilvusVectorIndex, PymilvusTransport
 from backend.retrieval.sqlite_fts import SQLiteFtsIndex
 from backend.retrieval.vector import DEFAULT_VECTOR_MIN_SCORE, LocalVectorIndex
 
@@ -39,6 +41,7 @@ RetrievalBackend = Literal[
     "local_vector",
     "local_rrf",
     "elasticsearch_bm25",
+    "milvus_vector",
 ]
 
 
@@ -77,12 +80,16 @@ def create_app(
     elasticsearch_url: str = "http://127.0.0.1:9200",
     elasticsearch_index: str | None = None,
     elasticsearch_transport: ElasticsearchTransport | None = None,
+    milvus_uri: str = "http://127.0.0.1:19530",
+    milvus_collection: str | None = None,
+    milvus_transport: MilvusTransport | None = None,
 ) -> FastAPI:
     chunks = load_chunks(chunks_path)
     sqlite_index: SQLiteFtsIndex | None = None
     vector_index: LocalVectorIndex | None = None
     hybrid_retriever: LocalRrfHybridRetriever | None = None
     elasticsearch_bm25_index: ElasticsearchBm25Index | None = None
+    milvus_vector_index: MilvusVectorIndex | None = None
     if retrieval_backend in ("sqlite_fts5", "local_rrf"):
         if index_path is None:
             raise ValueError(f"index_path is required for {retrieval_backend} retrieval")
@@ -120,6 +127,18 @@ def create_app(
             elasticsearch_index, elasticsearch_transport
         )
         elasticsearch_bm25_index.verify_source(chunks)
+    elif retrieval_backend == "milvus_vector":
+        if milvus_collection is None:
+            raise ValueError("milvus_collection is required for milvus_vector retrieval")
+        if embedding_provider is None:
+            embedding_provider = OllamaEmbeddingProvider(
+                model=embedding_model, base_url=embedding_base_url
+            )
+        if milvus_transport is None:
+            milvus_transport = PymilvusTransport(uri=milvus_uri)
+        milvus_vector_index = MilvusVectorIndex(milvus_collection, milvus_transport)
+        milvus_vector_index.verify_source(chunks)
+        milvus_vector_index.verify_provider(embedding_provider)
     elif retrieval_backend not in ("lexical_overlap", "sqlite_fts5", "local_vector"):
         raise ValueError(f"unsupported retrieval backend: {retrieval_backend}")
 
@@ -129,6 +148,7 @@ def create_app(
         "local_vector": "real local dense vector retrieval with Fake LLM",
         "local_rrf": "local SQLite FTS5 plus dense RRF retrieval with Fake LLM",
         "elasticsearch_bm25": "remote Elasticsearch BM25 retrieval with Fake LLM",
+        "milvus_vector": "remote Milvus/BGE-M3 vector retrieval with Fake LLM",
     }
     boundary = boundaries[retrieval_backend]
     app = FastAPI(
@@ -145,6 +165,7 @@ def create_app(
     app.state.vector_min_score = vector_min_score
     app.state.hybrid_retriever = hybrid_retriever
     app.state.elasticsearch_bm25_index = elasticsearch_bm25_index
+    app.state.milvus_vector_index = milvus_vector_index
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request_handler(
@@ -189,6 +210,15 @@ def create_app(
                 effective_scope,
                 chunks,
                 app.state.elasticsearch_bm25_index,
+            )
+        elif app.state.retrieval_backend == "milvus_vector":
+            answer = answer_milvus_question(
+                payload.question,
+                effective_scope,
+                chunks,
+                app.state.milvus_vector_index,
+                app.state.embedding_provider,
+                min_score=app.state.vector_min_score,
             )
         elif app.state.retrieval_backend == "sqlite_fts5":
             answer = answer_sqlite_fts_question(

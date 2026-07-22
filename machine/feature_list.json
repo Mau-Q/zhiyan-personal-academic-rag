@@ -92,6 +92,20 @@
       ]
     },
     {
+      "id": "milvus_vector_adapter",
+      "status": "READY",
+      "owner": "A",
+      "evidence": [
+        "backend/retrieval/milvus.py",
+        "backend/rag/milvus_consumer.py",
+        "backend/evaluation/harness.py",
+        "tests/retrieval/test_milvus_retrieval.py",
+        "tests/api/test_milvus_rag_answers_api.py",
+        "tests/evaluation/test_harness.py",
+        "docs/MILVUS_RETRIEVAL.md"
+      ]
+    },
+    {
       "id": "formal_retrieval_evaluation_framework",
       "status": "READY",
       "owner": "A",

@@ -21,11 +21,13 @@ from pydantic import (
 
 from backend.api.app import DEFAULT_CHUNKS_PATH, DEFAULT_SCOPE_PATH, create_app
 from backend.rag.elasticsearch_consumer import ELASTICSEARCH_EXECUTION_BOUNDARY
+from backend.rag.milvus_consumer import MILVUS_EXECUTION_BOUNDARY
 from backend.rag.sqlite_fts_consumer import SQLITE_FTS_EXECUTION_BOUNDARY
 from backend.rag.vector_consumer import RRF_EXECUTION_BOUNDARY, VECTOR_EXECUTION_BOUNDARY
 from backend.retrieval.embedding import EmbeddingProvider
 from backend.retrieval.elasticsearch import ElasticsearchTransport
 from backend.retrieval.hybrid import DEFAULT_CANDIDATE_K, DEFAULT_RRF_K
+from backend.retrieval.milvus import MilvusTransport
 from backend.retrieval.vector import DEFAULT_VECTOR_MIN_SCORE
 
 
@@ -39,6 +41,7 @@ RetrievalBackend = Literal[
     "local_vector",
     "local_rrf",
     "elasticsearch_bm25",
+    "milvus_vector",
 ]
 
 CaseId = Annotated[
@@ -258,6 +261,9 @@ def run_suite(
     elasticsearch_url: str = "http://127.0.0.1:9200",
     elasticsearch_index: str | None = None,
     elasticsearch_transport: ElasticsearchTransport | None = None,
+    milvus_uri: str = "http://127.0.0.1:19530",
+    milvus_collection: str | None = None,
+    milvus_transport: MilvusTransport | None = None,
 ) -> dict[str, Any]:
     """Run cases through the production-shaped local API adapter."""
 
@@ -276,6 +282,9 @@ def run_suite(
         elasticsearch_url=elasticsearch_url,
         elasticsearch_index=elasticsearch_index,
         elasticsearch_transport=elasticsearch_transport,
+        milvus_uri=milvus_uri,
+        milvus_collection=milvus_collection,
+        milvus_transport=milvus_transport,
     )
     client = TestClient(application)
     vector_metadata = (
@@ -283,6 +292,12 @@ def run_suite(
         if application.state.vector_index is not None
         else {}
     )
+    milvus_metadata = (
+        application.state.milvus_vector_index.inspect()
+        if application.state.milvus_vector_index is not None
+        else {}
+    )
+    retrieval_metadata = vector_metadata or milvus_metadata
     results = [_run_case(client, case) for case in cases]
     category_summary: dict[str, dict[str, int]] = {}
     for category in ("ANSWERABLE", "NO_EVIDENCE", "FORBIDDEN"):
@@ -302,20 +317,21 @@ def run_suite(
             "local_vector": VECTOR_EXECUTION_BOUNDARY,
             "local_rrf": RRF_EXECUTION_BOUNDARY,
             "elasticsearch_bm25": ELASTICSEARCH_EXECUTION_BOUNDARY,
+            "milvus_vector": MILVUS_EXECUTION_BOUNDARY,
         }[retrieval_backend],
         "retrieval_backend": retrieval_backend,
         "retrieval_configuration": {
             "top_k": 3,
             "embedding_model": embedding_model
-            if retrieval_backend in ("local_vector", "local_rrf")
+            if retrieval_backend in ("local_vector", "local_rrf", "milvus_vector")
             else None,
-            "embedding_model_digest": vector_metadata.get("embedding_model_digest"),
-            "embedding_dimension": int(vector_metadata["embedding_dimension"])
-            if vector_metadata
+            "embedding_model_digest": retrieval_metadata.get("embedding_model_digest"),
+            "embedding_dimension": int(retrieval_metadata["embedding_dimension"])
+            if retrieval_metadata
             else None,
-            "source_chunks_sha256": vector_metadata.get("source_chunks_sha256"),
+            "source_chunks_sha256": retrieval_metadata.get("source_chunks_sha256"),
             "vector_min_score": vector_min_score
-            if retrieval_backend in ("local_vector", "local_rrf")
+            if retrieval_backend in ("local_vector", "local_rrf", "milvus_vector")
             else None,
             "candidate_k": candidate_k if retrieval_backend == "local_rrf" else None,
             "rrf_k": rrf_k if retrieval_backend == "local_rrf" else None,
@@ -347,6 +363,7 @@ def build_parser() -> argparse.ArgumentParser:
             "local_vector",
             "local_rrf",
             "elasticsearch_bm25",
+            "milvus_vector",
         ),
         default="lexical_overlap",
     )
@@ -361,6 +378,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--rrf-k", type=int, default=DEFAULT_RRF_K)
     parser.add_argument("--elasticsearch-url", default="http://127.0.0.1:9200")
     parser.add_argument("--elasticsearch-index", default=None)
+    parser.add_argument("--milvus-uri", default="http://127.0.0.1:19530")
+    parser.add_argument("--milvus-collection", default=None)
     return parser
 
 
@@ -383,6 +402,8 @@ def main() -> int:
             rrf_k=args.rrf_k,
             elasticsearch_url=args.elasticsearch_url,
             elasticsearch_index=args.elasticsearch_index,
+            milvus_uri=args.milvus_uri,
+            milvus_collection=args.milvus_collection,
         )
     except (OSError, ValueError, ValidationError, json.JSONDecodeError) as exc:
         print(f"evaluation harness input error: {exc}", file=sys.stderr)

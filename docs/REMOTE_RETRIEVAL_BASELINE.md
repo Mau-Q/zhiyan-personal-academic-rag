@@ -2,7 +2,7 @@
 
 ## 边界
 
-本基线只证明单机远程环境中的 Elasticsearch、Milvus 和 BGE-M3 可运行、可持久化并执行带授权过滤的最小检索。它不证明应用已经接入、生产安全配置完成、生产参数冻结或性能目标达成。
+本基线证明单机远程环境中的 Elasticsearch、Milvus 和 BGE-M3 可运行、可持久化并执行带授权过滤的最小检索。Elasticsearch 应用适配与 316 Chunk Canary 已完成；Milvus 应用适配器已在仓库实现并通过 Fixture 测试，仍待远程同源验证。它不证明生产安全配置完成、生产参数冻结或性能目标达成。
 
 ## 已验证拓扑
 
@@ -44,12 +44,11 @@ Windows PowerShell 5.1 发送非 ASCII JSON 时必须显式传入 UTF-8 字节�
 
 ## 当前未完成
 
-- 应用级 Elasticsearch/Milvus 适配器与正式 Mapping/Collection Schema；
-- 316 Chunk 与 500 题在真实 ES/Milvus 上的同源重跑；
+- Milvus 适配器的远程 316 Chunk/15 题同源重跑；
+- 500 题在真实 ES/Milvus 上的同源重跑；
 - PostgreSQL 元数据/ACL 真值接入；
 - 认证、TLS、备份、监控、并发和性能验收；
 - 生产 HNSW/IVF、阈值、批大小和资源参数冻结；
 - 真实生成 LLM 接入。
 
-下一门禁是先接入 Elasticsearch 后端并用固定 Canary 验证；通过后再接入 Milvus，不同时改变两个检索实现。
-
+下一门禁是在已完成 Elasticsearch Canary 的前提下，只验证 Milvus 适配器的远程 316 Chunk/15 题链路，不同时接入真实 LLM 或 ES+Milvus RRF。

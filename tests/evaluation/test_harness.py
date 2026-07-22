@@ -7,13 +7,16 @@ from pathlib import Path
 
 from backend.evaluation.harness import DEFAULT_CASES_PATH, load_cases, run_suite
 from backend.rag.elasticsearch_consumer import ELASTICSEARCH_EXECUTION_BOUNDARY
+from backend.rag.milvus_consumer import MILVUS_EXECUTION_BOUNDARY
 from backend.rag.sqlite_fts_consumer import SQLITE_FTS_EXECUTION_BOUNDARY
 from backend.rag.vector_consumer import RRF_EXECUTION_BOUNDARY, VECTOR_EXECUTION_BOUNDARY
 from backend.retrieval.fixture import load_chunks
+from backend.retrieval.milvus import MilvusVectorIndex
 from backend.retrieval.sqlite_fts import chunks_fingerprint
 from backend.retrieval.sqlite_fts import SQLiteFtsIndex
 from backend.retrieval.vector import LocalVectorIndex
 from tests.retrieval.fake_embedding import FakeEmbeddingProvider
+from tests.retrieval.fake_milvus import FakeMilvusTransport
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -21,6 +24,26 @@ SQLITE_CASES_PATH = ROOT / "evaluation" / "suites" / "fixture-sqlite-fts-v1.json
 
 
 class EvaluationHarnessTests(unittest.TestCase):
+    def test_answerable_case_runs_through_milvus_backend(self):
+        chunks = load_chunks(ROOT / "fixtures" / "chunks-v1.json")
+        provider = FakeEmbeddingProvider()
+        transport = FakeMilvusTransport()
+        MilvusVectorIndex("fixture_chunks_v1", transport).build(chunks, provider)
+        case = load_cases(SQLITE_CASES_PATH)[0].model_copy(deep=True)
+        case.expected.required_warnings = ["REMOTE_MILVUS_BGE_M3_FAKE_LLM"]
+        report = run_suite(
+            [case],
+            suite_id="fixture-milvus-v1",
+            retrieval_backend="milvus_vector",
+            milvus_collection="fixture_chunks_v1",
+            milvus_transport=transport,
+            embedding_provider=provider,
+            embedding_model="semantic-fixture-v1",
+        )
+        self.assertEqual(report["summary"]["passed"], 1)
+        self.assertEqual(report["execution_boundary"], MILVUS_EXECUTION_BOUNDARY)
+        self.assertEqual(report["retrieval_configuration"]["embedding_dimension"], 4)
+
     def test_answerable_case_runs_through_elasticsearch_backend(self):
         chunks = load_chunks(ROOT / "fixtures" / "chunks-v1.json")
 

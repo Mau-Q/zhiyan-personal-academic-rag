@@ -22,6 +22,9 @@ dev = [
 server = [
   "uvicorn>=0.34,<1",
 ]
+milvus = [
+  "pymilvus>=2.6,<2.7",
+]
 
 [tool.ruff]
 line-length = 100

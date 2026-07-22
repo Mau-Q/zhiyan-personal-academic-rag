@@ -99,13 +99,14 @@ Phase ID：`source-phase0-foundation-in-progress`
 - Elasticsearch、Milvus、MinIO、Ollama 的宿主机端口均限制为回环监听，持久化数据放在容量充足的数据盘；
 - 已固化脱敏 Compose 配置和远程检索基线文档，但 316 Chunk 重跑和性能验收尚未开始。
 - Elasticsearch BM25 适配器已实现：严格 Mapping、源身份、服务端 ACL、Bulk UTF-8、漂移失败关闭和 Answer API 边界测试通过；远程 Fixture 与 316 Chunk 索引通过，固定 15 题结果为 14/15（可回答 8/9、无证据 3/3、越权 3/3）。唯一未通过项检索到同一论文第 5 页的完整模式/评分正文，但冻结目标只接受第 2 页概览图，因此不修改题目、目标页或 `top_k=3` 制造通过。
+- Milvus 向量适配器已实现：固定源 Chunk、Embedding 模型 digest、维度、COSINE、HNSW 工程参数和严格 Collection Schema；服务端 ACL 与应用侧二次授权、漂移失败关闭、Answer API 和评测 Harness Fixture 测试通过。远程 316 Chunk/15 题尚未运行，HNSW 参数仍是工程基线而非生产最终值。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：风险驱动人工确认、原方案双人工标注、正式范围/SLO、PostgreSQL 应用接入、真实 ES/Milvus 适配器、正式索引 Schema、远程 316 Chunk/500 题重跑、真实生成模型和性能验收；
+- 未完成能力：风险驱动人工确认、原方案双人工标注、正式范围/SLO、PostgreSQL 应用接入、Milvus 远程同源验证、远程 500 题重跑、真实生成模型和性能验收；
 - 远程部署拓扑的工程基线已经确定；下一工作是保持一次一个变量，先接入 Elasticsearch 后端并跑固定 Canary，再接入 Milvus。
 
 ## 验收
@@ -136,14 +137,14 @@ Phase ID：`source-phase0-foundation-in-progress`
 
 ## Current boundary
 
-当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；近期评测执行边界为 `AI_AUDITED_ENGINEERING_ITEMS_500 / FOUR_BACKENDS_500_COMPLETE / HUMAN_DECISIONS_0_OF_213`，原方案执行边界为 `SOURCE_FORMAL_DOUBLE_HUMAN_PENDING`。AI 复核和本地实跑不证明人工验收、真实 ES/Milvus、远程部署或生产参数已完成。运行时私有数据继续不进入 Git。
+当前仓库 Harness 已与最高方案建立需求映射。总体仍处于最高方案阶段 0。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；近期评测执行边界为 `AI_AUDITED_ENGINEERING_ITEMS_500 / FOUR_BACKENDS_500_COMPLETE / HUMAN_DECISIONS_0_OF_213`，原方案执行边界为 `SOURCE_FORMAL_DOUBLE_HUMAN_PENDING`。AI 复核和本地实跑不证明人工验收、Milvus 远程应用链路、真实生成模型或生产参数已完成。运行时私有数据继续不进入 Git。
 
 ## Next gate
 
 1. **共享范围与评测线：** 保留 AI 工程集与人工验收的独立记账；不恢复日常全量双人工；
 2. **A 本地工程线：** 500 题四路对比已完成，暂缓重排；下一步固化配置和结果接口；
 3. **B 远程基础设施线：** 主机、PostgreSQL、Elasticsearch、Milvus 和 BGE-M3 工程基线已闭环；保持回环监听和数据盘持久化边界；
-4. **真实检索接入：** Elasticsearch 适配器、远程 Fixture 与 316 Chunk/15 题 Canary 已完成并如实保留 14/15；下个工作日开始 Milvus 适配器，仍保持一次只改变一个真实检索变量；
+4. **真实检索接入：** Elasticsearch 适配器和远程 Canary 已完成并如实保留 14/15；Milvus 适配器本地实现已完成，下一步只运行远程 316 Chunk/15 题验证；
 5. A 已完成同一 Canary 的词项、SQLite BM25、向量和混合检索比较；真实 LLM 仍放在扩展评测和远程检索证据链稳定后单独接入；
 6. GPT 辅助 500 题只用于近期工程决策；只有恢复原方案双人工验收口径，并让范围、正式评测、真实 ES/Milvus 基线和模型资源选型都形成证据后，才能按最高方案关闭阶段 0。
 
