@@ -319,6 +319,18 @@
       ]
     },
     {
+      "id": "dual_index_lifecycle_coordination",
+      "status": "PARTIAL",
+      "owner": "A",
+      "evidence": [
+        "backend/ingestion/index_lifecycle.py",
+        "backend/storage/postgres.py",
+        "tests/ingestion/test_index_lifecycle.py",
+        "tests/storage/test_postgres_fact_source.py",
+        "docs/LOCAL_PDF_INGESTION.md"
+      ]
+    },
+    {
       "id": "remote_host_readiness",
       "status": "READY",
       "owner": "USER",

@@ -430,6 +430,25 @@ class PostgresFactRepository:
         target_status: LifecycleStatus,
         updates: Mapping[str, Any] | None = None,
     ) -> DocumentVersionLifecycleV1:
+        return self._transition_version(
+            owner_id=owner_id,
+            document_version_id=document_version_id,
+            expected_revision=expected_revision,
+            target_status=target_status,
+            updates=updates,
+            commit_transaction=True,
+        )
+
+    def _transition_version(
+        self,
+        *,
+        owner_id: str,
+        document_version_id: str,
+        expected_revision: int,
+        target_status: LifecycleStatus,
+        updates: Mapping[str, Any] | None,
+        commit_transaction: bool,
+    ) -> DocumentVersionLifecycleV1:
         """Compare-and-swap a lifecycle state after validating the frozen transition graph."""
 
         patch = dict(updates or {})
@@ -535,7 +554,8 @@ class PostgresFactRepository:
                     "document lifecycle revision changed during update"
                 )
             updated = _version_from_row(updated_row)
-            self._commit()
+            if commit_transaction:
+                self._commit()
             return updated
         except Exception:
             self._rollback()
@@ -580,6 +600,23 @@ class PostgresFactRepository:
         status: IngestionJobStatus,
         failure_code: str | None = None,
     ) -> IngestionJobV1:
+        return self._update_ingestion_job(
+            owner_id=owner_id,
+            job_id=job_id,
+            status=status,
+            failure_code=failure_code,
+            commit_transaction=True,
+        )
+
+    def _update_ingestion_job(
+        self,
+        *,
+        owner_id: str,
+        job_id: str,
+        status: IngestionJobStatus,
+        failure_code: str | None,
+        commit_transaction: bool,
+    ) -> IngestionJobV1:
         """Persist replay attempts and stable job failure state."""
 
         if status is IngestionJobStatus.FAILED and failure_code is None:
@@ -613,8 +650,92 @@ class PostgresFactRepository:
                     "ingestion job does not exist in the authenticated owner scope"
                 )
             job = _job_from_row(row)
-            self._commit()
+            if commit_transaction:
+                self._commit()
             return job
+        except Exception:
+            self._rollback()
+            raise
+
+    def record_indexing_failure(
+        self,
+        *,
+        owner_id: str,
+        document_version_id: str,
+        expected_revision: int,
+        index_states: IndexStatesV1 | Mapping[str, Any],
+        job_id: str,
+        failure_code: str,
+    ) -> tuple[DocumentVersionLifecycleV1, IngestionJobV1]:
+        """Atomically persist a replayable indexing failure and its stable job code."""
+
+        try:
+            version = self._transition_version(
+                owner_id=owner_id,
+                document_version_id=document_version_id,
+                expected_revision=expected_revision,
+                target_status=LifecycleStatus.PROCESSING,
+                updates={
+                    "index_states": index_states,
+                    "failure_code": failure_code,
+                },
+                commit_transaction=False,
+            )
+            job = self._update_ingestion_job(
+                owner_id=owner_id,
+                job_id=job_id,
+                status=IngestionJobStatus.FAILED,
+                failure_code=failure_code,
+                commit_transaction=False,
+            )
+            if job.document_version_id != version.document_version_id:
+                raise IdentityConflictError(
+                    "ingestion job is not bound to the indexed document version"
+                )
+            self._commit()
+            return version, job
+        except Exception:
+            self._rollback()
+            raise
+
+    def finalize_indexing_success(
+        self,
+        *,
+        owner_id: str,
+        document_version_id: str,
+        expected_revision: int,
+        index_states: IndexStatesV1 | Mapping[str, Any],
+        vector_index_time: datetime,
+        job_id: str,
+    ) -> tuple[DocumentVersionLifecycleV1, IngestionJobV1]:
+        """Atomically make a dual-indexed version READY and complete its job."""
+
+        try:
+            version = self._transition_version(
+                owner_id=owner_id,
+                document_version_id=document_version_id,
+                expected_revision=expected_revision,
+                target_status=LifecycleStatus.READY,
+                updates={
+                    "index_states": index_states,
+                    "vector_index_time": vector_index_time,
+                    "failure_code": None,
+                },
+                commit_transaction=False,
+            )
+            job = self._update_ingestion_job(
+                owner_id=owner_id,
+                job_id=job_id,
+                status=IngestionJobStatus.SUCCEEDED,
+                failure_code=None,
+                commit_transaction=False,
+            )
+            if job.document_version_id != version.document_version_id:
+                raise IdentityConflictError(
+                    "ingestion job is not bound to the indexed document version"
+                )
+            self._commit()
+            return version, job
         except Exception:
             self._rollback()
             raise

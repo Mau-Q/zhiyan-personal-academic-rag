@@ -52,4 +52,10 @@
 
 该路径将 PostgreSQL `document_version_id` 写入现有 `ChunkRecordV1.version_id`，并固定将待索引 Chunk 输出为 `is_active=false`。只有后续 ES 和 Milvus 均就绪且事实源进入 `READY` 后，才能对在线检索可见。相同请求重放会复用映射、版本、任务和 Chunk ID；同一幂等 Key 换用另一 PDF 会在产生新版本前失效关闭。
 
-当前未连接远程 PostgreSQL，未保存 PDF/Chunk 私有运行产物，也未将任何版本提升为 `READY`。
+## 双索引生命周期协调
+
+`backend.ingestion.index_lifecycle.publish_prepared_indexes` 接收两个显式的版本索引写入器。两路先以非活动 Chunk 幂等暂存并核对版本、数量和源指纹，再逐侧记录 PostgreSQL 状态；只有两路激活均成功，才在同一数据库事务中将版本提升为 `READY` 并将入库任务记为 `SUCCEEDED`。单侧暂存或激活失败会记录稳定错误码，已激活侧执行非活动补偿，版本继续保持 `PROCESSING`，可由同一请求重放。
+
+删除、撤权和过期使用 `inactivate_and_schedule_cleanup`：先提交 PostgreSQL `INACTIVE`，再失效查询可见性、将两路索引标记为非活动，最后分别排入异步物理清理。后续清理失败只会形成待处理结果，不会回滚事实源或重新激活版本。
+
+当前只完成本地协调层、写入器协议和失败顺序测试。尚未连接远程 PostgreSQL，未实现远程 ES/Milvus 版本写入器、持久化清理队列或在线 Answer API 的 PostgreSQL 可见性门禁，也没有将任何真实版本提升为 `READY`。

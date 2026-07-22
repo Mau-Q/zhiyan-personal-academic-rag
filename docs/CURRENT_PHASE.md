@@ -137,20 +137,23 @@ Phase ID：`source-phase1-data-index-minimal-loop-in-progress`
 - 完成本地持久化 PDF 准备编排：先校验 PDF 身份，再按 `owner_id` 建立映射，原子绑定内容版本与幂等任务，将 PostgreSQL `document_version_id` 适配到 `ChunkRecordV1.version_id`。
 - 持久化准备产生的 Chunk 在双索引完成前固定 `is_active=false`；解析失败和 `REVIEW` 状态已记录稳定任务错误，同一请求可重放恢复。
 - 新增 7 项持久化摄取测试与 2 项事实源进度/原子绑定测试后，全仓 182 项测试及 Harness 9 项检查通过。
+- 完成本地双索引生命周期协调：逐侧暂存并核对源身份，单侧失败记录稳定任务错误并补偿为非活动，两路成功后原子提交 `READY + SUCCEEDED`。
+- 完成删除、撤权和过期的失效顺序：先提交 PostgreSQL `INACTIVE`，再失效查询可见性并安排 ES/Milvus 异步物理清理；远程写入器和持久化清理队列尚未接入。
+- 新增 7 项双索引协调测试与 2 项事实源原子结果测试后，全仓 191 项测试及 Harness 9 项检查通过。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：远程 PostgreSQL 迁移与持久化 PDF 实跑、PDF/Chunk 运行存储、ES/Milvus 写入状态对账与撤权清理、目标规模性能验收、无证据校准、安全策略层和真实生成模型；
+- 未完成能力：远程 PostgreSQL 迁移与持久化 PDF 实跑、PDF/Chunk 运行存储、实际 ES/Milvus 版本写入器、持久化清理队列、在线事实源权限门禁、目标规模性能验收、无证据校准、安全策略层和真实生成模型；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
 
 - `make harness-validate` 必须通过，且必须由 Makefile 强制使用项目 `.venv`；
-- `make storage-test` 必须覆盖迁移校验、owner scope、幂等映射、任务绑定、READY 双索引门禁和并发修订号；
-- `make ingestion-test` 必须覆盖持久化重放、owner 隔离、幂等 Key 换内容阻断、解析失败恢复和未建索引 Chunk 非活动语义；
+- `make storage-test` 必须覆盖迁移校验、owner scope、幂等映射、任务绑定、READY 双索引门禁、索引结果原子提交和并发修订号；
+- `make ingestion-test` 必须覆盖持久化重放、owner 隔离、幂等 Key 换内容阻断、解析失败恢复、双索引单侧失败补偿和先失效后清理；
 - `make test` 必须覆盖合同、入库、检索、RAG、API、评测和仓库 Harness；
 - 本地三论文 Harness 必须通过 15/15，且三类结果分别达到 9/9、3/3、3/3；
 - `make sqlite-fts-fixture-smoke` 必须通过 6/6；
@@ -166,7 +169,7 @@ Phase ID：`source-phase1-data-index-minimal-loop-in-progress`
 - 最高方案文件名、`725` 行与 SHA-256 必须在需求追踪和机器状态中一致；
 - `machine/phase_zero_scope_resource_slo.json` 必须通过仓库 Harness，且冻结目标不得写成已实测 SLO；
 - 数据身份/生命周期合同必须通过 JSON Schema 与失败关闭语义测试；
-- 不得将目标合同写成 PostgreSQL、索引对账或删除闭环已实现，不得将 Fake LLM 写成最高方案阶段 2 已完成。
+- 不得将本地协调协议写成远程 PostgreSQL、真实 ES/Milvus 写入、持久化物理清理或在线权限切换已完成，不得将 Fake LLM 写成最高方案阶段 2 已完成。
 
 ## Git
 
@@ -178,13 +181,13 @@ Phase ID：`source-phase1-data-index-minimal-loop-in-progress`
 
 ## Current boundary
 
-最高方案阶段 0 已完成，当前进入阶段 1。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。PostgreSQL 最小事实源及持久化 PDF 准备编排已在本地就绪，待索引 Chunk 保持非活动；远程迁移/实跑、运行存储、索引对账、目标规模性能和真实生成模型尚未完成。运行时私有数据继续不进入 Git。
+最高方案阶段 0 已完成，当前进入阶段 1。当前最宽本地问答执行边界仍为 `LOCAL_API_RRF_HYBRID_FAKE_LLM`；评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN`。PostgreSQL 最小事实源、持久化 PDF 准备和双索引生命周期协调已在本地就绪；远程迁移/实跑、实际版本写入器、持久化清理队列、在线事实源权限门禁、目标规模性能和真实生成模型尚未完成。运行时私有数据继续不进入 Git。
 
 ## Next gate
 
 1. **PostgreSQL 最小事实源：** 本地 Schema、迁移器与适配器已完成；下一步由用户在隔离远程 PostgreSQL 应用迁移并返回脱敏证据；
-2. **索引闭环：** 本地可重放 PDF 准备已完成；下一步实现 ES/Milvus 写入状态对账、单侧失败补偿和删除/撤权先失效后清理；
-3. **兼容迁移：** 持久化准备已将 `document_version_id/owner_id` 适配到 legacy Chunk 字段；在线 Answer API 仍待切换到事实源权限；
+2. **索引闭环：** 本地协调、状态对账、失败补偿和先失效后清理顺序已完成；下一步接入实际 ES/Milvus 版本写入器及持久化清理队列；
+3. **兼容迁移：** 持久化准备已将 `document_version_id/owner_id` 适配到 legacy Chunk 字段；在线 Answer API 仍待切换到 PostgreSQL READY 权限门禁；
 4. **性能与复杂度：** 闭环完成后再按冻结规模验收性能；当前不跑 175 题 RRF、不增加重排或真实 LLM。
 
 ## Prohibited shortcuts

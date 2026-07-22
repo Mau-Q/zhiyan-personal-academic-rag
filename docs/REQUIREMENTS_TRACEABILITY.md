@@ -34,10 +34,10 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | ID | 最高方案要求 | 当前状态 | 已有证据 | 关键缺口 |
 |---|---|---|---|---|
 | SR-01 | 冻结个人库知识源、用户范围、语料量、并发、硬件预算和 SLO | `COMPLETE` | `machine/phase_zero_scope_resource_slo.json`：500 篇标称/1000 篇验证上界、0.2 QPS、问答并发 2、入库并发 1、单台既有主机预算及阶段 1 SLO；`docs/PHASE_0_SCOPE_RESOURCE_SLO.md` | 数值已冻结为阶段 1 验收目标，但目标规模性能、真实 LLM 延迟和 PostgreSQL `owner_id` 生命周期仍待实测，不冒充已达标 |
-| SR-02 | PostgreSQL 作为 `owner_id`、主键适配和生命周期唯一事实源 | `PARTIAL` | `DocumentIdentityV1`、`DocumentVersionLifecycleV1` 和机器策略已冻结；`backend/storage/` 已实现 PostgreSQL Schema、版本化迁移器、owner-scoped 映射、幂等版本/任务与生命周期 CAS；本地 PDF 准备编排已接入事实源 | 远程 PostgreSQL 尚未应用迁移或实跑；运行存储、ES/Milvus 状态对账和在线权限切换尚未完成 |
-| SR-03 | PDF/OCR、章节页码、三种 Chunk Baseline、版本和幂等入库 | `PARTIAL` | 三种切片策略已完成同源受控对比；本地持久化准备已将 PDF SHA、owner-scoped 映射、原子版本/任务绑定、页码、Chunk 进度和失败恢复接入事实源 | 远程 PostgreSQL 实跑、PDF/Chunk 运行存储、OCR、MinIO、ES/Milvus 写入及完整删除链路未完成 |
-| SR-04 | Elasticsearch 论文级和 Chunk 级 BM25 | `PARTIAL` | 远程 ES 9.4.3；严格 Mapping、ACL、BM25 适配器；316 Chunk Canary 14/15；175 题严格通过 85/175 | `owner_id/is_active` 目标字段迁移、中文分词选型、生产别名和性能基线未完成 |
-| SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `PARTIAL` | 本地精确向量基线；远程 Milvus 2.6.18 + BGE-M3；固定源/模型身份、COSINE 和 HNSW 工程参数；316 Chunk Canary 12/15；175 题严格通过 109/175 | `owner_id/is_active` 目标字段迁移、版本/删除对账和性能基线未完成；不以远程 500 题或调参作为当前门禁 |
+| SR-02 | PostgreSQL 作为 `owner_id`、主键适配和生命周期唯一事实源 | `PARTIAL` | `backend/storage/` 已实现 PostgreSQL Schema、owner-scoped 映射、幂等版本/任务、生命周期 CAS；本地 PDF 准备、双索引结果原子提交和先 `INACTIVE` 后清理的协调顺序已接入事实源 | 远程 PostgreSQL 尚未应用迁移或实跑；运行存储、实际索引写入器、持久化清理队列和在线权限切换尚未完成 |
+| SR-03 | PDF/OCR、章节页码、三种 Chunk Baseline、版本和幂等入库 | `PARTIAL` | 三种切片策略已完成同源受控对比；本地持久化准备及双索引协调已覆盖 PDF SHA、owner 映射、原子版本/任务绑定、页码、Chunk 进度、重放和单侧失败补偿 | 远程 PostgreSQL 实跑、PDF/Chunk 运行存储、OCR、MinIO、实际 ES/Milvus 版本写入及物理删除未完成 |
+| SR-04 | Elasticsearch 论文级和 Chunk 级 BM25 | `PARTIAL` | 远程 ES 9.4.3；严格 Mapping、ACL、BM25 适配器；316 Chunk Canary 14/15；175 题严格通过 85/175；本地协调协议已冻结版本暂存、激活、补偿和清理接口 | 实际 ES 版本写入器、`owner_id/is_active` 生命周期接入、中文分词选型、生产别名和性能基线未完成 |
+| SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `PARTIAL` | 本地精确向量基线；远程 Milvus 2.6.18 + BGE-M3；固定源/模型身份、COSINE 和 HNSW 工程参数；316 Chunk Canary 12/15；175 题严格通过 109/175；本地协调协议已覆盖单侧失败补偿 | 实际 Milvus 版本写入器、`owner_id/is_active` 生命周期接入、物理清理和性能基线未完成；不以远程 500 题或调参作为当前门禁 |
 | SR-06 | 基础规范化和最小路由；改写、多查询和多跳按失败后置 | `PARTIAL` | API 问题输入合同与默认检索链路 | 最小路由合同尚未冻结；高级能力继续保持后置 |
 | SR-07 | ES/Milvus 并行、RRF、去重、多样性、Cross-Encoder 重排 | `PARTIAL` | 本地 SQLite BM25 + BGE-M3 RRF 15/15；ES/Milvus 统一候选接口、版本化配置与远程 RRF Canary 14/15，与 ES 单路持平 | 去重/多样性、重排和扩展消融未完成；当前无净增益，暂缓增加复杂度 |
 | SR-08 | 证据上下文、真实 LLM、强制引用、校验与拒答 | `PARTIAL` | Evidence/Citation、`NO_EVIDENCE`、Fake LLM Answer API | 真实模型、主张支持校验和冲突处理未实现 |
@@ -53,7 +53,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | 方案阶段 | 当前判断 | 说明 |
 |---|---|---|
 | 阶段 0：范围与 Baseline | `COMPLETE` | 175 题人工校验、ES/Milvus 同集单路 Baseline、三种 Chunk 受控 Baseline、单用户范围/资源/SLO 及数据身份/生命周期目标合同均已冻结；冻结目标不等于运行时达标 |
-| 阶段 1：数据与索引最小闭环 | `IN_PROGRESS` | 本地链路及远程 ES/Milvus/BGE-M3 应用 Canary 可用，PostgreSQL 仅完成主机基线；正式 Schema、幂等任务和完整生命周期未完成 |
+| 阶段 1：数据与索引最小闭环 | `IN_PROGRESS` | 本地 PostgreSQL Schema、幂等 PDF 准备、双索引状态协调及先失效后清理顺序已实现；远程迁移/实跑、实际版本写入器、清理队列和在线事实源权限门禁未完成 |
 | 阶段 2：基础 RAG MVP | `PARTIAL` | 非流式 API、Evidence、拒答和远程 RRF Canary 可运行，但仍无真实生成模型、完整去重/多样性和生产验收 |
 | 阶段 3：针对失败类型增强 | `NOT_STARTED` | 待基于人工校验 Baseline 的真实失败决定是否引入改写、拆解、去重、多样性或重排 |
 | 阶段 4：Claim–Evidence 可靠性 | `NOT_STARTED` | 尚未建立结构化 Claim、Claim–Evidence 映射及确定性支持检查 |
@@ -63,7 +63,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 
 方案阶段 1 的下一门禁是：
 
-1. **PostgreSQL 最小事实源：** 按冻结合同建立 documents/document_versions 与持久化任务状态，服务端产生 `owner_id` 范围；
-2. **索引闭环：** 实现可重放幂等入库、ES/Milvus 状态对账和删除/撤权先失效后清理；
+1. **PostgreSQL 最小事实源：** 本地 Schema、适配器和原子任务状态已完成；由用户在隔离远程 PostgreSQL 应用迁移并返回脱敏证据；
+2. **索引闭环：** 本地可重放准备、状态协调和失效顺序已完成；下一步接入实际 ES/Milvus 版本写入器、持久化清理队列和在线 READY 门禁；
 3. **兼容边界：** 现有 `ChunkRecordV1.version_id` 由适配层映射到 `document_version_id`，不破坏 V1 Answer API；
 4. **性能后置：** 闭环完成后再按 500/1000 篇冻结规模执行容量和延迟验收；当前仍不增加 RRF 调参、重排或真实 LLM。

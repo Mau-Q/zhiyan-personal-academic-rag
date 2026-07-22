@@ -18,6 +18,7 @@ from backend.storage.models import (
     DocumentIdentityV1,
     DocumentVersionLifecycleV1,
     IndexState,
+    IndexStatesV1,
     IngestionJobStatus,
     LifecycleStatus,
 )
@@ -416,6 +417,144 @@ class PostgresFactRepositoryTests(unittest.TestCase):
         self.assertEqual(result.lifecycle_status, LifecycleStatus.PROCESSING)
         self.assertFalse(result.is_active)
         self.assertIsNone(result.vector_index_time)
+
+    def test_index_failure_and_success_finalize_version_and_job_atomically(self):
+        processing = version_row(
+            lifecycle_status="PROCESSING",
+            parse_finish_time=NOW,
+            chunk_splitter_time=NOW,
+            chunk_create_time=NOW,
+            chunk_gen_time=NOW,
+        )
+        failed = version_row(
+            lifecycle_revision=2,
+            lifecycle_status="PROCESSING",
+            parse_finish_time=NOW,
+            chunk_splitter_time=NOW,
+            chunk_create_time=NOW,
+            chunk_gen_time=NOW,
+            elasticsearch_state="READY",
+            milvus_state="FAILED",
+            failure_code="MILVUS_VECTORS_STAGE_FAILED",
+        )
+        failed_job = job_row(
+            status="FAILED",
+            failure_code="MILVUS_VECTORS_STAGE_FAILED",
+        )
+        failure_connection = ScriptedConnection(processing, failed, failed_job)
+
+        failed_version, failed_result_job = self.repository(
+            failure_connection
+        ).record_indexing_failure(
+            owner_id="owner_001",
+            document_version_id="document_version_existing",
+            expected_revision=1,
+            index_states=IndexStatesV1(
+                elasticsearch_chunks=IndexState.READY,
+                milvus_vectors=IndexState.FAILED,
+            ),
+            job_id="ingestion_job_existing",
+            failure_code="MILVUS_VECTORS_STAGE_FAILED",
+        )
+
+        self.assertEqual(failed_version.failure_code, "MILVUS_VECTORS_STAGE_FAILED")
+        self.assertEqual(failed_result_job.status, IngestionJobStatus.FAILED)
+        self.assertEqual(failure_connection.commit_count, 1)
+
+        ready = version_row(
+            lifecycle_revision=2,
+            lifecycle_status="READY",
+            parse_finish_time=NOW,
+            chunk_splitter_time=NOW,
+            chunk_create_time=NOW,
+            chunk_gen_time=NOW,
+            vector_index_time=NOW,
+            elasticsearch_state="READY",
+            milvus_state="READY",
+            is_active=True,
+        )
+        succeeded_job = job_row(status="SUCCEEDED")
+        success_connection = ScriptedConnection(processing, ready, succeeded_job)
+
+        ready_version, ready_job = self.repository(
+            success_connection
+        ).finalize_indexing_success(
+            owner_id="owner_001",
+            document_version_id="document_version_existing",
+            expected_revision=1,
+            index_states=IndexStatesV1(
+                elasticsearch_chunks=IndexState.READY,
+                milvus_vectors=IndexState.READY,
+            ),
+            vector_index_time=NOW,
+            job_id="ingestion_job_existing",
+        )
+
+        self.assertTrue(ready_version.is_active)
+        self.assertEqual(ready_job.status, IngestionJobStatus.SUCCEEDED)
+        self.assertEqual(success_connection.commit_count, 1)
+
+        mismatched_job = job_row(
+            status="SUCCEEDED",
+            document_version_id="document_version_other",
+        )
+        mismatch_connection = ScriptedConnection(processing, ready, mismatched_job)
+        with self.assertRaisesRegex(IdentityConflictError, "not bound"):
+            self.repository(mismatch_connection).finalize_indexing_success(
+                owner_id="owner_001",
+                document_version_id="document_version_existing",
+                expected_revision=1,
+                index_states=IndexStatesV1(
+                    elasticsearch_chunks=IndexState.READY,
+                    milvus_vectors=IndexState.READY,
+                ),
+                vector_index_time=NOW,
+                job_id="ingestion_job_other",
+            )
+        self.assertEqual(mismatch_connection.commit_count, 0)
+        self.assertGreaterEqual(mismatch_connection.rollback_count, 1)
+
+    def test_index_finalization_rolls_back_when_job_update_fails(self):
+        processing = version_row(
+            lifecycle_status="PROCESSING",
+            parse_finish_time=NOW,
+            chunk_splitter_time=NOW,
+            chunk_create_time=NOW,
+            chunk_gen_time=NOW,
+        )
+        ready = version_row(
+            lifecycle_revision=2,
+            lifecycle_status="READY",
+            parse_finish_time=NOW,
+            chunk_splitter_time=NOW,
+            chunk_create_time=NOW,
+            chunk_gen_time=NOW,
+            vector_index_time=NOW,
+            elasticsearch_state="READY",
+            milvus_state="READY",
+            is_active=True,
+        )
+        connection = ScriptedConnection(
+            processing,
+            ready,
+            RuntimeError("simulated job update failure"),
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "job update"):
+            self.repository(connection).finalize_indexing_success(
+                owner_id="owner_001",
+                document_version_id="document_version_existing",
+                expected_revision=1,
+                index_states=IndexStatesV1(
+                    elasticsearch_chunks=IndexState.READY,
+                    milvus_vectors=IndexState.READY,
+                ),
+                vector_index_time=NOW,
+                job_id="ingestion_job_existing",
+            )
+
+        self.assertEqual(connection.commit_count, 0)
+        self.assertGreaterEqual(connection.rollback_count, 1)
 
     def test_invalid_or_stale_transition_fails_closed(self):
         invalid = ScriptedConnection(version_row())

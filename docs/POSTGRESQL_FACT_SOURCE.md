@@ -14,6 +14,7 @@
 - 版本和入库任务在同一事务内绑定；任务按 `(owner_id, idempotency_key)` 幂等，同一 Key 不得换绑版本或内容；
 - 生命周期使用修订号 Compare-and-Swap，陈旧并发更新失效关闭；
 - `PROCESSING` 允许通过新修订号记录解析和 Chunk 进度，但不因局部完成变为可检索；
+- 索引失败状态与任务失败在同一事务内提交，双索引成功后的 `READY` 与任务 `SUCCEEDED` 也原子提交；
 - 解析、Chunk 和向量时间齐全，且 ES/Milvus 均为 `READY` 时才能进入 `READY`；
 - 删除、撤权或过期版本先进入终态 `INACTIVE`；在线查询始终带 `owner_id AND is_active=true`。
 
@@ -22,6 +23,7 @@
 - SQL：`backend/storage/migrations/0001_fact_source.sql`；
 - 迁移器：`python -m backend.storage.migrate`；
 - 仓储适配器：`backend/storage/postgres.py`；
+- 双索引生命周期协调：`backend/ingestion/index_lifecycle.py`；
 - 运行时模型：`backend/storage/models.py`；
 - 本地门禁：`make storage-test`。
 
@@ -49,5 +51,6 @@ Remove-Item Env:DATABASE_URL
 
 1. 用户在隔离的远程 PostgreSQL 上应用迁移并返回脱敏输出；
 2. 在远程 PostgreSQL 上复测本地已完成的持久化 PDF 准备编排；
-3. 实现 ES/Milvus 状态对账与单侧写入失败补偿；
-4. 完成删除/撤权先失效、再异步物理清理的远程故障验证。
+3. 将本地双索引协调协议接到实际 ES/Milvus 版本写入器和持久化清理队列；
+4. 将在线 Answer API 切换到 PostgreSQL READY 可见性门禁；
+5. 完成单侧失败补偿与删除/撤权先失效、再异步物理清理的远程故障验证。
