@@ -1,0 +1,37 @@
+{
+  "schema_version": "phase2_model_selection_suite_v3",
+  "suite_id": "phase2-qwen3-14b-vs-llama3.2-v3",
+  "base_cases": {
+    "path": "evaluation/generation/phase2-model-selection-v1.json",
+    "sha256": "2ddec2697294ef98bacae7e01fd49a382235dad506b6a22b93b7b4d789ac176f"
+  },
+  "stability_policy": "TWO_ATTEMPTS_EACH_PASS_IDENTICAL_DETERMINISTIC_GATES",
+  "byte_identity": "OBSERVATION_ONLY",
+  "semantic_overrides": [
+    {
+      "case_id": "zh.evidence.insufficient",
+      "required_any_term_groups": [
+        [
+          "未提供",
+          "未说明",
+          "未提及",
+          "没有提及",
+          "无法确定",
+          "证据不足",
+          "没有说明"
+        ]
+      ]
+    },
+    {
+      "case_id": "zh.evidence.conflict",
+      "required_any_term_groups": [
+        [
+          "12周"
+        ],
+        [
+          "16周"
+        ]
+      ]
+    }
+  ]
+}

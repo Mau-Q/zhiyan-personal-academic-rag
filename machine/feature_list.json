@@ -459,6 +459,7 @@
       "evidence": [
         "evaluation/generation/phase2-model-selection-v1.json",
         "evaluation/generation/phase2-model-selection-v2.json",
+        "evaluation/generation/phase2-model-selection-v3.json",
         "scripts/run_phase2_model_selection.py",
         "tests/evaluation/test_phase2_model_selection.py",
         "docs/PHASE_2_MODEL_SELECTION.md"

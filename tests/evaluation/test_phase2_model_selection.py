@@ -46,12 +46,16 @@ class FakeProvider:
         candidate_regression: bool = False,
         incomplete_candidate: bool = False,
         varying_candidate_wording: bool = False,
+        equivalent_conflict_wording: bool = False,
+        conflict_omission: bool = False,
     ) -> None:
         del base_url
         self.model = model
         self.candidate_regression = candidate_regression
         self.incomplete_candidate = incomplete_candidate
         self.varying_candidate_wording = varying_candidate_wording
+        self.equivalent_conflict_wording = equivalent_conflict_wording
+        self.conflict_omission = conflict_omission
         self.question_calls = {}
         self.identity = GenerationModelIdentity(
             provider="ollama",
@@ -68,6 +72,18 @@ class FakeProvider:
         if self.incomplete_candidate and self.model == CANDIDATE_MODEL.model:
             raise RuntimeError("private provider detail")
         answer = ANSWERS[question]
+        if (
+            self.equivalent_conflict_wording
+            and self.model == CANDIDATE_MODEL.model
+            and question == "主要终点的观察窗口是多少周？如果证据存在差异，请明确说明。"
+        ):
+            answer = "摘要报告12周 [1]；修订后的最终分析采用16周 [2]。"
+        if (
+            self.conflict_omission
+            and self.model == CANDIDATE_MODEL.model
+            and question == "主要终点的观察窗口是多少周？如果证据存在差异，请明确说明。"
+        ):
+            answer = "摘要报告主要终点观察窗口为12周。 [1][2]"
         if (
             self.varying_candidate_wording
             and self.model == CANDIDATE_MODEL.model
@@ -96,10 +112,14 @@ class FakeProviderFactory:
         candidate_regression: bool = False,
         incomplete_candidate: bool = False,
         varying_candidate_wording: bool = False,
+        equivalent_conflict_wording: bool = False,
+        conflict_omission: bool = False,
     ) -> None:
         self.candidate_regression = candidate_regression
         self.incomplete_candidate = incomplete_candidate
         self.varying_candidate_wording = varying_candidate_wording
+        self.equivalent_conflict_wording = equivalent_conflict_wording
+        self.conflict_omission = conflict_omission
 
     def __call__(self, **kwargs):
         return FakeProvider(
@@ -107,6 +127,8 @@ class FakeProviderFactory:
             candidate_regression=self.candidate_regression,
             incomplete_candidate=self.incomplete_candidate,
             varying_candidate_wording=self.varying_candidate_wording,
+            equivalent_conflict_wording=self.equivalent_conflict_wording,
+            conflict_omission=self.conflict_omission,
         )
 
 
@@ -127,6 +149,12 @@ class Phase2ModelSelectionTests(unittest.TestCase):
         self.assertIn(
             "没有提及", insufficient["required_any_term_groups"][0]
         )
+        conflict = next(
+            case for case in cases if case["case_id"] == "zh.evidence.conflict"
+        )
+        self.assertEqual(
+            conflict["required_any_term_groups"], [["12周"], ["16周"]]
+        )
         self.assertEqual(BASELINE_MODEL.model, "llama3.2:latest")
         self.assertEqual(
             CANDIDATE_MODEL.digest,
@@ -140,7 +168,7 @@ class Phase2ModelSelectionTests(unittest.TestCase):
         )
 
         self.assertEqual(report["status"], "PASS")
-        self.assertEqual(REPORT_SCHEMA_VERSION, "phase2_model_selection_report_v3")
+        self.assertEqual(REPORT_SCHEMA_VERSION, "phase2_model_selection_report_v4")
         self.assertIs(report["think"], False)
         self.assertEqual(report["decision"], "PROMOTE_QWEN3_14B")
         self.assertTrue(report["candidate_eligible"])
@@ -163,6 +191,38 @@ class Phase2ModelSelectionTests(unittest.TestCase):
         self.assertTrue(insufficient["stable_replay"])
         self.assertFalse(insufficient["byte_stable_replay"])
         self.assertEqual(insufficient["semantic_checks_by_attempt"], [True, True])
+
+    def test_conflict_semantics_accept_values_and_citations_without_surface_word(self):
+        report = run_selection(
+            base_url="http://127.0.0.1:11434",
+            provider_factory=FakeProviderFactory(equivalent_conflict_wording=True),
+        )
+
+        candidate = report["results"][1]
+        conflict = next(
+            case
+            for case in candidate["cases"]
+            if case["case_id"] == "zh.evidence.conflict"
+        )
+        self.assertEqual(report["decision"], "PROMOTE_QWEN3_14B")
+        self.assertTrue(conflict["hard_gate_pass"])
+        self.assertEqual(conflict["semantic_checks_by_attempt"], [True, True])
+
+    def test_conflict_value_omission_keeps_fallback(self):
+        report = run_selection(
+            base_url="http://127.0.0.1:11434",
+            provider_factory=FakeProviderFactory(conflict_omission=True),
+        )
+
+        candidate = report["results"][1]
+        conflict = next(
+            case
+            for case in candidate["cases"]
+            if case["case_id"] == "zh.evidence.conflict"
+        )
+        self.assertEqual(report["decision"], "KEEP_LLAMA3_2")
+        self.assertFalse(conflict["hard_gate_pass"])
+        self.assertEqual(conflict["semantic_checks_by_attempt"], [False, False])
 
     def test_unsupported_candidate_claim_keeps_fallback(self):
         report = run_selection(

@@ -11,7 +11,7 @@ Gate 直接复用 `OllamaGenerationProvider` 的 `/api/tags` 身份检查和 `/a
 - JSON Schema：`claims[].text + claims[].citation_ids`；
 - 解码：`temperature=0.0`、`seed=42`、`num_predict=384`、`num_ctx=8192`、`think=false`；
 - 四组公开合成中文科研 Evidence，基础用例规范化 SHA-256：`2ddec2697294ef98bacae7e01fd49a382235dad506b6a22b93b7b4d789ac176f`；
-- v2 评测套件规范化 SHA-256：`f3b48efe5e3700e23cdfb3781f49b6a8907fefbd51107126705f92fdb2352260`。
+- v3 评测套件规范化 SHA-256：`85d639796aed211ea0f778fdadd791933a80f6374dd7b81e0a1b765429df2331`。
 
 ## 冻结模型
 
@@ -50,7 +50,11 @@ v1 首次远程运行暴露了评测器假失败：`qwen3:14b` 对证据不足�
 
 因此阶段 2 的冻结生成模型晋级为 `qwen3:14b@bdbd181c33f2ed1b31c972991882db3cf4d192569092138a7d29e973cd9debe8`，`llama3.2:latest` 保留为已有远程 READY 证据的回退基线。本报告只证明固定公开 Evidence/Prompt 的模型选型，不证明 Qwen 已通过 PostgreSQL READY + ES/Milvus RRF 端到端闭环；后者必须使用新 Run ID 独立验证。
 
-Qwen READY 的稳定分类进一步定位为 `REAL_GENERATION_INITIAL_OLLAMA_ANSWER_JSON_INVALID`。Ollama 对 Qwen3 的 API 默认启用 thinking；此前冻结配置没有显式发送 `think`，真实长 Evidence 下最终回答在固定 `num_predict=384` 内未形成完整 JSON。v3 只把该隐式默认冻结为 `think=false`，不修改模型摘要、Prompt、Schema、温度、Seed、Token 上限或检索。v2 选型证据继续保留，v3 必须先在相同四题上保持候选无回归，才能继续 Qwen READY 恢复。
+Qwen READY 的稳定分类进一步定位为 `REAL_GENERATION_INITIAL_OLLAMA_ANSWER_JSON_INVALID`。Ollama 对 Qwen3 的 API 默认启用 thinking；此前冻结配置没有显式发送 `think`，真实长 Evidence 下最终回答在固定 `num_predict=384` 内未形成完整 JSON。v3 只把该隐式默认冻结为 `think=false`，不修改模型摘要、Prompt、Schema、温度、Seed、Token 上限或检索。
+
+用户在提交 `43dc5b4b5aae9ea7e2d16660ed3e75a3e6d07344` 执行 v3 后，报告为 `PASS / KEEP_LLAMA3_2`：Qwen `3/4`、llama3.2 `2/4`，报告 SHA-256 为 `64C4A7C741D5DC624D501165A129400D98DF66845F43BFC57D964AA9CD2B3C4E`。唯一失败用例为 `zh.evidence.conflict`；两次生成均完成并包含 `12周`、`16周`、引用 `[1][2]`，身份和禁词门禁通过，只因答案未逐字出现“差异/不一致/冲突”而失败。这是固定词面门禁假阴性，不是事实、引用或模型执行回归。
+
+v4 因此把冲突用例冻结为结构语义门禁：两个互斥时间点和两条来源引用必须同时存在，仍保留禁词、身份、两次独立门禁与回答哈希；不要求某个表面连接词。基础 Evidence、问题、模型、Prompt、Schema、解码和检索均不改变。v3 原始结果继续保留，v4 必须形成新的远程报告，不得覆盖旧报告。
 
 ## 运行
 
@@ -69,7 +73,7 @@ Windows 可执行：
 默认报告位于被忽略的：
 
 ```text
-runtime/phases/source-phase2-model-selection-qwen3-14b-v3/report.json
+runtime/phases/source-phase2-model-selection-qwen3-14b-v4/report.json
 ```
 
 脚本只允许回环 Ollama URL 和 `runtime/` 下的新 JSON 报告；目标报告已存在时拒绝覆盖。返回证据只需要提交 SHA、完整脱敏报告、报告 SHA-256 和稳定错误码，不需要模型回答正文。
