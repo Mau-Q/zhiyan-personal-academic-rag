@@ -42,8 +42,10 @@ $py = ".\.venv\Scripts\python.exe"
 
 公开 Fixture 的建索引、inspect 和授权查询已在 Windows 远程主机通过。薄 Harness 已支持 `elasticsearch_bm25`，并要求显式提供 URL 和 Index 名称。
 
+同一三论文 316 Chunk、15 题、`top_k=3` Canary 的远程结果为 14/15：`ANSWERABLE 8/9`、`NO_EVIDENCE 3/3`、`FORBIDDEN 3/3`。唯一失败为 `local3.answerable.evmbench.modes`：冻结目标要求第 2 页概览图，Elasticsearch 返回同一论文第 5 页的 `Harness and Evaluation Modes` 正文及完整评分细节。该结果作为目标页不完全覆盖的真实差异保留，不修改问题、目标页或排序结果制造 15/15，也不为单个 Canary 增加重排复杂度。
+
 ## 下一门禁
 
-1. 用私有 316 Chunk 建立独立版本 Index；
-2. 固定 15 题 Canary 与 SQLite 结果对比；
-3. Elasticsearch 单路通过后才开始 Milvus 适配器。
+1. 下个工作日开始 Milvus 适配器；
+2. 使用同一 316 Chunk、15 题和 ACL 单独验证 Milvus；
+3. Milvus 单路证据稳定后再接真实 ES + Milvus RRF，不提前增加重排。

@@ -79,7 +79,7 @@
     },
     {
       "id": "elasticsearch_bm25_adapter",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "A",
       "evidence": [
         "backend/retrieval/elasticsearch.py",
