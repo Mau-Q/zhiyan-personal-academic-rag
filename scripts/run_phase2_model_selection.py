@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import re
@@ -23,12 +24,15 @@ from backend.rag.generation import (
 )
 
 
-REPORT_SCHEMA_VERSION = "phase2_model_selection_report_v1"
-CASES_SCHEMA_VERSION = "phase2_model_selection_cases_v1"
-CASES_PATH = Path("evaluation/generation/phase2-model-selection-v1.json")
-CASES_SHA256 = "2ddec2697294ef98bacae7e01fd49a382235dad506b6a22b93b7b4d789ac176f"
+REPORT_SCHEMA_VERSION = "phase2_model_selection_report_v2"
+SUITE_SCHEMA_VERSION = "phase2_model_selection_suite_v2"
+SUITE_PATH = Path("evaluation/generation/phase2-model-selection-v2.json")
+SUITE_SHA256 = "f3b48efe5e3700e23cdfb3781f49b6a8907fefbd51107126705f92fdb2352260"
+BASE_CASES_SCHEMA_VERSION = "phase2_model_selection_cases_v1"
+BASE_CASES_PATH = Path("evaluation/generation/phase2-model-selection-v1.json")
+BASE_CASES_SHA256 = "2ddec2697294ef98bacae7e01fd49a382235dad506b6a22b93b7b4d789ac176f"
 DEFAULT_OUTPUT = Path(
-    "runtime/phases/source-phase2-model-selection-qwen3-14b/report.json"
+    "runtime/phases/source-phase2-model-selection-qwen3-14b-v2/report.json"
 )
 _CITATION_PATTERN = re.compile(r"\[(\d+)\]")
 
@@ -73,18 +77,56 @@ def _text_sha256(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
-def _load_frozen_cases(path: Path = CASES_PATH) -> list[dict[str, Any]]:
+def _read_json_object(path: Path, *, error_code: str) -> dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ModelSelectionGateError("FROZEN_CASES_UNREADABLE") from exc
-    if not isinstance(payload, dict) or payload.get("schema_version") != CASES_SCHEMA_VERSION:
-        raise ModelSelectionGateError("FROZEN_CASES_SCHEMA_MISMATCH")
-    if _canonical_sha256(payload) != CASES_SHA256:
-        raise ModelSelectionGateError("FROZEN_CASES_DIGEST_MISMATCH")
-    cases = payload.get("cases")
+        raise ModelSelectionGateError(error_code) from exc
+    if not isinstance(payload, dict):
+        raise ModelSelectionGateError(error_code)
+    return payload
+
+
+def _load_frozen_cases(path: Path = SUITE_PATH) -> list[dict[str, Any]]:
+    suite = _read_json_object(path, error_code="FROZEN_SUITE_UNREADABLE")
+    if suite.get("schema_version") != SUITE_SCHEMA_VERSION:
+        raise ModelSelectionGateError("FROZEN_SUITE_SCHEMA_MISMATCH")
+    if _canonical_sha256(suite) != SUITE_SHA256:
+        raise ModelSelectionGateError("FROZEN_SUITE_DIGEST_MISMATCH")
+    base_identity = suite.get("base_cases")
+    if base_identity != {
+        "path": str(BASE_CASES_PATH).replace("\\", "/"),
+        "sha256": BASE_CASES_SHA256,
+    }:
+        raise ModelSelectionGateError("FROZEN_BASE_CASES_IDENTITY_MISMATCH")
+    base_payload = _read_json_object(
+        BASE_CASES_PATH, error_code="FROZEN_BASE_CASES_UNREADABLE"
+    )
+    if base_payload.get("schema_version") != BASE_CASES_SCHEMA_VERSION:
+        raise ModelSelectionGateError("FROZEN_BASE_CASES_SCHEMA_MISMATCH")
+    if _canonical_sha256(base_payload) != BASE_CASES_SHA256:
+        raise ModelSelectionGateError("FROZEN_BASE_CASES_DIGEST_MISMATCH")
+    cases = copy.deepcopy(base_payload.get("cases"))
     if not isinstance(cases, list) or len(cases) != 4:
         raise ModelSelectionGateError("FROZEN_CASES_COUNT_MISMATCH")
+    overrides = suite.get("semantic_overrides")
+    if not isinstance(overrides, list) or not overrides:
+        raise ModelSelectionGateError("FROZEN_SUITE_OVERRIDES_INVALID")
+    cases_by_id = {case.get("case_id"): case for case in cases}
+    if len(cases_by_id) != len(cases):
+        raise ModelSelectionGateError("FROZEN_CASE_IDS_INVALID")
+    for override in overrides:
+        if not isinstance(override, dict) or set(override) != {
+            "case_id",
+            "required_any_term_groups",
+        }:
+            raise ModelSelectionGateError("FROZEN_SUITE_OVERRIDE_INVALID")
+        case = cases_by_id.get(override["case_id"])
+        if not isinstance(case, dict):
+            raise ModelSelectionGateError("FROZEN_SUITE_OVERRIDE_CASE_UNKNOWN")
+        case["required_any_term_groups"] = copy.deepcopy(
+            override["required_any_term_groups"]
+        )
     return cases
 
 
@@ -176,44 +218,64 @@ def _evaluate_model(
                 durations_ms.append(round((time.perf_counter() - started) * 1000, 3))
 
         generation_complete = len(results) == 2 and not errors
-        stable_replay = (
+        byte_stable_replay = (
             generation_complete and results[0].answer == results[1].answer
         )
         identity_validated = generation_complete and all(
             result.identity == configured_identity for result in results
         )
-        answer = results[0].answer if results else ""
-        citations_pass, citation_ids = _required_citations_pass(
-            answer, case.get("required_citation_ids")
+        answers = [result.answer for result in results]
+        citation_checks = [
+            _required_citations_pass(answer, case.get("required_citation_ids"))
+            for answer in answers
+        ]
+        semantic_checks = [
+            _term_groups_pass(answer, case.get("required_any_term_groups"))
+            for answer in answers
+        ]
+        forbidden_checks = [
+            _forbidden_terms_absent(answer, case.get("forbidden_terms"))
+            for answer in answers
+        ]
+        citations_pass = generation_complete and all(
+            passed for passed, _ in citation_checks
         )
-        semantic_checks_pass = _term_groups_pass(
-            answer, case.get("required_any_term_groups")
-        )
-        forbidden_terms_absent = _forbidden_terms_absent(
-            answer, case.get("forbidden_terms")
+        semantic_checks_pass = generation_complete and all(semantic_checks)
+        forbidden_terms_absent = generation_complete and all(forbidden_checks)
+        deterministic_gate_replay = all(
+            (
+                generation_complete,
+                citations_pass,
+                semantic_checks_pass,
+                forbidden_terms_absent,
+            )
         )
         hard_gate_pass = all(
             (
                 generation_complete,
-                stable_replay,
+                deterministic_gate_replay,
                 identity_validated,
-                citations_pass,
-                semantic_checks_pass,
-                forbidden_terms_absent,
             )
         )
         case_reports.append(
             {
                 "case_id": case.get("case_id"),
                 "generation_complete": generation_complete,
-                "stable_replay": stable_replay,
+                "stable_replay": deterministic_gate_replay,
+                "byte_stable_replay": byte_stable_replay,
                 "identity_validated": identity_validated,
                 "required_citations_present": citations_pass,
-                "citation_ids": citation_ids,
+                "citation_ids_by_attempt": [
+                    citation_ids for _, citation_ids in citation_checks
+                ],
                 "semantic_checks_pass": semantic_checks_pass,
+                "semantic_checks_by_attempt": semantic_checks,
                 "forbidden_terms_absent": forbidden_terms_absent,
+                "forbidden_terms_absent_by_attempt": forbidden_checks,
                 "hard_gate_pass": hard_gate_pass,
-                "answer_sha256": _text_sha256(answer) if answer else None,
+                "answer_sha256_by_attempt": [
+                    _text_sha256(answer) for answer in answers
+                ],
                 "attempt_duration_ms": durations_ms,
                 "median_duration_ms": round(statistics.median(durations_ms), 3),
                 "prompt_eval_count": (
@@ -249,7 +311,7 @@ def run_selection(
     *,
     base_url: str,
     provider_factory: ProviderFactory = OllamaGenerationProvider,
-    cases_path: Path = CASES_PATH,
+    cases_path: Path = SUITE_PATH,
 ) -> dict[str, Any]:
     cases = _load_frozen_cases(cases_path)
     baseline = _evaluate_model(
@@ -272,7 +334,8 @@ def run_selection(
             "schema_version": REPORT_SCHEMA_VERSION,
             "status": "FAIL",
             "error_code": "MODEL_SELECTION_EXECUTION_INCOMPLETE",
-            "cases_sha256": CASES_SHA256,
+            "suite_sha256": SUITE_SHA256,
+            "base_cases_sha256": BASE_CASES_SHA256,
             "prompt_version": PROMPT_VERSION,
             "prompt_sha256": PROMPT_SHA256,
             "retrieval_parameters_changed": False,
@@ -283,7 +346,8 @@ def run_selection(
     return {
         "schema_version": REPORT_SCHEMA_VERSION,
         "status": "PASS",
-        "cases_sha256": CASES_SHA256,
+        "suite_sha256": SUITE_SHA256,
+        "base_cases_sha256": BASE_CASES_SHA256,
         "prompt_version": PROMPT_VERSION,
         "prompt_sha256": PROMPT_SHA256,
         "retrieval_parameters_changed": False,

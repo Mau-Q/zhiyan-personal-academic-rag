@@ -10,7 +10,8 @@ Gate 直接复用 `OllamaGenerationProvider` 的 `/api/tags` 身份检查和 `/a
 - Prompt SHA-256：`796bf2fad94a92584d604479fb921bd98e72e4b97ecc09d6e49eaa2c0c71df71`；
 - JSON Schema：`claims[].text + claims[].citation_ids`；
 - 解码：`temperature=0.0`、`seed=42`、`num_predict=384`、`num_ctx=8192`；
-- 四组公开合成中文科研 Evidence，规范化 SHA-256：`2ddec2697294ef98bacae7e01fd49a382235dad506b6a22b93b7b4d789ac176f`。
+- 四组公开合成中文科研 Evidence，基础用例规范化 SHA-256：`2ddec2697294ef98bacae7e01fd49a382235dad506b6a22b93b7b4d789ac176f`；
+- v2 评测套件规范化 SHA-256：`f3b48efe5e3700e23cdfb3781f49b6a8907fefbd51107126705f92fdb2352260`。
 
 ## 冻结模型
 
@@ -26,13 +27,16 @@ Gate 直接复用 `OllamaGenerationProvider` 的 `/api/tags` 身份检查和 `/a
 每个模型对四类固定问题各生成两次：方法与样本、数值比较、冲突证据、证据不足。自动门禁检查：
 
 1. 两次调用均完成且模型身份一致；
-2. 同模型同问题的答案字节稳定；
+2. 两次回答分别通过相同的引用、必须回答点和禁止主张检查；
 3. 必需 Evidence 引用编号全部存在；
 4. 固定必须回答点出现，禁止主张不出现；
 5. 回答正文不写入报告，只保存 SHA-256；
-6. 调用耗时与 Token 只记录，当前没有冻结性能阈值，也不参与晋级决定。
+6. 两次答案是否字节一致单独记录为观测项，不作为选型硬门禁；
+7. 调用耗时与 Token 只记录，当前没有冻结性能阈值，也不参与晋级决定。
 
 候选四题全部通过时报告 `PROMOTE_QWEN3_14B`；任何确定性硬门禁未通过时报告 `KEEP_LLAMA3_2`。模型请求未完整执行时报告失败，不作选型决定。这里不建设匿名 A/B 平台，也不把本 Gate 冒充正式 Acceptance 人工验收。
+
+v1 首次远程运行暴露了评测器假失败：`qwen3:14b` 对证据不足问题两次诊断回答完全一致，均为“提供的证据中没有提及本研究的资助机构”，引用 `[1]` 正确且没有外推；v1 固定短语表漏掉“没有提及/未提及”。v2 保留 v1 基础 Evidence 和原始运行证据，只以版本化覆盖补充等价拒答措辞，并把稳定性定义修正为“两次均通过相同确定性门禁”。
 
 ## 运行
 
@@ -51,7 +55,7 @@ Windows 可执行：
 默认报告位于被忽略的：
 
 ```text
-runtime/phases/source-phase2-model-selection-qwen3-14b/report.json
+runtime/phases/source-phase2-model-selection-qwen3-14b-v2/report.json
 ```
 
 脚本只允许回环 Ollama URL 和 `runtime/` 下的新 JSON 报告；目标报告已存在时拒绝覆盖。返回证据只需要提交 SHA、完整脱敏报告、报告 SHA-256 和稳定错误码，不需要模型回答正文。

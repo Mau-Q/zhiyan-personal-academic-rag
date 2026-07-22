@@ -7,11 +7,12 @@ from pathlib import Path
 
 from backend.rag.generation import GenerationModelIdentity, GenerationResult
 from scripts.run_phase2_model_selection import (
+    BASE_CASES_SHA256,
     BASELINE_MODEL,
     CANDIDATE_MODEL,
-    CASES_PATH,
-    CASES_SHA256,
     ModelSelectionGateError,
+    SUITE_PATH,
+    SUITE_SHA256,
     _canonical_sha256,
     _load_frozen_cases,
     _validate_loopback_url,
@@ -43,11 +44,14 @@ class FakeProvider:
         base_url: str,
         candidate_regression: bool = False,
         incomplete_candidate: bool = False,
+        varying_candidate_wording: bool = False,
     ) -> None:
         del base_url
         self.model = model
         self.candidate_regression = candidate_regression
         self.incomplete_candidate = incomplete_candidate
+        self.varying_candidate_wording = varying_candidate_wording
+        self.question_calls = {}
         self.identity = GenerationModelIdentity(
             provider="ollama",
             model=model,
@@ -59,9 +63,17 @@ class FakeProvider:
 
     def generate(self, question, evidence):
         del evidence
+        self.question_calls[question] = self.question_calls.get(question, 0) + 1
         if self.incomplete_candidate and self.model == CANDIDATE_MODEL.model:
             raise RuntimeError("private provider detail")
         answer = ANSWERS[question]
+        if (
+            self.varying_candidate_wording
+            and self.model == CANDIDATE_MODEL.model
+            and question == "这项研究由哪个机构资助？"
+            and self.question_calls[question] == 2
+        ):
+            answer = "提供的证据中没有提及本研究的资助机构。 [1]"
         if (
             self.candidate_regression
             and self.model == CANDIDATE_MODEL.model
@@ -78,25 +90,42 @@ class FakeProvider:
 
 class FakeProviderFactory:
     def __init__(
-        self, *, candidate_regression: bool = False, incomplete_candidate: bool = False
+        self,
+        *,
+        candidate_regression: bool = False,
+        incomplete_candidate: bool = False,
+        varying_candidate_wording: bool = False,
     ) -> None:
         self.candidate_regression = candidate_regression
         self.incomplete_candidate = incomplete_candidate
+        self.varying_candidate_wording = varying_candidate_wording
 
     def __call__(self, **kwargs):
         return FakeProvider(
             **kwargs,
             candidate_regression=self.candidate_regression,
             incomplete_candidate=self.incomplete_candidate,
+            varying_candidate_wording=self.varying_candidate_wording,
         )
 
 
 class Phase2ModelSelectionTests(unittest.TestCase):
     def test_frozen_suite_and_model_identities_are_exact(self):
-        payload = json.loads(CASES_PATH.read_text(encoding="utf-8"))
+        payload = json.loads(SUITE_PATH.read_text(encoding="utf-8"))
 
-        self.assertEqual(_canonical_sha256(payload), CASES_SHA256)
-        self.assertEqual(len(_load_frozen_cases()), 4)
+        self.assertEqual(_canonical_sha256(payload), SUITE_SHA256)
+        cases = _load_frozen_cases()
+        self.assertEqual(len(cases), 4)
+        self.assertEqual(
+            payload["base_cases"]["sha256"],
+            BASE_CASES_SHA256,
+        )
+        insufficient = next(
+            case for case in cases if case["case_id"] == "zh.evidence.insufficient"
+        )
+        self.assertIn(
+            "没有提及", insufficient["required_any_term_groups"][0]
+        )
         self.assertEqual(BASELINE_MODEL.model, "llama3.2:latest")
         self.assertEqual(
             CANDIDATE_MODEL.digest,
@@ -114,6 +143,23 @@ class Phase2ModelSelectionTests(unittest.TestCase):
         self.assertTrue(report["candidate_eligible"])
         self.assertTrue(report["results"][1]["hard_gate_pass"])
         self.assertNotIn("240名受试者", json.dumps(report, ensure_ascii=False))
+
+    def test_semantic_replay_can_pass_without_byte_identity(self):
+        report = run_selection(
+            base_url="http://127.0.0.1:11434",
+            provider_factory=FakeProviderFactory(varying_candidate_wording=True),
+        )
+
+        candidate = report["results"][1]
+        insufficient = next(
+            case
+            for case in candidate["cases"]
+            if case["case_id"] == "zh.evidence.insufficient"
+        )
+        self.assertEqual(report["decision"], "PROMOTE_QWEN3_14B")
+        self.assertTrue(insufficient["stable_replay"])
+        self.assertFalse(insufficient["byte_stable_replay"])
+        self.assertEqual(insufficient["semantic_checks_by_attempt"], [True, True])
 
     def test_unsupported_candidate_claim_keeps_fallback(self):
         report = run_selection(
@@ -137,13 +183,15 @@ class Phase2ModelSelectionTests(unittest.TestCase):
         self.assertNotIn("private provider detail", json.dumps(report))
 
     def test_case_drift_and_unsafe_endpoints_fail_closed(self):
-        payload = json.loads(CASES_PATH.read_text(encoding="utf-8"))
-        payload["cases"][0]["question"] = "drift"
+        payload = json.loads(SUITE_PATH.read_text(encoding="utf-8"))
+        payload["semantic_overrides"][0]["required_any_term_groups"][0].append(
+            "drift"
+        )
         with tempfile.TemporaryDirectory() as directory:
             changed = Path(directory) / "cases.json"
             changed.write_text(json.dumps(payload), encoding="utf-8")
             with self.assertRaisesRegex(
-                ModelSelectionGateError, "FROZEN_CASES_DIGEST_MISMATCH"
+                ModelSelectionGateError, "FROZEN_SUITE_DIGEST_MISMATCH"
             ):
                 _load_frozen_cases(changed)
 
