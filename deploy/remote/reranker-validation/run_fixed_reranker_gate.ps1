@@ -1,9 +1,12 @@
 [CmdletBinding()]
 param(
-    [string]$RepositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..\..')).Path
+    [string]$RepositoryRoot
 )
 
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
+    $RepositoryRoot = Join-Path -Path $PSScriptRoot -ChildPath '..\..\..'
+}
 $RepositoryRoot = (Resolve-Path -LiteralPath $RepositoryRoot).Path
 $PythonPath = Join-Path $RepositoryRoot '.venv\Scripts\python.exe'
 $OutputDirectory = Join-Path $RepositoryRoot 'runtime\evaluation\formal-retrieval-v1\ai-audited-engineering-v1\reranker-bge-v2-m3-windows-rtx4090-v1'
@@ -14,12 +17,12 @@ if (-not (Test-Path -LiteralPath $PythonPath -PathType Leaf)) {
 
 Push-Location $RepositoryRoot
 try {
-    $dirtyPaths = @(& git status --porcelain)
+    $dirtyPaths = @(& git status --porcelain --untracked-files=no)
     if ($LASTEXITCODE -ne 0) {
         throw 'git status failed.'
     }
     if ($dirtyPaths.Count -ne 0) {
-        throw 'Remote repository must be clean before the Reranker Gate.'
+        throw 'Remote repository must have no tracked or staged changes before the Reranker Gate.'
     }
 
     & git fetch origin main

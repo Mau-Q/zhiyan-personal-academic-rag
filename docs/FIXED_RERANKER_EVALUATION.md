@@ -100,5 +100,7 @@ Windows 配置位于
 用户运行入口为
 `deploy/remote/reranker-validation/run_fixed_reranker_gate.ps1`。
 该脚本面向 Windows PowerShell 5.1；只在 Mac 推送成功且 Windows
-检出同一 `origin/main` 后运行。模型权重、题目、Chunk、排名和运行报告
-继续只保留在被忽略的 `runtime/`。
+检出同一 `origin/main` 后运行。脚本拒绝已跟踪或已暂存修改；未跟踪的
+评审材料不会阻断本 Gate，因为模型与五份冻结输入仍须逐项通过 SHA-256
+身份校验。模型权重、题目、Chunk、排名和运行报告继续只保留在被忽略的
+`runtime/`。
