@@ -23,6 +23,9 @@ from backend.retrieval.milvus import (
     PASSAGE_TEMPLATE,
     QUERY_TEMPLATE,
     RETRIEVAL_BACKEND,
+    MAX_VERSION_LOGICAL_ROWS,
+    VERSION_ONLINE_ENTRYPOINT,
+    VERSION_WRITER_SCHEMA,
     VECTOR_NORMALIZATION,
     JsonObject,
     MilvusIndexNotReadyError,
@@ -38,10 +41,8 @@ from backend.retrieval.milvus import (
 from backend.retrieval.sqlite_fts import chunks_fingerprint
 
 
-VERSION_WRITER_SCHEMA = "milvus_version_writer_v1"
-ONLINE_ENTRYPOINT = "DETACHED_VERSION_COLLECTION"
 MAX_COLLECTION_NAME_LENGTH = 255
-MAX_VERSION_ROWS = 16_000
+MAX_VERSION_ROWS = MAX_VERSION_LOGICAL_ROWS
 _CONTRACT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 
 
@@ -128,7 +129,7 @@ class MilvusVersionIndexWriter:
                     "owner_id": owner_id,
                     "document_id": document_id,
                     "document_version_id": document_version_id,
-                    "online_entrypoint": ONLINE_ENTRYPOINT,
+                    "online_entrypoint": VERSION_ONLINE_ENTRYPOINT,
                     "embeddings_sha256": _embeddings_fingerprint(vectors),
                 }
             )
@@ -341,7 +342,7 @@ class MilvusVersionIndexWriter:
             "version_writer_schema": VERSION_WRITER_SCHEMA,
             "owner_id": owner_id,
             "document_version_id": document_version_id,
-            "online_entrypoint": ONLINE_ENTRYPOINT,
+            "online_entrypoint": VERSION_ONLINE_ENTRYPOINT,
         }
         if document_id is not None:
             expected["document_id"] = document_id

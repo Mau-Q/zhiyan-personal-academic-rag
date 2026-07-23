@@ -4,7 +4,7 @@
 
 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的本地实现候选与冻结配置已完成，
 方案阶段 3 由 `NOT_STARTED` 进入 `IN_PROGRESS`。本地结论仅为
-`FIFTH_ATTEMPT_MILVUS_ROUTE_FAILED_STAGE_DIAGNOSTIC_READY`：
+`SIXTH_ATTEMPT_MILVUS_ROUTE_IDENTITY_FAILED_LOGICAL_ROW_FIX_READY`：
 
 - 默认开关仍为 `false`，未改变默认 RRF；
 - 4 个冻结 `dev` 样本的 Control 均保持原问题，Treatment 规划均为
@@ -24,6 +24,9 @@
 - 第五次运行 `_05` 已返回 `RUN_CONTROL / ONLINE_MILVUS_ROUTE_FAILED`，并
   再次完成 9/9 清理、READY 失败关闭和删除后 403；该结果证明组件诊断生效，
   但仍没有 Control/Treatment 指标；
+- 第六次运行 `_06` 已将故障收敛为
+  `RUN_CONTROL / ONLINE_MILVUS_ROUTE_IDENTITY_FAILED`，并再次完成 9/9
+  清理、READY 失败关闭和删除后 403；无需恢复，但仍没有质量指标；
 - 尚未完成真实 PostgreSQL READY + ES/Milvus + RRF 配对质量回放，因此没有
   检索质量增益、关键类不退化或 300 ms 通过结论；
 - `test` 与 `acceptance` 均未读取、未运行。
@@ -213,6 +216,25 @@ Milvus 路径失败，不能确定根因或形成质量结论。
 稳定阶段，并由 Gate runner 映射为固定错误码。它不增加探测或检索请求，不
 改变 Milvus/Embedding 调用、候选 20、RRF `k=60`、Top-3、阈值或默认开关。
 
+第六次 Windows Run ID `phase3_comparison_dev_20260723_06` 在提交
+`4771fe39ade2039a3251a6f8699a99fd1fb69b4d` 上返回
+`RUN_CONTROL / ONLINE_MILVUS_ROUTE_IDENTITY_FAILED`。报告 SHA-256
+`FCBD2B472E21AD5554FB3EBB0389CDE649FDFE80C4036C8BCC64A194FC4F70CB`，
+裁决 SHA-256
+`A43F13F6E06F3D0C1B9ABA405529A31A82B754477292220D9EAC831CDCC6B779D`；
+清理 9/9、READY 失败关闭和删除后 403 通过，无需恢复。
+
+版本集合经过暂存和激活 `upsert` 后，通用检索器原先把
+`get_collection_stats().row_count` 与冻结 Chunk 数作精确等式。该统计接口允许
+尚在 stream 中的数据不计入统计，因此不适合作逐请求身份硬门；依据为
+[Milvus 2.6 `get_collection_stats()` 官方接口说明](https://milvus.io/api-reference/pymilvus/v2.6.x/MilvusClient/Collections/get_collection_stats.md)。
+当前修复只对
+`milvus_version_writer_v1` 集合使用一次只返回 `chunk_id` 的逻辑快照，要求
+数量和唯一性与元数据一致；版本 writer 在 READY 路由解析时执行的完整行、
+活动状态与向量身份验证，以及检索端的 schema、owner/document/version、
+provider 和 source fingerprint 校验均保留。此次未更改 ANN、Embedding、
+默认 RRF、比较变量、候选 20、RRF `k=60`、Top-3、阈值或 holdout。
+
 ## 6. 远程结果回收与裁决
 
 Windows runner 现在把实际 Git HEAD 和 Run ID 写入完整报告。PowerShell 入口在
@@ -230,8 +252,9 @@ Windows runner 现在把实际 Git HEAD 和 Run ID 写入完整报告。PowerShe
    `test` 仍需新的冻结提交和独立 Gate；
 6. 远程 FAIL 或报告不可采信时都保持比较拆分关闭。
 
-当前裁决器保留前三次拒绝、第四次可信通用 FAIL 和第五次可信 Milvus 路径
-FAIL 证据；第五次仍没有形成 Control/Treatment 指标，在线配对 dev 仍无可
+当前裁决器保留前三次拒绝、第四次可信通用 FAIL、第五次可信 Milvus 路径
+FAIL 和第六次可信 Milvus 身份 FAIL 证据；第六次仍没有形成 Control/Treatment
+指标，在线配对 dev 仍无可
 采信质量结论。
 
 ## 7. 不能合并的边界

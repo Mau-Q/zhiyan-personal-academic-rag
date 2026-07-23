@@ -55,7 +55,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | 阶段 0：范围与 Baseline | `COMPLETE` | 175 题人工校验、ES/Milvus 同集单路 Baseline、三种 Chunk 受控 Baseline、单用户范围/资源/SLO 及数据身份/生命周期目标合同均已冻结 | 冻结目标不等于运行时达标 |
 | 阶段 1：数据与索引最小闭环 | `COMPLETE` | 远程 v2 已通过 PDF/Chunk 持久化、owner/版本 READY 对账、ES/Milvus 在线 Evidence、同 Run ID 恢复、删除后 403 和三路清理；报告 SHA-256 `6B2AB3BAAD55AE8FA506C0D1FD7A310D9EF3A3833A93E33DD1A2D8A0938A9D8C` | 正式 MinIO、OCR 和目标规模性能不属于阶段 1 退出条件 |
 | 阶段 2：基础 RAG MVP | `COMPLETE` | 非流式 API、Evidence、拒答、远程 RRF Canary、llama3.2/Qwen READY 真实生成闭环、模型选型和 3 文档 9 题 v2 均通过；固定 BGE Reranker 的增益、目标硬件成本和在线边界已验证，最终决定为原 RRF 默认、Reranker 可选且不默认启用 | Windows 分段 Gate 的 combined `P95=504.71613 ms` 未通过 300 ms；这是显式后移的性能债，不写成 SLO 或生产验收完成 |
-| 阶段 3：针对失败类型增强 | `IN_PROGRESS` | 入口 Gate 已冻结 4 个 `dev` 双文档比较失衡样本和单一变量；`_05` 已把 `RUN_CONTROL` 故障归因为 `ONLINE_MILVUS_ROUTE_FAILED`，生命周期清理 9/9、READY 关闭和 403 通过；Milvus 搜索阶段的脱敏诊断已独立加固 | 尚无可采信在线质量指标；只能用全新 Run ID `_06` 重试同一 dev Gate。`test/acceptance` 封存，300 ms 性能 Gate 独立 |
+| 阶段 3：针对失败类型增强 | `IN_PROGRESS` | 入口 Gate 已冻结 4 个 `dev` 双文档比较失衡样本和单一变量；`_06` 已把 `RUN_CONTROL` 故障归因为 `ONLINE_MILVUS_ROUTE_IDENTITY_FAILED`，生命周期清理 9/9、READY 关闭和 403 通过；版本集合逻辑行身份校验已独立修复 | 尚无可采信在线质量指标；只能用全新 Run ID `_07` 重试同一 dev Gate。`test/acceptance` 封存，300 ms 性能 Gate 独立 |
 | 阶段 4：Claim–Evidence 可靠性 | `NOT_STARTED` | 尚未建立结构化 Claim、Claim–Evidence 映射及确定性支持检查 | 不用模型自评冒充确定性支持检查 |
 | 阶段 5：复杂科研问答与复用 | `NOT_STARTED` | 暂未完成比较、多跳、时效问答与 Agent Evidence API | 进入前需满足 MVP、权限委托、审计与运维条件 |
 
@@ -146,3 +146,14 @@ Control/Treatment 指标仍未形成，但清理 9/9、READY 失败关闭和删�
 通过，无需恢复。该证据只能定位到 Milvus 路径，不能证明具体根因或质量结果；
 下一独立诊断只将既有 Milvus 搜索拆为路由身份、查询向量、ANN 调用和响应合同
 四个固定阶段，不新增探测请求或改变检索行为。
+
+第六次 Run ID `phase3_comparison_dev_20260723_06` 在提交
+`4771fe39ade2039a3251a6f8699a99fd1fb69b4d` 上于 `RUN_CONTROL` 以
+`ONLINE_MILVUS_ROUTE_IDENTITY_FAILED` 失败。报告 SHA-256
+`FCBD2B472E21AD5554FB3EBB0389CDE649FDFE80C4036C8BCC64A194FC4F70CB`，
+裁决 SHA-256
+`A43F13F6E06F3D0C1B9ABA405529A31A82B754477292220D9EAC831CDCC6B779D`。
+Control/Treatment 指标仍未形成，但清理 9/9、READY 失败关闭和删除后 403
+通过，无需恢复。独立修复只把版本集合的精确计数证明从可能滞后的 collection
+stats 改为逻辑主键快照；既有 READY/owner、完整版本行、活动状态、向量、
+provider、source fingerprint 和 schema 校验不放宽，ANN、RRF 与质量变量不变。

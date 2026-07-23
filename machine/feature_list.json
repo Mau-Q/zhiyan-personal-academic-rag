@@ -560,7 +560,7 @@
       "id": "phase3_bilateral_comparison_query_decomposition",
       "status": "PARTIAL",
       "owner": "SHARED",
-      "gate_status": "FIFTH_ATTEMPT_CLEAN_MILVUS_ROUTE_FAILURE_STAGE_DIAGNOSTIC_READY_FOR_NEW_DEV_RUN",
+      "gate_status": "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FAILURE_LOGICAL_ROW_FIX_READY_FOR_NEW_DEV_RUN",
       "evidence": [
         "backend/retrieval/comparison_decomposition.py",
         "backend/retrieval/online.py",
@@ -580,6 +580,8 @@
         "tests/validation/test_phase3_comparison_cleanup_audit.py",
         "tests/validation/test_phase3_comparison_report_adjudication.py",
         "tests/retrieval/test_comparison_decomposition.py",
+        "tests/ingestion/test_milvus_version_writer.py",
+        "tests/retrieval/test_milvus_retrieval.py",
         "tests/retrieval/test_online_visibility.py",
         "machine/phase3_comparison_dev_gate.json",
         "machine/phase3_comparison_report_intake.json",

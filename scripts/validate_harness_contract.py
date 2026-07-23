@@ -193,7 +193,7 @@ def check_feature_list() -> None:
         not isinstance(phase3_feature, dict)
         or phase3_feature.get("status") != "PARTIAL"
         or phase3_feature.get("gate_status")
-        != "FIFTH_ATTEMPT_CLEAN_MILVUS_ROUTE_FAILURE_STAGE_DIAGNOSTIC_READY_FOR_NEW_DEV_RUN"
+        != "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FAILURE_LOGICAL_ROW_FIX_READY_FOR_NEW_DEV_RUN"
     ):
         raise ValueError("phase 3 comparison feature gate status drifted")
 
@@ -437,7 +437,7 @@ def check_phase3_comparison_dev_gate() -> None:
     if payload.get("schema_version") != "phase3_comparison_dev_gate_v1":
         raise ValueError("phase 3 comparison dev gate schema_version is invalid")
     if payload.get("status") != (
-        "FIFTH_ATTEMPT_MILVUS_ROUTE_FAILED_STAGE_DIAGNOSTIC_READY"
+        "SIXTH_ATTEMPT_MILVUS_ROUTE_IDENTITY_FAILED_LOGICAL_ROW_FIX_READY"
     ):
         raise ValueError("phase 3 comparison dev gate status is invalid")
     if payload.get("source_phase") != {"id": "phase-3", "status": "IN_PROGRESS"}:
@@ -497,7 +497,7 @@ def check_phase3_comparison_dev_gate() -> None:
         not isinstance(user_entry, dict)
         or user_entry.get("decision_id") != "PD-041"
         or user_entry.get("status")
-        != "FIFTH_ATTEMPT_CLEAN_MILVUS_STAGE_DIAGNOSTIC_READY_FOR_NEW_RUN"
+        != "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FIX_READY_FOR_NEW_RUN"
         or user_entry.get("cleanup_audit_decision_id") != "PD-044"
         or user_entry.get("cleanup_recovery_decision_id") != "PD-045"
         or user_entry.get("quality_top_k") != 3
@@ -509,7 +509,7 @@ def check_phase3_comparison_dev_gate() -> None:
     attempts = payload.get("windows_attempts")
     if (
         not isinstance(attempts, list)
-        or len(attempts) != 5
+        or len(attempts) != 6
         or any(not isinstance(attempt, dict) for attempt in attempts)
         or attempts[0].get("run_id") != "phase3_comparison_dev_20260723_01"
         or attempts[0].get("status") != "REJECTED_BEFORE_SERVICES"
@@ -568,6 +568,25 @@ def check_phase3_comparison_dev_gate() -> None:
         or attempts[4].get("online_quality_executed") is not False
         or attempts[4].get("test") != "NOT_READ_NOT_RUN"
         or attempts[4].get("acceptance") != "NOT_READ_NOT_RUN"
+        or attempts[5].get("run_id") != "phase3_comparison_dev_20260723_06"
+        or attempts[5].get("head_commit")
+        != "4771fe39ade2039a3251a6f8699a99fd1fb69b4d"
+        or attempts[5].get("status")
+        != "FAIL_RUN_CONTROL_MILVUS_ROUTE_IDENTITY_NO_METRICS_CLEANUP_PASS"
+        or attempts[5].get("primary_stage") != "RUN_CONTROL"
+        or attempts[5].get("primary_error_code")
+        != "ONLINE_MILVUS_ROUTE_IDENTITY_FAILED"
+        or attempts[5].get("report_sha256")
+        != "fcbd2b472e21ad5554fb3ebb0389cde649fdfe80c4036c8bcc64a194fc4f70cb"
+        or attempts[5].get("adjudication_sha256")
+        != "a43f13f6e06f3d0c1b9aba405529a31a82b754477292220d9eac831cdcc6b779d"
+        or attempts[5].get("cleanup_status") != "PASS"
+        or attempts[5].get("cleanup_jobs_succeeded") != 9
+        or attempts[5].get("ready_reconciliation_failed_closed") is not True
+        or attempts[5].get("deleted_answer_api_status") != 403
+        or attempts[5].get("online_quality_executed") is not False
+        or attempts[5].get("test") != "NOT_READ_NOT_RUN"
+        or attempts[5].get("acceptance") != "NOT_READ_NOT_RUN"
     ):
         raise ValueError("phase 3 rejected Windows attempt evidence drifted")
     for field in (
@@ -724,7 +743,8 @@ def check_phase3_comparison_dev_gate() -> None:
     milvus_diagnostic = payload.get("milvus_failure_diagnostic_hardening")
     if (
         not isinstance(milvus_diagnostic, dict)
-        or milvus_diagnostic.get("status") != "READY_AWAITING_NEW_WINDOWS_RUN"
+        or milvus_diagnostic.get("status")
+        != "VERIFIED_BY_SIXTH_WINDOWS_ROUTE_IDENTITY_CODE"
         or milvus_diagnostic.get("decision_id") != "PD-050"
         or milvus_diagnostic.get("source_run_id")
         != "phase3_comparison_dev_20260723_05"
@@ -747,6 +767,25 @@ def check_phase3_comparison_dev_gate() -> None:
         or milvus_diagnostic.get("performance_gate") != "NOT_RUN"
     ):
         raise ValueError("phase 3 Milvus failure diagnostic boundary drifted")
+    identity_fix = payload.get("milvus_route_identity_fix")
+    if (
+        not isinstance(identity_fix, dict)
+        or identity_fix.get("status") != "READY_AWAITING_NEW_WINDOWS_RUN"
+        or identity_fix.get("decision_id") != "PD-051"
+        or identity_fix.get("source_run_id")
+        != "phase3_comparison_dev_20260723_06"
+        or identity_fix.get("source_primary_error_code")
+        != "ONLINE_MILVUS_ROUTE_IDENTITY_FAILED"
+        or identity_fix.get("ann_changed") is not False
+        or identity_fix.get("embedding_changed") is not False
+        or identity_fix.get("quality_variable_changed") is not False
+        or identity_fix.get("retrieval_parameters_changed") is not False
+        or identity_fix.get("default_enabled") is not False
+        or identity_fix.get("test") != "NOT_READ_NOT_RUN"
+        or identity_fix.get("acceptance") != "NOT_READ_NOT_RUN"
+        or identity_fix.get("performance_gate") != "NOT_RUN"
+    ):
+        raise ValueError("phase 3 Milvus route identity fix boundary drifted")
 
 
 def check_phase3_comparison_report_intake() -> None:
@@ -760,8 +799,9 @@ def check_phase3_comparison_report_intake() -> None:
         or payload.get("cleanup_recovery_completion_decision_id") != "PD-046"
         or payload.get("control_failure_diagnostic_decision_id") != "PD-049"
         or payload.get("milvus_failure_diagnostic_decision_id") != "PD-050"
+        or payload.get("milvus_route_identity_fix_decision_id") != "PD-051"
         or payload.get("status")
-        != "FIFTH_ATTEMPT_CLEAN_MILVUS_FAILURE_STAGE_DIAGNOSTIC_READY"
+        != "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FAILURE_LOGICAL_ROW_FIX_READY"
     ):
         raise ValueError("phase 3 report intake identity is invalid")
     implementation = payload.get("implementation")
@@ -782,7 +822,7 @@ def check_phase3_comparison_report_intake() -> None:
     tests = implementation.get("tests")
     if (
         not isinstance(tests, list)
-        or len(tests) != 4
+        or len(tests) != 5
         or any(not isinstance(path, str) or not (ROOT / path).is_file() for path in tests)
     ):
         raise ValueError("phase 3 report intake tests are invalid")
@@ -835,7 +875,7 @@ def check_phase3_comparison_report_intake() -> None:
     attempts = evidence.get("attempts")
     if (
         not isinstance(attempts, list)
-        or len(attempts) != 5
+        or len(attempts) != 6
         or any(not isinstance(attempt, dict) for attempt in attempts)
         or attempts[0].get("status") != "REJECTED_BEFORE_SERVICES"
         or attempts[0].get("error_code") != "REPORT_CONFIG_IDENTITY_MISMATCH"
@@ -875,6 +915,22 @@ def check_phase3_comparison_report_intake() -> None:
         or attempts[4].get("deleted_answer_api_status") != 403
         or attempts[4].get("test") != "NOT_READ_NOT_RUN"
         or attempts[4].get("acceptance") != "NOT_READ_NOT_RUN"
+        or attempts[5].get("run_id") != "phase3_comparison_dev_20260723_06"
+        or attempts[5].get("status")
+        != "FAIL_RUN_CONTROL_MILVUS_ROUTE_IDENTITY_NO_METRICS_CLEANUP_PASS"
+        or attempts[5].get("error_code")
+        != "ONLINE_MILVUS_ROUTE_IDENTITY_FAILED"
+        or attempts[5].get("primary_stage") != "RUN_CONTROL"
+        or attempts[5].get("report_sha256")
+        != "fcbd2b472e21ad5554fb3ebb0389cde649fdfe80c4036c8bcc64a194fc4f70cb"
+        or attempts[5].get("adjudication_sha256")
+        != "a43f13f6e06f3d0c1b9aba405529a31a82b754477292220d9eac831cdcc6b779d"
+        or attempts[5].get("cleanup_status") != "PASS"
+        or attempts[5].get("cleanup_jobs_succeeded") != 9
+        or attempts[5].get("ready_reconciliation_failed_closed") is not True
+        or attempts[5].get("deleted_answer_api_status") != 403
+        or attempts[5].get("test") != "NOT_READ_NOT_RUN"
+        or attempts[5].get("acceptance") != "NOT_READ_NOT_RUN"
     ):
         raise ValueError("phase 3 report intake rejected evidence drifted")
     audit = payload.get("cleanup_audit_boundary")
@@ -1001,7 +1057,8 @@ def check_phase3_comparison_report_intake() -> None:
     milvus_diagnostic = payload.get("milvus_failure_diagnostic_hardening")
     if (
         not isinstance(milvus_diagnostic, dict)
-        or milvus_diagnostic.get("status") != "READY_AWAITING_NEW_WINDOWS_RUN"
+        or milvus_diagnostic.get("status")
+        != "VERIFIED_BY_SIXTH_WINDOWS_ROUTE_IDENTITY_CODE"
         or milvus_diagnostic.get("decision_id") != "PD-050"
         or milvus_diagnostic.get("additional_requests") != 0
         or milvus_diagnostic.get("quality_variable_changed") is not False
@@ -1009,6 +1066,39 @@ def check_phase3_comparison_report_intake() -> None:
         or milvus_diagnostic.get("default_enabled") is not False
     ):
         raise ValueError("phase 3 report intake Milvus diagnostic boundary drifted")
+    sixth_cleanup = payload.get("sixth_attempt_cleanup_proof")
+    if (
+        not isinstance(sixth_cleanup, dict)
+        or sixth_cleanup.get("run_id")
+        != "phase3_comparison_dev_20260723_06"
+        or sixth_cleanup.get("status") != "PASS_CLEAN"
+        or sixth_cleanup.get("jobs_succeeded") != 9
+        or sixth_cleanup.get("ready_reconciliation_failed_closed") is not True
+        or sixth_cleanup.get("deleted_answer_api_status") != 403
+        or sixth_cleanup.get("recovery_required") is not False
+        or sixth_cleanup.get("quality_metrics_available") is not False
+        or sixth_cleanup.get("test") != "NOT_READ_NOT_RUN"
+        or sixth_cleanup.get("acceptance") != "NOT_READ_NOT_RUN"
+        or sixth_cleanup.get("performance_gate") != "NOT_RUN"
+    ):
+        raise ValueError("phase 3 sixth attempt cleanup proof drifted")
+    identity_fix = payload.get("milvus_route_identity_fix")
+    if (
+        not isinstance(identity_fix, dict)
+        or identity_fix.get("status") != "READY_AWAITING_NEW_WINDOWS_RUN"
+        or identity_fix.get("decision_id") != "PD-051"
+        or identity_fix.get("source_run_id")
+        != "phase3_comparison_dev_20260723_06"
+        or identity_fix.get("source_primary_error_code")
+        != "ONLINE_MILVUS_ROUTE_IDENTITY_FAILED"
+        or identity_fix.get("quality_variable_changed") is not False
+        or identity_fix.get("retrieval_parameters_changed") is not False
+        or identity_fix.get("default_enabled") is not False
+        or identity_fix.get("test") != "NOT_READ_NOT_RUN"
+        or identity_fix.get("acceptance") != "NOT_READ_NOT_RUN"
+        or identity_fix.get("performance_gate") != "NOT_RUN"
+    ):
+        raise ValueError("phase 3 report intake Milvus identity fix drifted")
 
 
 def check_harness_links() -> None:

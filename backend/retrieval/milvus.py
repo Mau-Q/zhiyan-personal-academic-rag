@@ -33,6 +33,9 @@ METRIC_TYPE = "COSINE"
 HNSW_M = 16
 HNSW_EF_CONSTRUCTION = 200
 HNSW_SEARCH_EF = 64
+VERSION_WRITER_SCHEMA = "milvus_version_writer_v1"
+VERSION_ONLINE_ENTRYPOINT = "DETACHED_VERSION_COLLECTION"
+MAX_VERSION_LOGICAL_ROWS = 16_000
 EXPECTED_FIELDS = {
     "chunk_id",
     "embedding",
@@ -44,6 +47,7 @@ EXPECTED_FIELDS = {
     "payload",
 }
 _COLLECTION_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,254}$")
+_CONTRACT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 
 
 class MilvusIndexNotReadyError(ValueError):
@@ -428,15 +432,41 @@ class MilvusVectorIndex:
         } != EXPECTED_FIELDS:
             raise MilvusIndexNotReadyError("Milvus collection schema fields are invalid")
         try:
-            count = int(self.transport.get_collection_stats(self.collection_name)["row_count"])
             dimension = int(metadata["embedding_dimension"])
             expected_count = int(metadata["chunk_count"])
         except (KeyError, TypeError, ValueError) as exc:
             raise MilvusIndexNotReadyError(
                 "Milvus collection count or dimension is invalid"
             ) from exc
-        if dimension < 1 or count != expected_count:
-            raise MilvusIndexNotReadyError("Milvus collection row count does not match metadata")
+        if dimension < 1 or expected_count < 1:
+            raise MilvusIndexNotReadyError(
+                "Milvus collection count or dimension is invalid"
+            )
+        version_writer_schema = metadata.get("version_writer_schema")
+        if version_writer_schema is None:
+            try:
+                count = int(
+                    self.transport.get_collection_stats(self.collection_name)[
+                        "row_count"
+                    ]
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                raise MilvusIndexNotReadyError(
+                    "Milvus collection count or dimension is invalid"
+                ) from exc
+            if count != expected_count:
+                raise MilvusIndexNotReadyError(
+                    "Milvus collection row count does not match metadata"
+                )
+        elif version_writer_schema == VERSION_WRITER_SCHEMA:
+            self._verify_version_logical_rows(
+                metadata=metadata,
+                expected_count=expected_count,
+            )
+        else:
+            raise MilvusIndexNotReadyError(
+                "Milvus collection version writer schema is invalid"
+            )
         for key in (
             "source_chunks_sha256",
             "embedding_provider",
@@ -447,15 +477,71 @@ class MilvusVectorIndex:
                 raise MilvusIndexNotReadyError(f"Milvus collection {key} is missing")
         return metadata
 
+    def _verify_version_logical_rows(
+        self,
+        *,
+        metadata: Mapping[str, str],
+        expected_count: int,
+    ) -> None:
+        if (
+            expected_count > MAX_VERSION_LOGICAL_ROWS
+            or metadata.get("online_entrypoint") != VERSION_ONLINE_ENTRYPOINT
+            or any(
+                not _CONTRACT_ID_PATTERN.fullmatch(metadata.get(key, ""))
+                for key in ("owner_id", "document_id", "document_version_id")
+            )
+        ):
+            raise MilvusIndexNotReadyError(
+                "Milvus version collection route identity is invalid"
+            )
+        try:
+            rows = self.transport.query(
+                self.collection_name,
+                filter_expression="",
+                output_fields=["chunk_id"],
+                limit=expected_count + 1,
+            )
+        except Exception as exc:
+            raise MilvusIndexNotReadyError(
+                "Milvus version collection logical rows are unavailable"
+            ) from exc
+        if not isinstance(rows, list):
+            raise MilvusIndexNotReadyError(
+                "Milvus version collection logical rows are invalid"
+            )
+        chunk_ids = [
+            row.get("chunk_id") if isinstance(row, Mapping) else None
+            for row in rows
+        ]
+        if (
+            len(chunk_ids) != expected_count
+            or any(
+                not isinstance(chunk_id, str) or not chunk_id
+                for chunk_id in chunk_ids
+            )
+            or len({str(chunk_id) for chunk_id in chunk_ids}) != expected_count
+        ):
+            raise MilvusIndexNotReadyError(
+                "Milvus version collection logical row count does not match metadata"
+            )
+
     def verify_source(self, chunks: Sequence[Mapping[str, Any]]) -> dict[str, str]:
         metadata = self.inspect()
+        self._verify_source_metadata(metadata=metadata, chunks=chunks)
+        return metadata
+
+    @staticmethod
+    def _verify_source_metadata(
+        *,
+        metadata: Mapping[str, str],
+        chunks: Sequence[Mapping[str, Any]],
+    ) -> None:
         if metadata["source_chunks_sha256"] != chunks_fingerprint(chunks):
             raise MilvusIndexNotReadyError(
                 "Milvus collection source fingerprint does not match chunks"
             )
         if metadata["chunk_count"] != str(len(chunks)):
             raise MilvusIndexNotReadyError("Milvus collection chunk count does not match chunks")
-        return metadata
 
     def verify_provider(self, provider: EmbeddingProvider) -> dict[str, str]:
         metadata = self.inspect()
@@ -496,7 +582,10 @@ class MilvusVectorIndex:
                 else expected_chunks
             )
             if fingerprint_chunks is not None:
-                self.verify_source(fingerprint_chunks)
+                self._verify_source_metadata(
+                    metadata=metadata,
+                    chunks=fingerprint_chunks,
+                )
         except Exception as exc:
             raise MilvusSearchStageError("ROUTE_IDENTITY") from exc
         validation_latency_ms = (time.perf_counter() - validation_started) * 1000

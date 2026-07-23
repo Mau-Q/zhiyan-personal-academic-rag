@@ -48,17 +48,19 @@ unzip -p runtime/handoffs/phase3-comparison-paired-dev-input-v1.zip manifest.jso
 
 ## 2. Windows：仅在 Mac 推送成功后运行
 
-`phase3_comparison_dev_20260723_05` 已越过入库、READY 和 Chunk 身份校验，
-但在 `RUN_CONTROL` 以 `ONLINE_MILVUS_ROUTE_FAILED` 失败，未形成 Control 或
+`phase3_comparison_dev_20260723_06` 已越过入库和 READY 路由解析，
+但在 `RUN_CONTROL` 以 `ONLINE_MILVUS_ROUTE_IDENTITY_FAILED` 失败，未形成 Control 或
 Treatment 指标。报告 SHA-256 为
-`19A92545D6E87408462BDC38A72E3F4F69B5AA03EDCAAED19400116AAFBA4CD4`，
+`FCBD2B472E21AD5554FB3EBB0389CDE649FDFE80C4036C8BCC64A194FC4F70CB`，
 裁决 SHA-256 为
-`F8F72C59278A2A7EFB13B9B5917EAB596779372E4B159677A32B7538B82A9A2D`。
+`A43F13F6E06F3D0C1B9ABA405529A31A82B754477292220D9EAC831CDCC6B779D`。
 清理 9/9、READY 失败关闭和删除后 403 均通过，无需恢复 Gate。
 
-本次独立诊断加固只把既有 Milvus 搜索细分为路由身份、查询向量、ANN 调用和
-响应合同四个固定阶段；不输出异常文本、不增加请求、不改默认 RRF、比较变量
-或检索参数。诊断提交推送后，使用全新 Run ID `_06` 重试同一 dev Gate。
+本次独立修复只把版本集合的在线精确计数证明从 collection stats 改为逻辑
+Chunk 主键快照，保留 schema、版本入口、owner/document/version、provider、
+source fingerprint、READY 和完整版本行身份校验；不改 ANN、Embedding、默认
+RRF、比较变量或检索参数。修复提交推送后，使用全新 Run ID `_07` 重试同一
+dev Gate。
 
 先确保服务已经由用户正常维护并可通过本机环回端口访问。脚本不会安装依赖、
 启动容器或重启服务。输入 ZIP 已位于仓库忽略目录
@@ -97,7 +99,7 @@ powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass `
     -InputPackagePath $PackagePath `
     -ExpectedPackageSha256 $ExpectedPackageSha256 `
     -ExpectedManifestSha256 $ExpectedManifestSha256 `
-    -RunId 'phase3_comparison_dev_20260723_06'
+    -RunId 'phase3_comparison_dev_20260723_07'
 ```
 
 如未设置 `DATABASE_URL`，脚本以安全提示读取 PostgreSQL 密码，并在结束时删除

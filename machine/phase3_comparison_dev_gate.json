@@ -1,6 +1,6 @@
 {
   "schema_version": "phase3_comparison_dev_gate_v1",
-  "status": "FIFTH_ATTEMPT_MILVUS_ROUTE_FAILED_STAGE_DIAGNOSTIC_READY",
+  "status": "SIXTH_ATTEMPT_MILVUS_ROUTE_IDENTITY_FAILED_LOGICAL_ROW_FIX_READY",
   "source_phase": {
     "id": "phase-3",
     "status": "IN_PROGRESS"
@@ -50,7 +50,7 @@
   },
   "paired_online_user_entry": {
     "decision_id": "PD-041",
-    "status": "FIFTH_ATTEMPT_CLEAN_MILVUS_STAGE_DIAGNOSTIC_READY_FOR_NEW_RUN",
+    "status": "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FIX_READY_FOR_NEW_RUN",
     "package_builder": "scripts/build_phase3_comparison_dev_package.py",
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "report_adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -152,11 +152,31 @@
       "test": "NOT_READ_NOT_RUN",
       "acceptance": "NOT_READ_NOT_RUN",
       "performance_gate": "PENDING_SEPARATE_300MS_GATE"
+    },
+    {
+      "run_id": "phase3_comparison_dev_20260723_06",
+      "head_commit": "4771fe39ade2039a3251a6f8699a99fd1fb69b4d",
+      "status": "FAIL_RUN_CONTROL_MILVUS_ROUTE_IDENTITY_NO_METRICS_CLEANUP_PASS",
+      "report_error_code": "ONLINE_MILVUS_ROUTE_IDENTITY_FAILED",
+      "primary_stage": "RUN_CONTROL",
+      "primary_error_code": "ONLINE_MILVUS_ROUTE_IDENTITY_FAILED",
+      "report_sha256": "fcbd2b472e21ad5554fb3ebb0389cde649fdfe80c4036c8bcc64a194fc4f70cb",
+      "adjudication_status": "FAIL",
+      "adjudication_decision": "KEEP_COMPARISON_DECOMPOSITION_DISABLED",
+      "adjudication_sha256": "a43f13f6e06f3d0c1b9aba405529a31a82b754477292220d9eac831cdcc6b779d",
+      "cleanup_status": "PASS",
+      "cleanup_jobs_succeeded": 9,
+      "ready_reconciliation_failed_closed": true,
+      "deleted_answer_api_status": 403,
+      "online_quality_executed": false,
+      "test": "NOT_READ_NOT_RUN",
+      "acceptance": "NOT_READ_NOT_RUN",
+      "performance_gate": "PENDING_SEPARATE_300MS_GATE"
     }
   ],
   "paired_online_dev_quality": {
     "status": "NOT_RUN",
-    "reason": "The fifth Windows attempt reached RUN_CONTROL and classified the failure as ONLINE_MILVUS_ROUTE_FAILED before the first complete Control metric. Cleanup passed 9/9 with READY failed closed and deleted Answer API 403, so no recovery is required; no online quality result is accepted.",
+    "reason": "The sixth Windows attempt reached RUN_CONTROL and classified the failure as ONLINE_MILVUS_ROUTE_IDENTITY_FAILED before the first complete Control metric. Cleanup passed 9/9 with READY failed closed and deleted Answer API 403, so no recovery is required; no online quality result is accepted.",
     "control_baseline": null,
     "treatment_gain": null,
     "critical_non_regression": null
@@ -274,7 +294,7 @@
     "performance_gate": "NOT_RUN"
   },
   "milvus_failure_diagnostic_hardening": {
-    "status": "READY_AWAITING_NEW_WINDOWS_RUN",
+    "status": "VERIFIED_BY_SIXTH_WINDOWS_ROUTE_IDENTITY_CODE",
     "decision_id": "PD-050",
     "source_run_id": "phase3_comparison_dev_20260723_05",
     "source_primary_stage": "RUN_CONTROL",
@@ -287,6 +307,33 @@
       "RESPONSE_CONTRACT"
     ],
     "additional_requests": 0,
+    "quality_variable_changed": false,
+    "retrieval_parameters_changed": false,
+    "default_enabled": false,
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN",
+    "performance_gate": "NOT_RUN"
+  },
+  "milvus_route_identity_fix": {
+    "status": "READY_AWAITING_NEW_WINDOWS_RUN",
+    "decision_id": "PD-051",
+    "source_run_id": "phase3_comparison_dev_20260723_06",
+    "source_head_commit": "4771fe39ade2039a3251a6f8699a99fd1fb69b4d",
+    "source_primary_stage": "RUN_CONTROL",
+    "source_primary_error_code": "ONLINE_MILVUS_ROUTE_IDENTITY_FAILED",
+    "cause": "VERSION_COLLECTION_SEARCH_USED_EXACT_COLLECTION_STATS_ROW_COUNT_EQUALITY_DESPITE_STREAM_VISIBILITY_SEMANTICS",
+    "repair": "QUERY_LOGICAL_CHUNK_IDS_ONCE_AND_REQUIRE_EXACT_COUNT_UNIQUENESS_AND_VERSION_ROUTE_METADATA",
+    "preserved_checks": [
+      "POSTGRES_READY_OWNER_ROUTE",
+      "FULL_VERSION_ROW_ACTIVE_AND_VECTOR_IDENTITY",
+      "COLLECTION_SCHEMA_AND_VERSION_ENTRYPOINT",
+      "OWNER_DOCUMENT_VERSION_METADATA",
+      "EMBEDDING_PROVIDER_IDENTITY",
+      "SOURCE_CHUNKS_SHA256",
+      "CHUNK_COUNT"
+    ],
+    "ann_changed": false,
+    "embedding_changed": false,
     "quality_variable_changed": false,
     "retrieval_parameters_changed": false,
     "default_enabled": false,

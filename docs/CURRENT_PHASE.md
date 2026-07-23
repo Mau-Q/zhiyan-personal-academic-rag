@@ -2,9 +2,9 @@
 
 ## Status
 
-`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_FIFTH_ATTEMPT_CLEAN_MILVUS_STAGE_DIAGNOSTIC_READY / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
+`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FIX_READY / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
-Phase ID：`source-phase3-comparison-fifth-attempt-clean-milvus-stage-diagnostic-ready`
+Phase ID：`source-phase3-comparison-sixth-attempt-clean-milvus-route-identity-fix-ready`
 
 ## Completed
 
@@ -191,13 +191,15 @@ Phase ID：`source-phase3-comparison-fifth-attempt-clean-milvus-stage-diagnostic
 - 当前独立诊断加固只将异常类型链映射为 PostgreSQL READY、ES、Embedding、Milvus、在线 Scope/可见性、结果规范化或未分类等固定错误码，并把 Control 检索与指标计算分为 `RUN_CONTROL` / `SCORE_CONTROL`；不输出异常文本、不新增请求、不改变检索或质量变量。
 - 第五次 Windows Run ID `phase3_comparison_dev_20260723_05` 在提交 `a669702b24880269a130f8e249126b30e17a2972` 上于 `RUN_CONTROL` 返回 `ONLINE_MILVUS_ROUTE_FAILED`；报告 SHA-256 为 `19A92545D6E87408462BDC38A72E3F4F69B5AA03EDCAAED19400116AAFBA4CD4`，裁决 SHA-256 为 `F8F72C59278A2A7EFB13B9B5917EAB596779372E4B159677A32B7538B82A9A2D`。Control/Treatment 指标均未形成；清理 9/9、READY 失败关闭和删除后 403 继续通过，无需恢复。比较拆分保持关闭，test/Acceptance 未读取，性能 Gate 未运行。
 - 当前独立诊断只在既有 Milvus 搜索调用内部标注 `ROUTE_IDENTITY / QUERY_EMBEDDING / ANN_SEARCH / RESPONSE_CONTRACT` 四个稳定失败阶段，并由 Gate runner 映射为固定码；不新增请求、不输出异常文本、不改变 Milvus/Embedding 调用、默认 RRF 或质量变量。
+- 第六次 Windows Run ID `phase3_comparison_dev_20260723_06` 在提交 `4771fe39ade2039a3251a6f8699a99fd1fb69b4d` 上于 `RUN_CONTROL` 返回 `ONLINE_MILVUS_ROUTE_IDENTITY_FAILED`；报告 SHA-256 为 `FCBD2B472E21AD5554FB3EBB0389CDE649FDFE80C4036C8BCC64A194FC4F70CB`，裁决 SHA-256 为 `A43F13F6E06F3D0C1B9ABA405529A31A82B754477292220D9EAC831CDCC6B779D`。Control/Treatment 指标仍未形成；清理 9/9、READY 失败关闭和删除后 403 通过，无需恢复。比较拆分保持关闭，test/Acceptance 未读取，性能 Gate 未运行。
+- 当前独立修复只更正版本化 Milvus 集合的在线身份计数证明：不再把可能滞后的 collection stats 行数当作精确逻辑实体数，改为一次只返回 `chunk_id` 的逻辑快照，校验数量、唯一性和既有版本路由身份；provider、source fingerprint、schema、READY/owner 和完整版本行校验仍保留。未改变 ANN、Embedding、默认 RRF、比较变量、候选、阈值或 holdout。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：阶段 3 比较拆分已进入默认关闭的本地实现，但第五次 Windows 报告在首个完整 Control 指标前定位到 Milvus 路径失败；生命周期已干净收口，当前只增加脱敏 Milvus 阶段诊断，尚未进入 `test`；正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层继续后置；固定 Reranker 在当前 300 ms SLO 下不默认启用；
+- 未完成能力：阶段 3 比较拆分已进入默认关闭的本地实现，但第六次 Windows 报告在首个完整 Control 指标前定位到 Milvus 版本集合身份计数证明；生命周期已干净收口，当前只修复该在线身份合同并等待 `_07`，尚未进入 `test`；正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层继续后置；固定 Reranker 在当前 300 ms SLO 下不默认启用；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -235,11 +237,11 @@ Phase ID：`source-phase3-comparison-fifth-attempt-clean-milvus-stage-diagnostic
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 为 `IN_PROGRESS`。第五次 Windows 运行未形成质量指标，但生命周期清理完整通过并把 Control 故障定位到 Milvus 路径；当前只完成了 Milvus 搜索阶段的脱敏诊断加固。当前评测边界为 `PHASE3_COMPARISON_FIFTH_ATTEMPT_CLEAN_MILVUS_ROUTE_FAILURE_STAGE_DIAGNOSTIC_READY_NEW_RUN_ID_REQUIRED_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL`。失败定位与诊断加固都不构成质量增益、不退化或 300 ms 证据；默认 RRF、Reranker 关闭和比较拆分关闭均不变。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 为 `IN_PROGRESS`。第六次 Windows 运行未形成质量指标，但生命周期清理完整通过并把 Control 故障定位到 Milvus 版本集合身份校验；当前只完成了逻辑行身份修复。当前评测边界为 `PHASE3_COMPARISON_SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FAILURE_LOGICAL_ROW_FIX_READY_NEW_RUN_ID_REQUIRED_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL`。失败定位与身份修复都不构成质量增益、不退化或 300 ms 证据；默认 RRF、Reranker 关闭和比较拆分关闭均不变。
 
 ## Next gate
 
-1. **全新 Windows Run ID `_06`：** 固定输入和参数运行 Control；若仍失败，报告必须给出 Milvus 阶段级固定 `primary_error_code`，并完成 9 任务清理；
+1. **全新 Windows Run ID `_07`：** 固定输入和参数运行 Control；若仍失败，报告必须给出固定 `primary_error_code`，并完成 9 任务清理；
 2. **Treatment 与裁决：** 只有 Control 完整运行并复现冻结失败形态后才运行唯一 Treatment；报告继续绑定 HEAD、Run ID、输入/配置/目标 SHA、清理和 holdout；
 3. **失败不调参：** 任一红色、清理不完整或身份漂移都停止，不复用旧 Run ID；
 4. **继续封存 test 与性能：** dev PASS 也只形成默认关闭候选；test/Acceptance 和 300 ms 性能仍是后续独立 Gate。

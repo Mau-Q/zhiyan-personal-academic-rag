@@ -12,6 +12,7 @@ from backend.retrieval.milvus import (
     DESCRIPTION_PREFIX,
     EXPECTED_FIELDS,
     MilvusIndexNotReadyError,
+    MilvusVectorIndex,
     _description,
 )
 from backend.retrieval.sqlite_fts import chunks_fingerprint
@@ -62,6 +63,8 @@ class FakeMilvusVersionTransport:
         self.collections: dict[str, dict[str, Any]] = {}
         self.upsert_batches: list[list[str]] = []
         self.calls: list[tuple[str, str]] = []
+        self.physical_row_count = 0
+        self.stats_calls = 0
 
     def has_collection(self, collection_name: str) -> bool:
         return collection_name in self.collections
@@ -89,6 +92,7 @@ class FakeMilvusVersionTransport:
     ) -> Mapping[str, Any]:
         self.calls.append(("upsert", collection_name))
         self.upsert_batches.append([str(row["chunk_id"]) for row in data])
+        self.physical_row_count += len(data)
         rows = self.collections[collection_name]["rows"]
         for row in data:
             rows[row["chunk_id"]] = copy.deepcopy(row)
@@ -114,7 +118,9 @@ class FakeMilvusVersionTransport:
         }
 
     def get_collection_stats(self, collection_name: str) -> Mapping[str, Any]:
-        return {"row_count": len(self.collections[collection_name]["rows"])}
+        del collection_name
+        self.stats_calls += 1
+        return {"row_count": self.physical_row_count}
 
     def query(
         self,
@@ -136,10 +142,16 @@ class FakeMilvusVersionTransport:
         filter_expression: str,
         limit: int,
     ) -> list[list[Mapping[str, Any]]]:
-        raise AssertionError(
-            f"version writer must not search: {collection_name} {vector} "
-            f"{filter_expression} {limit}"
-        )
+        del vector, filter_expression
+        rows = self.collections[collection_name]["rows"].values()
+        visible = [row for row in rows if row["is_active"]]
+        return [[
+            {
+                "distance": 0.9 - position * 0.1,
+                "entity": {"payload": copy.deepcopy(row["payload"])},
+            }
+            for position, row in enumerate(visible[:limit])
+        ]]
 
 
 class MilvusVersionIndexWriterTests(unittest.TestCase):
@@ -226,6 +238,39 @@ class MilvusVersionIndexWriterTests(unittest.TestCase):
                 document_id=DOCUMENT_ID,
                 document_version_id=VERSION_ID,
             )
+
+    def test_online_search_uses_logical_version_rows_not_physical_stats(self):
+        self.stage()
+        name = self.collection_name()
+        self.writer.activate_version(
+            owner_id=OWNER_ID,
+            document_version_id=VERSION_ID,
+        )
+        self.assertEqual(self.transport.physical_row_count, 4)
+        self.assertEqual(len(self.transport.collections[name]["rows"]), 2)
+
+        online_chunks = [{**chunk, "is_active": True} for chunk in self.chunks]
+        ranking = MilvusVectorIndex(name, self.transport).search(
+            "semantic evidence",
+            {
+                "user_id": OWNER_ID,
+                "tenant_id": OWNER_ID,
+                "acl_version": "acl_v1",
+                "include_public": False,
+                "document_ids": [DOCUMENT_ID],
+                "library_ids": [],
+                "folder_ids": [],
+            },
+            self.provider,
+            expected_chunks=online_chunks,
+            source_fingerprint_chunks=self.chunks,
+        )
+
+        self.assertEqual([item.chunk["chunk_id"] for item in ranking], [
+            "chunk_001",
+            "chunk_002",
+        ])
+        self.assertEqual(self.transport.stats_calls, 0)
 
     def test_incomplete_replay_verifies_existing_rows_and_upserts_only_missing(self):
         self.stage()

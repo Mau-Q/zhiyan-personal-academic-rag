@@ -1,10 +1,10 @@
 {
   "schema_version": "phase3_comparison_report_intake_v1",
   "decision_id": "PD-042",
-  "status": "FIFTH_ATTEMPT_CLEAN_MILVUS_FAILURE_STAGE_DIAGNOSTIC_READY",
+  "status": "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FAILURE_LOGICAL_ROW_FIX_READY",
   "source_gate": {
     "artifact": "machine/phase3_comparison_dev_gate.json",
-    "status": "FIFTH_ATTEMPT_MILVUS_ROUTE_FAILED_STAGE_DIAGNOSTIC_READY"
+    "status": "SIXTH_ATTEMPT_MILVUS_ROUTE_IDENTITY_FAILED_LOGICAL_ROW_FIX_READY"
   },
   "repair_decision_id": "PD-043",
   "cleanup_audit_decision_id": "PD-044",
@@ -12,6 +12,7 @@
   "cleanup_recovery_completion_decision_id": "PD-046",
   "control_failure_diagnostic_decision_id": "PD-049",
   "milvus_failure_diagnostic_decision_id": "PD-050",
+  "milvus_route_identity_fix_decision_id": "PD-051",
   "implementation": {
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -24,6 +25,7 @@
       "tests/validation/test_phase3_comparison_paired_dev_gate.py",
       "tests/validation/test_phase3_comparison_cleanup_audit.py",
       "tests/validation/test_phase3_comparison_report_adjudication.py",
+      "tests/ingestion/test_milvus_version_writer.py",
       "tests/retrieval/test_milvus_retrieval.py"
     ]
   },
@@ -105,6 +107,7 @@
         "primary_stage": "RUN_CONTROL",
         "cleanup_status": "PASS",
         "cleanup_jobs_succeeded": 9,
+        "ready_reconciliation_failed_closed": true,
         "deleted_answer_api_status": 403,
         "test": "NOT_READ_NOT_RUN",
         "acceptance": "NOT_READ_NOT_RUN"
@@ -119,12 +122,28 @@
         "primary_stage": "RUN_CONTROL",
         "cleanup_status": "PASS",
         "cleanup_jobs_succeeded": 9,
+        "ready_reconciliation_failed_closed": true,
+        "deleted_answer_api_status": 403,
+        "test": "NOT_READ_NOT_RUN",
+        "acceptance": "NOT_READ_NOT_RUN"
+      },
+      {
+        "run_id": "phase3_comparison_dev_20260723_06",
+        "head_commit": "4771fe39ade2039a3251a6f8699a99fd1fb69b4d",
+        "report_sha256": "fcbd2b472e21ad5554fb3ebb0389cde649fdfe80c4036c8bcc64a194fc4f70cb",
+        "adjudication_sha256": "a43f13f6e06f3d0c1b9aba405529a31a82b754477292220d9eac831cdcc6b779d",
+        "status": "FAIL_RUN_CONTROL_MILVUS_ROUTE_IDENTITY_NO_METRICS_CLEANUP_PASS",
+        "error_code": "ONLINE_MILVUS_ROUTE_IDENTITY_FAILED",
+        "primary_stage": "RUN_CONTROL",
+        "cleanup_status": "PASS",
+        "cleanup_jobs_succeeded": 9,
+        "ready_reconciliation_failed_closed": true,
         "deleted_answer_api_status": 403,
         "test": "NOT_READ_NOT_RUN",
         "acceptance": "NOT_READ_NOT_RUN"
       }
     ],
-    "interpretation": "The fifth report is identity-bound and proves a clean lifecycle close, but it stopped in RUN_CONTROL before any complete Control metric and therefore cannot establish quality. ONLINE_MILVUS_ROUTE_FAILED narrows the failure to the Milvus path but not to route identity, query embedding, ANN search, or response validation, so the next independent Gate adds only stable Milvus search-stage classification without exception text or extra requests."
+    "interpretation": "The sixth report is identity-bound and proves a clean lifecycle close, but it stopped in RUN_CONTROL before any complete Control metric and therefore cannot establish quality. ONLINE_MILVUS_ROUTE_IDENTITY_FAILED narrows the failure to the version-collection search identity check. The next independent Gate replaces only the unreliable exact collection-stats equality with a logical primary-key snapshot while preserving all READY, owner, version, provider, source, schema, active-row, and vector identity checks."
   },
   "cleanup_audit_boundary": {
     "target_run_id": "phase3_comparison_dev_20260723_03",
@@ -210,12 +229,39 @@
     "performance_gate": "NOT_RUN"
   },
   "milvus_failure_diagnostic_hardening": {
-    "status": "READY_AWAITING_NEW_WINDOWS_RUN",
+    "status": "VERIFIED_BY_SIXTH_WINDOWS_ROUTE_IDENTITY_CODE",
     "decision_id": "PD-050",
     "classification": "MILVUS_ROUTE_IDENTITY_QUERY_EMBEDDING_ANN_SEARCH_OR_RESPONSE_CONTRACT_STABLE_CODE_NO_EXCEPTION_TEXT",
     "additional_requests": 0,
     "quality_variable_changed": false,
     "retrieval_parameters_changed": false,
     "default_enabled": false
+  },
+  "sixth_attempt_cleanup_proof": {
+    "run_id": "phase3_comparison_dev_20260723_06",
+    "status": "PASS_CLEAN",
+    "jobs_succeeded": 9,
+    "ready_reconciliation_failed_closed": true,
+    "deleted_answer_api_status": 403,
+    "recovery_required": false,
+    "quality_metrics_available": false,
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN",
+    "performance_gate": "NOT_RUN"
+  },
+  "milvus_route_identity_fix": {
+    "status": "READY_AWAITING_NEW_WINDOWS_RUN",
+    "decision_id": "PD-051",
+    "source_run_id": "phase3_comparison_dev_20260723_06",
+    "source_primary_error_code": "ONLINE_MILVUS_ROUTE_IDENTITY_FAILED",
+    "repair": "VERSION_COLLECTION_LOGICAL_CHUNK_ID_SNAPSHOT_REPLACES_EXACT_COLLECTION_STATS_EQUALITY",
+    "preserved_checks": "READY_OWNER_FULL_VERSION_ROWS_ACTIVE_STATE_VECTOR_SCHEMA_ROUTE_PROVIDER_SOURCE_FINGERPRINT_AND_CHUNK_COUNT",
+    "search_identity_requests": "TWO_STATS_CALLS_REPLACED_BY_ONE_LOGICAL_PRIMARY_KEY_QUERY",
+    "quality_variable_changed": false,
+    "retrieval_parameters_changed": false,
+    "default_enabled": false,
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN",
+    "performance_gate": "NOT_RUN"
   }
 }

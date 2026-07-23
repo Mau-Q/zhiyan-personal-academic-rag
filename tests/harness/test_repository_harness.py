@@ -191,7 +191,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         self.assertEqual(phase3_feature["status"], "PARTIAL")
         self.assertEqual(
             phase3_feature["gate_status"],
-            "FIFTH_ATTEMPT_CLEAN_MILVUS_ROUTE_FAILURE_STAGE_DIAGNOSTIC_READY_FOR_NEW_DEV_RUN",
+            "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FAILURE_LOGICAL_ROW_FIX_READY_FOR_NEW_DEV_RUN",
         )
         payload = json.loads(
             (ROOT / "machine" / "phase3_comparison_dev_gate.json").read_text(
@@ -200,7 +200,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "FIFTH_ATTEMPT_MILVUS_ROUTE_FAILED_STAGE_DIAGNOSTIC_READY",
+            "SIXTH_ATTEMPT_MILVUS_ROUTE_IDENTITY_FAILED_LOGICAL_ROW_FIX_READY",
         )
         self.assertEqual(
             payload["source_phase"], {"id": "phase-3", "status": "IN_PROGRESS"}
@@ -219,7 +219,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["paired_online_user_entry"]["status"],
-            "FIFTH_ATTEMPT_CLEAN_MILVUS_STAGE_DIAGNOSTIC_READY_FOR_NEW_RUN",
+            "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FIX_READY_FOR_NEW_RUN",
         )
         self.assertEqual(
             payload["windows_attempts"][0]["status"],
@@ -303,6 +303,18 @@ class RepositoryHarnessTests(unittest.TestCase):
             "PASS",
         )
         self.assertEqual(
+            payload["windows_attempts"][5]["primary_error_code"],
+            "ONLINE_MILVUS_ROUTE_IDENTITY_FAILED",
+        )
+        self.assertEqual(
+            payload["windows_attempts"][5]["report_sha256"],
+            "fcbd2b472e21ad5554fb3ebb0389cde649fdfe80c4036c8bcc64a194fc4f70cb",
+        )
+        self.assertEqual(
+            payload["windows_attempts"][5]["cleanup_status"],
+            "PASS",
+        )
+        self.assertEqual(
             payload["control_failure_diagnostic_hardening"][
                 "additional_requests"
             ],
@@ -322,6 +334,13 @@ class RepositoryHarnessTests(unittest.TestCase):
                 "RESPONSE_CONTRACT",
             ],
         )
+        self.assertEqual(
+            payload["milvus_route_identity_fix"]["decision_id"],
+            "PD-051",
+        )
+        self.assertFalse(
+            payload["milvus_route_identity_fix"]["quality_variable_changed"]
+        )
         self.assertFalse(
             payload["paired_online_user_entry"][
                 "absolute_300ms_slo_adjudication"
@@ -340,7 +359,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "FIFTH_ATTEMPT_CLEAN_MILVUS_FAILURE_STAGE_DIAGNOSTIC_READY",
+            "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FAILURE_LOGICAL_ROW_FIX_READY",
         )
         self.assertEqual(payload["decision_id"], "PD-042")
         self.assertEqual(
@@ -425,6 +444,18 @@ class RepositoryHarnessTests(unittest.TestCase):
                 "additional_requests"
             ],
             0,
+        )
+        self.assertEqual(
+            payload["evidence"]["attempts"][5]["error_code"],
+            "ONLINE_MILVUS_ROUTE_IDENTITY_FAILED",
+        )
+        self.assertEqual(
+            payload["sixth_attempt_cleanup_proof"]["status"],
+            "PASS_CLEAN",
+        )
+        self.assertEqual(
+            payload["milvus_route_identity_fix"]["decision_id"],
+            "PD-051",
         )
 
     def test_validator_rejects_template_as_concrete_phase_result(self):
