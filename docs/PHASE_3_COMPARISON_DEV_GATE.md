@@ -1,5 +1,10 @@
 # 阶段 3 双侧比较 dev 质量 Gate
 
+> `_07` 已以可信质量失败关闭本文件中的首个查询拆分变量。后续第二变量的
+> 复用评估、合同与默认关闭本地实现见
+> `docs/PHASE_3_COMPARISON_ROUTE_COVERAGE_GATE.md`；本文件保留为首个变量的
+> 历史证据，不授权复用旧 Run ID。
+
 ## 1. 当前结论
 
 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的本地实现候选与冻结配置已完成，

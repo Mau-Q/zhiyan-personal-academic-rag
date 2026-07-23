@@ -514,6 +514,48 @@ class RepositoryHarnessTests(unittest.TestCase):
             payload["seventh_attempt_quality_result"]["default_enabled"]
         )
 
+    def test_phase_three_route_coverage_is_local_default_off_and_reuse_first(self):
+        payload = json.loads(
+            (
+                ROOT
+                / "machine"
+                / "phase3_comparison_route_coverage_gate.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            payload["status"],
+            "LOCAL_IMPLEMENTATION_READY_DEFAULT_OFF_REMOTE_DEV_NOT_RUN",
+        )
+        self.assertEqual(payload["decision_ids"], ["PD-053", "PD-054"])
+        self.assertEqual(
+            payload["reuse_review"]["decision"],
+            "REUSE_EXISTING_NARROW_RETRIEVAL_CONTRACTS_WITHOUT_NEW_DEPENDENCY",
+        )
+        self.assertEqual(
+            payload["single_enhancement_variable"]["id"],
+            "BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1",
+        )
+        self.assertFalse(
+            payload["single_enhancement_variable"]["default_enabled"]
+        )
+        self.assertEqual(payload["preserved_online_path"]["candidate_k"], 20)
+        self.assertEqual(payload["preserved_online_path"]["rrf_k"], 60)
+        self.assertEqual(payload["preserved_online_path"]["final_top_k"], 3)
+        self.assertFalse(payload["preserved_online_path"]["reranker_enabled"])
+        self.assertFalse(payload["preserved_online_path"]["candidate_expansion"])
+        self.assertEqual(
+            payload["future_paired_dev_gate"]["status"],
+            "NOT_PREPARED_NOT_RUN",
+        )
+        self.assertIsNone(payload["future_paired_dev_gate"]["run_id"])
+        self.assertEqual(payload["split_isolation"]["test"], "NOT_READ_NOT_RUN")
+        self.assertFalse(
+            payload["remote_boundary"]["windows_run_id_assigned"]
+        )
+        self.assertFalse(
+            payload["remote_boundary"]["windows_command_authorized"]
+        )
+
     def test_validator_rejects_template_as_concrete_phase_result(self):
         template = json.loads(
             (ROOT / "machine" / "phase_result.template.json").read_text(encoding="utf-8")

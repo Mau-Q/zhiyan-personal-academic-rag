@@ -1,0 +1,144 @@
+{
+  "schema_version": "phase3_comparison_route_coverage_gate_v1",
+  "decision_ids": [
+    "PD-053",
+    "PD-054"
+  ],
+  "status": "LOCAL_IMPLEMENTATION_READY_DEFAULT_OFF_REMOTE_DEV_NOT_RUN",
+  "source_phase": {
+    "id": "phase-3",
+    "status": "IN_PROGRESS"
+  },
+  "predecessor": {
+    "variable_id": "BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1",
+    "decision": "KEEP_COMPARISON_DECOMPOSITION_DISABLED",
+    "control_strict_two_sided_passed": 0,
+    "treatment_strict_two_sided_passed": 0,
+    "macro_recall_at_3_absolute_gain": 0.0,
+    "macro_ndcg_at_3_absolute_gain": -0.017739,
+    "cleanup_status": "PASS",
+    "recovery_required": false
+  },
+  "reuse_review": {
+    "policy": "REVIEW_REPOSITORY_PRIOR_PROJECTS_AND_MAINTAINED_UPSTREAM_BEFORE_CUSTOM_IMPLEMENTATION",
+    "repository_reuse": [
+      "backend/retrieval/online.py: Postgres READY owner-scoped per-version routing",
+      "backend/retrieval/results.py: RankedChunk and ranking validation",
+      "backend/retrieval/online.py: existing ES and Milvus per-route RRF ordering"
+    ],
+    "prior_projects_reviewed": [
+      "zhiyan-paper-reading-agent",
+      "zhiyan-data-quality-center",
+      "zhiyan-patent-drafting-agent",
+      "zhiyan-kb-remote-4090"
+    ],
+    "prior_project_result": "NO_COMPATIBLE_GROUP_CONSTRAINED_FINAL_TOPK_SELECTOR_FOUND",
+    "upstream_components_reviewed": [
+      {
+        "component": "Elasticsearch RRF retriever",
+        "decision": "NOT_ADOPTED",
+        "reason": "Fuses Elasticsearch child retrievers but cannot enforce document coverage after external ES and Milvus fusion."
+      },
+      {
+        "component": "Milvus Grouping Search",
+        "decision": "NOT_ADOPTED",
+        "reason": "Groups one Milvus ANN result set; current online path searches version-scoped collections and must preserve joint ES and Milvus RRF."
+      },
+      {
+        "component": "Haystack DocumentJoiner",
+        "decision": "NOT_ADOPTED",
+        "reason": "Duplicates current RRF joining and does not provide the exact two-authorized-route Top-3 coverage contract."
+      },
+      {
+        "component": "LangChain maximal_marginal_relevance",
+        "decision": "NOT_ADOPTED",
+        "reason": "Adds embedding-similarity diversification and a lambda parameter without guaranteeing document identity coverage."
+      }
+    ],
+    "decision": "REUSE_EXISTING_NARROW_RETRIEVAL_CONTRACTS_WITHOUT_NEW_DEPENDENCY"
+  },
+  "single_enhancement_variable": {
+    "id": "BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1",
+    "default_enabled": false,
+    "reserved_switch": "PHASE3_COMPARISON_ROUTE_COVERAGE_ENABLED",
+    "config": "evaluation/phase3/bilateral-comparison-route-coverage-top3-v1.json",
+    "config_sha256": "bdf7b0616812362966189e5ebaf374d705f4537a6e3e06a99efc6b480209a9d0",
+    "implementation": "backend/retrieval/comparison_route_coverage.py",
+    "integration": "OPTIONAL_FINAL_SELECTOR_AFTER_FULL_EXISTING_RRF_ORDER",
+    "eligibility": {
+      "comparison_marker_required": true,
+      "authorized_ready_route_count": 2,
+      "final_top_k": 3,
+      "minimum_per_route": 1
+    },
+    "selection": "TAKE_HIGHEST_RRF_CANDIDATE_FROM_EACH_ROUTE_THEN_FILL_IN_ORIGINAL_RRF_ORDER",
+    "score_policy": "PRESERVE_ORIGINAL_RRF_SCORES",
+    "failure_policy": "FALLBACK_TO_ORIGINAL_RRF_TOP3"
+  },
+  "preserved_online_path": {
+    "postgres_ready_owner_precondition": true,
+    "persistent_document_version_chunk_identity_validation": true,
+    "elasticsearch_milvus_parallel_per_route": true,
+    "candidate_k": 20,
+    "rrf_k": 60,
+    "final_top_k": 3,
+    "reranker_enabled": false,
+    "additional_es_requests": 0,
+    "additional_milvus_requests": 0,
+    "new_embedding_calls": 0,
+    "new_llm_calls": 0,
+    "candidate_expansion": false
+  },
+  "local_gate": {
+    "status": "PASS",
+    "contract_and_config": "FROZEN",
+    "default_path_equivalence": "COVERED_BY_ONLINE_RETRIEVAL_REGRESSION",
+    "route_coverage_unit_tests": "PASS",
+    "online_selector_integration_tests": "PASS",
+    "quality_conclusion": "NOT_CLAIMED_WITHOUT_PAIRED_ONLINE_DEV"
+  },
+  "future_paired_dev_gate": {
+    "status": "NOT_PREPARED_NOT_RUN",
+    "run_id": null,
+    "sample_count": 4,
+    "target_ids_sha256": "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8",
+    "control": "ORIGINAL_QUERY_EXISTING_RRF_TOP3",
+    "treatment": "ORIGINAL_QUERY_EXISTING_RRF_THEN_ROUTE_COVERAGE_TOP3",
+    "quality_thresholds": {
+      "treatment_strict_two_sided_passed_min": 3,
+      "strict_two_sided_absolute_gain_min": 0.5,
+      "macro_recall_at_3_absolute_gain_min": 0.2,
+      "macro_ndcg_at_3_absolute_gain_min": 0.1,
+      "fixed_15_canary_passed": 15,
+      "fixed_15_control_treatment_boundary_identical": true,
+      "critical_non_target_recall_at_3_drop_max": 0.0,
+      "critical_non_target_ndcg_at_10_drop_max": 0.01
+    },
+    "cost_thresholds": {
+      "selection_p95_ms_max": 5.0,
+      "incremental_retrieval_p95_ms_max": 50.0
+    },
+    "pass_decision": "DEV_CANDIDATE_DEFAULT_OFF_AWAITING_SEPARATE_FREEZE",
+    "fail_decision": "KEEP_COMPARISON_ROUTE_COVERAGE_DISABLED"
+  },
+  "split_isolation": {
+    "dev": "FROZEN_FOUR_CASES_ONLY",
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN_REQUIRES_EXPLICIT_AUTHORIZATION"
+  },
+  "independent_performance_gate": {
+    "status": "PENDING_SEPARATE_GATE",
+    "retrieval_p95_ms_max": 300,
+    "must_not_be_combined_with_comparison_quality_change": true
+  },
+  "rollback": {
+    "action": "Omit the optional final candidate selector or set PHASE3_COMPARISON_ROUTE_COVERAGE_ENABLED=false.",
+    "data_schema_index_model_cleanup_required": false
+  },
+  "remote_boundary": {
+    "windows_run_id_assigned": false,
+    "windows_command_authorized": false,
+    "remote_host_operated": false,
+    "test_or_acceptance_read": false
+  }
+}

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -24,12 +25,14 @@ REQUIRED_FILES = (
     "docs/PHASE_0_SCOPE_RESOURCE_SLO.md",
     "docs/PHASE_3_ENTRY_FREEZE.md",
     "docs/PHASE_3_COMPARISON_DEV_GATE.md",
+    "docs/PHASE_3_COMPARISON_ROUTE_COVERAGE_GATE.md",
     "machine/project_state.json",
     "machine/feature_list.json",
     "machine/phase_zero_scope_resource_slo.json",
     "machine/phase3_entry_freeze.json",
     "machine/phase3_comparison_dev_gate.json",
     "machine/phase3_comparison_report_intake.json",
+    "machine/phase3_comparison_route_coverage_gate.json",
     "machine/phase_result.schema.json",
     "machine/phase_result.template.json",
     "scripts/validate_harness_contract.py",
@@ -196,6 +199,22 @@ def check_feature_list() -> None:
         != "SEVENTH_ATTEMPT_TRUSTWORTHY_DEV_QUALITY_FAIL_CLEAN_VARIABLE_DISABLED_TEST_SEALED"
     ):
         raise ValueError("phase 3 comparison feature gate status drifted")
+    route_coverage_feature = next(
+        (
+            feature
+            for feature in features
+            if feature.get("id")
+            == "phase3_bilateral_comparison_route_coverage_top3"
+        ),
+        None,
+    )
+    if (
+        not isinstance(route_coverage_feature, dict)
+        or route_coverage_feature.get("status") != "PARTIAL"
+        or route_coverage_feature.get("gate_status")
+        != "LOCAL_IMPLEMENTATION_READY_DEFAULT_OFF_REMOTE_DEV_NOT_RUN_TEST_SEALED"
+    ):
+        raise ValueError("phase 3 route coverage feature gate status drifted")
 
 
 def validate_phase_result(payload: Any, *, require_concrete: bool) -> None:
@@ -1221,6 +1240,115 @@ def check_phase3_comparison_report_intake() -> None:
         raise ValueError("phase 3 seventh attempt quality result drifted")
 
 
+def check_phase3_comparison_route_coverage_gate() -> None:
+    payload = _read_json("machine/phase3_comparison_route_coverage_gate.json")
+    if payload.get("schema_version") != (
+        "phase3_comparison_route_coverage_gate_v1"
+    ):
+        raise ValueError("phase 3 route coverage schema_version is invalid")
+    if payload.get("decision_ids") != ["PD-053", "PD-054"]:
+        raise ValueError("phase 3 route coverage decision ids drifted")
+    if payload.get("status") != (
+        "LOCAL_IMPLEMENTATION_READY_DEFAULT_OFF_REMOTE_DEV_NOT_RUN"
+    ):
+        raise ValueError("phase 3 route coverage status is invalid")
+    if payload.get("source_phase") != {"id": "phase-3", "status": "IN_PROGRESS"}:
+        raise ValueError("phase 3 route coverage source phase is invalid")
+
+    reuse = payload.get("reuse_review")
+    if (
+        not isinstance(reuse, dict)
+        or reuse.get("decision")
+        != "REUSE_EXISTING_NARROW_RETRIEVAL_CONTRACTS_WITHOUT_NEW_DEPENDENCY"
+        or reuse.get("prior_project_result")
+        != "NO_COMPATIBLE_GROUP_CONSTRAINED_FINAL_TOPK_SELECTOR_FOUND"
+        or len(reuse.get("prior_projects_reviewed", [])) != 4
+        or len(reuse.get("upstream_components_reviewed", [])) != 4
+        or any(
+            item.get("decision") != "NOT_ADOPTED"
+            for item in reuse.get("upstream_components_reviewed", [])
+            if isinstance(item, dict)
+        )
+    ):
+        raise ValueError("phase 3 route coverage reuse review drifted")
+
+    variable = payload.get("single_enhancement_variable")
+    config_path = (
+        "evaluation/phase3/bilateral-comparison-route-coverage-top3-v1.json"
+    )
+    if (
+        not isinstance(variable, dict)
+        or variable.get("id")
+        != "BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1"
+        or variable.get("default_enabled") is not False
+        or variable.get("reserved_switch")
+        != "PHASE3_COMPARISON_ROUTE_COVERAGE_ENABLED"
+        or variable.get("config") != config_path
+        or variable.get("integration")
+        != "OPTIONAL_FINAL_SELECTOR_AFTER_FULL_EXISTING_RRF_ORDER"
+        or variable.get("score_policy") != "PRESERVE_ORIGINAL_RRF_SCORES"
+        or variable.get("failure_policy")
+        != "FALLBACK_TO_ORIGINAL_RRF_TOP3"
+    ):
+        raise ValueError("phase 3 route coverage variable contract drifted")
+    config_bytes = (ROOT / config_path).read_bytes()
+    if hashlib.sha256(config_bytes).hexdigest() != variable.get("config_sha256"):
+        raise ValueError("phase 3 route coverage config identity drifted")
+
+    path = payload.get("preserved_online_path")
+    if (
+        not isinstance(path, dict)
+        or path.get("postgres_ready_owner_precondition") is not True
+        or path.get(
+            "persistent_document_version_chunk_identity_validation"
+        )
+        is not True
+        or path.get("candidate_k") != 20
+        or path.get("rrf_k") != 60
+        or path.get("final_top_k") != 3
+        or path.get("reranker_enabled") is not False
+        or path.get("additional_es_requests") != 0
+        or path.get("additional_milvus_requests") != 0
+        or path.get("new_embedding_calls") != 0
+        or path.get("new_llm_calls") != 0
+        or path.get("candidate_expansion") is not False
+    ):
+        raise ValueError("phase 3 route coverage online path drifted")
+
+    local_gate = payload.get("local_gate")
+    future = payload.get("future_paired_dev_gate")
+    if (
+        not isinstance(local_gate, dict)
+        or local_gate.get("status") != "PASS"
+        or local_gate.get("quality_conclusion")
+        != "NOT_CLAIMED_WITHOUT_PAIRED_ONLINE_DEV"
+        or not isinstance(future, dict)
+        or future.get("status") != "NOT_PREPARED_NOT_RUN"
+        or future.get("run_id") is not None
+        or future.get("sample_count") != 4
+        or future.get("target_ids_sha256")
+        != "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8"
+    ):
+        raise ValueError("phase 3 route coverage local or future gate drifted")
+    split = payload.get("split_isolation")
+    performance = payload.get("independent_performance_gate")
+    remote = payload.get("remote_boundary")
+    if (
+        not isinstance(split, dict)
+        or split.get("test") != "NOT_READ_NOT_RUN"
+        or not str(split.get("acceptance", "")).startswith("NOT_READ_NOT_RUN")
+        or not isinstance(performance, dict)
+        or performance.get("retrieval_p95_ms_max") != 300
+        or performance.get(
+            "must_not_be_combined_with_comparison_quality_change"
+        )
+        is not True
+        or not isinstance(remote, dict)
+        or any(remote.values())
+    ):
+        raise ValueError("phase 3 route coverage isolation boundary drifted")
+
+
 def check_harness_links() -> None:
     for relative_path in ("AGENTS.md", "docs/HARNESS_ARCHITECTURE.md"):
         text = (ROOT / relative_path).read_text(encoding="utf-8")
@@ -1284,6 +1412,10 @@ def main() -> int:
         ("phase3_entry_freeze", check_phase3_entry_freeze),
         ("phase3_comparison_dev_gate", check_phase3_comparison_dev_gate),
         ("phase3_comparison_report_intake", check_phase3_comparison_report_intake),
+        (
+            "phase3_comparison_route_coverage_gate",
+            check_phase3_comparison_route_coverage_gate,
+        ),
         ("harness_links", check_harness_links),
         ("content_safety", check_harness_content_safety),
         ("tracked_artifact_boundary", check_tracked_artifact_boundary),

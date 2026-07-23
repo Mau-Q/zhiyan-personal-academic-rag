@@ -9,6 +9,16 @@ ES/Milvus 双索引 READY、失效先行、补偿/清理和引用身份。成熟
 每项复用都是独立 Gate。不得把数据库迁移、索引传输、PDF 解析、遥测和
 评测框架同时引入，也不得以替换框架为由重跑或改写已经冻结的远程证据。
 
+新增非平凡能力前必须按以下顺序完成复用检查：
+
+1. 本仓库已有合同、模块、测试和窄适配器；
+2. 用户既有项目中身份与失败语义兼容的实现；
+3. 仍在维护的官方 SDK、算法组件或框架能力。
+
+每次记录“直接复用、窄适配或不采用”及理由。成熟组件可以替换重复的技术
+实现，但不能接管 PostgreSQL 事实源、ACL、READY、统一身份、失效和清理合同。
+没有精确匹配时优先复用现有窄接口，不为一个小算法引入全栈框架。
+
 ## 已采用
 
 | 能力 | 复用组件 | 当前边界 |
@@ -18,6 +28,19 @@ ES/Milvus 双索引 READY、失效先行、补偿/清理和引用身份。成熟
 | 固定 Reranker | `sentence-transformers.CrossEncoder` | 冻结 `test=100` 质量门及 Windows RTX 4090 组件 P95 已通过；最终分段 Gate 的在线组合 `P95=504.71613 ms`、base retrieval `P95=376.394385 ms`，不满足 300 ms；阶段 2 以原 RRF 默认、固定 Reranker 非默认收口 |
 
 ## 后续独立 Gate
+
+### 阶段 3 双文档最终覆盖
+
+已评估 Elasticsearch RRF retriever、Milvus Grouping Search、Haystack
+DocumentJoiner、LangChain MMR，以及用户既有项目中的检索实现。前两者分别
+只覆盖 ES 子检索或单一 Milvus ANN，Haystack 只复用融合，MMR 会引入候选
+向量、`lambda_mult` 和新的语义多样性目标；均不能直接满足融合后两个已授权
+document route 的 Top-3 最小覆盖合同。
+
+当前决定不新增依赖，复用 `OnlineVersionRrfRetriever`、`RankedChunk` 和完整
+原 RRF 顺序，通过默认关闭的
+`BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1` 窄选择器完成本地候选。
+该决定不证明 dev 质量增益；远程配对 Gate 继续独立。
 
 ### 1. Elasticsearch 批量传输
 

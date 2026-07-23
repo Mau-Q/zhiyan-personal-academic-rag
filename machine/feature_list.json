@@ -590,6 +590,24 @@
         "docs/REQUIREMENTS_TRACEABILITY.md",
         "docs/CURRENT_PHASE.md"
       ]
+    },
+    {
+      "id": "phase3_bilateral_comparison_route_coverage_top3",
+      "status": "PARTIAL",
+      "owner": "SHARED",
+      "gate_status": "LOCAL_IMPLEMENTATION_READY_DEFAULT_OFF_REMOTE_DEV_NOT_RUN_TEST_SEALED",
+      "evidence": [
+        "backend/retrieval/comparison_route_coverage.py",
+        "backend/retrieval/online.py",
+        "evaluation/phase3/bilateral-comparison-route-coverage-top3-v1.json",
+        "tests/retrieval/test_comparison_route_coverage.py",
+        "tests/retrieval/test_online_visibility.py",
+        "machine/phase3_comparison_route_coverage_gate.json",
+        "docs/PHASE_3_COMPARISON_ROUTE_COVERAGE_GATE.md",
+        "docs/COMPONENT_REUSE_ROADMAP.md",
+        "docs/PRODUCT_DECISIONS.md",
+        "docs/CURRENT_PHASE.md"
+      ]
     }
   ]
 }

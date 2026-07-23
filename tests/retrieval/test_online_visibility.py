@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from unittest.mock import patch
 
 from backend.retrieval.comparison_decomposition import RouteQueryPlan
+from backend.retrieval.comparison_route_coverage import RouteCoveragePlan
 from backend.retrieval.online import (
     OnlineRetrievalLatencyBreakdown,
     OnlineScopeForbiddenError,
@@ -240,6 +241,105 @@ class FakeChunkSnapshots:
 
 
 class OnlineVersionRrfRetrieverTests(unittest.TestCase):
+    def test_applied_final_selector_reorders_only_existing_rrf_candidates(self):
+        alpha_route = OnlineVersionRoute(
+            owner_id=OWNER_ID,
+            document_id="document_alpha",
+            document_version_id="version_alpha",
+            elasticsearch_index="es_version_alpha",
+            milvus_collection="milvus_version_alpha",
+        )
+        beta_route = OnlineVersionRoute(
+            owner_id=OWNER_ID,
+            document_id="document_beta",
+            document_version_id="version_beta",
+            elasticsearch_index="es_version_beta",
+            milvus_collection="milvus_version_beta",
+        )
+        alpha_1 = chunk("document_alpha", "version_alpha", 1)
+        alpha_2 = chunk("document_alpha", "version_alpha", 2)
+        alpha_3 = chunk("document_alpha", "version_alpha", 3)
+        beta_1 = chunk("document_beta", "version_beta", 1)
+        elasticsearch = RankingTransport(
+            {
+                "es_version_alpha": [
+                    RankedChunk("es", 1, 4.0, alpha_1),
+                    RankedChunk("es", 2, 3.0, alpha_2),
+                    RankedChunk("es", 3, 2.5, alpha_3),
+                ],
+                "es_version_beta": [RankedChunk("es", 1, 2.0, beta_1)],
+            }
+        )
+        milvus = RankingTransport(
+            {
+                "milvus_version_alpha": [
+                    RankedChunk("milvus", 1, 0.9, alpha_1),
+                    RankedChunk("milvus", 2, 0.8, alpha_2),
+                    RankedChunk("milvus", 3, 0.7, alpha_3),
+                ],
+                "milvus_version_beta": [],
+            }
+        )
+
+        class StaticSelector:
+            def plan(self, question, candidates, *, document_ids, top_k):
+                self.seen = (
+                    question,
+                    tuple(document_ids),
+                    tuple(item.chunk["chunk_id"] for item in candidates),
+                    top_k,
+                )
+                return RouteCoveragePlan(
+                    status="APPLIED",
+                    selected_chunk_ids=(
+                        alpha_1["chunk_id"],
+                        alpha_2["chunk_id"],
+                        beta_1["chunk_id"],
+                    ),
+                    failure_code=None,
+                )
+
+        selector = StaticSelector()
+        retriever = OnlineVersionRrfRetriever(
+            resolver=StaticResolver([alpha_route, beta_route]),
+            elasticsearch_transport=elasticsearch,
+            milvus_transport=milvus,
+            embedding_provider=FakeEmbeddingProvider(),
+            chunk_snapshots=FakeChunkSnapshots(
+                [alpha_1, alpha_2, alpha_3, beta_1]
+            ),
+            final_candidate_selector=selector,
+        )
+
+        with patch(
+            "backend.retrieval.online.ElasticsearchBm25Index",
+            FakeElasticsearchIndex,
+        ), patch("backend.retrieval.online.MilvusVectorIndex", FakeMilvusIndex):
+            results = retriever.retrieve(
+                "比较两篇论文",
+                {"user_id": OWNER_ID, "tenant_id": OWNER_ID},
+                owner_id=OWNER_ID,
+                document_ids=["document_alpha", "document_beta"],
+                top_k=3,
+            )
+
+        self.assertEqual(
+            [item["chunk_id"] for item in results],
+            [alpha_1["chunk_id"], alpha_2["chunk_id"], beta_1["chunk_id"]],
+        )
+        self.assertEqual(selector.seen[0], "比较两篇论文")
+        self.assertEqual(selector.seen[1], ("document_alpha", "document_beta"))
+        self.assertEqual(
+            selector.seen[2][:3],
+            (
+                alpha_1["chunk_id"],
+                alpha_2["chunk_id"],
+                alpha_3["chunk_id"],
+            ),
+        )
+        self.assertEqual(retriever.candidate_k, 20)
+        self.assertEqual(retriever.rrf_k, 60)
+
     def test_applied_route_query_plan_changes_only_route_query_text(self):
         first_route = OnlineVersionRoute(
             owner_id=OWNER_ID,

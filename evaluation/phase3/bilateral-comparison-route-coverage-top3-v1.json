@@ -1,0 +1,21 @@
+{
+  "schema_version": "bilateral_comparison_route_coverage_top3_config_v1",
+  "variable_id": "BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1",
+  "default_enabled": false,
+  "failure_policy": "FALLBACK_TO_ORIGINAL_RRF_TOP3",
+  "eligible_route_count": 2,
+  "final_top_k": 3,
+  "minimum_per_route": 1,
+  "comparison_markers": [
+    "比较",
+    "对比",
+    "差异",
+    "不同",
+    "区别",
+    "异同",
+    "compare",
+    "comparison",
+    "contrast",
+    "difference"
+  ]
+}

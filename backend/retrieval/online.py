@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from backend.retrieval.comparison_decomposition import RouteQueryPlan
+from backend.retrieval.comparison_route_coverage import RouteCoveragePlan
 from backend.retrieval.elasticsearch import (
     ElasticsearchBm25Index,
     ElasticsearchSearchLatencyBreakdown,
@@ -76,6 +77,17 @@ class OnlineRouteQueryPlanner(Protocol):
         *,
         document_ids: Sequence[str],
     ) -> RouteQueryPlan: ...
+
+
+class OnlineFinalCandidateSelector(Protocol):
+    def plan(
+        self,
+        question: str,
+        candidates: Sequence[RankedChunk],
+        *,
+        document_ids: Sequence[str],
+        top_k: int,
+    ) -> RouteCoveragePlan: ...
 
 
 @dataclass(frozen=True)
@@ -236,6 +248,7 @@ class OnlineVersionRrfRetriever:
         rrf_k: int = 60,
         vector_min_score: float = DEFAULT_VECTOR_MIN_SCORE,
         route_query_planner: OnlineRouteQueryPlanner | None = None,
+        final_candidate_selector: OnlineFinalCandidateSelector | None = None,
         latency_observer: (
             Callable[[OnlineRetrievalLatencyBreakdown], None] | None
         ) = None,
@@ -253,6 +266,7 @@ class OnlineVersionRrfRetriever:
         self.rrf_k = rrf_k
         self.vector_min_score = vector_min_score
         self.route_query_planner = route_query_planner
+        self.final_candidate_selector = final_candidate_selector
         self.latency_observer = latency_observer
 
     def search(
@@ -398,7 +412,28 @@ class OnlineVersionRrfRetriever:
                 "online version retrieval route failed closed"
             ) from exc
         rrf_fusion_started = time.perf_counter()
-        fused = self._fuse(rankings, top_k=top_k)
+        fused_candidates = self._fuse(
+            rankings,
+            top_k=None if self.final_candidate_selector is not None else top_k,
+        )
+        fused = fused_candidates[:top_k]
+        if self.final_candidate_selector is not None:
+            try:
+                selection = self.final_candidate_selector.plan(
+                    question,
+                    fused_candidates,
+                    document_ids=[route.document_id for route in routes],
+                    top_k=top_k,
+                )
+                if selection.status == "APPLIED":
+                    fused = self._apply_selection(
+                        fused_candidates,
+                        selection.selected_chunk_ids,
+                        top_k=top_k,
+                    )
+            except Exception:
+                # Optional quality selection may only fall back to original RRF.
+                fused = fused_candidates[:top_k]
         rrf_fusion_latency_ms = (time.perf_counter() - rrf_fusion_started) * 1000
         if self.latency_observer is not None:
             if len(elasticsearch_timings) != len(routes) or len(
@@ -504,7 +539,10 @@ class OnlineVersionRrfRetriever:
                 )
 
     def _fuse(
-        self, rankings: Sequence[Sequence[RankedChunk]], *, top_k: int
+        self,
+        rankings: Sequence[Sequence[RankedChunk]],
+        *,
+        top_k: int | None,
     ) -> list[RankedChunk]:
         payloads: dict[str, JsonObject] = {}
         scores: dict[str, float] = {}
@@ -527,7 +565,9 @@ class OnlineVersionRrfRetriever:
         ordered = sorted(
             scores,
             key=lambda chunk_id: (-scores[chunk_id], best_rank[chunk_id], chunk_id),
-        )[:top_k]
+        )
+        if top_k is not None:
+            ordered = ordered[:top_k]
         fused = [
             RankedChunk(
                 backend=ONLINE_RETRIEVAL_BACKEND,
@@ -539,3 +579,33 @@ class OnlineVersionRrfRetriever:
         ]
         validate_ranking(fused, expected_backend=ONLINE_RETRIEVAL_BACKEND)
         return fused
+
+    @staticmethod
+    def _apply_selection(
+        candidates: Sequence[RankedChunk],
+        selected_chunk_ids: Sequence[str],
+        *,
+        top_k: int,
+    ) -> list[RankedChunk]:
+        selected_ids = tuple(selected_chunk_ids)
+        if (
+            len(selected_ids) != top_k
+            or len(set(selected_ids)) != len(selected_ids)
+        ):
+            raise ValueError("final candidate selection cardinality is invalid")
+        by_id = {
+            str(candidate.chunk["chunk_id"]): candidate for candidate in candidates
+        }
+        if not set(selected_ids).issubset(by_id):
+            raise ValueError("final candidate selection expands the RRF candidates")
+        selected = [
+            RankedChunk(
+                backend=ONLINE_RETRIEVAL_BACKEND,
+                rank=rank,
+                score=by_id[chunk_id].score,
+                chunk=by_id[chunk_id].chunk,
+            )
+            for rank, chunk_id in enumerate(selected_ids, 1)
+        ]
+        validate_ranking(selected, expected_backend=ONLINE_RETRIEVAL_BACKEND)
+        return selected

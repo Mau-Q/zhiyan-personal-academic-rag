@@ -1,5 +1,10 @@
 # 阶段 3 双侧比较配对 dev Gate
 
+> 本目录当前只保留首个查询拆分变量 `_01`～`_07` 的历史入口。第二变量
+> `BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1` 仅完成默认关闭本地实现，
+> 尚未准备远程 runner、分配 Run ID 或授权 Windows 命令；不得使用本目录
+> 旧入口复跑 `_07`。
+
 目标平台是用户维护的 Windows 主机上的 Windows PowerShell 5.1。本目录只提供
 用户运行入口；本地实现 Gate 不连接远程主机、不启动或重启服务。
 
