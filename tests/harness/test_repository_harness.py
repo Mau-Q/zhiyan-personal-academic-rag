@@ -191,7 +191,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         self.assertEqual(phase3_feature["status"], "PARTIAL")
         self.assertEqual(
             phase3_feature["gate_status"],
-            "FOURTH_ATTEMPT_CLEAN_CONTROL_FAILURE_DIAGNOSTIC_READY_FOR_NEW_DEV_RUN",
+            "FIFTH_ATTEMPT_CLEAN_MILVUS_ROUTE_FAILURE_STAGE_DIAGNOSTIC_READY_FOR_NEW_DEV_RUN",
         )
         payload = json.loads(
             (ROOT / "machine" / "phase3_comparison_dev_gate.json").read_text(
@@ -200,7 +200,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "FOURTH_ATTEMPT_RUN_CONTROL_FAILED_DIAGNOSTIC_HARDENING_READY",
+            "FIFTH_ATTEMPT_MILVUS_ROUTE_FAILED_STAGE_DIAGNOSTIC_READY",
         )
         self.assertEqual(
             payload["source_phase"], {"id": "phase-3", "status": "IN_PROGRESS"}
@@ -219,7 +219,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["paired_online_user_entry"]["status"],
-            "FOURTH_ATTEMPT_CLEAN_DIAGNOSTIC_HARDENING_READY_FOR_NEW_RUN",
+            "FIFTH_ATTEMPT_CLEAN_MILVUS_STAGE_DIAGNOSTIC_READY_FOR_NEW_RUN",
         )
         self.assertEqual(
             payload["windows_attempts"][0]["status"],
@@ -291,6 +291,18 @@ class RepositoryHarnessTests(unittest.TestCase):
             "PASS",
         )
         self.assertEqual(
+            payload["windows_attempts"][4]["primary_error_code"],
+            "ONLINE_MILVUS_ROUTE_FAILED",
+        )
+        self.assertEqual(
+            payload["windows_attempts"][4]["report_sha256"],
+            "19a92545d6e87408462bdc38a72e3f4f69b5aa03edcaaed19400116aafba4cd4",
+        )
+        self.assertEqual(
+            payload["windows_attempts"][4]["cleanup_status"],
+            "PASS",
+        )
+        self.assertEqual(
             payload["control_failure_diagnostic_hardening"][
                 "additional_requests"
             ],
@@ -300,6 +312,15 @@ class RepositoryHarnessTests(unittest.TestCase):
             payload["control_failure_diagnostic_hardening"][
                 "quality_variable_changed"
             ]
+        )
+        self.assertEqual(
+            payload["milvus_failure_diagnostic_hardening"]["stable_stages"],
+            [
+                "ROUTE_IDENTITY",
+                "QUERY_EMBEDDING",
+                "ANN_SEARCH",
+                "RESPONSE_CONTRACT",
+            ],
         )
         self.assertFalse(
             payload["paired_online_user_entry"][
@@ -319,7 +340,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "FOURTH_ATTEMPT_CLEAN_CONTROL_FAILURE_DIAGNOSTIC_READY",
+            "FIFTH_ATTEMPT_CLEAN_MILVUS_FAILURE_STAGE_DIAGNOSTIC_READY",
         )
         self.assertEqual(payload["decision_id"], "PD-042")
         self.assertEqual(
@@ -389,6 +410,20 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["control_failure_diagnostic_hardening"]["additional_requests"],
+            0,
+        )
+        self.assertEqual(
+            payload["evidence"]["attempts"][4]["error_code"],
+            "ONLINE_MILVUS_ROUTE_FAILED",
+        )
+        self.assertEqual(
+            payload["fifth_attempt_cleanup_proof"]["status"],
+            "PASS_CLEAN",
+        )
+        self.assertEqual(
+            payload["milvus_failure_diagnostic_hardening"][
+                "additional_requests"
+            ],
             0,
         )
 

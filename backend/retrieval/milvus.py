@@ -50,6 +50,26 @@ class MilvusIndexNotReadyError(ValueError):
     """Raised when Milvus cannot prove a matching usable collection."""
 
 
+_MILVUS_SEARCH_STAGES = frozenset(
+    {
+        "ROUTE_IDENTITY",
+        "QUERY_EMBEDDING",
+        "ANN_SEARCH",
+        "RESPONSE_CONTRACT",
+    }
+)
+
+
+class MilvusSearchStageError(MilvusIndexNotReadyError):
+    """Expose only a stable Milvus search stage while retaining the cause chain."""
+
+    def __init__(self, stage: str):
+        if stage not in _MILVUS_SEARCH_STAGES:
+            raise ValueError("Milvus search stage is invalid")
+        self.stage = stage
+        super().__init__(f"Milvus search failed at stable stage {stage}")
+
+
 @dataclass(frozen=True)
 class MilvusSearchLatencyBreakdown:
     validation_latency_ms: float
@@ -468,61 +488,75 @@ class MilvusVectorIndex:
             raise ValueError("top_k or min_score is invalid")
         total_started = time.perf_counter()
         validation_started = time.perf_counter()
-        metadata = self.verify_provider(provider)
-        fingerprint_chunks = (
-            source_fingerprint_chunks
-            if source_fingerprint_chunks is not None
-            else expected_chunks
-        )
-        if fingerprint_chunks is not None:
-            self.verify_source(fingerprint_chunks)
+        try:
+            metadata = self.verify_provider(provider)
+            fingerprint_chunks = (
+                source_fingerprint_chunks
+                if source_fingerprint_chunks is not None
+                else expected_chunks
+            )
+            if fingerprint_chunks is not None:
+                self.verify_source(fingerprint_chunks)
+        except Exception as exc:
+            raise MilvusSearchStageError("ROUTE_IDENTITY") from exc
         validation_latency_ms = (time.perf_counter() - validation_started) * 1000
         embedding_started = time.perf_counter()
-        vector = _normalize(provider.embed([question])[0])
+        try:
+            vector = _normalize(provider.embed([question])[0])
+        except Exception as exc:
+            raise MilvusSearchStageError("QUERY_EMBEDDING") from exc
         query_embedding_latency_ms = (
             time.perf_counter() - embedding_started
         ) * 1000
         if len(vector) != int(metadata["embedding_dimension"]):
-            raise MilvusIndexNotReadyError("Milvus query embedding dimension does not match")
+            raise MilvusSearchStageError("QUERY_EMBEDDING")
         ann_search_started = time.perf_counter()
-        hits = self.transport.search(
-            self.collection_name,
-            vector=vector,
-            filter_expression=_authorization_filter(scope),
-            limit=top_k,
-        )
-        if (
-            not isinstance(hits, list)
-            or len(hits) != 1
-            or not isinstance(hits[0], list)
-        ):
-            raise MilvusIndexNotReadyError("Milvus search response is invalid")
-        first = hits[0]
-        results: list[tuple[float, JsonObject]] = []
-        for hit in first:
-            entity = hit.get("entity") if isinstance(hit, Mapping) else None
-            payload = entity.get("payload") if isinstance(entity, Mapping) else None
-            score = hit.get("distance") if isinstance(hit, Mapping) else None
-            if not isinstance(payload, dict) or not isinstance(score, (int, float)):
-                raise MilvusIndexNotReadyError(
-                    "Milvus search hit violates ranked candidate interface"
-                )
-            numeric_score = float(score)
-            if not math.isfinite(numeric_score):
-                raise MilvusIndexNotReadyError("Milvus search score must be finite")
-            if numeric_score >= min_score and is_chunk_authorized(payload, scope):
-                results.append((numeric_score, dict(payload)))
-        results.sort(key=lambda item: (-item[0], item[1]["chunk_id"]))
-        ranking = [
-            RankedChunk(
-                backend=RETRIEVAL_BACKEND,
-                rank=rank,
-                score=score,
-                chunk=chunk,
+        try:
+            hits = self.transport.search(
+                self.collection_name,
+                vector=vector,
+                filter_expression=_authorization_filter(scope),
+                limit=top_k,
             )
-            for rank, (score, chunk) in enumerate(results[:top_k], 1)
-        ]
-        validate_ranking(ranking, expected_backend=RETRIEVAL_BACKEND)
+        except Exception as exc:
+            raise MilvusSearchStageError("ANN_SEARCH") from exc
+        try:
+            if (
+                not isinstance(hits, list)
+                or len(hits) != 1
+                or not isinstance(hits[0], list)
+            ):
+                raise MilvusIndexNotReadyError("Milvus search response is invalid")
+            first = hits[0]
+            results: list[tuple[float, JsonObject]] = []
+            for hit in first:
+                entity = hit.get("entity") if isinstance(hit, Mapping) else None
+                payload = entity.get("payload") if isinstance(entity, Mapping) else None
+                score = hit.get("distance") if isinstance(hit, Mapping) else None
+                if not isinstance(payload, dict) or not isinstance(score, (int, float)):
+                    raise MilvusIndexNotReadyError(
+                        "Milvus search hit violates ranked candidate interface"
+                    )
+                numeric_score = float(score)
+                if not math.isfinite(numeric_score):
+                    raise MilvusIndexNotReadyError(
+                        "Milvus search score must be finite"
+                    )
+                if numeric_score >= min_score and is_chunk_authorized(payload, scope):
+                    results.append((numeric_score, dict(payload)))
+            results.sort(key=lambda item: (-item[0], item[1]["chunk_id"]))
+            ranking = [
+                RankedChunk(
+                    backend=RETRIEVAL_BACKEND,
+                    rank=rank,
+                    score=score,
+                    chunk=chunk,
+                )
+                for rank, (score, chunk) in enumerate(results[:top_k], 1)
+            ]
+            validate_ranking(ranking, expected_backend=RETRIEVAL_BACKEND)
+        except Exception as exc:
+            raise MilvusSearchStageError("RESPONSE_CONTRACT") from exc
         if timing_sink is not None:
             timing_sink(
                 MilvusSearchLatencyBreakdown(

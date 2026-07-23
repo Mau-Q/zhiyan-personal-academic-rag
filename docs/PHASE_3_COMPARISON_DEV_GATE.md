@@ -4,7 +4,7 @@
 
 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的本地实现候选与冻结配置已完成，
 方案阶段 3 由 `NOT_STARTED` 进入 `IN_PROGRESS`。本地结论仅为
-`FOURTH_ATTEMPT_RUN_CONTROL_FAILED_DIAGNOSTIC_HARDENING_READY`：
+`FIFTH_ATTEMPT_MILVUS_ROUTE_FAILED_STAGE_DIAGNOSTIC_READY`：
 
 - 默认开关仍为 `false`，未改变默认 RRF；
 - 4 个冻结 `dev` 样本的 Control 均保持原问题，Treatment 规划均为
@@ -20,8 +20,11 @@
   PDF 与全局非终态任务均清零，事后审计为 `PASS/CLEAN`；
 - 第三次运行在质量指标前因清理队列范围证明误判失败；`_03` 只读审计再次
   冻结 3 个 `INACTIVE` 版本、9 个 `PENDING/attempt=0` 任务、316 Chunk 和
-  3 PDF，当前只允许独立精确恢复；
-- 尚未运行真实 PostgreSQL READY + ES/Milvus + RRF 配对回放，因此没有
+  3 PDF，随后已由独立精确恢复清零；
+- 第五次运行 `_05` 已返回 `RUN_CONTROL / ONLINE_MILVUS_ROUTE_FAILED`，并
+  再次完成 9/9 清理、READY 失败关闭和删除后 403；该结果证明组件诊断生效，
+  但仍没有 Control/Treatment 指标；
+- 尚未完成真实 PostgreSQL READY + ES/Milvus + RRF 配对质量回放，因此没有
   检索质量增益、关键类不退化或 300 ms 通过结论；
 - `test` 与 `acceptance` 均未读取、未运行。
 
@@ -196,6 +199,20 @@ Control 指标。报告 SHA-256
 同时将 Control 检索与指标计算分为 `RUN_CONTROL` / `SCORE_CONTROL`。该变更
 不增加网络请求，也不修改 `OnlineVersionRrfRetriever`、默认 RRF 或质量变量。
 
+第五次 Windows Run ID `phase3_comparison_dev_20260723_05` 在提交
+`a669702b24880269a130f8e249126b30e17a2972` 上返回
+`RUN_CONTROL / ONLINE_MILVUS_ROUTE_FAILED`。报告 SHA-256
+`19A92545D6E87408462BDC38A72E3F4F69B5AA03EDCAAED19400116AAFBA4CD4`，
+裁决 SHA-256
+`F8F72C59278A2A7EFB13B9B5917EAB596779372E4B159677A32B7538B82A9A2D`；
+清理 9/9、READY 失败关闭和删除后 403 通过。该结果无需恢复，但只能证明
+Milvus 路径失败，不能确定根因或形成质量结论。
+
+当前阶段诊断通过 `MilvusSearchStageError` 在原失败因果链外只增加
+`ROUTE_IDENTITY / QUERY_EMBEDDING / ANN_SEARCH / RESPONSE_CONTRACT` 四个
+稳定阶段，并由 Gate runner 映射为固定错误码。它不增加探测或检索请求，不
+改变 Milvus/Embedding 调用、候选 20、RRF `k=60`、Top-3、阈值或默认开关。
+
 ## 6. 远程结果回收与裁决
 
 Windows runner 现在把实际 Git HEAD 和 Run ID 写入完整报告。PowerShell 入口在
@@ -213,8 +230,9 @@ Windows runner 现在把实际 Git HEAD 和 Run ID 写入完整报告。PowerShe
    `test` 仍需新的冻结提交和独立 Gate；
 6. 远程 FAIL 或报告不可采信时都保持比较拆分关闭。
 
-当前裁决器保留前三次拒绝和第四次可信 FAIL 证据；第四次没有形成
-Control/Treatment 指标，在线配对 dev 仍无可采信质量结论。
+当前裁决器保留前三次拒绝、第四次可信通用 FAIL 和第五次可信 Milvus 路径
+FAIL 证据；第五次仍没有形成 Control/Treatment 指标，在线配对 dev 仍无可
+采信质量结论。
 
 ## 7. 不能合并的边界
 

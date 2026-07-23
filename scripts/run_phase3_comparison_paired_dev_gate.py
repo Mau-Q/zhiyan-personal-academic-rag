@@ -49,7 +49,11 @@ from backend.retrieval.elasticsearch import (
     UrllibElasticsearchTransport,
 )
 from backend.retrieval.embedding import EmbeddingServiceError, OllamaEmbeddingProvider
-from backend.retrieval.milvus import MilvusIndexNotReadyError, PymilvusTransport
+from backend.retrieval.milvus import (
+    MilvusIndexNotReadyError,
+    MilvusSearchStageError,
+    PymilvusTransport,
+)
 from backend.retrieval.online import (
     OnlineRetrievalLatencyBreakdown,
     OnlineScopeForbiddenError,
@@ -415,6 +419,15 @@ def _retrieval_failure_code(exc: BaseException) -> str:
         return "ONLINE_EMBEDDING_SERVICE_FAILED"
     if any(isinstance(item, ElasticsearchIndexNotReadyError) for item in chain):
         return "ONLINE_ELASTICSEARCH_ROUTE_FAILED"
+    milvus_stage_codes = {
+        "ROUTE_IDENTITY": "ONLINE_MILVUS_ROUTE_IDENTITY_FAILED",
+        "QUERY_EMBEDDING": "ONLINE_MILVUS_QUERY_EMBEDDING_FAILED",
+        "ANN_SEARCH": "ONLINE_MILVUS_ANN_SEARCH_FAILED",
+        "RESPONSE_CONTRACT": "ONLINE_MILVUS_RESPONSE_CONTRACT_FAILED",
+    }
+    for item in chain:
+        if isinstance(item, MilvusSearchStageError):
+            return milvus_stage_codes[item.stage]
     if any(isinstance(item, MilvusIndexNotReadyError) for item in chain) or any(
         type(item).__module__.startswith(("pymilvus", "grpc")) for item in chain
     ):

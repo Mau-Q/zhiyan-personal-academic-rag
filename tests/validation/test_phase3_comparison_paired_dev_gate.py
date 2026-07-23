@@ -31,7 +31,7 @@ from scripts.run_phase3_comparison_paired_dev_gate import (
 )
 from backend.retrieval.elasticsearch import ElasticsearchIndexNotReadyError
 from backend.retrieval.embedding import EmbeddingServiceError
-from backend.retrieval.milvus import MilvusIndexNotReadyError
+from backend.retrieval.milvus import MilvusIndexNotReadyError, MilvusSearchStageError
 from backend.retrieval.online import (
     OnlineRetrievalLatencyBreakdown,
     OnlineScopeForbiddenError,
@@ -245,6 +245,27 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
             _retrieval_failure_code(RuntimeError("private unknown detail")),
             "ONLINE_RETRIEVAL_UNCLASSIFIED_FAILURE",
         )
+
+    def test_retrieval_failure_code_splits_milvus_search_stages(self):
+        expected = {
+            "ROUTE_IDENTITY": "ONLINE_MILVUS_ROUTE_IDENTITY_FAILED",
+            "QUERY_EMBEDDING": "ONLINE_MILVUS_QUERY_EMBEDDING_FAILED",
+            "ANN_SEARCH": "ONLINE_MILVUS_ANN_SEARCH_FAILED",
+            "RESPONSE_CONTRACT": "ONLINE_MILVUS_RESPONSE_CONTRACT_FAILED",
+        }
+        for stage, code in expected.items():
+            with self.subTest(stage=stage):
+                try:
+                    raise MilvusSearchStageError(stage)
+                except BaseException as inner:
+                    try:
+                        raise OnlineVisibilityUnavailableError(
+                            "private visibility detail"
+                        ) from inner
+                    except BaseException as outer:
+                        observed = _retrieval_failure_code(outer)
+                self.assertEqual(observed, code)
+                self.assertNotIn("private", observed.casefold())
 
     def test_windows_cleanup_audit_is_read_only_and_pinned(self):
         script = AUDIT_POWERSHELL_PATH.read_text(encoding="utf-8")

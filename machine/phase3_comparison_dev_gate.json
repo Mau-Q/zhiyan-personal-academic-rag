@@ -1,6 +1,6 @@
 {
   "schema_version": "phase3_comparison_dev_gate_v1",
-  "status": "FOURTH_ATTEMPT_RUN_CONTROL_FAILED_DIAGNOSTIC_HARDENING_READY",
+  "status": "FIFTH_ATTEMPT_MILVUS_ROUTE_FAILED_STAGE_DIAGNOSTIC_READY",
   "source_phase": {
     "id": "phase-3",
     "status": "IN_PROGRESS"
@@ -50,7 +50,7 @@
   },
   "paired_online_user_entry": {
     "decision_id": "PD-041",
-    "status": "FOURTH_ATTEMPT_CLEAN_DIAGNOSTIC_HARDENING_READY_FOR_NEW_RUN",
+    "status": "FIFTH_ATTEMPT_CLEAN_MILVUS_STAGE_DIAGNOSTIC_READY_FOR_NEW_RUN",
     "package_builder": "scripts/build_phase3_comparison_dev_package.py",
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "report_adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -132,11 +132,31 @@
       "test": "NOT_READ_NOT_RUN",
       "acceptance": "NOT_READ_NOT_RUN",
       "performance_gate": "PENDING_SEPARATE_300MS_GATE"
+    },
+    {
+      "run_id": "phase3_comparison_dev_20260723_05",
+      "head_commit": "a669702b24880269a130f8e249126b30e17a2972",
+      "status": "FAIL_RUN_CONTROL_MILVUS_ROUTE_NO_METRICS_CLEANUP_PASS",
+      "report_error_code": "ONLINE_MILVUS_ROUTE_FAILED",
+      "primary_stage": "RUN_CONTROL",
+      "primary_error_code": "ONLINE_MILVUS_ROUTE_FAILED",
+      "report_sha256": "19a92545d6e87408462bdc38a72e3f4f69b5aa03edcaaed19400116aafba4cd4",
+      "adjudication_status": "FAIL",
+      "adjudication_decision": "KEEP_COMPARISON_DECOMPOSITION_DISABLED",
+      "adjudication_sha256": "f8f72c59278a2a7efb13b9b5917eab596779372e4b159677a32b7538b82a9a2d",
+      "cleanup_status": "PASS",
+      "cleanup_jobs_succeeded": 9,
+      "ready_reconciliation_failed_closed": true,
+      "deleted_answer_api_status": 403,
+      "online_quality_executed": false,
+      "test": "NOT_READ_NOT_RUN",
+      "acceptance": "NOT_READ_NOT_RUN",
+      "performance_gate": "PENDING_SEPARATE_300MS_GATE"
     }
   ],
   "paired_online_dev_quality": {
     "status": "NOT_RUN",
-    "reason": "The fourth Windows attempt reached RUN_CONTROL but failed before the first complete Control metric. Cleanup passed 9/9 with READY failed closed and deleted Answer API 403, so no recovery is required; no online quality result is accepted.",
+    "reason": "The fifth Windows attempt reached RUN_CONTROL and classified the failure as ONLINE_MILVUS_ROUTE_FAILED before the first complete Control metric. Cleanup passed 9/9 with READY failed closed and deleted Answer API 403, so no recovery is required; no online quality result is accepted.",
     "control_baseline": null,
     "treatment_gain": null,
     "critical_non_regression": null
@@ -228,7 +248,7 @@
     "quality_rerun_authorized": true
   },
   "control_failure_diagnostic_hardening": {
-    "status": "READY_AWAITING_NEW_WINDOWS_RUN",
+    "status": "VERIFIED_BY_FIFTH_WINDOWS_COMPONENT_CODE",
     "decision_id": "PD-049",
     "source_run_id": "phase3_comparison_dev_20260723_04",
     "source_primary_stage": "RUN_CONTROL",
@@ -244,6 +264,27 @@
       "CONTROL_METRIC_COMPUTATION",
       "RESULT_NORMALIZATION",
       "UNCLASSIFIED"
+    ],
+    "additional_requests": 0,
+    "quality_variable_changed": false,
+    "retrieval_parameters_changed": false,
+    "default_enabled": false,
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN",
+    "performance_gate": "NOT_RUN"
+  },
+  "milvus_failure_diagnostic_hardening": {
+    "status": "READY_AWAITING_NEW_WINDOWS_RUN",
+    "decision_id": "PD-050",
+    "source_run_id": "phase3_comparison_dev_20260723_05",
+    "source_primary_stage": "RUN_CONTROL",
+    "source_primary_error_code": "ONLINE_MILVUS_ROUTE_FAILED",
+    "classification": "MILVUS_SEARCH_STAGE_ERROR_TO_STABLE_CODE_WITH_CAUSE_CHAIN_WITHOUT_EXCEPTION_TEXT",
+    "stable_stages": [
+      "ROUTE_IDENTITY",
+      "QUERY_EMBEDDING",
+      "ANN_SEARCH",
+      "RESPONSE_CONTRACT"
     ],
     "additional_requests": 0,
     "quality_variable_changed": false,

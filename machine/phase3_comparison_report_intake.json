@@ -1,16 +1,17 @@
 {
   "schema_version": "phase3_comparison_report_intake_v1",
   "decision_id": "PD-042",
-  "status": "FOURTH_ATTEMPT_CLEAN_CONTROL_FAILURE_DIAGNOSTIC_READY",
+  "status": "FIFTH_ATTEMPT_CLEAN_MILVUS_FAILURE_STAGE_DIAGNOSTIC_READY",
   "source_gate": {
     "artifact": "machine/phase3_comparison_dev_gate.json",
-    "status": "FOURTH_ATTEMPT_RUN_CONTROL_FAILED_DIAGNOSTIC_HARDENING_READY"
+    "status": "FIFTH_ATTEMPT_MILVUS_ROUTE_FAILED_STAGE_DIAGNOSTIC_READY"
   },
   "repair_decision_id": "PD-043",
   "cleanup_audit_decision_id": "PD-044",
   "cleanup_recovery_decision_id": "PD-045",
   "cleanup_recovery_completion_decision_id": "PD-046",
   "control_failure_diagnostic_decision_id": "PD-049",
+  "milvus_failure_diagnostic_decision_id": "PD-050",
   "implementation": {
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -22,7 +23,8 @@
     "tests": [
       "tests/validation/test_phase3_comparison_paired_dev_gate.py",
       "tests/validation/test_phase3_comparison_cleanup_audit.py",
-      "tests/validation/test_phase3_comparison_report_adjudication.py"
+      "tests/validation/test_phase3_comparison_report_adjudication.py",
+      "tests/retrieval/test_milvus_retrieval.py"
     ]
   },
   "required_report_identity": {
@@ -106,9 +108,23 @@
         "deleted_answer_api_status": 403,
         "test": "NOT_READ_NOT_RUN",
         "acceptance": "NOT_READ_NOT_RUN"
+      },
+      {
+        "run_id": "phase3_comparison_dev_20260723_05",
+        "head_commit": "a669702b24880269a130f8e249126b30e17a2972",
+        "report_sha256": "19a92545d6e87408462bdc38a72e3f4f69b5aa03edcaaed19400116aafba4cd4",
+        "adjudication_sha256": "f8f72c59278a2a7efb13b9b5917eab596779372e4b159677a32b7538b82a9a2d",
+        "status": "FAIL_RUN_CONTROL_MILVUS_ROUTE_NO_METRICS_CLEANUP_PASS",
+        "error_code": "ONLINE_MILVUS_ROUTE_FAILED",
+        "primary_stage": "RUN_CONTROL",
+        "cleanup_status": "PASS",
+        "cleanup_jobs_succeeded": 9,
+        "deleted_answer_api_status": 403,
+        "test": "NOT_READ_NOT_RUN",
+        "acceptance": "NOT_READ_NOT_RUN"
       }
     ],
-    "interpretation": "The fourth report is identity-bound and proves a clean lifecycle close, but it stopped in RUN_CONTROL before any complete Control metric and therefore cannot establish quality. The generic PHASE3_GATE_FAILED code does not identify retrieval versus scoring or the failing online component, so the next independent Gate separates the Control substages and adds type-only stable component classification without exception text or extra requests."
+    "interpretation": "The fifth report is identity-bound and proves a clean lifecycle close, but it stopped in RUN_CONTROL before any complete Control metric and therefore cannot establish quality. ONLINE_MILVUS_ROUTE_FAILED narrows the failure to the Milvus path but not to route identity, query embedding, ANN search, or response validation, so the next independent Gate adds only stable Milvus search-stage classification without exception text or extra requests."
   },
   "cleanup_audit_boundary": {
     "target_run_id": "phase3_comparison_dev_20260723_03",
@@ -174,11 +190,32 @@
     "performance_gate": "NOT_RUN"
   },
   "control_failure_diagnostic_hardening": {
-    "status": "READY_AWAITING_NEW_WINDOWS_RUN",
+    "status": "VERIFIED_BY_FIFTH_WINDOWS_COMPONENT_CODE",
     "decision_id": "PD-049",
     "classification": "CONTROL_SUBSTAGE_PLUS_TYPE_ONLY_STABLE_COMPONENT_CODE_NO_EXCEPTION_TEXT",
     "additional_requests": 0,
     "quality_variable_changed": false,
+    "default_enabled": false
+  },
+  "fifth_attempt_cleanup_proof": {
+    "run_id": "phase3_comparison_dev_20260723_05",
+    "status": "PASS_CLEAN",
+    "jobs_succeeded": 9,
+    "ready_reconciliation_failed_closed": true,
+    "deleted_answer_api_status": 403,
+    "recovery_required": false,
+    "quality_metrics_available": false,
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN",
+    "performance_gate": "NOT_RUN"
+  },
+  "milvus_failure_diagnostic_hardening": {
+    "status": "READY_AWAITING_NEW_WINDOWS_RUN",
+    "decision_id": "PD-050",
+    "classification": "MILVUS_ROUTE_IDENTITY_QUERY_EMBEDDING_ANN_SEARCH_OR_RESPONSE_CONTRACT_STABLE_CODE_NO_EXCEPTION_TEXT",
+    "additional_requests": 0,
+    "quality_variable_changed": false,
+    "retrieval_parameters_changed": false,
     "default_enabled": false
   }
 }

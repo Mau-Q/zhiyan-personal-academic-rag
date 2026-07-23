@@ -8,6 +8,7 @@ from backend.retrieval.milvus import (
     HNSW_EF_CONSTRUCTION,
     HNSW_M,
     MilvusIndexNotReadyError,
+    MilvusSearchStageError,
     MilvusVectorIndex,
     PymilvusTransport,
 )
@@ -69,6 +70,56 @@ class MilvusVectorRetrievalTests(unittest.TestCase):
         self.assertGreaterEqual(timings[0].query_embedding_latency_ms, 0)
         self.assertGreaterEqual(timings[0].ann_search_latency_ms, 0)
         self.assertGreaterEqual(timings[0].total_latency_ms, 0)
+
+    def test_search_failures_expose_only_stable_stage_identity(self):
+        cases = []
+
+        self.transport.description = None
+        cases.append(("ROUTE_IDENTITY", self.index, self.provider))
+
+        class FailingEmbeddingProvider(FakeEmbeddingProvider):
+            def embed(self, texts):
+                del texts
+                raise RuntimeError("private embedding detail")
+
+        embedding_transport = FakeMilvusTransport()
+        embedding_index = MilvusVectorIndex("fixture_chunks_v1", embedding_transport)
+        embedding_index.build(self.chunks, self.provider)
+        cases.append(
+            ("QUERY_EMBEDDING", embedding_index, FailingEmbeddingProvider())
+        )
+
+        class FailingAnnTransport(FakeMilvusTransport):
+            def search(self, *args, **kwargs):
+                del args, kwargs
+                raise RuntimeError("private transport detail")
+
+        ann_transport = FailingAnnTransport()
+        ann_index = MilvusVectorIndex("fixture_chunks_v1", ann_transport)
+        ann_index.build(self.chunks, self.provider)
+        cases.append(("ANN_SEARCH", ann_index, self.provider))
+
+        class InvalidResponseTransport(FakeMilvusTransport):
+            def search(self, *args, **kwargs):
+                del args, kwargs
+                return {"private": "invalid"}
+
+        response_transport = InvalidResponseTransport()
+        response_index = MilvusVectorIndex("fixture_chunks_v1", response_transport)
+        response_index.build(self.chunks, self.provider)
+        cases.append(("RESPONSE_CONTRACT", response_index, self.provider))
+
+        for expected_stage, index, provider in cases:
+            with self.subTest(stage=expected_stage):
+                with self.assertRaises(MilvusSearchStageError) as raised:
+                    index.search(
+                        "How are candidates combined?",
+                        self.scope,
+                        provider,
+                        expected_chunks=self.chunks,
+                    )
+                self.assertEqual(raised.exception.stage, expected_stage)
+                self.assertNotIn("private", str(raised.exception).casefold())
 
     def test_folder_only_or_invalid_scope_fails_closed(self):
         folder_scope = dict(self.scope, library_ids=[], document_ids=[], folder_ids=["folder-x"])
