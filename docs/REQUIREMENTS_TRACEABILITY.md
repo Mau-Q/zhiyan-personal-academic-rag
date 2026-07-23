@@ -55,7 +55,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | 阶段 0：范围与 Baseline | `COMPLETE` | 175 题人工校验、ES/Milvus 同集单路 Baseline、三种 Chunk 受控 Baseline、单用户范围/资源/SLO 及数据身份/生命周期目标合同均已冻结 | 冻结目标不等于运行时达标 |
 | 阶段 1：数据与索引最小闭环 | `COMPLETE` | 远程 v2 已通过 PDF/Chunk 持久化、owner/版本 READY 对账、ES/Milvus 在线 Evidence、同 Run ID 恢复、删除后 403 和三路清理；报告 SHA-256 `6B2AB3BAAD55AE8FA506C0D1FD7A310D9EF3A3833A93E33DD1A2D8A0938A9D8C` | 正式 MinIO、OCR 和目标规模性能不属于阶段 1 退出条件 |
 | 阶段 2：基础 RAG MVP | `COMPLETE` | 非流式 API、Evidence、拒答、远程 RRF Canary、llama3.2/Qwen READY 真实生成闭环、模型选型和 3 文档 9 题 v2 均通过；固定 BGE Reranker 的增益、目标硬件成本和在线边界已验证，最终决定为原 RRF 默认、Reranker 可选且不默认启用 | Windows 分段 Gate 的 combined `P95=504.71613 ms` 未通过 300 ms；这是显式后移的性能债，不写成 SLO 或生产验收完成 |
-| 阶段 3：针对失败类型增强 | `IN_PROGRESS` | 入口 Gate 已冻结 4 个 `dev` 双文档比较失衡样本和单一变量；`_03` 残留已 9/9 恢复且事后审计 `PASS/CLEAN`；`dict_row` 范围读取已独立修复并增加 `primary_stage` | 尚无可采信在线质量指标；只能用全新 Run ID 重试同一 dev Gate。`test/acceptance` 封存，300 ms 性能 Gate 独立 |
+| 阶段 3：针对失败类型增强 | `IN_PROGRESS` | 入口 Gate 已冻结 4 个 `dev` 双文档比较失衡样本和单一变量；`_04` 已越过 READY/Chunk 身份并在 `RUN_CONTROL` 失败，生命周期清理 9/9、READY 关闭和 403 通过；组件级脱敏诊断已独立加固 | 尚无可采信在线质量指标；只能用全新 Run ID `_05` 重试同一 dev Gate。`test/acceptance` 封存，300 ms 性能 Gate 独立 |
 | 阶段 4：Claim–Evidence 可靠性 | `NOT_STARTED` | 尚未建立结构化 Claim、Claim–Evidence 映射及确定性支持检查 | 不用模型自评冒充确定性支持检查 |
 | 阶段 5：复杂科研问答与复用 | `NOT_STARTED` | 暂未完成比较、多跳、时效问答与 Agent Evidence API | 进入前需满足 MVP、权限委托、审计与运维条件 |
 
@@ -124,3 +124,14 @@ SHA-256 `A45EF2F9F030FEB6AAED05DECB33A019CFA7920FAF6E1F1ABEB7189C242E339EC`
 `FFD2E805B857DF1D4D7E256A00BF09B15992261A4A31960C7A2D55B8D504DBAB`。
 当前独立修复只更正 mapping 行读取并补充脱敏主阶段，不改变质量变量；允许在
 新提交和新 Run ID 上重试，仍不解封 `test/acceptance` 或性能 Gate。
+
+第四次 Run ID `phase3_comparison_dev_20260723_04` 在提交
+`b92e9ffa1d576aeef83dd028a28df09bf601d52e` 上于 `RUN_CONTROL` 失败，
+报告 SHA-256
+`2CA305DCD16820DE4EB28863097F58C53AD5F9D678604C5251A65DE70B2AA47C`，
+裁决 SHA-256
+`B49BF9079ED3C9C7C2019A4E4836CDB9677DEA07955675D6BFE1CDCE25E4A4BF`。
+Control/Treatment 指标均未形成，但清理 9/9、READY 失败关闭和删除后 403
+通过，不需要恢复。下一独立诊断变更只细分 Control 检索/评分子阶段，并将异常
+类型链映射为固定组件码；不输出异常文本、不增加请求、不改变默认 RRF、质量
+变量、test/Acceptance 或性能 Gate。

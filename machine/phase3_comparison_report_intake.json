@@ -1,15 +1,16 @@
 {
   "schema_version": "phase3_comparison_report_intake_v1",
   "decision_id": "PD-042",
-  "status": "PAIRED_ONLINE_DEV_RETRY_READY_AFTER_THIRD_RECOVERY_AND_RUNNER_REPAIR",
+  "status": "FOURTH_ATTEMPT_CLEAN_CONTROL_FAILURE_DIAGNOSTIC_READY",
   "source_gate": {
     "artifact": "machine/phase3_comparison_dev_gate.json",
-    "status": "THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY"
+    "status": "FOURTH_ATTEMPT_RUN_CONTROL_FAILED_DIAGNOSTIC_HARDENING_READY"
   },
   "repair_decision_id": "PD-043",
   "cleanup_audit_decision_id": "PD-044",
   "cleanup_recovery_decision_id": "PD-045",
   "cleanup_recovery_completion_decision_id": "PD-046",
+  "control_failure_diagnostic_decision_id": "PD-049",
   "implementation": {
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -91,9 +92,23 @@
         "status": "REJECTED_CLEANUP_QUEUE_SCOPE_PROOF_FAILED",
         "error_code": "REPORT_CLEANUP_PROOF_INVALID",
         "cleanup_stage": "VERIFY_QUEUE_SCOPE"
+      },
+      {
+        "run_id": "phase3_comparison_dev_20260723_04",
+        "head_commit": "b92e9ffa1d576aeef83dd028a28df09bf601d52e",
+        "report_sha256": "2ca305dcd16820de4eb28863097f58c53ad5f9d678604c5251a65de70b2aa47c",
+        "adjudication_sha256": "b49bf9079ed3c9c7c2019a4e4836cdb9677dea07955675d6bfe1cdce25e4a4bf",
+        "status": "FAIL_RUN_CONTROL_NO_METRICS_CLEANUP_PASS",
+        "error_code": "PHASE3_GATE_FAILED",
+        "primary_stage": "RUN_CONTROL",
+        "cleanup_status": "PASS",
+        "cleanup_jobs_succeeded": 9,
+        "deleted_answer_api_status": 403,
+        "test": "NOT_READ_NOT_RUN",
+        "acceptance": "NOT_READ_NOT_RUN"
       }
     ],
-    "interpretation": "The third report stopped before Control/Treatment metrics and cannot establish quality. Its cleanup queue scope proof was falsely rejected because dict rows were unpacked as column names. The exact residual was subsequently recovered and audited clean before the runner defect was repaired in this separate Gate."
+    "interpretation": "The fourth report is identity-bound and proves a clean lifecycle close, but it stopped in RUN_CONTROL before any complete Control metric and therefore cannot establish quality. The generic PHASE3_GATE_FAILED code does not identify retrieval versus scoring or the failing online component, so the next independent Gate separates the Control substages and adds type-only stable component classification without exception text or extra requests."
   },
   "cleanup_audit_boundary": {
     "target_run_id": "phase3_comparison_dev_20260723_03",
@@ -139,10 +154,30 @@
     "performance_gate": "NOT_RUN"
   },
   "runner_repair": {
-    "status": "READY_AWAITING_NEW_WINDOWS_RUN",
+    "status": "VERIFIED_BY_FOURTH_WINDOWS_CLEANUP_PASS",
     "cause": "PSYCOPG_DICT_ROW_WAS_TUPLE_UNPACKED_AS_COLUMN_NAMES",
     "repair": "EXPLICIT_OWNER_VERSION_BACKEND_MAPPING_KEY_ACCESS",
     "diagnostic_hardening": "REPORT_SANITIZED_PRIMARY_STAGE",
+    "quality_variable_changed": false,
+    "default_enabled": false
+  },
+  "fourth_attempt_cleanup_proof": {
+    "run_id": "phase3_comparison_dev_20260723_04",
+    "status": "PASS_CLEAN",
+    "jobs_succeeded": 9,
+    "ready_reconciliation_failed_closed": true,
+    "deleted_answer_api_status": 403,
+    "recovery_required": false,
+    "quality_metrics_available": false,
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN",
+    "performance_gate": "NOT_RUN"
+  },
+  "control_failure_diagnostic_hardening": {
+    "status": "READY_AWAITING_NEW_WINDOWS_RUN",
+    "decision_id": "PD-049",
+    "classification": "CONTROL_SUBSTAGE_PLUS_TYPE_ONLY_STABLE_COMPONENT_CODE_NO_EXCEPTION_TEXT",
+    "additional_requests": 0,
     "quality_variable_changed": false,
     "default_enabled": false
   }

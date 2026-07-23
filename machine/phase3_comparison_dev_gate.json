@@ -1,6 +1,6 @@
 {
   "schema_version": "phase3_comparison_dev_gate_v1",
-  "status": "THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY",
+  "status": "FOURTH_ATTEMPT_RUN_CONTROL_FAILED_DIAGNOSTIC_HARDENING_READY",
   "source_phase": {
     "id": "phase-3",
     "status": "IN_PROGRESS"
@@ -50,7 +50,7 @@
   },
   "paired_online_user_entry": {
     "decision_id": "PD-041",
-    "status": "THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY_FOR_NEW_RUN",
+    "status": "FOURTH_ATTEMPT_CLEAN_DIAGNOSTIC_HARDENING_READY_FOR_NEW_RUN",
     "package_builder": "scripts/build_phase3_comparison_dev_package.py",
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "report_adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -112,11 +112,31 @@
       "online_quality_executed": false,
       "test": "NOT_READ_NOT_RUN",
       "acceptance": "NOT_READ_NOT_RUN"
+    },
+    {
+      "run_id": "phase3_comparison_dev_20260723_04",
+      "head_commit": "b92e9ffa1d576aeef83dd028a28df09bf601d52e",
+      "status": "FAIL_RUN_CONTROL_NO_METRICS_CLEANUP_PASS",
+      "report_error_code": "PHASE3_GATE_FAILED",
+      "primary_stage": "RUN_CONTROL",
+      "primary_error_code": "PHASE3_GATE_FAILED",
+      "report_sha256": "2ca305dcd16820de4eb28863097f58c53ad5f9d678604c5251a65de70b2aa47c",
+      "adjudication_status": "FAIL",
+      "adjudication_decision": "KEEP_COMPARISON_DECOMPOSITION_DISABLED",
+      "adjudication_sha256": "b49bf9079ed3c9c7c2019a4e4836cdb9677dea07955675d6bfe1cdce25e4a4bf",
+      "cleanup_status": "PASS",
+      "cleanup_jobs_succeeded": 9,
+      "ready_reconciliation_failed_closed": true,
+      "deleted_answer_api_status": 403,
+      "online_quality_executed": false,
+      "test": "NOT_READ_NOT_RUN",
+      "acceptance": "NOT_READ_NOT_RUN",
+      "performance_gate": "PENDING_SEPARATE_300MS_GATE"
     }
   ],
   "paired_online_dev_quality": {
     "status": "NOT_RUN",
-    "reason": "The third Windows attempt stopped before Control/Treatment metrics and was rejected at cleanup queue scope proof. The exact residual is frozen for a separate recovery Gate; no online quality result is accepted.",
+    "reason": "The fourth Windows attempt reached RUN_CONTROL but failed before the first complete Control metric. Cleanup passed 9/9 with READY failed closed and deleted Answer API 403, so no recovery is required; no online quality result is accepted.",
     "control_baseline": null,
     "treatment_gain": null,
     "critical_non_regression": null
@@ -197,7 +217,7 @@
     "performance_gate": "NOT_RUN"
   },
   "known_runner_defect": {
-    "status": "FIXED_LOCALLY_AWAITING_NEW_WINDOWS_RUN",
+    "status": "VERIFIED_FIXED_BY_FOURTH_WINDOWS_CLEANUP",
     "location": "scripts/run_phase3_comparison_paired_dev_gate.py::_active_cleanup_scope",
     "cause": "PSYCOPG_DICT_ROW_WAS_TUPLE_UNPACKED_AS_COLUMN_NAMES",
     "effect": "EXACT_NINE_JOB_QUEUE_FALSELY_REJECTED_AT_VERIFY_QUEUE_SCOPE",
@@ -206,6 +226,32 @@
     "repair": "ACCESS_MAPPING_VALUES_BY_EXPLICIT_KEYS",
     "diagnostic_hardening": "SANITIZED_PRIMARY_STAGE_REPORTED",
     "quality_rerun_authorized": true
+  },
+  "control_failure_diagnostic_hardening": {
+    "status": "READY_AWAITING_NEW_WINDOWS_RUN",
+    "decision_id": "PD-049",
+    "source_run_id": "phase3_comparison_dev_20260723_04",
+    "source_primary_stage": "RUN_CONTROL",
+    "source_primary_error_code": "PHASE3_GATE_FAILED",
+    "classification": "CONTROL_SUBSTAGE_PLUS_EXCEPTION_TYPE_CHAIN_TO_STABLE_COMPONENT_CODE_WITHOUT_EXCEPTION_TEXT",
+    "stable_components": [
+      "POSTGRES_READY_ROUTE",
+      "ELASTICSEARCH_ROUTE",
+      "EMBEDDING_SERVICE",
+      "MILVUS_ROUTE",
+      "ONLINE_SCOPE",
+      "ONLINE_VISIBILITY",
+      "CONTROL_METRIC_COMPUTATION",
+      "RESULT_NORMALIZATION",
+      "UNCLASSIFIED"
+    ],
+    "additional_requests": 0,
+    "quality_variable_changed": false,
+    "retrieval_parameters_changed": false,
+    "default_enabled": false,
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN",
+    "performance_gate": "NOT_RUN"
   },
   "independent_performance_gate": {
     "status": "PENDING_SEPARATE_GATE",

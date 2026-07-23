@@ -50,5 +50,6 @@
 | PD-046 | ACCEPTED | `_02` 精确恢复 Gate 已 9/9 `SUCCEEDED`，Chunk/PDF/全局非终态任务均清零，事后只读审计 `PASS/CLEAN`；允许以全新 Run ID 重试同一冻结配对 dev 质量 Gate | 恢复成功只清除旧运行残留，不补造 `_02` 质量证据。新运行继续固定 dev 输入、配置、候选 20、RRF `k=60`、Top-3、默认关闭与 Control 停止规则；`test/acceptance` 和 300 ms 性能 Gate仍不参与 |
 | PD-047 | ACCEPTED | `_03` 在 Control/Treatment 指标前因 PostgreSQL `dict_row` 被错误按元组解包而误判清理队列范围；只先恢复审计冻结的 3 个 `INACTIVE` 版本、9 个 `PENDING/attempt=0` 任务、316 Chunk 和 3 PDF | `_03` 只读审计 SHA-256 为 `E9430BE17811C60116630F718C182A3FFD0A12FFD83F753EBB5FDFBA0420112B`，全局非终态正好是同一 9 任务。恢复入口必须绑定已冻结 Run ID 与审计 SHA，最多让既有 Worker 领取 9 个任务并自动事后审计；本 Gate 不修运行器、不重跑质量、不读取 `test/acceptance`、不处理 300 ms 性能债 |
 | PD-048 | ACCEPTED | `_03` 精确恢复已 9/9 `SUCCEEDED` 且事后审计 `PASS/CLEAN`；随后独立修复清理范围读取为显式 mapping key，并增加脱敏 `primary_stage` | 修复不改变比较拆分、默认 RRF、候选 20、RRF `k=60`、Top-3、Embedding、阈值或 holdout。允许用全新 Run ID 重试同一 dev Gate；若仍有前置故障，必须按 `primary_stage` 失败关闭并完成清理，不能调参重跑 |
+| PD-049 | ACCEPTED | `_04` 在 `RUN_CONTROL` 以通用 `PHASE3_GATE_FAILED` 失败，未形成 Control 指标，但 9/9 清理、READY 失败关闭和删除后 403 均通过；下一独立 Gate 只细分 Control 子阶段并把异常类型链映射为固定组件错误码 | 不记录异常文本，不新增请求，不改默认 RRF、比较变量、候选 20、RRF `k=60`、Top-3、Embedding、阈值或 holdout。允许以新 Run ID `_05` 获取可归因的失败码；`test/acceptance` 与 300 ms 性能 Gate仍封存 |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。

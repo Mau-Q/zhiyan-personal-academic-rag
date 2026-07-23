@@ -48,18 +48,17 @@ unzip -p runtime/handoffs/phase3-comparison-paired-dev-input-v1.zip manifest.jso
 
 ## 2. Windows：仅在 Mac 推送成功后运行
 
-`phase3_comparison_dev_20260723_03` 没有形成 Control/Treatment 指标，并在
-`VERIFY_QUEUE_SCOPE` 失败关闭。精确恢复已完成：9/9 清理任务
-`SUCCEEDED`，Chunk/PDF/全局非终态均为 0，事后审计 `PASS/CLEAN`。恢复
-SHA-256 为
-`94A10A54FFB6B326740E093DB97D148891FD44898E7BC077E25FA4385B780CDB`，
-审计 SHA-256 为
-`FFD2E805B857DF1D4D7E256A00BF09B15992261A4A31960C7A2D55B8D504DBAB`。
+`phase3_comparison_dev_20260723_04` 已越过入库、READY 和 Chunk 身份校验，
+但在 `RUN_CONTROL` 以通用 `PHASE3_GATE_FAILED` 失败，未形成 Control 或
+Treatment 指标。报告 SHA-256 为
+`2CA305DCD16820DE4EB28863097F58C53AD5F9D678604C5251A65DE70B2AA47C`，
+裁决 SHA-256 为
+`B49BF9079ED3C9C7C2019A4E4836CDB9677DEA07955675D6BFE1CDCE25E4A4BF`。
+清理 9/9、READY 失败关闭和删除后 403 均通过，无需恢复 Gate。
 
-清理范围误拒绝的原因是 psycopg `dict_row` 被按 tuple 解包。独立修复只把
-owner/version/backend 改为显式 mapping key 读取，并增加脱敏
-`primary_stage`；质量变量、默认开关和检索参数均未改变。修复提交推送后，使用
-全新 Run ID `_04` 重试同一 dev 质量 Gate。
+本次独立诊断加固只细分 Control 检索/评分子阶段，并把异常类型链映射为固定
+组件错误码；不输出异常文本、不增加请求、不改默认 RRF、比较变量或检索参数。
+诊断提交推送后，使用全新 Run ID `_05` 重试同一 dev Gate。
 
 先确保服务已经由用户正常维护并可通过本机环回端口访问。脚本不会安装依赖、
 启动容器或重启服务。输入 ZIP 已位于仓库忽略目录
@@ -98,7 +97,7 @@ powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass `
     -InputPackagePath $PackagePath `
     -ExpectedPackageSha256 $ExpectedPackageSha256 `
     -ExpectedManifestSha256 $ExpectedManifestSha256 `
-    -RunId 'phase3_comparison_dev_20260723_04'
+    -RunId 'phase3_comparison_dev_20260723_05'
 ```
 
 如未设置 `DATABASE_URL`，脚本以安全提示读取 PostgreSQL 密码，并在结束时删除
@@ -107,7 +106,8 @@ powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass `
 解压的临时输入目录，原始 ZIP 不受影响。
 
 任何红色终止都停止并回传当前 JSON summary，不要调整参数重跑。summary 中
-的 `primary_stage` 与 `primary_error_code` 用于定位质量步骤之前的失败。
+的 `primary_stage` 与固定组件级 `primary_error_code` 用于定位质量步骤之前
+的失败；不得回传原始异常消息。
 
 只回传终端输出的 JSON summary、裁决文件和两个文件的 SHA-256；不要回传输入
 ZIP、问题文本、证据文本、路径、连接串或密码。完整报告保存在

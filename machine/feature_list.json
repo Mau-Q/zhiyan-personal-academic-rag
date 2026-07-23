@@ -560,7 +560,7 @@
       "id": "phase3_bilateral_comparison_query_decomposition",
       "status": "PARTIAL",
       "owner": "SHARED",
-      "gate_status": "THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY_FOR_NEW_DEV_RUN",
+      "gate_status": "FOURTH_ATTEMPT_CLEAN_CONTROL_FAILURE_DIAGNOSTIC_READY_FOR_NEW_DEV_RUN",
       "evidence": [
         "backend/retrieval/comparison_decomposition.py",
         "backend/retrieval/online.py",

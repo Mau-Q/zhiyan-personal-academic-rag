@@ -44,16 +44,25 @@ from backend.retrieval.comparison_decomposition import (
     load_bilateral_comparison_config,
     remap_document_identities,
 )
-from backend.retrieval.elasticsearch import UrllibElasticsearchTransport
-from backend.retrieval.embedding import OllamaEmbeddingProvider
-from backend.retrieval.milvus import PymilvusTransport
+from backend.retrieval.elasticsearch import (
+    ElasticsearchIndexNotReadyError,
+    UrllibElasticsearchTransport,
+)
+from backend.retrieval.embedding import EmbeddingServiceError, OllamaEmbeddingProvider
+from backend.retrieval.milvus import MilvusIndexNotReadyError, PymilvusTransport
 from backend.retrieval.online import (
     OnlineRetrievalLatencyBreakdown,
+    OnlineScopeForbiddenError,
     OnlineVersionRrfRetriever,
+    OnlineVisibilityUnavailableError,
     PostgresReadyRouteResolver,
 )
 from backend.storage.pdf_objects import FilesystemPdfObjectStore
-from backend.storage.postgres import PostgresFactRepository, connect_postgres
+from backend.storage.postgres import (
+    PostgresFactRepository,
+    PostgresFactSourceError,
+    connect_postgres,
+)
 from backend.validation.stage1 import Stage1ReconciliationError, reconcile_ready_scope
 from scripts.build_phase3_comparison_dev_package import (
     ASSETS,
@@ -379,6 +388,49 @@ def _runtime_document_ids(
         raise GateError("DEV_DOCUMENT_IDENTITY_UNAVAILABLE") from exc
 
 
+def _exception_chain(exc: BaseException) -> tuple[BaseException, ...]:
+    chain: list[BaseException] = []
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen and len(chain) < 8:
+        seen.add(id(current))
+        chain.append(current)
+        if current.__cause__ is not None:
+            current = current.__cause__
+        elif not current.__suppress_context__:
+            current = current.__context__
+        else:
+            current = None
+    return tuple(chain)
+
+
+def _retrieval_failure_code(exc: BaseException) -> str:
+    chain = _exception_chain(exc)
+    for item in chain:
+        if isinstance(item, GateError):
+            code = _sanitized_code(item)
+            if code != "PHASE3_GATE_FAILED":
+                return code
+    if any(isinstance(item, EmbeddingServiceError) for item in chain):
+        return "ONLINE_EMBEDDING_SERVICE_FAILED"
+    if any(isinstance(item, ElasticsearchIndexNotReadyError) for item in chain):
+        return "ONLINE_ELASTICSEARCH_ROUTE_FAILED"
+    if any(isinstance(item, MilvusIndexNotReadyError) for item in chain) or any(
+        type(item).__module__.startswith(("pymilvus", "grpc")) for item in chain
+    ):
+        return "ONLINE_MILVUS_ROUTE_FAILED"
+    if any(isinstance(item, PostgresFactSourceError) for item in chain) or any(
+        type(item).__module__.startswith(("psycopg", "psycopg_pool"))
+        for item in chain
+    ):
+        return "ONLINE_POSTGRES_READY_ROUTE_FAILED"
+    if any(isinstance(item, OnlineScopeForbiddenError) for item in chain):
+        return "ONLINE_SCOPE_FORBIDDEN"
+    if any(isinstance(item, OnlineVisibilityUnavailableError) for item in chain):
+        return "ONLINE_VISIBILITY_PROOF_FAILED"
+    return "ONLINE_RETRIEVAL_UNCLASSIFIED_FAILURE"
+
+
 def _search(
     retriever: OnlineVersionRrfRetriever,
     row: Mapping[str, Any],
@@ -388,16 +440,20 @@ def _search(
     top_k: int,
 ) -> list[dict[str, Any]]:
     document_ids = _runtime_document_ids(row, document_id_map)
-    return [
-        dict(candidate.chunk)
-        for candidate in retriever.search(
+    try:
+        ranking = retriever.search(
             row["question"],
             _scope(owner_id, document_ids),
             owner_id=owner_id,
             document_ids=document_ids,
             top_k=top_k,
         )
-    ]
+    except BaseException as exc:
+        raise GateError(_retrieval_failure_code(exc)) from exc
+    try:
+        return [dict(candidate.chunk) for candidate in ranking]
+    except BaseException as exc:
+        raise GateError("ONLINE_RESULT_NORMALIZATION_FAILED") from exc
 
 
 def _target_metrics(
@@ -815,7 +871,15 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
             )
             for row in targets
         }
-        control_target = _target_metrics(targets, control_results, runtime_to_source)
+        primary_stage = "SCORE_CONTROL"
+        try:
+            control_target = _target_metrics(
+                targets,
+                control_results,
+                runtime_to_source,
+            )
+        except BaseException as exc:
+            raise GateError("CONTROL_METRIC_COMPUTATION_FAILED") from exc
         if control_target["strict_two_sided_passed"] != 0:
             primary_stage = "CONTROL_STOP_RULE"
             report = {

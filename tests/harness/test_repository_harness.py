@@ -191,7 +191,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         self.assertEqual(phase3_feature["status"], "PARTIAL")
         self.assertEqual(
             phase3_feature["gate_status"],
-            "THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY_FOR_NEW_DEV_RUN",
+            "FOURTH_ATTEMPT_CLEAN_CONTROL_FAILURE_DIAGNOSTIC_READY_FOR_NEW_DEV_RUN",
         )
         payload = json.loads(
             (ROOT / "machine" / "phase3_comparison_dev_gate.json").read_text(
@@ -200,7 +200,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY",
+            "FOURTH_ATTEMPT_RUN_CONTROL_FAILED_DIAGNOSTIC_HARDENING_READY",
         )
         self.assertEqual(
             payload["source_phase"], {"id": "phase-3", "status": "IN_PROGRESS"}
@@ -219,7 +219,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["paired_online_user_entry"]["status"],
-            "THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY_FOR_NEW_RUN",
+            "FOURTH_ATTEMPT_CLEAN_DIAGNOSTIC_HARDENING_READY_FOR_NEW_RUN",
         )
         self.assertEqual(
             payload["windows_attempts"][0]["status"],
@@ -278,6 +278,29 @@ class RepositoryHarnessTests(unittest.TestCase):
         self.assertFalse(
             payload["known_runner_defect"]["quality_variable_changed"]
         )
+        self.assertEqual(
+            payload["windows_attempts"][3]["primary_stage"],
+            "RUN_CONTROL",
+        )
+        self.assertEqual(
+            payload["windows_attempts"][3]["report_sha256"],
+            "2ca305dcd16820de4eb28863097f58c53ad5f9d678604c5251a65de70b2aa47c",
+        )
+        self.assertEqual(
+            payload["windows_attempts"][3]["cleanup_status"],
+            "PASS",
+        )
+        self.assertEqual(
+            payload["control_failure_diagnostic_hardening"][
+                "additional_requests"
+            ],
+            0,
+        )
+        self.assertFalse(
+            payload["control_failure_diagnostic_hardening"][
+                "quality_variable_changed"
+            ]
+        )
         self.assertFalse(
             payload["paired_online_user_entry"][
                 "absolute_300ms_slo_adjudication"
@@ -296,7 +319,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "PAIRED_ONLINE_DEV_RETRY_READY_AFTER_THIRD_RECOVERY_AND_RUNNER_REPAIR",
+            "FOURTH_ATTEMPT_CLEAN_CONTROL_FAILURE_DIAGNOSTIC_READY",
         )
         self.assertEqual(payload["decision_id"], "PD-042")
         self.assertEqual(
@@ -353,6 +376,21 @@ class RepositoryHarnessTests(unittest.TestCase):
             "PASS_CLEAN",
         )
         self.assertFalse(payload["runner_repair"]["quality_variable_changed"])
+        self.assertEqual(
+            payload["evidence"]["attempts"][3]["primary_stage"],
+            "RUN_CONTROL",
+        )
+        self.assertEqual(
+            payload["fourth_attempt_cleanup_proof"]["status"],
+            "PASS_CLEAN",
+        )
+        self.assertFalse(
+            payload["fourth_attempt_cleanup_proof"]["recovery_required"]
+        )
+        self.assertEqual(
+            payload["control_failure_diagnostic_hardening"]["additional_requests"],
+            0,
+        )
 
     def test_validator_rejects_template_as_concrete_phase_result(self):
         template = json.loads(

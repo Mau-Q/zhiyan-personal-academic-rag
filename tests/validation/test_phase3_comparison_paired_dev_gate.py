@@ -22,13 +22,22 @@ from scripts.run_phase3_comparison_paired_dev_gate import (
     _latency_summary,
     _require_empty_cleanup_queue,
     _require_exact_cleanup_scope,
+    _retrieval_failure_code,
     _score,
     _strict_two_sided,
     build_parser,
     load_input_package,
     remap_runtime_chunks,
 )
-from backend.retrieval.online import OnlineRetrievalLatencyBreakdown
+from backend.retrieval.elasticsearch import ElasticsearchIndexNotReadyError
+from backend.retrieval.embedding import EmbeddingServiceError
+from backend.retrieval.milvus import MilvusIndexNotReadyError
+from backend.retrieval.online import (
+    OnlineRetrievalLatencyBreakdown,
+    OnlineScopeForbiddenError,
+    OnlineVisibilityUnavailableError,
+)
+from backend.storage.postgres import PostgresFactSourceError
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -189,6 +198,52 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
         self.assertEqual(
             summary["error_code"],
             "CLEANUP_WORKER_EXECUTION_FAILED",
+        )
+
+    def test_retrieval_failure_code_uses_only_stable_component_taxonomy(self):
+        failures = (
+            (
+                EmbeddingServiceError("private embedding detail"),
+                "ONLINE_EMBEDDING_SERVICE_FAILED",
+            ),
+            (
+                ElasticsearchIndexNotReadyError("private ES detail"),
+                "ONLINE_ELASTICSEARCH_ROUTE_FAILED",
+            ),
+            (
+                MilvusIndexNotReadyError("private Milvus detail"),
+                "ONLINE_MILVUS_ROUTE_FAILED",
+            ),
+            (
+                PostgresFactSourceError("private PostgreSQL detail"),
+                "ONLINE_POSTGRES_READY_ROUTE_FAILED",
+            ),
+            (
+                OnlineScopeForbiddenError("private scope detail"),
+                "ONLINE_SCOPE_FORBIDDEN",
+            ),
+        )
+        for cause, expected in failures:
+            try:
+                raise cause
+            except BaseException as inner:
+                try:
+                    raise OnlineVisibilityUnavailableError(
+                        "generic visibility detail"
+                    ) from inner
+                except BaseException as outer:
+                    code = _retrieval_failure_code(outer)
+            self.assertEqual(code, expected)
+            self.assertNotIn("private", code.casefold())
+        self.assertEqual(
+            _retrieval_failure_code(
+                OnlineVisibilityUnavailableError("private visibility detail")
+            ),
+            "ONLINE_VISIBILITY_PROOF_FAILED",
+        )
+        self.assertEqual(
+            _retrieval_failure_code(RuntimeError("private unknown detail")),
+            "ONLINE_RETRIEVAL_UNCLASSIFIED_FAILURE",
         )
 
     def test_windows_cleanup_audit_is_read_only_and_pinned(self):

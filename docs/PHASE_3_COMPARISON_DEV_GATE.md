@@ -4,7 +4,7 @@
 
 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的本地实现候选与冻结配置已完成，
 方案阶段 3 由 `NOT_STARTED` 进入 `IN_PROGRESS`。本地结论仅为
-`THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY`：
+`FOURTH_ATTEMPT_RUN_CONTROL_FAILED_DIAGNOSTIC_HARDENING_READY`：
 
 - 默认开关仍为 `false`，未改变默认 RRF；
 - 4 个冻结 `dev` 样本的 Control 均保持原问题，Treatment 规划均为
@@ -182,6 +182,20 @@ Run ID、确认词、审计 SHA 与完整前置计数。恢复完成并事后审
 随后独立修复只把 `_active_cleanup_scope` 改为显式 mapping key 取值，并记录
 脱敏 `primary_stage`；质量变量、检索参数和 holdout 均未改变。
 
+第四次 Windows Run ID `phase3_comparison_dev_20260723_04` 在提交
+`b92e9ffa1d576aeef83dd028a28df09bf601d52e` 上越过入库、READY 和 Chunk
+身份校验，但在 `RUN_CONTROL` 以通用 `PHASE3_GATE_FAILED` 失败，未形成完整
+Control 指标。报告 SHA-256
+`2CA305DCD16820DE4EB28863097F58C53AD5F9D678604C5251A65DE70B2AA47C`；
+裁决 SHA-256
+`B49BF9079ED3C9C7C2019A4E4836CDB9677DEA07955675D6BFE1CDCE25E4A4BF`。
+清理 9/9、READY 失败关闭和删除后 403 均通过，因此无需恢复 Gate。
+
+当前诊断加固只在 Gate runner 捕获在线检索异常后，遍历最多 8 层异常类型链，
+将其映射到固定组件码。异常消息、问题、Evidence、路径和连接信息均不进入报告；
+同时将 Control 检索与指标计算分为 `RUN_CONTROL` / `SCORE_CONTROL`。该变更
+不增加网络请求，也不修改 `OnlineVersionRrfRetriever`、默认 RRF 或质量变量。
+
 ## 6. 远程结果回收与裁决
 
 Windows runner 现在把实际 Git HEAD 和 Run ID 写入完整报告。PowerShell 入口在
@@ -199,8 +213,8 @@ Windows runner 现在把实际 Git HEAD 和 Run ID 写入完整报告。PowerShe
    `test` 仍需新的冻结提交和独立 Gate；
 6. 远程 FAIL 或报告不可采信时都保持比较拆分关闭。
 
-当前裁决器保留三次真实拒绝证据；第三次没有形成 Control/Treatment 指标，
-在线配对 dev 仍无可采信结论。
+当前裁决器保留前三次拒绝和第四次可信 FAIL 证据；第四次没有形成
+Control/Treatment 指标，在线配对 dev 仍无可采信质量结论。
 
 ## 7. 不能合并的边界
 
