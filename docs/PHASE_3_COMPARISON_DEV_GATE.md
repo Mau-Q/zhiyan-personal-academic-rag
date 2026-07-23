@@ -4,7 +4,7 @@
 
 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的本地实现候选与冻结配置已完成，
 方案阶段 3 由 `NOT_STARTED` 进入 `IN_PROGRESS`。本地结论仅为
-`CLEANUP_RECOVERY_COMPLETE_PAIRED_ONLINE_DEV_RETRY_READY`：
+`THIRD_WINDOWS_ATTEMPT_CLEANUP_RECOVERY_READY`：
 
 - 默认开关仍为 `false`，未改变默认 RRF；
 - 4 个冻结 `dev` 样本的 Control 均保持原问题，Treatment 规划均为
@@ -13,11 +13,14 @@
   用户运行入口已完成本地契约测试与静态检查；首次 Windows 尝试在连接服务前
   因 `core.autocrlf=true` 造成的纯 CRLF 配置字节漂移被拒绝；
 - 远程报告的 SHA-256、Git HEAD、Run ID、指标算术、清理与 holdout 隔离
-  裁决器已准备；前两次拒绝报告已保留已确认的身份，但不构成在线质量证据；
+  裁决器已准备；三次拒绝报告均不构成在线质量证据；
 - 第二次报告的通用清理异常遮蔽了主失败与具体阶段；运行器已改为同时保留
   `primary_error_code` 和分阶段清理错误，另有只读 PostgreSQL 残留审计入口；
 - 只读审计确认的 9 个 `PENDING` 任务已由精确恢复入口全部处理成功，Chunk、
   PDF 与全局非终态任务均清零，事后审计为 `PASS/CLEAN`；
+- 第三次运行在质量指标前因清理队列范围证明误判失败；`_03` 只读审计再次
+  冻结 3 个 `INACTIVE` 版本、9 个 `PENDING/attempt=0` 任务、316 Chunk 和
+  3 PDF，当前只允许独立精确恢复；
 - 尚未运行真实 PostgreSQL READY + ES/Milvus + RRF 配对回放，因此没有
   检索质量增益、关键类不退化或 300 ms 通过结论；
 - `test` 与 `acceptance` 均未读取、未运行。
@@ -157,6 +160,20 @@ SHA-256 为
 本次没有运行质量、test、Acceptance 或性能 Gate。旧 `_02` 仍不可作为质量
 证据；下一次只能使用全新 Run ID。
 
+第三次 Windows Run ID `phase3_comparison_dev_20260723_03` 在提交
+`3a77484020f57aca27e6fa4b6d48cd1d81260982` 上于质量指标前失败关闭。清理
+阶段为 `VERIFY_QUEUE_SCOPE`，报告 SHA-256 为
+`A45EF2F9F030FEB6AAED05DECB33A019CFA7920FAF6E1F1ABEB7189C242E339EC`。
+只读审计 SHA-256
+`E9430BE17811C60116630F718C182A3FFD0A12FFD83F753EBB5FDFBA0420112B`
+确认残留与 `_02` 同构，且全局非终态正好只有该 owner 的 9 个任务。
+
+根因是 `_active_cleanup_scope` 在 psycopg `dict_row` 连接上把行按元组解包，
+得到列名而非实际值，从而把正确的 9 任务范围误判为不匹配。本 Gate 不修复该
+运行器缺陷；恢复入口只把既有恢复器扩展到显式冻结的 `_03`，绑定 Run ID、
+确认词、审计 SHA 与完整前置计数。恢复完成并事后审计 `CLEAN` 前，不得修复后
+重跑质量。
+
 ## 6. 远程结果回收与裁决
 
 Windows runner 现在把实际 Git HEAD 和 Run ID 写入完整报告。PowerShell 入口在
@@ -174,8 +191,8 @@ Windows runner 现在把实际 Git HEAD 和 Run ID 写入完整报告。PowerShe
    `test` 仍需新的冻结提交和独立 Gate；
 6. 远程 FAIL 或报告不可采信时都保持比较拆分关闭。
 
-当前裁决器保留两次真实拒绝证据；第二次质量执行程度与清理状态不可从旧报告
-恢复，在线配对 dev 仍无可采信结论。
+当前裁决器保留三次真实拒绝证据；第三次没有形成 Control/Treatment 指标，
+在线配对 dev 仍无可采信结论。
 
 ## 7. 不能合并的边界
 

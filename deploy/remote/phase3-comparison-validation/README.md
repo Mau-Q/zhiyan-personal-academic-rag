@@ -48,29 +48,27 @@ unzip -p runtime/handoffs/phase3-comparison-paired-dev-input-v1.zip manifest.jso
 
 ## 2. Windows：仅在 Mac 推送成功后运行
 
-`phase3_comparison_dev_20260723_02` 的 9 个残留任务已在恢复提交上全部
-`SUCCEEDED`，Chunk/PDF/全局非终态清零且事后审计 `PASS/CLEAN`。旧 `_02`
-仍不是质量证据；新的状态收口提交推送后，才允许用新 Run ID 重跑同一质量
-Gate：
+`phase3_comparison_dev_20260723_03` 没有形成 Control/Treatment 指标，并在
+`VERIFY_QUEUE_SCOPE` 失败关闭。只读审计确认 3 个版本全部 `INACTIVE`、
+9 个任务全部 `PENDING/attempt=0`、316 Chunk、3 PDF，且没有其他全局非终态
+任务。新的恢复准备提交推送后，只运行精确恢复：
 
 ```text
-$packagePath = 'C:\private\phase3-comparison-paired-dev-input-v1.zip'
-$packageSha256 = (Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash
-powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\deploy\remote\phase3-comparison-validation\run_phase3_comparison_paired_dev_gate.ps1 -InputPackagePath $packagePath -ExpectedPackageSha256 $packageSha256 -ExpectedManifestSha256 05c36a393a51a8aa705e17d1ac3895df074b9273f8af6bfad06c9904c458c63f -RunId phase3_comparison_dev_20260723_03
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\deploy\remote\phase3-comparison-validation\recover_phase3_comparison_cleanup.ps1 -ExpectedHeadCommit <NEW_COMMIT_SHA> -RunId phase3_comparison_dev_20260723_03
 ```
 
-ZIP 已在 `_02` 中通过固定 Manifest 与 6 个工件 SHA 校验；这里重新计算容器
-SHA 防止命令执行期间变化，固定 Manifest SHA 不变。脚本继续执行完整身份、
-Control 停止规则、Treatment、清理和裁决。任何红色终止都停止并回传完整
-summary、报告/裁决 SHA；不要调整参数重跑。
+恢复器重新验证冻结审计 SHA 对应的完整前置，只让既有 Worker 最多领取这
+9 个任务，并自动运行事后只读审计。它不运行质量、test、Acceptance 或性能，
+也不重启服务。任何红色终止都停止并回传 JSON summary，不要调整参数重跑。
 
-以下原质量入口仅在后续状态文件明确解除冻结后使用。
+以下原质量入口仅在恢复收口、运行器缺陷独立修复且后续状态文件明确解除冻结后
+使用。
 
 先确保服务已经由用户正常维护并可通过本机环回端口访问。脚本不会安装依赖、
 启动容器或重启服务。然后在仓库根目录调用：
 
 ```text
-powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\deploy\remote\phase3-comparison-validation\run_phase3_comparison_paired_dev_gate.ps1 -InputPackagePath C:\private\phase3-comparison-paired-dev-input-v1.zip -ExpectedPackageSha256 <ZIP_SHA256> -ExpectedManifestSha256 <MANIFEST_SHA256> -RunId <NEW_RUN_ID>
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\deploy\remote\phase3-comparison-validation\run_phase3_comparison_paired_dev_gate.ps1 -InputPackagePath C:\Users\Administrator\zhiyan-personal-academic-rag\runtime\handoffs\phase3-comparison-paired-dev-input-v1.zip -ExpectedPackageSha256 <ZIP_SHA256> -ExpectedManifestSha256 <MANIFEST_SHA256> -RunId <NEW_RUN_ID>
 ```
 
 如未设置 `DATABASE_URL`，脚本以安全提示读取 PostgreSQL 密码，并在结束时删除

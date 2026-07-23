@@ -1,6 +1,6 @@
 {
   "schema_version": "phase3_comparison_dev_gate_v1",
-  "status": "CLEANUP_RECOVERY_COMPLETE_PAIRED_ONLINE_DEV_RETRY_READY",
+  "status": "THIRD_WINDOWS_ATTEMPT_CLEANUP_RECOVERY_READY",
   "source_phase": {
     "id": "phase-3",
     "status": "IN_PROGRESS"
@@ -50,7 +50,7 @@
   },
   "paired_online_user_entry": {
     "decision_id": "PD-041",
-    "status": "SECOND_WINDOWS_ATTEMPT_CLEANLY_RECOVERED_NEW_QUALITY_RUN_READY",
+    "status": "THIRD_WINDOWS_ATTEMPT_RESIDUAL_CONFIRMED_RECOVERY_READY",
     "package_builder": "scripts/build_phase3_comparison_dev_package.py",
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "report_adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -97,11 +97,26 @@
       "reported_identity": null,
       "online_quality_executed": "UNKNOWN_REPORT_NOT_TRUSTWORTHY",
       "infrastructure_mutation_started": "UNKNOWN_REQUIRES_READ_ONLY_AUDIT"
+    },
+    {
+      "run_id": "phase3_comparison_dev_20260723_03",
+      "head_commit": "3a77484020f57aca27e6fa4b6d48cd1d81260982",
+      "status": "REJECTED_CLEANUP_QUEUE_SCOPE_PROOF_FAILED",
+      "report_error_code": "CLEANUP_PROOF_FAILED",
+      "primary_error_code": "PHASE3_GATE_FAILED",
+      "cleanup_stage": "VERIFY_QUEUE_SCOPE",
+      "cleanup_error_code": "CLEANUP_QUEUE_SCOPE_PROOF_FAILED",
+      "report_sha256": "a45ef2f9f030feb6aaed05decb33a019cfa7920faf6e1f1abeb7189c242e339ec",
+      "adjudication_error_code": "REPORT_CLEANUP_PROOF_INVALID",
+      "adjudication_sha256": "74a599288445f1c2267f892a81b5f6b8bd3d5002d4a67e6be6700645d3516981",
+      "online_quality_executed": false,
+      "test": "NOT_READ_NOT_RUN",
+      "acceptance": "NOT_READ_NOT_RUN"
     }
   ],
   "paired_online_dev_quality": {
     "status": "NOT_RUN",
-    "reason": "The first Windows attempt stopped before services. The second report was rejected because cleanup proof failed and the v1 report masked both the primary failure and cleanup stage; no online quality result is accepted until the isolated owner scope is proven clean by the read-only audit.",
+    "reason": "The third Windows attempt stopped before Control/Treatment metrics and was rejected at cleanup queue scope proof. The exact residual is frozen for a separate recovery Gate; no online quality result is accepted.",
     "control_baseline": null,
     "treatment_gain": null,
     "critical_non_regression": null
@@ -117,9 +132,9 @@
   },
   "cleanup_audit_gate": {
     "status": "FAIL_RESIDUAL_REQUIRES_RECOVERY_GATE",
-    "run_id": "phase3_comparison_dev_20260723_02",
-    "head_commit": "740393a7897a7ed9bdff747acfcd27dfa0667ddd",
-    "audit_sha256": "a3fbddc29acaaab0e72edcd889f14a198f238f523a08588d5d486765999498cf",
+    "run_id": "phase3_comparison_dev_20260723_03",
+    "head_commit": "3a77484020f57aca27e6fa4b6d48cd1d81260982",
+    "audit_sha256": "e9430be17811c60116630f718c182a3ffd0a12ffd83f753ebb5fdfba0420112b",
     "mode": "POSTGRESQL_READ_ONLY_OWNER_SCOPED_PLUS_GLOBAL_NONTERMINAL_COUNT",
     "quality_rerun_allowed_before_clean": false,
     "manual_cleanup_allowed": false,
@@ -128,11 +143,11 @@
     "residual_outcome": "REQUIRES_SEPARATE_RECOVERY_GATE"
   },
   "cleanup_recovery_gate": {
-    "status": "PASS",
-    "decision_id": "PD-045",
-    "completion_decision_id": "PD-046",
-    "run_id": "phase3_comparison_dev_20260723_02",
-    "head_commit": "64ef344daa5382d0b043ff444300963fb076c068",
+    "status": "READY_AWAITING_USER_RUN",
+    "decision_id": "PD-047",
+    "run_id": "phase3_comparison_dev_20260723_03",
+    "head_commit": "PENDING_RECOVERY_PREPARATION_COMMIT",
+    "frozen_audit_sha256": "e9430be17811c60116630f718c182a3ffd0a12ffd83f753ebb5fdfba0420112b",
     "precondition": "THREE_INACTIVE_VERSIONS_NINE_PENDING_ATTEMPT_ZERO_JOBS_THREE_BACKENDS_316_CHUNKS_THREE_PDF_OBJECTS_NO_OTHER_GLOBAL_NONTERMINAL_JOBS",
     "single_action": "RUN_EXISTING_PERSISTENT_CLEANUP_WORKER_MAX_NINE",
     "postcondition": "NINE_SUCCEEDED_ZERO_GLOBAL_NONTERMINAL_ZERO_CHUNKS_ZERO_PDF_OBJECTS_THEN_READ_ONLY_AUDIT_CLEAN",
@@ -143,6 +158,7 @@
     "manual_delete_allowed": false
   },
   "cleanup_recovery_result": {
+    "run_id": "phase3_comparison_dev_20260723_02",
     "status": "PASS",
     "jobs_observed": 9,
     "jobs_succeeded": 9,
@@ -159,6 +175,14 @@
     "test": "NOT_READ_NOT_RUN",
     "acceptance": "NOT_READ_NOT_RUN",
     "performance_gate": "NOT_RUN"
+  },
+  "known_runner_defect": {
+    "status": "CONFIRMED_FIX_DEFERRED_UNTIL_RECOVERY_CLEAN",
+    "location": "scripts/run_phase3_comparison_paired_dev_gate.py::_active_cleanup_scope",
+    "cause": "PSYCOPG_DICT_ROW_WAS_TUPLE_UNPACKED_AS_COLUMN_NAMES",
+    "effect": "EXACT_NINE_JOB_QUEUE_FALSELY_REJECTED_AT_VERIFY_QUEUE_SCOPE",
+    "quality_variable_changed": false,
+    "fix_in_cleanup_recovery_gate": false
   },
   "independent_performance_gate": {
     "status": "PENDING_SEPARATE_GATE",

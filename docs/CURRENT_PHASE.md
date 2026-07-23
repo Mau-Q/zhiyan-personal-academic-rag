@@ -2,9 +2,9 @@
 
 ## Status
 
-`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_COMPARISON_RUNNER_REPAIR_READY_AWAITING_PAIRED_DEV_RETRY / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
+`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_THIRD_ATTEMPT_EXACT_CLEANUP_RECOVERY_READY / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
-Phase ID：`source-phase3-comparison-cleanup-recovered-paired-online-dev-retry-ready`
+Phase ID：`source-phase3-comparison-third-attempt-cleanup-recovery-ready`
 
 ## Completed
 
@@ -183,13 +183,15 @@ Phase ID：`source-phase3-comparison-cleanup-recovered-paired-online-dev-retry-r
 - `_02` 只读审计已返回 `FAIL / RESIDUAL_REQUIRES_RECOVERY_GATE`：3 个版本全部 `INACTIVE`，3 个入库任务终态，9 个清理任务全部 `PENDING/attempt=0`，全局非终态任务正好也是这 9 个，仍有 316 Chunk 和 3 PDF；审计 SHA-256 为 `A3FBDDC29ACAAAB0E72EDCD889F14A198F238F523A08588D5D486765999498CF`。因此没有 READY 泄漏，但物理清理未执行。
 - 精确恢复入口已准备：变更前重验完整残留身份，只让既有持久化 Worker 最多领取这 9 个任务，完成后要求 9 个 `SUCCEEDED`、全局非终态/Chunk/PDF 清零并自动运行只读事后审计；不运行质量、test、Acceptance 或性能，不重启服务，不允许手工删除。
 - 用户已在提交 `64ef344daa5382d0b043ff444300963fb076c068` 完成 `_02` 精确恢复：9/9 `SUCCEEDED`，Chunk `316→0`、PDF `3→0`、全局非终态 `9→0`；恢复报告 SHA-256 为 `E9A9566ECFEDE9C30310F9831D8EBF22249CB5081EDA69BA6F7DEA48E26CB8FA`，事后只读审计 `PASS/CLEAN`，SHA-256 为 `F3C12A2F2F7C4D8E0F75EE8DB7B483B44C6509CF65FA0F0EE03779E296252790`。本次没有运行质量、test、Acceptance 或性能，允许以全新 Run ID 重试同一冻结质量 Gate。
+- 第三次 Windows Run ID `phase3_comparison_dev_20260723_03` 在提交 `3a77484020f57aca27e6fa4b6d48cd1d81260982` 上于 Control/Treatment 指标前失败关闭：清理阶段 `VERIFY_QUEUE_SCOPE`、错误 `CLEANUP_QUEUE_SCOPE_PROOF_FAILED`；报告 SHA-256 为 `A45EF2F9F030FEB6AAED05DECB33A019CFA7920FAF6E1F1ABEB7189C242E339EC`。只读审计确认 3 个版本全部 `INACTIVE`、9 个三路任务全部 `PENDING/attempt=0`、316 Chunk、3 PDF，且全局非终态正好只有这 9 个；审计 SHA-256 为 `E9430BE17811C60116630F718C182A3FFD0A12FFD83F753EBB5FDFBA0420112B`。
+- 根因已定位为运行器 `_active_cleanup_scope` 在 psycopg `dict_row` 连接上按元组解包行，实际得到列名而非 owner/version/backend 值，导致正确的 9 任务队列被错误拒绝。当前 Gate 只准备绑定 `_03` 与审计 SHA 的精确恢复；运行器修复必须在残留清零后的独立 Gate 完成。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：阶段 3 比较拆分已进入默认关闭的本地实现，但第二次 Windows 报告因清理证明失败而不可采信；必须先审计 `_02` 隔离 owner，再决定恢复或新的配对 dev 质量运行，尚未进入 `test`；正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层继续后置；固定 Reranker 在当前 300 ms SLO 下不默认启用；
+- 未完成能力：阶段 3 比较拆分已进入默认关闭的本地实现，但第三次 Windows 报告在质量指标前失败关闭；必须先精确恢复 `_03` 残留，再单独修复清理队列范围读取，尚未进入 `test`；正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层继续后置；固定 Reranker 在当前 300 ms SLO 下不默认启用；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -227,14 +229,14 @@ Phase ID：`source-phase3-comparison-cleanup-recovered-paired-online-dev-retry-r
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 已完成入口冻结、默认关闭的比较拆分本地实现候选、用户运行入口和报告裁决准备，因此为 `IN_PROGRESS`。第一次 Windows 尝试证明并修复了 CRLF 配置身份缺陷；第二次报告不可采信，但其残留现已精确恢复并由事后审计证明干净。当前评测边界为 `PHASE3_COMPARISON_CLEANUP_RECOVERED_NEW_PAIRED_ONLINE_DEV_RUN_READY_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_3_OF_3_DOCUMENTS_9_OF_9_CASES_PASS`。恢复成功不构成质量增益、关键类不退化或在线增量延迟证据。Windows 阶段 2 分段证据仍为 base `P95=376.394385 ms`、combined `P95=504.71613 ms`，默认继续使用原 RRF，固定 Reranker和比较拆分都保持关闭；阶段 2 完成与阶段 3 本地实现均不代表 300 ms 或生产性能验收通过。运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 已完成入口冻结和默认关闭的比较拆分本地实现候选，因此为 `IN_PROGRESS`。第三次 Windows 运行在质量指标前因清理队列范围读取缺陷失败关闭，审计已冻结精确残留。当前评测边界为 `PHASE3_COMPARISON_THIRD_ATTEMPT_EXACT_CLEANUP_RECOVERY_READY_NO_QUALITY_RERUN_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_3_OF_3_DOCUMENTS_9_OF_9_CASES_PASS`。恢复准备与后续恢复成功都不构成质量增益、关键类不退化或在线增量延迟证据。Windows 阶段 2 分段证据仍为 base `P95=376.394385 ms`、combined `P95=504.71613 ms`，默认继续使用原 RRF，固定 Reranker 和比较拆分都保持关闭；不代表 300 ms 或生产性能验收通过。
 
 ## Next gate
 
-1. **同一质量 Gate 的 Windows 新运行：** 恢复已收口，只能使用全新 Run ID；验证 316 个持久化 Chunk 身份后先跑 Control，再只开比较拆分 Treatment；若 Control 不能复现冻结失败形态，停止 Treatment 但仍完成清理，且不读取 `test`；
-2. **新报告独立裁决：** 报告必须由版本化裁决器绑定 SHA-256、实际 HEAD、Run ID、输入/配置/目标身份、指标算术、清理和 holdout；旧 `_02` 报告不得参与质量判断；
-3. **dev 候选冻结：** 只有裁决 PASS 才能在新的本地 Gate 固化仍默认关闭的 dev 候选；失败或不可采信报告只记录证据，不调整冻结参数重跑；
-4. **封存 test 与独立性能：** test 只能在实现、配置、dev 结果和候选提交全部冻结后一次性运行，Acceptance 仍需明确授权；300 ms 性能 Gate 固定现有模型/snapshot、候选、RRF 与门槛，不与任何失败类型能力同时实施。
+1. **Windows `_03` 精确恢复：** 变更前重新证明审计冻结的 3 个 `INACTIVE` 版本、9 个 `PENDING/attempt=0` 三路任务、316 Chunk、3 PDF，且无其他全局非终态任务；只让既有 Worker 最多领取 9 个任务；
+2. **自动事后只读审计：** 只有 9 个任务全部 `SUCCEEDED`、Chunk/PDF/全局非终态清零且审计 `PASS/CLEAN` 才能收口；任何红色终止都不重试；
+3. **独立运行器修复 Gate：** 清理收口后，仅修正 psycopg `dict_row` 读取与增加对应回归，不改比较变量、默认 RRF、候选、阈值或 holdout；
+4. **继续封存质量与性能：** 当前不分配新质量 Run ID；test/Acceptance 仍封存，300 ms 性能 Gate继续独立。
 
 ## Prohibited shortcuts
 

@@ -55,7 +55,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | 阶段 0：范围与 Baseline | `COMPLETE` | 175 题人工校验、ES/Milvus 同集单路 Baseline、三种 Chunk 受控 Baseline、单用户范围/资源/SLO 及数据身份/生命周期目标合同均已冻结 | 冻结目标不等于运行时达标 |
 | 阶段 1：数据与索引最小闭环 | `COMPLETE` | 远程 v2 已通过 PDF/Chunk 持久化、owner/版本 READY 对账、ES/Milvus 在线 Evidence、同 Run ID 恢复、删除后 403 和三路清理；报告 SHA-256 `6B2AB3BAAD55AE8FA506C0D1FD7A310D9EF3A3833A93E33DD1A2D8A0938A9D8C` | 正式 MinIO、OCR 和目标规模性能不属于阶段 1 退出条件 |
 | 阶段 2：基础 RAG MVP | `COMPLETE` | 非流式 API、Evidence、拒答、远程 RRF Canary、llama3.2/Qwen READY 真实生成闭环、模型选型和 3 文档 9 题 v2 均通过；固定 BGE Reranker 的增益、目标硬件成本和在线边界已验证，最终决定为原 RRF 默认、Reranker 可选且不默认启用 | Windows 分段 Gate 的 combined `P95=504.71613 ms` 未通过 300 ms；这是显式后移的性能债，不写成 SLO 或生产验收完成 |
-| 阶段 3：针对失败类型增强 | `IN_PROGRESS` | 入口 Gate 已冻结 4 个 `dev` 双文档比较失衡样本、基线/增益/不退化线和单一变量；默认关闭实现、4/4 Control/Treatment 纯规划检查与报告裁决已完成；`_02` 残留已 9/9 清理且事后审计 `PASS/CLEAN` | 允许用全新 Run ID 重试同一冻结配对 dev；尚无可采信质量增益或不退化结论。`test/acceptance` 封存；300 ms 性能硬化保持独立 |
+| 阶段 3：针对失败类型增强 | `IN_PROGRESS` | 入口 Gate 已冻结 4 个 `dev` 双文档比较失衡样本、基线/增益/不退化线和单一变量；默认关闭实现与纯规划检查已完成；`_02` 残留曾 9/9 清理 | `_03` 在质量指标前因 `dict_row` 范围读取缺陷失败，审计确认 3 `INACTIVE`、9 `PENDING`、316 Chunk、3 PDF；先独立恢复，再单独修运行器。`test/acceptance` 封存，300 ms 性能 Gate 独立 |
 | 阶段 4：Claim–Evidence 可靠性 | `NOT_STARTED` | 尚未建立结构化 Claim、Claim–Evidence 映射及确定性支持检查 | 不用模型自评冒充确定性支持检查 |
 | 阶段 5：复杂科研问答与复用 | `NOT_STARTED` | 暂未完成比较、多跳、时效问答与 Agent Evidence API | 进入前需满足 MVP、权限委托、审计与运维条件 |
 
@@ -107,3 +107,12 @@ Chunk/PDF/全局非终态均为 0；恢复报告 SHA-256
 `F3C12A2F2F7C4D8E0F75EE8DB7B483B44C6509CF65FA0F0EE03779E296252790`。
 该结果不补造 `_02` 质量证据，只允许以新 Run ID 重试同一 dev Gate；PASS 分支
 仍只形成默认关闭的候选草案。
+
+第三次 Run ID `phase3_comparison_dev_20260723_03` 未形成质量指标；报告
+SHA-256 `A45EF2F9F030FEB6AAED05DECB33A019CFA7920FAF6E1F1ABEB7189C242E339EC`
+在清理 `VERIFY_QUEUE_SCOPE` 阶段失败。只读审计 SHA-256
+`E9430BE17811C60116630F718C182A3FFD0A12FFD83F753EBB5FDFBA0420112B`
+确认 3 个版本全部 `INACTIVE`、9 个三路任务全部 `PENDING/attempt=0`、
+316 Chunk、3 PDF，且全局非终态正好是这 9 个。根因是 psycopg `dict_row`
+被错误按元组解包，队列真实值未参与比较。当前只准备绑定该审计的精确恢复，
+不在同一 Gate 修运行器或重跑质量。

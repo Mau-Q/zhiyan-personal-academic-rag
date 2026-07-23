@@ -4,6 +4,11 @@ param(
     [Parameter(Mandatory = $true)]
     [ValidatePattern('^[0-9a-f]{40}$')]
     [string]$ExpectedHeadCommit,
+    [ValidateSet(
+        'phase3_comparison_dev_20260723_02',
+        'phase3_comparison_dev_20260723_03'
+    )]
+    [string]$RunId = 'phase3_comparison_dev_20260723_02',
     [string]$DatabaseHost = '127.0.0.1',
     [ValidateRange(1, 65535)]
     [int]$DatabasePort = 5432,
@@ -12,10 +17,18 @@ param(
 )
 
 # Target: Windows PowerShell 5.1 on the user-operated Windows validation host.
-# This processes only the frozen `_02` nine-job cleanup queue, then audits it.
+# This processes one explicitly frozen nine-job cleanup queue, then audits it.
 $ErrorActionPreference = 'Stop'
 $databaseUrlCreatedByScript = $false
-$runId = 'phase3_comparison_dev_20260723_02'
+
+$confirmation = switch ($RunId) {
+    'phase3_comparison_dev_20260723_02' {
+        'RECOVER_EXACT_PHASE3_COMPARISON_02_CLEANUP'
+    }
+    'phase3_comparison_dev_20260723_03' {
+        'RECOVER_EXACT_PHASE3_COMPARISON_03_CLEANUP'
+    }
+}
 
 if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
     $RepositoryRoot = Join-Path -Path $PSScriptRoot -ChildPath '..\..\..'
@@ -100,13 +113,15 @@ try {
         }
     }
 
-    $recoveryPath = "runtime\phase3-comparison-cleanup-recovery-$runId.json"
+    $recoveryPath = "runtime\phase3-comparison-cleanup-recovery-$RunId.json"
     $recoveryArguments = @(
         'scripts/recover_phase3_comparison_cleanup.py',
+        '--run-id',
+        $RunId,
         '--expected-head-commit',
         $ExpectedHeadCommit,
         '--confirm',
-        'RECOVER_EXACT_PHASE3_COMPARISON_02_CLEANUP',
+        $confirmation,
         '--output',
         $recoveryPath
     )
@@ -121,12 +136,12 @@ try {
     ).Hash
 
     $auditPath = (
-        "runtime\phase3-comparison-cleanup-post-recovery-audit-$runId.json"
+        "runtime\phase3-comparison-cleanup-post-recovery-audit-$RunId.json"
     )
     $auditArguments = @(
         'scripts/audit_phase3_comparison_cleanup_state.py',
         '--run-id',
-        $runId,
+        $RunId,
         '--output',
         $auditPath
     )
@@ -142,7 +157,7 @@ try {
 
     $summary = [ordered]@{
         schema_version = 'phase3_comparison_cleanup_recovery_summary_v1'
-        run_id = $runId
+        run_id = $RunId
         head_commit = $headCommit
         recovery_status = $recovery.status
         recovery_stage = $recovery.stage

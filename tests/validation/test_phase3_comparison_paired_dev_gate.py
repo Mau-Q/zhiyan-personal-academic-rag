@@ -213,6 +213,12 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
         self.assertIn("Target: Windows PowerShell 5.1", script)
         self.assertIn("$headCommit -ne $ExpectedHeadCommit", script)
         self.assertIn("RECOVER_EXACT_PHASE3_COMPARISON_02_CLEANUP", script)
+        self.assertIn("RECOVER_EXACT_PHASE3_COMPARISON_03_CLEANUP", script)
+        self.assertIn(
+            "'phase3_comparison_dev_20260723_03'",
+            script,
+        )
+        self.assertIn("'--run-id'", script)
         self.assertIn("scripts/recover_phase3_comparison_cleanup.py", script)
         self.assertIn("scripts/audit_phase3_comparison_cleanup_state.py", script)
         self.assertIn("-AsSecureString", script)

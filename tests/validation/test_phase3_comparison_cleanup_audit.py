@@ -9,6 +9,7 @@ from scripts.audit_phase3_comparison_cleanup_state import (
 from scripts.recover_phase3_comparison_cleanup import (
     EXPECTED_BACKENDS,
     EXPECTED_OWNER,
+    FROZEN_RECOVERY_CASES,
     RecoveryError,
     _postcondition_pass,
     _require_frozen_precondition,
@@ -183,6 +184,21 @@ def _recovery_snapshot(status: str = "PENDING") -> dict[str, object]:
 
 
 class Phase3ComparisonCleanupRecoveryTests(unittest.TestCase):
+    def test_only_read_only_audited_runs_are_frozen_for_recovery(self):
+        self.assertEqual(
+            set(FROZEN_RECOVERY_CASES),
+            {
+                "phase3_comparison_dev_20260723_02",
+                "phase3_comparison_dev_20260723_03",
+            },
+        )
+        self.assertEqual(
+            FROZEN_RECOVERY_CASES[
+                "phase3_comparison_dev_20260723_03"
+            ]["audit_sha256"],
+            "e9430be17811c60116630f718c182a3ffd0a12ffd83f753ebb5fdfba0420112b",
+        )
+
     def test_frozen_pending_snapshot_is_the_only_recovery_precondition(self):
         snapshot = _recovery_snapshot()
         _require_frozen_precondition(snapshot)
@@ -196,6 +212,22 @@ class Phase3ComparisonCleanupRecoveryTests(unittest.TestCase):
             "FROZEN_RECOVERY_PRECONDITION_MISMATCH",
         ):
             _require_frozen_precondition(snapshot)
+
+    def test_recovery_owner_scope_is_pinned_per_run(self):
+        snapshot = _recovery_snapshot()
+        expected_owner = (
+            "phase3_comparison_canary_phase3_comparison_dev_20260723_03"
+        )
+        snapshot["global_nonterminal"] = tuple(
+            {**row, "owner_id": expected_owner}
+            for row in snapshot["global_nonterminal"]
+        )
+        _require_frozen_precondition(snapshot, expected_owner)
+        with self.assertRaisesRegex(
+            RecoveryError,
+            "FROZEN_RECOVERY_PRECONDITION_MISMATCH",
+        ):
+            _require_frozen_precondition(snapshot, EXPECTED_OWNER)
 
     def test_postcondition_requires_nine_succeeded_and_zero_snapshots(self):
         snapshot = _recovery_snapshot(status="SUCCEEDED")

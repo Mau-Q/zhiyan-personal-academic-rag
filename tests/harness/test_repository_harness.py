@@ -187,7 +187,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "CLEANUP_RECOVERY_COMPLETE_PAIRED_ONLINE_DEV_RETRY_READY",
+            "THIRD_WINDOWS_ATTEMPT_CLEANUP_RECOVERY_READY",
         )
         self.assertEqual(
             payload["source_phase"], {"id": "phase-3", "status": "IN_PROGRESS"}
@@ -206,7 +206,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["paired_online_user_entry"]["status"],
-            "SECOND_WINDOWS_ATTEMPT_CLEANLY_RECOVERED_NEW_QUALITY_RUN_READY",
+            "THIRD_WINDOWS_ATTEMPT_RESIDUAL_CONFIRMED_RECOVERY_READY",
         )
         self.assertEqual(
             payload["windows_attempts"][0]["status"],
@@ -225,6 +225,10 @@ class RepositoryHarnessTests(unittest.TestCase):
             "REPORT_CLEANUP_PROOF_INVALID",
         )
         self.assertEqual(
+            payload["windows_attempts"][2]["cleanup_stage"],
+            "VERIFY_QUEUE_SCOPE",
+        )
+        self.assertEqual(
             payload["cleanup_audit_gate"]["mode"],
             "POSTGRESQL_READ_ONLY_OWNER_SCOPED_PLUS_GLOBAL_NONTERMINAL_COUNT",
         )
@@ -234,6 +238,10 @@ class RepositoryHarnessTests(unittest.TestCase):
         self.assertEqual(
             payload["cleanup_recovery_gate"]["single_action"],
             "RUN_EXISTING_PERSISTENT_CLEANUP_WORKER_MAX_NINE",
+        )
+        self.assertEqual(
+            payload["cleanup_recovery_gate"]["status"],
+            "READY_AWAITING_USER_RUN",
         )
         self.assertFalse(payload["cleanup_recovery_gate"]["quality_gate_run"])
         self.assertEqual(payload["cleanup_recovery_result"]["jobs_succeeded"], 9)
@@ -259,7 +267,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "PAIRED_ONLINE_DEV_RETRY_READY_AFTER_CLEAN_RECOVERY",
+            "CLEANUP_RECOVERY_READY_AFTER_THIRD_ATTEMPT_RESIDUAL",
         )
         self.assertEqual(payload["decision_id"], "PD-042")
         self.assertEqual(
@@ -296,16 +304,20 @@ class RepositoryHarnessTests(unittest.TestCase):
             payload["cleanup_audit_boundary"]["postgresql_transaction"],
             "READ_ONLY",
         )
-        self.assertTrue(
+        self.assertFalse(
             payload["cleanup_audit_boundary"]["quality_rerun_authorized"]
         )
         self.assertEqual(
             payload["cleanup_audit_boundary"]["next_gate"],
-            "NEW_RUN_ID_PAIRED_ONLINE_DEV_QUALITY_GATE",
+            "EXACT_NINE_JOB_CLEANUP_RECOVERY_THEN_READ_ONLY_AUDIT",
         )
         self.assertEqual(
             payload["cleanup_recovery_evidence"]["post_recovery_audit"],
             "PASS_CLEAN",
+        )
+        self.assertEqual(
+            payload["pending_cleanup_recovery"]["run_id"],
+            "phase3_comparison_dev_20260723_03",
         )
 
     def test_validator_rejects_template_as_concrete_phase_result(self):

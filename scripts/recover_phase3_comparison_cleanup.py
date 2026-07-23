@@ -1,4 +1,4 @@
-"""Recover the exact frozen Phase 3 `_02` pending cleanup queue once."""
+"""Recover one explicitly frozen Phase 3 pending cleanup queue once."""
 
 from __future__ import annotations
 
@@ -35,6 +35,20 @@ SCHEMA_VERSION = "phase3_comparison_cleanup_recovery_v1"
 CONFIRMATION = "RECOVER_EXACT_PHASE3_COMPARISON_02_CLEANUP"
 FROZEN_RUN_ID = "phase3_comparison_dev_20260723_02"
 EXPECTED_OWNER = f"phase3_comparison_canary_{FROZEN_RUN_ID}"
+FROZEN_RECOVERY_CASES = {
+    FROZEN_RUN_ID: {
+        "confirmation": CONFIRMATION,
+        "audit_sha256": (
+            "a3fbddc29acaaab0e72edcd889f14a198f238f523a08588d5d486765999498cf"
+        ),
+    },
+    "phase3_comparison_dev_20260723_03": {
+        "confirmation": "RECOVER_EXACT_PHASE3_COMPARISON_03_CLEANUP",
+        "audit_sha256": (
+            "e9430be17811c60116630f718c182a3ffd0a12ffd83f753ebb5fdfba0420112b"
+        ),
+    },
+}
 EXPECTED_BACKENDS = {
     "elasticsearch_chunks",
     "milvus_vectors",
@@ -53,6 +67,7 @@ class RecoveryError(RuntimeError):
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--run-id", default=FROZEN_RUN_ID)
     parser.add_argument("--expected-head-commit", required=True)
     parser.add_argument("--confirm", required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -132,7 +147,10 @@ def _count(connection: Any, table: str, owner_id: str) -> int:
     return int(row["row_count"])
 
 
-def _snapshot(connection: Any) -> dict[str, Any]:
+def _snapshot(
+    connection: Any,
+    expected_owner: str = EXPECTED_OWNER,
+) -> dict[str, Any]:
     versions = _rows(
         connection,
         """
@@ -141,7 +159,7 @@ def _snapshot(connection: Any) -> dict[str, Any]:
         WHERE owner_id = %s
         ORDER BY document_version_id
         """,
-        (EXPECTED_OWNER,),
+        (expected_owner,),
     )
     owner_cleanup = _rows(
         connection,
@@ -151,7 +169,7 @@ def _snapshot(connection: Any) -> dict[str, Any]:
         WHERE owner_id = %s
         ORDER BY document_version_id, backend
         """,
-        (EXPECTED_OWNER,),
+        (expected_owner,),
     )
     global_nonterminal = _rows(
         connection,
@@ -170,13 +188,13 @@ def _snapshot(connection: Any) -> dict[str, Any]:
         "ingestion_job_count": _count(
             connection,
             "rag_ingestion_jobs",
-            EXPECTED_OWNER,
+            expected_owner,
         ),
-        "chunk_rows": _count(connection, "rag_chunks", EXPECTED_OWNER),
+        "chunk_rows": _count(connection, "rag_chunks", expected_owner),
         "pdf_object_rows": _count(
             connection,
             "rag_pdf_objects",
-            EXPECTED_OWNER,
+            expected_owner,
         ),
     }
 
@@ -206,7 +224,10 @@ def _summary(snapshot: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _require_frozen_precondition(snapshot: dict[str, Any]) -> None:
+def _require_frozen_precondition(
+    snapshot: dict[str, Any],
+    expected_owner: str = EXPECTED_OWNER,
+) -> None:
     version_ids = {
         row["document_version_id"] for row in snapshot["versions"]
     }
@@ -237,7 +258,7 @@ def _require_frozen_precondition(snapshot: dict[str, Any]) -> None:
         )
         or len(snapshot["global_nonterminal"]) != EXPECTED_JOBS
         or any(
-            row["owner_id"] != EXPECTED_OWNER
+            row["owner_id"] != expected_owner
             for row in snapshot["global_nonterminal"]
         )
         or snapshot["chunk_rows"] != EXPECTED_CHUNKS
@@ -267,7 +288,9 @@ def _postcondition_pass(snapshot: dict[str, Any]) -> bool:
 
 def _error_report(
     *,
+    run_id: str,
     expected_head_commit: str,
+    audit_sha256: str | None,
     stage: str,
     error_code: str,
     precondition: dict[str, Any] | None,
@@ -275,7 +298,7 @@ def _error_report(
 ) -> dict[str, Any]:
     return {
         "schema_version": SCHEMA_VERSION,
-        "run_id": FROZEN_RUN_ID,
+        "run_id": run_id,
         "expected_head_commit": expected_head_commit,
         "status": "FAIL",
         "stage": stage,
@@ -289,6 +312,7 @@ def _error_report(
             "acceptance_read_or_run": False,
             "performance_gate_run": False,
             "services_restarted": False,
+            "frozen_read_only_audit_sha256": audit_sha256,
         },
     }
 
@@ -298,8 +322,12 @@ def run_recovery(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
     postcondition: dict[str, Any] | None = None
     connection: Any | None = None
     stage = "VALIDATE_INPUT"
+    recovery_case: dict[str, str] | None = None
     try:
-        if args.confirm != CONFIRMATION:
+        recovery_case = FROZEN_RECOVERY_CASES.get(args.run_id)
+        if recovery_case is None:
+            raise RecoveryError("RECOVERY_RUN_ID_NOT_FROZEN")
+        if args.confirm != recovery_case["confirmation"]:
             raise RecoveryError("RECOVERY_CONFIRMATION_REQUIRED")
         if (
             not _GIT_COMMIT.fullmatch(args.expected_head_commit)
@@ -323,9 +351,10 @@ def run_recovery(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
 
         connection = connect_postgres(database_url)
         stage = "VERIFY_FROZEN_PRECONDITION"
-        initial = _snapshot(connection)
+        expected_owner = f"phase3_comparison_canary_{args.run_id}"
+        initial = _snapshot(connection, expected_owner)
         precondition = _summary(initial)
-        _require_frozen_precondition(initial)
+        _require_frozen_precondition(initial, expected_owner)
         connection.rollback()
 
         stage = "RUN_EXACT_CLEANUP_WORKER"
@@ -354,7 +383,7 @@ def run_recovery(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         results = worker.run_batch(max_jobs=EXPECTED_JOBS)
 
         stage = "VERIFY_POSTCONDITION"
-        final = _snapshot(connection)
+        final = _snapshot(connection, expected_owner)
         postcondition = _summary(final)
         passed = (
             len(results) == EXPECTED_JOBS
@@ -363,7 +392,7 @@ def run_recovery(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         )
         report = {
             "schema_version": SCHEMA_VERSION,
-            "run_id": FROZEN_RUN_ID,
+            "run_id": args.run_id,
             "expected_head_commit": args.expected_head_commit,
             "status": "PASS" if passed else "FAIL",
             "stage": "COMPLETE" if passed else stage,
@@ -379,6 +408,7 @@ def run_recovery(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
                 "acceptance_read_or_run": False,
                 "performance_gate_run": False,
                 "services_restarted": False,
+                "frozen_read_only_audit_sha256": recovery_case["audit_sha256"],
             },
         }
         connection.rollback()
@@ -400,7 +430,13 @@ def run_recovery(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
                 connection.close()
     return (
         _error_report(
+            run_id=args.run_id,
             expected_head_commit=args.expected_head_commit,
+            audit_sha256=(
+                recovery_case["audit_sha256"]
+                if recovery_case is not None
+                else None
+            ),
             stage=stage,
             error_code=error_code,
             precondition=precondition,

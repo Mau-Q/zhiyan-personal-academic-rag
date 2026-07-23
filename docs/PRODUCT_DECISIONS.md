@@ -48,5 +48,6 @@
 | PD-044 | ACCEPTED | 第二次 Windows 配对 dev 报告因清理证明失败而不可采信；在任何质量复跑前，先用版本固定、owner-scoped、PostgreSQL `READ ONLY` 审计证明版本全部失活、清理任务终态成功且 Chunk/PDF 快照清零 | 运行器必须分别保留主失败码和清理阶段失败码，不再用通用清理异常覆盖原始原因。审计不查询 ES/Milvus、不重启服务、不执行清理、不读取 `test/acceptance`；若发现残留，只能进入独立恢复 Gate，不能手工删除或与质量增强、300 ms 性能 Gate 合并 |
 | PD-045 | ACCEPTED | `_02` 只读审计确认 3 个版本均 `INACTIVE`，但 9 个三路任务均为 `PENDING/attempt=0`，316 Chunk 与 3 PDF 快照仍在；恢复 Gate 只允许现有持久化 Worker 领取这 9 个精确任务一次 | 变更前必须重新证明没有其他全局非终态任务、版本/任务/backend/计数与审计完全一致；完成条件为 9 个任务 `SUCCEEDED`、Chunk/PDF 清零并通过独立只读审计。不得重跑质量、读取 `test/acceptance`、重启服务、手工删除或顺带处理性能债 |
 | PD-046 | ACCEPTED | `_02` 精确恢复 Gate 已 9/9 `SUCCEEDED`，Chunk/PDF/全局非终态任务均清零，事后只读审计 `PASS/CLEAN`；允许以全新 Run ID 重试同一冻结配对 dev 质量 Gate | 恢复成功只清除旧运行残留，不补造 `_02` 质量证据。新运行继续固定 dev 输入、配置、候选 20、RRF `k=60`、Top-3、默认关闭与 Control 停止规则；`test/acceptance` 和 300 ms 性能 Gate仍不参与 |
+| PD-047 | ACCEPTED | `_03` 在 Control/Treatment 指标前因 PostgreSQL `dict_row` 被错误按元组解包而误判清理队列范围；只先恢复审计冻结的 3 个 `INACTIVE` 版本、9 个 `PENDING/attempt=0` 任务、316 Chunk 和 3 PDF | `_03` 只读审计 SHA-256 为 `E9430BE17811C60116630F718C182A3FFD0A12FFD83F753EBB5FDFBA0420112B`，全局非终态正好是同一 9 任务。恢复入口必须绑定已冻结 Run ID 与审计 SHA，最多让既有 Worker 领取 9 个任务并自动事后审计；本 Gate 不修运行器、不重跑质量、不读取 `test/acceptance`、不处理 300 ms 性能债 |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。
