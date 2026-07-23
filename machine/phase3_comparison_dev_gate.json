@@ -1,6 +1,6 @@
 {
   "schema_version": "phase3_comparison_dev_gate_v1",
-  "status": "USER_RUNNER_RETRY_READY_AWAITING_PAIRED_ONLINE_DEV",
+  "status": "CLEANUP_AUDIT_READY_AWAITING_WINDOWS_READ_ONLY_AUDIT",
   "source_phase": {
     "id": "phase-3",
     "status": "IN_PROGRESS"
@@ -50,12 +50,15 @@
   },
   "paired_online_user_entry": {
     "decision_id": "PD-041",
-    "status": "WINDOWS_PRE_SERVICE_REJECTED_CONFIG_LINE_ENDING_REPAIR_READY_FOR_RETRY",
+    "status": "SECOND_WINDOWS_ATTEMPT_UNTRUSTED_CLEANUP_AUDIT_REQUIRED",
     "package_builder": "scripts/build_phase3_comparison_dev_package.py",
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "report_adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
     "report_intake": "machine/phase3_comparison_report_intake.json",
     "windows_powershell_51_entry": "deploy/remote/phase3-comparison-validation/run_phase3_comparison_paired_dev_gate.ps1",
+    "cleanup_audit_decision_id": "PD-044",
+    "cleanup_auditor": "scripts/audit_phase3_comparison_cleanup_state.py",
+    "windows_cleanup_audit_entry": "deploy/remote/phase3-comparison-validation/audit_phase3_comparison_cleanup_state.ps1",
     "runbook": "deploy/remote/phase3-comparison-validation/README.md",
     "input_boundary": "PRIVATE_DEV_ONLY_105_ROWS_316_FROZEN_CHUNKS_FIXED_15_CANARY_THREE_PDFS_TEST_ACCEPTANCE_EXCLUDED",
     "lifecycle": "ISOLATED_OWNER_THREE_READY_VERSIONS_NINE_CLEANUP_JOBS_DELETED_ANSWER_API_403_REQUIRED",
@@ -65,22 +68,37 @@
     "ndcg_at_10_boundary": "EVALUATION_DIAGNOSTIC_WITHIN_EXISTING_CANDIDATE_20_PRODUCT_FINAL_TOP3_UNCHANGED",
     "absolute_300ms_slo_adjudication": false
   },
-  "windows_attempt": {
-    "run_id": "phase3_comparison_dev_20260723_01",
-    "head_commit": "c8785f7220089302e54db8d06c6a6adde0dbc898",
-    "status": "REJECTED_BEFORE_SERVICES",
-    "adjudication_error_code": "REPORT_CONFIG_IDENTITY_MISMATCH",
-    "report_sha256": "ac081a26fd331f00659be3e950537a9b22d46e75c1f3303b1bfefbd7d7706827",
-    "adjudication_sha256": "eb0ce6f786963b65e859496405f4f12018c93ab43015b0e759d306141b1714f6",
-    "expected_lf_config_sha256": "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2b",
-    "observed_crlf_config_sha256": "491509223178e63bafa7ebecdfc4f0a2efedd6a1fcd6fdd935476966423f9889",
-    "git_core_autocrlf": true,
-    "online_quality_executed": false,
-    "infrastructure_mutation_started": false
-  },
+  "windows_attempts": [
+    {
+      "run_id": "phase3_comparison_dev_20260723_01",
+      "head_commit": "c8785f7220089302e54db8d06c6a6adde0dbc898",
+      "status": "REJECTED_BEFORE_SERVICES",
+      "adjudication_error_code": "REPORT_CONFIG_IDENTITY_MISMATCH",
+      "report_sha256": "ac081a26fd331f00659be3e950537a9b22d46e75c1f3303b1bfefbd7d7706827",
+      "adjudication_sha256": "eb0ce6f786963b65e859496405f4f12018c93ab43015b0e759d306141b1714f6",
+      "expected_lf_config_sha256": "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2b",
+      "observed_crlf_config_sha256": "491509223178e63bafa7ebecdfc4f0a2efedd6a1fcd6fdd935476966423f9889",
+      "git_core_autocrlf": true,
+      "online_quality_executed": false,
+      "infrastructure_mutation_started": false
+    },
+    {
+      "run_id": "phase3_comparison_dev_20260723_02",
+      "head_commit": "ac1e5994f8e35648750d912b9a778c2a46682c3c",
+      "status": "REJECTED_CLEANUP_PROOF_FAILED",
+      "report_error_code": "CLEANUP_PROOF_FAILED",
+      "adjudication_error_code": "REPORT_CLEANUP_PROOF_INVALID",
+      "report_sha256": "423d736d496be0afa1cc06a90e3402b060c519f74c17d9c4939e31a50304e276",
+      "adjudication_sha256": "74a599288445f1c2267f892a81b5f6b8bd3d5002d4a67e6be6700645d3516981",
+      "reported_cleanup_stage": "UNAVAILABLE_IN_V1_REPORT",
+      "reported_identity": null,
+      "online_quality_executed": "UNKNOWN_REPORT_NOT_TRUSTWORTHY",
+      "infrastructure_mutation_started": "UNKNOWN_REQUIRES_READ_ONLY_AUDIT"
+    }
+  ],
   "paired_online_dev_quality": {
     "status": "NOT_RUN",
-    "reason": "The first user-run Windows attempt was rejected before service connection because core.autocrlf changed only the config line endings; no online ES-Milvus-RRF paired replay was performed.",
+    "reason": "The first Windows attempt stopped before services. The second report was rejected because cleanup proof failed and the v1 report masked both the primary failure and cleanup stage; no online quality result is accepted until the isolated owner scope is proven clean by the read-only audit.",
     "control_baseline": null,
     "treatment_gain": null,
     "critical_non_regression": null
@@ -93,6 +111,16 @@
   "rollback": {
     "action": "Set PHASE3_COMPARISON_DECOMPOSITION_ENABLED=false or omit the route query planner.",
     "data_schema_index_model_cleanup_required": false
+  },
+  "cleanup_audit_gate": {
+    "status": "READY_AWAITING_USER_RUN",
+    "run_id": "phase3_comparison_dev_20260723_02",
+    "mode": "POSTGRESQL_READ_ONLY_OWNER_SCOPED_PLUS_GLOBAL_NONTERMINAL_COUNT",
+    "quality_rerun_allowed_before_clean": false,
+    "manual_cleanup_allowed": false,
+    "test_acceptance_read_allowed": false,
+    "elasticsearch_milvus_direct_query_allowed": false,
+    "residual_outcome": "REQUIRES_SEPARATE_RECOVERY_GATE"
   },
   "independent_performance_gate": {
     "status": "PENDING_SEPARATE_GATE",

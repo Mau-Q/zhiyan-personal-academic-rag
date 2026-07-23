@@ -75,6 +75,7 @@ phase3-comparison-dev-package:
 phase3-comparison-gate-test:
 	$(PROJECT_PYTHON) -m unittest -v \
 		tests.validation.test_phase3_comparison_paired_dev_gate \
+		tests.validation.test_phase3_comparison_cleanup_audit \
 		tests.validation.test_phase3_comparison_report_adjudication
 
 fixed-reranker-test:

@@ -4,7 +4,7 @@
 
 `SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_COMPARISON_RUNNER_REPAIR_READY_AWAITING_PAIRED_DEV_RETRY / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
-Phase ID：`source-phase3-comparison-runner-repair-ready-awaiting-paired-dev-retry`
+Phase ID：`source-phase3-comparison-cleanup-audit-ready-awaiting-windows-read-only-audit`
 
 ## Completed
 
@@ -178,13 +178,15 @@ Phase ID：`source-phase3-comparison-runner-repair-ready-awaiting-paired-dev-ret
 - 阶段 3 入口已冻结，并完成唯一变量 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的默认关闭本地实现候选：4 个冻结 `dev` 的 Control 原问题保持 `4/4`、Treatment 确定性规划 `4/4`，120 次纯拆分本地 P95 为 `0.016271 ms`；隔离三文档在线 runner、私有 dev 输入包和 Windows PowerShell 5.1 用户入口已通过本地契约/静态检查，但尚未运行真实在线配对检索，故不写成质量增益或不退化通过。`test/acceptance` 保持封存，固定 Reranker 和默认 RRF 不变。
 - 阶段 3 配对 dev 报告的独立裁决入口已准备：报告必须绑定实际 Git HEAD、Run ID 和 SHA-256，并重新验证输入/配置/目标身份、指标算术、9 路清理、删除后 403 与 holdout 隔离；PASS 只形成默认关闭的 dev 候选草案，不能自动解封 `test`。
 - 首次 Windows Run ID `phase3_comparison_dev_20260723_01` 在连接服务前因 `core.autocrlf=true` 把冻结 JSON 检出为 CRLF 而被拒绝；报告 SHA-256 为 `AC081A26FD331F00659BE3E950537A9B22D46E75C1F3303B1BFEFBD7D7706827`，裁决 SHA-256 为 `EB0CE6F786963B65E859496405F4F12018C93AB43015B0E759D306141B1714F6`。该尝试没有运行在线 Control/Treatment、没有写入基础设施，也不是质量证据；运行器现只将纯 CRLF 规范化为 LF 后核对原冻结 SHA，内容漂移仍失败关闭，等待新提交和新 Run ID 重试。
+- 第二次 Windows Run ID `phase3_comparison_dev_20260723_02` 在提交 `ac1e5994f8e35648750d912b9a778c2a46682c3c` 上通过配置身份后以 `CLEANUP_PROOF_FAILED` 结束；报告 SHA-256 为 `423D736D496BE0AFA1CC06A90E3402B060C519F74C17D9C4939E31A50304E276`，裁决 SHA-256 为 `74A599288445F1C2267F892A81B5F6B8BD3D5002D4A67E6BE6700645D3516981`，错误码为 `REPORT_CLEANUP_PROOF_INVALID`。旧通用异常路径没有保留主失败或清理阶段，`identity=null`，因此该报告既不是质量证据，也不能证明隔离 owner 已清理。
+- 运行器现分别保留 `primary_error_code`、清理阶段、已观察/成功任务数与稳定阶段错误；版本固定的 Windows PowerShell 5.1 审计入口只在 PostgreSQL `READ ONLY` 事务中查询 `_02` owner 的版本、入库任务、三路清理任务、Chunk/PDF 快照聚合及全局非终态清理任务计数，不暴露其他 owner、不直接查询 ES/Milvus、不修改数据、不重启服务、不读取 `test/acceptance`。审计返回 `CLEAN` 前禁止新质量 Run ID；残留只能进入独立恢复 Gate。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：阶段 3 比较拆分已进入默认关闭的本地实现，用户运行入口已就绪但真实 PostgreSQL READY + ES/Milvus + RRF 配对 dev 质量与不退化仍待用户运行验证，尚未进入 `test`；正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层继续后置；固定 Reranker 在当前 300 ms SLO 下不默认启用；
+- 未完成能力：阶段 3 比较拆分已进入默认关闭的本地实现，但第二次 Windows 报告因清理证明失败而不可采信；必须先审计 `_02` 隔离 owner，再决定恢复或新的配对 dev 质量运行，尚未进入 `test`；正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层继续后置；固定 Reranker 在当前 300 ms SLO 下不默认启用；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -222,15 +224,15 @@ Phase ID：`source-phase3-comparison-runner-repair-ready-awaiting-paired-dev-ret
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 已完成入口冻结、默认关闭的比较拆分本地实现候选、用户运行入口和报告裁决准备，因此为 `IN_PROGRESS`。首次 Windows 尝试只证明跨平台 CRLF 配置身份缺陷并在服务连接前失败关闭，修复已准备，当前评测边界为 `PHASE3_COMPARISON_RUNNER_REPAIR_READY_CONTROL_4_OF_4_TREATMENT_PLAN_4_OF_4_PAIRED_ONLINE_DEV_NOT_RUN_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_3_OF_3_DOCUMENTS_9_OF_9_CASES_PASS`。本地规划、运行器和裁决器静态证据不证明真实 ES/Milvus RRF 增益、关键类不退化或在线增量延迟。Windows 阶段 2 分段证据仍为 base `P95=376.394385 ms`、combined `P95=504.71613 ms`，默认继续使用原 RRF，固定 Reranker 和比较拆分都保持关闭；阶段 2 完成与阶段 3 本地实现均不代表 300 ms 或生产性能验收通过。运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 已完成入口冻结、默认关闭的比较拆分本地实现候选、用户运行入口和报告裁决准备，因此为 `IN_PROGRESS`。第一次 Windows 尝试证明并修复了 CRLF 配置身份缺陷；第二次报告因清理证明失败且未保留主失败/清理阶段而不可采信。当前评测边界为 `PHASE3_COMPARISON_CLEANUP_AUDIT_READY_SECOND_REPORT_UNTRUSTED_NO_QUALITY_RERUN_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_3_OF_3_DOCUMENTS_9_OF_9_CASES_PASS`。本地规划、运行器、裁决器与只读审计的静态证据不证明真实 ES/Milvus RRF 增益、关键类不退化、在线增量延迟或 `_02` 已清理。Windows 阶段 2 分段证据仍为 base `P95=376.394385 ms`、combined `P95=504.71613 ms`，默认继续使用原 RRF，固定 Reranker 和比较拆分都保持关闭；阶段 2 完成与阶段 3 本地实现均不代表 300 ms 或生产性能验收通过。运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
 
 ## Next gate
 
-1. **同一质量 Gate 的 Windows 重试节点：** 只在跨平台配置身份修复提交由用户推送后，使用新 Run ID 按版本化入口重试；纯 CRLF 必须回放到原冻结 SHA，随后才允许创建隔离 owner 的三文档临时 READY 范围；验证 316 个持久化 Chunk 身份后先跑原问题 Control，再只开比较拆分 Treatment；若 Control 不能重现冻结失败形态，立即停止 Treatment，仍完成 9 路清理，且不读取 `test`；
-2. **dev 报告独立裁决：** Windows 完整报告必须由版本化裁决器核对报告 SHA-256、实际 HEAD、Run ID、输入/配置/目标身份、指标算术、清理和 holdout 隔离；不满足则报告不可采信并保持默认关闭；
-3. **dev 决策冻结提交：** 只有裁决 PASS 才能在新的本地 Gate 固化 dev 候选；该提交仍保持开关默认关闭，且不得顺便运行 `test`；
-4. **封存 test 的一次性 Gate：** 只有实现、配置、dev 结果和候选提交全部冻结后才可运行；不得以 test 结果反向调参，Acceptance 仍需用户另行明确授权；
-5. **独立性能携带 Gate：** 固定现有模型/snapshot、候选边界、RRF 和 300 ms 门槛，评估基础检索性能债；不得与比较拆分或其他失败类型能力同时实施。
+1. **Windows `_02` 只读残留审计：** 用户推送本地修复提交后，只运行版本化审计入口；固定 Run ID `phase3_comparison_dev_20260723_02`，仅查询 PostgreSQL owner 范围。若结果不是 `status=PASS / decision=CLEAN`，立即停止，不运行质量 Gate、不手工清理；
+2. **条件式独立恢复 Gate：** 只有审计发现残留时才设计；根据版本、任务和快照聚合确定一个恢复动作，完成后重新只读审计。不得与比较拆分质量、test、Acceptance 或 300 ms 性能合并；
+3. **同一质量 Gate 的 Windows 新运行：** 只有审计证明 `CLEAN` 后，才以新 Run ID 重跑；验证 316 个持久化 Chunk 身份后先跑 Control，再只开比较拆分 Treatment；若 Control 不能重现冻结失败形态，停止 Treatment但仍完成清理，且不读取 `test`；
+4. **dev 报告独立裁决与冻结：** 完整报告必须绑定 SHA-256、实际 HEAD、Run ID、输入/配置/目标身份、指标算术、清理和 holdout；只有裁决 PASS 才能在新的本地 Gate 固化仍默认关闭的 dev 候选；
+5. **封存 test 与独立性能：** test 只能在实现、配置、dev 结果和候选提交全部冻结后一次性运行，Acceptance 仍需明确授权；300 ms 性能 Gate 固定现有模型/snapshot、候选、RRF 与门槛，不与任何失败类型能力同时实施。
 
 ## Prohibited shortcuts
 

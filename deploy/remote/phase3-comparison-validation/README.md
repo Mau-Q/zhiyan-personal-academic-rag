@@ -48,6 +48,23 @@ unzip -p runtime/handoffs/phase3-comparison-paired-dev-input-v1.zip manifest.jso
 
 ## 2. Windows：仅在 Mac 推送成功后运行
 
+当前不要再次运行质量 Gate。`phase3_comparison_dev_20260723_02` 的旧报告因
+清理证明失败而不可采信，必须先在新修复提交上执行只读审计：
+
+```text
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\deploy\remote\phase3-comparison-validation\audit_phase3_comparison_cleanup_state.ps1 -ExpectedHeadCommit <NEW_COMMIT_SHA>
+```
+
+脚本已填入待审计 Run ID `_02` 与现有本机数据库默认值，只在 PostgreSQL
+`READ ONLY` 事务中查询该 owner 的聚合状态和不含 owner 身份的全局非终态清理
+任务计数；不连接 ES/Milvus、不重启服务、不执行删除、不读取
+`test/acceptance`。回传终端 JSON 与
+`runtime\phase3-comparison-cleanup-audit-phase3_comparison_dev_20260723_02.json`
+的 SHA-256。只有 `status=PASS / decision=CLEAN` 才能另行准备新的质量 Run ID；
+若为 `RESIDUAL_REQUIRES_RECOVERY_GATE`，停止并保留报告，不要手工清理。
+
+以下原质量入口仅在后续状态文件明确解除冻结后使用。
+
 先确保服务已经由用户正常维护并可通过本机环回端口访问。脚本不会安装依赖、
 启动容器或重启服务。然后在仓库根目录调用：
 

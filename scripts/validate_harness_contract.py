@@ -421,7 +421,7 @@ def check_phase3_comparison_dev_gate() -> None:
     if payload.get("schema_version") != "phase3_comparison_dev_gate_v1":
         raise ValueError("phase 3 comparison dev gate schema_version is invalid")
     if payload.get("status") != (
-        "USER_RUNNER_RETRY_READY_AWAITING_PAIRED_ONLINE_DEV"
+        "CLEANUP_AUDIT_READY_AWAITING_WINDOWS_READ_ONLY_AUDIT"
     ):
         raise ValueError("phase 3 comparison dev gate status is invalid")
     if payload.get("source_phase") != {"id": "phase-3", "status": "IN_PROGRESS"}:
@@ -481,22 +481,33 @@ def check_phase3_comparison_dev_gate() -> None:
         not isinstance(user_entry, dict)
         or user_entry.get("decision_id") != "PD-041"
         or user_entry.get("status")
-        != "WINDOWS_PRE_SERVICE_REJECTED_CONFIG_LINE_ENDING_REPAIR_READY_FOR_RETRY"
+        != "SECOND_WINDOWS_ATTEMPT_UNTRUSTED_CLEANUP_AUDIT_REQUIRED"
+        or user_entry.get("cleanup_audit_decision_id") != "PD-044"
         or user_entry.get("quality_top_k") != 3
         or user_entry.get("absolute_300ms_slo_adjudication") is not False
         or "TEST_ACCEPTANCE_EXCLUDED"
         not in str(user_entry.get("input_boundary", ""))
     ):
         raise ValueError("phase 3 paired online user entry boundary drifted")
-    attempt = payload.get("windows_attempt")
+    attempts = payload.get("windows_attempts")
     if (
-        not isinstance(attempt, dict)
-        or attempt.get("run_id") != "phase3_comparison_dev_20260723_01"
-        or attempt.get("status") != "REJECTED_BEFORE_SERVICES"
-        or attempt.get("adjudication_error_code")
+        not isinstance(attempts, list)
+        or len(attempts) != 2
+        or any(not isinstance(attempt, dict) for attempt in attempts)
+        or attempts[0].get("run_id") != "phase3_comparison_dev_20260723_01"
+        or attempts[0].get("status") != "REJECTED_BEFORE_SERVICES"
+        or attempts[0].get("adjudication_error_code")
         != "REPORT_CONFIG_IDENTITY_MISMATCH"
-        or attempt.get("online_quality_executed") is not False
-        or attempt.get("infrastructure_mutation_started") is not False
+        or attempts[0].get("online_quality_executed") is not False
+        or attempts[0].get("infrastructure_mutation_started") is not False
+        or attempts[1].get("run_id") != "phase3_comparison_dev_20260723_02"
+        or attempts[1].get("status") != "REJECTED_CLEANUP_PROOF_FAILED"
+        or attempts[1].get("report_sha256")
+        != "423d736d496be0afa1cc06a90e3402b060c519f74c17d9c4939e31a50304e276"
+        or attempts[1].get("adjudication_error_code")
+        != "REPORT_CLEANUP_PROOF_INVALID"
+        or attempts[1].get("adjudication_sha256")
+        != "74a599288445f1c2267f892a81b5f6b8bd3d5002d4a67e6be6700645d3516981"
     ):
         raise ValueError("phase 3 rejected Windows attempt evidence drifted")
     for field in (
@@ -505,6 +516,8 @@ def check_phase3_comparison_dev_gate() -> None:
         "report_adjudicator",
         "report_intake",
         "windows_powershell_51_entry",
+        "cleanup_auditor",
+        "windows_cleanup_audit_entry",
         "runbook",
     ):
         relative_path = user_entry.get(field)
@@ -527,6 +540,19 @@ def check_phase3_comparison_dev_gate() -> None:
         is not True
     ):
         raise ValueError("phase 3 independent performance gate drifted")
+    cleanup_audit = payload.get("cleanup_audit_gate")
+    if (
+        not isinstance(cleanup_audit, dict)
+        or cleanup_audit.get("status") != "READY_AWAITING_USER_RUN"
+        or cleanup_audit.get("run_id")
+        != "phase3_comparison_dev_20260723_02"
+        or cleanup_audit.get("mode")
+        != "POSTGRESQL_READ_ONLY_OWNER_SCOPED_PLUS_GLOBAL_NONTERMINAL_COUNT"
+        or cleanup_audit.get("quality_rerun_allowed_before_clean") is not False
+        or cleanup_audit.get("manual_cleanup_allowed") is not False
+        or cleanup_audit.get("test_acceptance_read_allowed") is not False
+    ):
+        raise ValueError("phase 3 cleanup audit boundary drifted")
 
 
 def check_phase3_comparison_report_intake() -> None:
@@ -535,20 +561,28 @@ def check_phase3_comparison_report_intake() -> None:
         payload.get("schema_version") != "phase3_comparison_report_intake_v1"
         or payload.get("decision_id") != "PD-042"
         or payload.get("repair_decision_id") != "PD-043"
-        or payload.get("status") != "RETRY_READY_AFTER_PRE_SERVICE_REJECTION"
+        or payload.get("cleanup_audit_decision_id") != "PD-044"
+        or payload.get("status")
+        != "CLEANUP_AUDIT_REQUIRED_AFTER_UNTRUSTED_SECOND_REPORT"
     ):
         raise ValueError("phase 3 report intake identity is invalid")
     implementation = payload.get("implementation")
     if not isinstance(implementation, dict):
         raise ValueError("phase 3 report intake implementation is invalid")
-    for field in ("runner", "adjudicator", "windows_entry"):
+    for field in (
+        "runner",
+        "adjudicator",
+        "windows_entry",
+        "cleanup_auditor",
+        "windows_cleanup_audit_entry",
+    ):
         relative_path = implementation.get(field)
         if not isinstance(relative_path, str) or not (ROOT / relative_path).is_file():
             raise ValueError(f"phase 3 report intake {field} is missing")
     tests = implementation.get("tests")
     if (
         not isinstance(tests, list)
-        or len(tests) != 2
+        or len(tests) != 3
         or any(not isinstance(path, str) or not (ROOT / path).is_file() for path in tests)
     ):
         raise ValueError("phase 3 report intake tests are invalid")
@@ -598,16 +632,29 @@ def check_phase3_comparison_report_intake() -> None:
     evidence = payload.get("evidence")
     if not isinstance(evidence, dict):
         raise ValueError("phase 3 report intake evidence is invalid")
-    remote_report = evidence.get("remote_report")
-    adjudication = evidence.get("adjudication")
+    attempts = evidence.get("attempts")
     if (
-        not isinstance(remote_report, dict)
-        or remote_report.get("status") != "REJECTED_BEFORE_SERVICES"
-        or not isinstance(adjudication, dict)
-        or adjudication.get("status") != "REJECTED"
-        or adjudication.get("error_code") != "REPORT_CONFIG_IDENTITY_MISMATCH"
+        not isinstance(attempts, list)
+        or len(attempts) != 2
+        or any(not isinstance(attempt, dict) for attempt in attempts)
+        or attempts[0].get("status") != "REJECTED_BEFORE_SERVICES"
+        or attempts[0].get("error_code") != "REPORT_CONFIG_IDENTITY_MISMATCH"
+        or attempts[1].get("status") != "REJECTED_CLEANUP_PROOF_FAILED"
+        or attempts[1].get("error_code") != "REPORT_CLEANUP_PROOF_INVALID"
+        or attempts[1].get("adjudication_sha256")
+        != "74a599288445f1c2267f892a81b5f6b8bd3d5002d4a67e6be6700645d3516981"
     ):
         raise ValueError("phase 3 report intake rejected evidence drifted")
+    audit = payload.get("cleanup_audit_boundary")
+    if (
+        not isinstance(audit, dict)
+        or audit.get("target_run_id") != "phase3_comparison_dev_20260723_02"
+        or audit.get("postgresql_transaction") != "READ_ONLY"
+        or audit.get("quality_rerun_authorized") is not False
+        or audit.get("manual_cleanup_authorized") is not False
+        or audit.get("performance_gate") != "NOT_COMBINED"
+    ):
+        raise ValueError("phase 3 report intake cleanup audit boundary drifted")
 
 
 def check_harness_links() -> None:

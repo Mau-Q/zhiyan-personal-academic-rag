@@ -1,18 +1,22 @@
 {
   "schema_version": "phase3_comparison_report_intake_v1",
   "decision_id": "PD-042",
-  "status": "RETRY_READY_AFTER_PRE_SERVICE_REJECTION",
+  "status": "CLEANUP_AUDIT_REQUIRED_AFTER_UNTRUSTED_SECOND_REPORT",
   "source_gate": {
     "artifact": "machine/phase3_comparison_dev_gate.json",
-    "status": "USER_RUNNER_RETRY_READY_AWAITING_PAIRED_ONLINE_DEV"
+    "status": "CLEANUP_AUDIT_READY_AWAITING_WINDOWS_READ_ONLY_AUDIT"
   },
   "repair_decision_id": "PD-043",
+  "cleanup_audit_decision_id": "PD-044",
   "implementation": {
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
     "windows_entry": "deploy/remote/phase3-comparison-validation/run_phase3_comparison_paired_dev_gate.ps1",
+    "cleanup_auditor": "scripts/audit_phase3_comparison_cleanup_state.py",
+    "windows_cleanup_audit_entry": "deploy/remote/phase3-comparison-validation/audit_phase3_comparison_cleanup_state.ps1",
     "tests": [
       "tests/validation/test_phase3_comparison_paired_dev_gate.py",
+      "tests/validation/test_phase3_comparison_cleanup_audit.py",
       "tests/validation/test_phase3_comparison_report_adjudication.py"
     ]
   },
@@ -58,17 +62,33 @@
     "performance": "PENDING_SEPARATE_300MS_GATE"
   },
   "evidence": {
-    "remote_report": {
-      "run_id": "phase3_comparison_dev_20260723_01",
-      "head_commit": "c8785f7220089302e54db8d06c6a6adde0dbc898",
-      "sha256": "ac081a26fd331f00659be3e950537a9b22d46e75c1f3303b1bfefbd7d7706827",
-      "status": "REJECTED_BEFORE_SERVICES"
-    },
-    "adjudication": {
-      "sha256": "eb0ce6f786963b65e859496405f4f12018c93ab43015b0e759d306141b1714f6",
-      "status": "REJECTED",
-      "error_code": "REPORT_CONFIG_IDENTITY_MISMATCH"
-    },
-    "interpretation": "The first Windows attempt proved a CRLF-only checkout drift under core.autocrlf=true and stopped before service connection; it is not online quality evidence."
+    "attempts": [
+      {
+        "run_id": "phase3_comparison_dev_20260723_01",
+        "head_commit": "c8785f7220089302e54db8d06c6a6adde0dbc898",
+        "report_sha256": "ac081a26fd331f00659be3e950537a9b22d46e75c1f3303b1bfefbd7d7706827",
+        "adjudication_sha256": "eb0ce6f786963b65e859496405f4f12018c93ab43015b0e759d306141b1714f6",
+        "status": "REJECTED_BEFORE_SERVICES",
+        "error_code": "REPORT_CONFIG_IDENTITY_MISMATCH"
+      },
+      {
+        "run_id": "phase3_comparison_dev_20260723_02",
+        "head_commit": "ac1e5994f8e35648750d912b9a778c2a46682c3c",
+        "report_sha256": "423d736d496be0afa1cc06a90e3402b060c519f74c17d9c4939e31a50304e276",
+        "adjudication_sha256": "74a599288445f1c2267f892a81b5f6b8bd3d5002d4a67e6be6700645d3516981",
+        "status": "REJECTED_CLEANUP_PROOF_FAILED",
+        "error_code": "REPORT_CLEANUP_PROOF_INVALID"
+      }
+    ],
+    "interpretation": "The second report cannot establish quality or cleanup because its generic cleanup exception path masked the primary failure and exact cleanup stage. A version-pinned read-only owner-scope audit must prove clean state before any new quality run."
+  },
+  "cleanup_audit_boundary": {
+    "target_run_id": "phase3_comparison_dev_20260723_02",
+    "postgresql_transaction": "READ_ONLY",
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN",
+    "quality_rerun_authorized": false,
+    "manual_cleanup_authorized": false,
+    "performance_gate": "NOT_COMBINED"
   }
 }

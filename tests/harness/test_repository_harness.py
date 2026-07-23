@@ -187,7 +187,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "USER_RUNNER_RETRY_READY_AWAITING_PAIRED_ONLINE_DEV",
+            "CLEANUP_AUDIT_READY_AWAITING_WINDOWS_READ_ONLY_AUDIT",
         )
         self.assertEqual(
             payload["source_phase"], {"id": "phase-3", "status": "IN_PROGRESS"}
@@ -206,15 +206,30 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["paired_online_user_entry"]["status"],
-            "WINDOWS_PRE_SERVICE_REJECTED_CONFIG_LINE_ENDING_REPAIR_READY_FOR_RETRY",
+            "SECOND_WINDOWS_ATTEMPT_UNTRUSTED_CLEANUP_AUDIT_REQUIRED",
         )
         self.assertEqual(
-            payload["windows_attempt"]["status"],
+            payload["windows_attempts"][0]["status"],
             "REJECTED_BEFORE_SERVICES",
         )
-        self.assertFalse(payload["windows_attempt"]["online_quality_executed"])
+        self.assertFalse(payload["windows_attempts"][0]["online_quality_executed"])
         self.assertFalse(
-            payload["windows_attempt"]["infrastructure_mutation_started"]
+            payload["windows_attempts"][0]["infrastructure_mutation_started"]
+        )
+        self.assertEqual(
+            payload["windows_attempts"][1]["status"],
+            "REJECTED_CLEANUP_PROOF_FAILED",
+        )
+        self.assertEqual(
+            payload["windows_attempts"][1]["adjudication_error_code"],
+            "REPORT_CLEANUP_PROOF_INVALID",
+        )
+        self.assertEqual(
+            payload["cleanup_audit_gate"]["mode"],
+            "POSTGRESQL_READ_ONLY_OWNER_SCOPED_PLUS_GLOBAL_NONTERMINAL_COUNT",
+        )
+        self.assertFalse(
+            payload["cleanup_audit_gate"]["quality_rerun_allowed_before_clean"]
         )
         self.assertFalse(
             payload["paired_online_user_entry"][
@@ -234,7 +249,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "RETRY_READY_AFTER_PRE_SERVICE_REJECTION",
+            "CLEANUP_AUDIT_REQUIRED_AFTER_UNTRUSTED_SECOND_REPORT",
         )
         self.assertEqual(payload["decision_id"], "PD-042")
         self.assertEqual(
@@ -260,12 +275,19 @@ class RepositoryHarnessTests(unittest.TestCase):
             "NO_AUTOMATIC_UNLOCK_OR_EXECUTION",
         )
         self.assertEqual(
-            payload["evidence"]["remote_report"]["status"],
+            payload["evidence"]["attempts"][0]["status"],
             "REJECTED_BEFORE_SERVICES",
         )
         self.assertEqual(
-            payload["evidence"]["adjudication"]["error_code"],
-            "REPORT_CONFIG_IDENTITY_MISMATCH",
+            payload["evidence"]["attempts"][1]["error_code"],
+            "REPORT_CLEANUP_PROOF_INVALID",
+        )
+        self.assertEqual(
+            payload["cleanup_audit_boundary"]["postgresql_transaction"],
+            "READ_ONLY",
+        )
+        self.assertFalse(
+            payload["cleanup_audit_boundary"]["quality_rerun_authorized"]
         )
 
     def test_validator_rejects_template_as_concrete_phase_result(self):

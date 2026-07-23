@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 from scripts.build_phase3_comparison_dev_package import (
     ASSETS,
@@ -16,6 +17,7 @@ from scripts.run_phase3_comparison_paired_dev_gate import (
     CONFIRMATION,
     EXPECTED_CLEANUP_JOBS,
     GateError,
+    _cleanup_failure_summary,
     _lf_canonical_sha256,
     _latency_summary,
     _require_empty_cleanup_queue,
@@ -36,6 +38,13 @@ POWERSHELL_PATH = (
     / "remote"
     / "phase3-comparison-validation"
     / "run_phase3_comparison_paired_dev_gate.ps1"
+)
+AUDIT_POWERSHELL_PATH = (
+    ROOT
+    / "deploy"
+    / "remote"
+    / "phase3-comparison-validation"
+    / "audit_phase3_comparison_cleanup_state.ps1"
 )
 
 
@@ -151,6 +160,46 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
         summary = script[script.index("$summary = [ordered]@{") :]
         self.assertNotIn("question", summary.casefold())
         self.assertNotIn("evidence", summary.casefold())
+
+    def test_cleanup_failure_keeps_stable_stage_and_partial_progress(self):
+        summary = _cleanup_failure_summary(
+            stage="RUN_WORKER",
+            scheduled_versions=3,
+            cleanup_results=(
+                SimpleNamespace(succeeded=True),
+                SimpleNamespace(succeeded=False),
+            ),
+            inactive_403=False,
+            reconciliation_failed_closed=False,
+        )
+        self.assertEqual(summary["status"], "FAIL")
+        self.assertEqual(summary["stage"], "RUN_WORKER")
+        self.assertEqual(summary["jobs_succeeded"], 1)
+        self.assertEqual(summary["jobs_observed"], 2)
+        self.assertEqual(summary["jobs_expected"], 9)
+        self.assertEqual(
+            summary["error_code"],
+            "CLEANUP_WORKER_EXECUTION_FAILED",
+        )
+
+    def test_windows_cleanup_audit_is_read_only_and_pinned(self):
+        script = AUDIT_POWERSHELL_PATH.read_text(encoding="utf-8")
+        self.assertIn("Target: Windows PowerShell 5.1", script)
+        self.assertIn("$headCommit -ne $ExpectedHeadCommit", script)
+        self.assertIn("scripts/audit_phase3_comparison_cleanup_state.py", script)
+        self.assertIn("-AsSecureString", script)
+        self.assertNotIn("Restart-Service", script)
+        self.assertNotIn("Start-Service", script)
+        self.assertNotIn("Stop-Service", script)
+        self.assertNotIn("PHASE3_COMPARISON_DECOMPOSITION_ENABLED", script)
+        self.assertIn("$audit.decision -ne 'CLEAN'", script)
+        auditor = (
+            ROOT / "scripts" / "audit_phase3_comparison_cleanup_state.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY",
+            auditor,
+        )
 
     def test_package_output_must_be_a_runtime_zip(self):
         _validate_output(Path("runtime/phase3/input.zip"))

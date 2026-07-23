@@ -4,7 +4,7 @@
 
 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的本地实现候选与冻结配置已完成，
 方案阶段 3 由 `NOT_STARTED` 进入 `IN_PROGRESS`。本地结论仅为
-`USER_RUNNER_READY_AWAITING_PAIRED_ONLINE_DEV`：
+`CLEANUP_AUDIT_READY_AWAITING_WINDOWS_READ_ONLY_AUDIT`：
 
 - 默认开关仍为 `false`，未改变默认 RRF；
 - 4 个冻结 `dev` 样本的 Control 均保持原问题，Treatment 规划均为
@@ -13,7 +13,9 @@
   用户运行入口已完成本地契约测试与静态检查；首次 Windows 尝试在连接服务前
   因 `core.autocrlf=true` 造成的纯 CRLF 配置字节漂移被拒绝；
 - 远程报告的 SHA-256、Git HEAD、Run ID、指标算术、清理与 holdout 隔离
-  裁决器已准备；首次拒绝报告已按哈希保留，但不构成在线质量证据；
+  裁决器已准备；前两次拒绝报告已保留已确认的身份，但不构成在线质量证据；
+- 第二次报告的通用清理异常遮蔽了主失败与具体阶段；运行器已改为同时保留
+  `primary_error_code` 和分阶段清理错误，另有只读 PostgreSQL 残留审计入口；
 - 尚未运行真实 PostgreSQL READY + ES/Milvus + RRF 配对回放，因此没有
   检索质量增益、关键类不退化或 300 ms 通过结论；
 - `test` 与 `acceptance` 均未读取、未运行。
@@ -21,7 +23,7 @@
 机器状态见 `machine/phase3_comparison_dev_gate.json`，实现决策见 `PD-040`，
 用户运行入口决策见 `PD-041`。
 报告裁决边界见 `machine/phase3_comparison_report_intake.json`、`PD-042` 和
-跨平台配置身份决策 `PD-043`。
+跨平台配置身份决策 `PD-043`，清理审计边界见 `PD-044`。
 
 ## 2. 单变量实现
 
@@ -114,6 +116,23 @@ Windows CRLF 工作树 SHA-256 为
 删除后 Answer API 403。非目标 `nDCG@10` 只使用原候选 20 内的评测诊断
 Top-10，产品/API Top-3 不改变。
 
+第二次 Windows Run ID `phase3_comparison_dev_20260723_02` 已通过 LF/CRLF
+身份检查，但完整报告以 `CLEANUP_PROOF_FAILED` 结束，报告 SHA-256 为
+`423D736D496BE0AFA1CC06A90E3402B060C519F74C17D9C4939E31A50304E276`，
+裁决 SHA-256 为
+`74A599288445F1C2267F892A81B5F6B8BD3D5002D4A67E6BE6700645D3516981`，
+错误码为 `REPORT_CLEANUP_PROOF_INVALID`。该版本的通用异常路径只记录
+`jobs_expected=9`，没有保留原始失败、清理阶段或可靠身份汇总；因此既不能判定
+Control/Treatment，也不能证明隔离 owner 已清理。
+
+在任何第三次质量运行前，必须先对 `_02` 执行只读残留审计。审计在 PostgreSQL
+`READ ONLY` 事务内只按确定性 owner 查询聚合状态：无版本/任务/快照，或所有
+版本 `INACTIVE`、每版本三路清理任务均 `SUCCEEDED`、Chunk/PDF 快照为零，且
+全局没有会阻断下一隔离 Gate 的 `PENDING/RUNNING/RETRY` 清理任务，才返回
+`CLEAN`。全局汇总不输出其他 owner 身份。审计不直接查询 ES/Milvus；物理删除
+只解释为持久化任务成功与运行快照清零的组合证据。若返回残留，下一步是独立
+恢复 Gate，不允许临时 SQL、手工删索引或直接复跑。
+
 ## 6. 远程结果回收与裁决
 
 Windows runner 现在把实际 Git HEAD 和 Run ID 写入完整报告。PowerShell 入口在
@@ -131,7 +150,8 @@ Windows runner 现在把实际 Git HEAD 和 Run ID 写入完整报告。PowerShe
    `test` 仍需新的冻结提交和独立 Gate；
 6. 远程 FAIL 或报告不可采信时都保持比较拆分关闭。
 
-当前裁决器保留一次连接服务前的真实拒绝证据；在线配对 dev 仍未运行。
+当前裁决器保留两次真实拒绝证据；第二次质量执行程度与清理状态不可从旧报告
+恢复，在线配对 dev 仍无可采信结论。
 
 ## 7. 不能合并的边界
 

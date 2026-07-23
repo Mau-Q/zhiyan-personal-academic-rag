@@ -74,6 +74,13 @@ _RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,47}$")
 _HEX64 = re.compile(r"^[a-f0-9]{64}$")
 _GIT_COMMIT = re.compile(r"^[a-f0-9]{40}$")
 _ANSWERABLE = {"ANSWERABLE", "PARTIALLY_ANSWERABLE"}
+_CLEANUP_STAGE_ERROR_CODES = {
+    "INACTIVATE_AND_SCHEDULE": "CLEANUP_INACTIVATION_OR_SCHEDULING_FAILED",
+    "VERIFY_QUEUE_SCOPE": "CLEANUP_QUEUE_SCOPE_PROOF_FAILED",
+    "RUN_WORKER": "CLEANUP_WORKER_EXECUTION_FAILED",
+    "VERIFY_DELETED_API": "CLEANUP_DELETED_API_PROOF_FAILED",
+    "VERIFY_READY_CLOSED": "CLEANUP_READY_CLOSED_PROOF_FAILED",
+}
 
 
 class GateError(RuntimeError):
@@ -580,6 +587,30 @@ def _sanitized_code(exc: BaseException) -> str:
     return value if re.fullmatch(r"[A-Z][A-Z0-9_]{2,79}", value) else "PHASE3_GATE_FAILED"
 
 
+def _cleanup_failure_summary(
+    *,
+    stage: str,
+    scheduled_versions: int,
+    cleanup_results: Sequence[Any],
+    inactive_403: bool,
+    reconciliation_failed_closed: bool,
+) -> dict[str, Any]:
+    return {
+        "status": "FAIL",
+        "stage": stage,
+        "scheduled_versions": scheduled_versions,
+        "jobs_succeeded": sum(result.succeeded for result in cleanup_results),
+        "jobs_observed": len(cleanup_results),
+        "jobs_expected": EXPECTED_CLEANUP_JOBS,
+        "ready_reconciliation_failed_closed": reconciliation_failed_closed,
+        "deleted_answer_api_status": 403 if inactive_403 else None,
+        "error_code": _CLEANUP_STAGE_ERROR_CODES.get(
+            stage,
+            "CLEANUP_PROOF_FAILED",
+        ),
+    }
+
+
 def _active_cleanup_scope(connection: Any) -> set[tuple[str, str, str]]:
     with connection.cursor() as cursor:
         cursor.execute(
@@ -685,6 +716,10 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
     report: dict[str, Any] | None = None
     primary_error: BaseException | None = None
     control_client: TestClient | None = None
+    cleanup_stage = "NOT_STARTED"
+    cleanup_results: tuple[Any, ...] = ()
+    inactive_403 = False
+    reconciliation_failed_closed = False
     try:
         document_id_map: dict[str, str] = {}
         now = datetime.now(timezone.utc)
@@ -1024,6 +1059,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
         primary_error = exc
     finally:
         try:
+            cleanup_stage = "INACTIVATE_AND_SCHEDULE"
             for version in versions:
                 inactivate_and_schedule_cleanup(
                     version,
@@ -1034,6 +1070,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
                     elasticsearch=elasticsearch,
                     milvus=milvus,
                 )
+            cleanup_stage = "VERIFY_QUEUE_SCOPE"
             _require_exact_cleanup_scope(
                 connection,
                 owner_id=owner_id,
@@ -1041,6 +1078,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
                     version.document_version_id for version in versions
                 ],
             )
+            cleanup_stage = "RUN_WORKER"
             cleanup_results = PersistentIndexCleanupWorker(
                 repository=repository,
                 elasticsearch=elasticsearch,
@@ -1055,7 +1093,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
                 and len(cleanup_results) == EXPECTED_CLEANUP_JOBS
                 and all(result.succeeded for result in cleanup_results)
             )
-            inactive_403 = False
+            cleanup_stage = "VERIFY_DELETED_API"
             if control_client is not None and versions:
                 deleted = _api_result(
                     control_client,
@@ -1067,7 +1105,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
                     and deleted["error_code"] == "RAG_FORBIDDEN_SCOPE"
                     and deleted["evidence_count"] == 0
                 )
-            reconciliation_failed_closed = False
+            cleanup_stage = "VERIFY_READY_CLOSED"
             if versions:
                 try:
                     reconcile_ready_scope(
@@ -1079,9 +1117,11 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
                     )
                 except Stage1ReconciliationError:
                     reconciliation_failed_closed = True
+            cleanup_stage = "COMPLETE"
             cleanup_summary = {
                 "scheduled_versions": len(versions),
                 "jobs_succeeded": sum(result.succeeded for result in cleanup_results),
+                "jobs_observed": len(cleanup_results),
                 "jobs_expected": EXPECTED_CLEANUP_JOBS,
                 "ready_reconciliation_failed_closed": reconciliation_failed_closed,
                 "deleted_answer_api_status": 403 if inactive_403 else None,
@@ -1094,11 +1134,13 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
             if cleanup_summary["status"] != "PASS" and primary_error is None:
                 primary_error = GateError("CLEANUP_PROOF_FAILED")
         except BaseException:
-            cleanup_summary = {
-                "status": "FAIL",
-                "jobs_expected": EXPECTED_CLEANUP_JOBS,
-                "error_code": "CLEANUP_PROOF_FAILED",
-            }
+            cleanup_summary = _cleanup_failure_summary(
+                stage=cleanup_stage,
+                scheduled_versions=len(versions),
+                cleanup_results=cleanup_results,
+                inactive_403=inactive_403,
+                reconciliation_failed_closed=reconciliation_failed_closed,
+            )
             if primary_error is None:
                 primary_error = GateError("CLEANUP_PROOF_FAILED")
         connection.close()
@@ -1128,6 +1170,8 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
     report["cleanup"] = cleanup_summary
     report["run_id"] = args.run_id
     report["head_commit"] = args.expected_head_commit
+    if primary_error is not None:
+        report["primary_error_code"] = _sanitized_code(primary_error)
     if cleanup_summary is None or cleanup_summary.get("status") != "PASS":
         report["status"] = "FAIL"
         report["error_code"] = "CLEANUP_PROOF_FAILED"
