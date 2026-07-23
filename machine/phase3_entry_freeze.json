@@ -1,0 +1,173 @@
+{
+  "schema_version": "phase3_entry_freeze_v1",
+  "decision_id": "PD-039",
+  "status": "FROZEN_NOT_IMPLEMENTED",
+  "source_phase": {
+    "id": "phase-3",
+    "status": "NOT_STARTED"
+  },
+  "target_failure": {
+    "label": "CROSS_DOCUMENT_IMBALANCE",
+    "description": "Human-approved dev comparison questions whose two relevant document sides are not both represented by relevant evidence in the frozen local RRF top 3.",
+    "selection_boundary": "DEV_ONLY_ID_AND_ENUM_METADATA",
+    "selection_predicate": [
+      "mvp_split == dev",
+      "human_review_outcome == APPROVE_AS_IS",
+      "selected_category == comparison",
+      "final_answerability == ANSWERABLE",
+      "relevance_gte_2_document_count == 2",
+      "local_rrf_top3_relevant_document_count == 1",
+      "elasticsearch_strict_passed == false",
+      "milvus_strict_passed == false"
+    ]
+  },
+  "sample_identity": {
+    "sample_count": 4,
+    "question_ids": [
+      "local3.assisted.0033",
+      "local3.assisted.0304",
+      "local3.assisted.0383",
+      "local3.assisted.0387"
+    ],
+    "sorted_newline_question_ids_sha256": "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8",
+    "sources": {
+      "human_review_decisions_sha256": "a428a8fc92cece0d1aaf7e31ce11377bec2791e146b64efdc9e2ef1279800986",
+      "dev_item_metadata_sha256": "f107f98c3d7c0777c233e8b479384e7c2edd2470acb7f5ea9098d662f57b8f3b",
+      "engineering_items_sha256": "940e5b8c8d00d9f70626e65e34fdfce6bac6ec7ab681b8d2b08794976b94d5d4",
+      "local_rrf_rankings_sha256": "777b41c3e2544badcb9ed6fb7208f4556f4a989286a2373ebad5a59028bbc7f5",
+      "elasticsearch_dev_report_sha256": "149ea4a33edd65224c9da42224d731fc86c2562d9eff5cf573e212b81dd81935",
+      "milvus_dev_report_sha256": "d57910711a09bfb09f30c261453633b0692349341a1257ca914f0506133177f5"
+    }
+  },
+  "baseline": {
+    "interpretation_boundary": "Human-approved labels plus frozen local RRF rankings and remote single-backend dev outcomes; no remote ES-Milvus RRF dev replay has been run.",
+    "local_rrf": {
+      "top_k": 3,
+      "strict_two_sided_relevant_document_coverage": {
+        "passed": 0,
+        "total": 4,
+        "rate": 0.0
+      },
+      "macro_recall_at_3": 0.145833,
+      "macro_ndcg_at_3": 0.270971,
+      "missing_side_relevant_chunk_present_in_top_50": {
+        "passed": 0,
+        "total": 4,
+        "rate": 0.0
+      }
+    },
+    "remote_single_backend": {
+      "elasticsearch_strict_passed": {
+        "passed": 0,
+        "total": 4,
+        "rate": 0.0
+      },
+      "milvus_strict_passed": {
+        "passed": 0,
+        "total": 4,
+        "rate": 0.0
+      }
+    }
+  },
+  "single_enhancement_variable": {
+    "id": "BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1",
+    "status": "FROZEN_FOR_DEV_EXPERIMENT_NOT_IMPLEMENTED",
+    "scope": "Exactly two already-authorized document routes for an eligible comparison question.",
+    "allowed_change": "Replace the shared original query text on the two document routes with exactly one deterministic document-side subquery per route.",
+    "must_preserve": [
+      "PostgreSQL READY and owner authorization",
+      "persistent document, version, and Chunk identity verification",
+      "Elasticsearch and Milvus parallel retrieval",
+      "candidate_k == 20 per existing route",
+      "rrf_k == 60",
+      "final_top_k == 3",
+      "fixed Cross-Encoder disabled",
+      "generation model, Prompt, and decoding",
+      "no candidate, Chunk, page, answer, or relevance label available to the decomposer"
+    ],
+    "forbidden_co_changes": [
+      "RRF weight or k tuning",
+      "candidate count reduction or expansion",
+      "Reranker enablement",
+      "multi-query beyond the two frozen document-side subqueries",
+      "parent-child Chunk changes",
+      "adjacency expansion",
+      "Chunk strategy changes",
+      "Embedding model changes",
+      "generation changes",
+      "fixed-question cache"
+    ]
+  },
+  "quality_gate": {
+    "paired_control": "Original query with the existing RRF path and frozen identities.",
+    "primary_target": {
+      "metric": "strict_two_sided_relevant_document_coverage",
+      "minimum_treatment_passed": 3,
+      "total": 4,
+      "minimum_absolute_gain_over_control": 0.5
+    },
+    "secondary_targets": {
+      "macro_recall_at_3_minimum_absolute_gain": 0.2,
+      "macro_ndcg_at_3_minimum_absolute_gain": 0.1
+    },
+    "critical_non_regression": {
+      "non_target_answerable_dev_recall_at_3_max_absolute_drop": 0.01,
+      "non_target_answerable_dev_ndcg_at_10_max_absolute_drop": 0.01,
+      "forbidden_decision_and_zero_candidate_boundary": "EXACT_MATCH_CONTROL",
+      "no_evidence_decision_and_candidate_boundary": "NO_WORSE_THAN_CONTROL",
+      "owner_acl_version_chunk_identity_violations_max": 0,
+      "fixed_15_question_canary": "15_OF_15"
+    }
+  },
+  "cost_budgets": {
+    "latency": {
+      "deterministic_decomposition_p95_ms_max": 5,
+      "incremental_retrieval_p95_ms_max": 50,
+      "absolute_retrieval_p95_ms_max": 300,
+      "absolute_slo_adjudication": "INDEPENDENT_PERFORMANCE_GATE_ONLY"
+    },
+    "tokens": {
+      "new_llm_calls_max": 0,
+      "new_generation_tokens_max": 0,
+      "generation_context_token_ceiling": "UNCHANGED"
+    },
+    "operations": {
+      "new_services_max": 0,
+      "new_models_max": 0,
+      "new_indexes_max": 0,
+      "database_migrations_max": 0,
+      "additional_query_embeddings_max": 1,
+      "additional_es_requests_max": 0,
+      "additional_milvus_requests_max": 0
+    }
+  },
+  "disable_and_rollback": {
+    "reserved_switch": "PHASE3_COMPARISON_DECOMPOSITION_ENABLED",
+    "default": false,
+    "failure_behavior": "Use the unchanged original query on both routes when eligibility or decomposition cannot be proven.",
+    "rollback": "Set the switch to false; no data, schema, index, model, or migration rollback is required."
+  },
+  "split_isolation": {
+    "dev": {
+      "status": "OPEN_FOR_TARGETED_EXPERIMENT",
+      "allowed_use": "Design, debug, and tune only the frozen single variable."
+    },
+    "test": {
+      "status": "SEALED",
+      "allowed_use": "One-shot evaluation only after implementation, configuration, and dev decision are frozen.",
+      "tuning_allowed": false
+    },
+    "acceptance": {
+      "status": "SEALED_REQUIRES_EXPLICIT_AUTHORIZATION",
+      "allowed_use": "Independent acceptance only; never tuning.",
+      "tuning_allowed": false
+    }
+  },
+  "independent_performance_debt": {
+    "status": "PENDING_SEPARATE_GATE",
+    "base_retrieval_p95_ms": 376.394385,
+    "combined_p95_ms": 504.71613,
+    "retrieval_p95_ms_max": 300,
+    "must_not_be_combined_with_first_failure_enhancement": true
+  }
+}

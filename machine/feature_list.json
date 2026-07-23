@@ -543,6 +543,18 @@
         "tests/validation/test_online_reranker_remote_script.py",
         "docs/FIXED_RERANKER_EVALUATION.md"
       ]
+    },
+    {
+      "id": "source_phase_three_entry_freeze",
+      "status": "READY",
+      "owner": "SHARED",
+      "evidence": [
+        "machine/phase3_entry_freeze.json",
+        "docs/PHASE_3_ENTRY_FREEZE.md",
+        "docs/REQUIREMENTS_TRACEABILITY.md",
+        "docs/CURRENT_PHASE.md",
+        "tests/harness/test_repository_harness.py"
+      ]
     }
   ]
 }

@@ -2,9 +2,9 @@
 
 ## Status
 
-`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_NOT_STARTED / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
+`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_ENTRY_FROZEN_NOT_IMPLEMENTED / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
-Phase ID：`source-phase3-failure-enhancement-not-started`
+Phase ID：`source-phase3-entry-frozen-cross-document-imbalance`
 
 ## Completed
 
@@ -175,13 +175,14 @@ Phase ID：`source-phase3-failure-enhancement-not-started`
 - 受控在线 Reranker 窄适配器已本地实现：现有 PostgreSQL READY/owner、持久化 Chunk 身份和检索后重验保持前置，ES/Milvus RRF 最多返回 20 个已授权候选，固定 Cross-Encoder 只排序并输出前 3；标题/模型/分数故障显式回退同一批 RRF，身份漂移仍失败关闭。用户在提交 `fb54918` 完成 ES/Milvus 并行远程复跑：30/30 `APPLIED`、无回退/扩张/越界、三路清理与删除后 403 通过，但 base retrieval `P95=344.676365 ms`、Reranker `P95=131.885375 ms`、combined `P95=472.190015 ms`，报告 SHA-256 为 `132DFFDECDAD02F9C5280FADFBD09B5AE100C1DB31FE07118BF97B6E0C1B2602`。默认路由继续保持原 RRF；当前本地只增加基础召回分段观测，等待远程归因。
 - 用户随后在提交 `3303bed` 和 Run ID `online_retrieval_profile_20260723_01` 完成 Windows 分段归因：30/30 `APPLIED`，分段状态 `PASS`，base retrieval `P95=376.394385 ms`、Reranker `P95=132.456 ms`、combined `P95=504.71613 ms`；主要成本为 Query Embedding `P95=189.838925 ms` 和 READY 路由解析 `P95=145.48693 ms`，ES 总工作 `P95=35.634955 ms`、Milvus ANN `P95=6.03377 ms`、RRF `P95=0.12001 ms`。三路清理和删除后 403 通过，报告 SHA-256 为 `235FE36A97B7F4E462AD502595CB0CF38C139022703B6C4EA1E93E19D3AC765B`。
 - 阶段 2 现按最高方案第 10.3 节完成：Hybrid 对比、固定 Reranker 增益与保留/回退决定、引用/ACL/版本/定位硬门禁和普通学术问答稳定回放均已完成。默认继续使用原 RRF，固定 Reranker 保留为非默认可选组件；300 ms 性能未通过，作为显式性能债进入阶段 3 独立 Gate，不冒充生产性能验收。
+- 阶段 3 入口已冻结但增强尚未实现：从人工 `APPROVE_AS_IS` 的 `dev` 资产中固定 4 个 `CROSS_DOCUMENT_IMBALANCE` 比较题；ES/Milvus 单路均为 `0/4`，同身份本地 RRF Top-3 双侧相关文档覆盖为 `0/4`、Macro Recall@3 为 `0.145833`。下一质量实验唯一变量为默认关闭的 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1`；`test/acceptance` 保持封存，固定 Reranker 和默认 RRF 不变。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：阶段 3 真实失败类型增强尚未启动；正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层继续后置；固定 Reranker 在当前 300 ms SLO 下不默认启用；
+- 未完成能力：阶段 3 真实失败类型增强尚未实现；入口只冻结了 `dev` 目标集、单变量和门禁，尚未进入实现或 `test`；正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层继续后置；固定 Reranker 在当前 300 ms SLO 下不默认启用；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -207,6 +208,7 @@ Phase ID：`source-phase3-failure-enhancement-not-started`
 - 数据身份/生命周期合同必须通过 JSON Schema 与失败关闭语义测试；
 - 不得将本地协调协议写成远程 PostgreSQL、真实 ES/Milvus 写入、持久化物理清理或在线权限切换已完成，不得将 Fake LLM 写成最高方案阶段 2 已完成。
 - `make real-generation-canary` 必须使用固定模型摘要和 Prompt/解码配置，覆盖稳定回放、引用编号、`NO_EVIDENCE` 不调用模型与 403；公开 Fixture 结果不得写成远程 READY 实跑。
+- `machine/phase3_entry_freeze.json` 必须保持 4 个唯一 `dev` ID、单一默认关闭变量、`test/acceptance` 封存和独立性能债；本 Gate 不得出现实现代码或 Acceptance 结果。
 
 ## Git
 
@@ -218,13 +220,14 @@ Phase ID：`source-phase3-failure-enhancement-not-started`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2 已完成，阶段 3 尚未启动。评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_3_OF_3_DOCUMENTS_9_OF_9_CASES_PASS`。阶段 2 的 Hybrid 比较、Reranker 增益与保留/回退决策、引用/ACL/版本/定位门禁和普通学术问答稳定回放均已完成。Windows 分段证据证明 base `P95=376.394385 ms`、combined `P95=504.71613 ms`，因此默认明确保持原 RRF，固定 Reranker 只保留为可选组件；阶段完成不代表 300 ms 或生产性能验收通过。远程证据已证明两种生成模型均可消费 PostgreSQL READY + ES/Milvus RRF Evidence，并完成引用、稳定回放、删除后 403 和三路清理；固定四题 v4 进一步确认 Qwen `4/4` 晋级。普通科研问答 v2 的 3 篇文档各 `3/3`、合计 `9/9` 已通过；第 3 篇先前的 Answer HTTP 失败报告作为失败谱系保留，最终 retry2 以报告 SHA-256 `3C106423AB3575B11B3B0142A66F19A2C949B8BAED3457F1BCA101A9931302FA` 通过。`citation_stable_replay=true`，`byte_stable_replay_observed=false` 仅为自然语言观测项；运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 入口已冻结，增强尚未实现，因此方案阶段 3 仍为 `NOT_STARTED`。评测执行边界新增 `PHASE3_ENTRY_FROZEN_DEV_ONLY_CROSS_DOCUMENT_IMBALANCE_4_CASES_SINGLE_VARIABLE_DEFAULT_OFF_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_3_OF_3_DOCUMENTS_9_OF_9_CASES_PASS`。入口冻结只证明目标、预算与隔离边界成立，不证明远程 ES/Milvus RRF 在四题上的当前基线，也不证明查询拆分有效。Windows 分段证据证明 base `P95=376.394385 ms`、combined `P95=504.71613 ms`，因此默认明确保持原 RRF，固定 Reranker 只保留为可选组件；阶段完成不代表 300 ms 或生产性能验收通过。远程证据已证明两种生成模型均可消费 PostgreSQL READY + ES/Milvus RRF Evidence，并完成引用、稳定回放、删除后 403 和三路清理；固定四题 v4 进一步确认 Qwen `4/4` 晋级。普通科研问答 v2 的 3 篇文档各 `3/3`、合计 `9/9` 已通过；第 3 篇先前的 Answer HTTP 失败报告作为失败谱系保留，最终 retry2 以报告 SHA-256 `3C106423AB3575B11B3B0142A66F19A2C949B8BAED3457F1BCA101A9931302FA` 通过。`citation_stable_replay=true`，`byte_stable_replay_observed=false` 仅为自然语言观测项；运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
 
 ## Next gate
 
-1. **阶段 3 入口冻结：** 从人工校验 Baseline 的真实失败中选择一个稳定失败类型和最小能力变量；没有目标失败集、关键类保护线和回退开关时不实施增强；
-2. **独立性能携带 Gate：** 固定现有模型/snapshot、候选边界、RRF 和 300 ms 门槛，分别评估 READY 路由执行方式与可复用 GPU 推理运行时；不得与查询改写、多查询、Chunk 扩展或模型切换同时改变；
-3. **默认路径边界：** 性能 Gate 通过前继续使用原 RRF，固定 Reranker 保持非默认；阶段 2 的 Windows 分段 Gate 不再重复运行，除非后续独立性能变更需要同合同复验。
+1. **阶段 3 首个 dev-only 质量实验：** 先在 4 个冻结 ID 上回放未改变的 ES/Milvus RRF control，再只实现 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1`；若 control 不能重现冻结失败形态，停止并重新审查入口，不读取 `test`；
+2. **封存 test 的一次性 Gate：** 只有实现、配置、dev 结果和候选提交全部冻结后才可运行；不得以 test 结果反向调参，Acceptance 仍需用户另行明确授权；
+3. **独立性能携带 Gate：** 固定现有模型/snapshot、候选边界、RRF 和 300 ms 门槛，分别评估 READY 路由执行方式与可复用 GPU 推理运行时；不得与比较拆分或其他失败类型能力同时实施；
+4. **默认路径边界：** 质量与独立性能 Gate 通过前继续使用原 RRF，固定 Reranker 与比较拆分均保持默认关闭。
 
 ## Prohibited shortcuts
 

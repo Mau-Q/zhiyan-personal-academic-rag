@@ -139,6 +139,46 @@ class RepositoryHarnessTests(unittest.TestCase):
             "PENDING_PHASE_1_TARGET_SCALE_TEST",
         )
 
+    def test_phase_three_entry_is_frozen_without_starting_implementation(self):
+        payload = json.loads(
+            (ROOT / "machine" / "phase3_entry_freeze.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(payload["status"], "FROZEN_NOT_IMPLEMENTED")
+        self.assertEqual(
+            payload["source_phase"], {"id": "phase-3", "status": "NOT_STARTED"}
+        )
+        self.assertEqual(payload["sample_identity"]["sample_count"], 4)
+        self.assertEqual(
+            payload["sample_identity"]["question_ids"],
+            [
+                "local3.assisted.0033",
+                "local3.assisted.0304",
+                "local3.assisted.0383",
+                "local3.assisted.0387",
+            ],
+        )
+        self.assertEqual(
+            payload["single_enhancement_variable"]["id"],
+            "BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1",
+        )
+        self.assertFalse(payload["disable_and_rollback"]["default"])
+        self.assertEqual(payload["split_isolation"]["test"]["status"], "SEALED")
+        self.assertFalse(payload["split_isolation"]["test"]["tuning_allowed"])
+        self.assertEqual(
+            payload["split_isolation"]["acceptance"]["status"],
+            "SEALED_REQUIRES_EXPLICIT_AUTHORIZATION",
+        )
+        self.assertTrue(
+            payload["independent_performance_debt"][
+                "must_not_be_combined_with_first_failure_enhancement"
+            ]
+        )
+        self.assertEqual(
+            payload["independent_performance_debt"]["retrieval_p95_ms_max"], 300
+        )
+
     def test_validator_rejects_template_as_concrete_phase_result(self):
         template = json.loads(
             (ROOT / "machine" / "phase_result.template.json").read_text(encoding="utf-8")

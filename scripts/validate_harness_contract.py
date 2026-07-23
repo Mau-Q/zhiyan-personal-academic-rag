@@ -22,9 +22,11 @@ REQUIRED_FILES = (
     "docs/EXECUTION_CONTRACT.md",
     "docs/CURRENT_PHASE.md",
     "docs/PHASE_0_SCOPE_RESOURCE_SLO.md",
+    "docs/PHASE_3_ENTRY_FREEZE.md",
     "machine/project_state.json",
     "machine/feature_list.json",
     "machine/phase_zero_scope_resource_slo.json",
+    "machine/phase3_entry_freeze.json",
     "machine/phase_result.schema.json",
     "machine/phase_result.template.json",
     "scripts/validate_harness_contract.py",
@@ -352,6 +354,65 @@ def check_phase_zero_scope_resource_slo() -> None:
         raise ValueError("phase zero performance validation boundary is invalid")
 
 
+def check_phase3_entry_freeze() -> None:
+    payload = _read_json("machine/phase3_entry_freeze.json")
+    if payload.get("schema_version") != "phase3_entry_freeze_v1":
+        raise ValueError("phase 3 entry freeze schema_version is invalid")
+    if payload.get("decision_id") != "PD-039":
+        raise ValueError("phase 3 entry freeze decision_id must be PD-039")
+    if payload.get("status") != "FROZEN_NOT_IMPLEMENTED":
+        raise ValueError("phase 3 entry freeze must remain not implemented")
+    if payload.get("source_phase") != {"id": "phase-3", "status": "NOT_STARTED"}:
+        raise ValueError("phase 3 source phase must remain NOT_STARTED")
+
+    identity = payload.get("sample_identity")
+    expected_ids = [
+        "local3.assisted.0033",
+        "local3.assisted.0304",
+        "local3.assisted.0383",
+        "local3.assisted.0387",
+    ]
+    if not isinstance(identity, dict) or identity.get("question_ids") != expected_ids:
+        raise ValueError("phase 3 target question ids drifted")
+    if identity.get("sample_count") != len(expected_ids):
+        raise ValueError("phase 3 target sample count drifted")
+    if identity.get("sorted_newline_question_ids_sha256") != (
+        "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8"
+    ):
+        raise ValueError("phase 3 target identity digest drifted")
+
+    variable = payload.get("single_enhancement_variable")
+    if not isinstance(variable, dict) or variable.get("id") != (
+        "BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1"
+    ):
+        raise ValueError("phase 3 single enhancement variable drifted")
+    if variable.get("status") != "FROZEN_FOR_DEV_EXPERIMENT_NOT_IMPLEMENTED":
+        raise ValueError("phase 3 enhancement must remain unimplemented")
+
+    rollback = payload.get("disable_and_rollback")
+    if not isinstance(rollback, dict) or rollback.get("default") is not False:
+        raise ValueError("phase 3 enhancement switch must default to false")
+    isolation = payload.get("split_isolation")
+    if not isinstance(isolation, dict):
+        raise ValueError("phase 3 split isolation is missing")
+    if isolation.get("test", {}).get("status") != "SEALED":
+        raise ValueError("phase 3 test split must remain sealed")
+    if isolation.get("test", {}).get("tuning_allowed") is not False:
+        raise ValueError("phase 3 test tuning must remain forbidden")
+    if isolation.get("acceptance", {}).get("status") != (
+        "SEALED_REQUIRES_EXPLICIT_AUTHORIZATION"
+    ):
+        raise ValueError("phase 3 acceptance split must require explicit authorization")
+    if isolation.get("acceptance", {}).get("tuning_allowed") is not False:
+        raise ValueError("phase 3 acceptance tuning must remain forbidden")
+
+    debt = payload.get("independent_performance_debt")
+    if not isinstance(debt, dict) or debt.get("retrieval_p95_ms_max") != 300:
+        raise ValueError("phase 3 independent 300 ms performance debt drifted")
+    if debt.get("must_not_be_combined_with_first_failure_enhancement") is not True:
+        raise ValueError("phase 3 performance debt must remain an independent gate")
+
+
 def check_harness_links() -> None:
     for relative_path in ("AGENTS.md", "docs/HARNESS_ARCHITECTURE.md"):
         text = (ROOT / relative_path).read_text(encoding="utf-8")
@@ -412,6 +473,7 @@ def main() -> int:
         ("phase_contract", check_phase_contract),
         ("current_phase", check_current_phase),
         ("phase_zero_scope_resource_slo", check_phase_zero_scope_resource_slo),
+        ("phase3_entry_freeze", check_phase3_entry_freeze),
         ("harness_links", check_harness_links),
         ("content_safety", check_harness_content_safety),
         ("tracked_artifact_boundary", check_tracked_artifact_boundary),
