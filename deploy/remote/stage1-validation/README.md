@@ -61,7 +61,10 @@ locally and do not return the environment-variable assignment lines.
    mutating and refuses to run without the literal confirmation phrase:
 
    ```powershell
-   .\.venv\Scripts\python.exe scripts\run_stage1_remote_canary.py --pdf <PDF_PATH> --expected-sha256 <PDF_SHA256> --run-id <NEW_RUN_ID> --confirm RUN_ISOLATED_STAGE1_CANARY --output runtime\stage1-remote-validation\report.json
+   $PdfPath = Read-Host 'PDF path'
+   $ExpectedPdfSha256 = Read-Host 'Expected PDF SHA-256'
+   $RunId = Read-Host 'New non-secret run ID'
+   .\.venv\Scripts\python.exe scripts\run_stage1_remote_canary.py --pdf $PdfPath --expected-sha256 $ExpectedPdfSha256 --run-id $RunId --confirm RUN_ISOLATED_STAGE1_CANARY --output runtime\stage1-remote-validation\report.json
    ```
 
 5. Return only these sanitized artifacts:

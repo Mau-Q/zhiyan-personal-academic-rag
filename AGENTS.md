@@ -19,6 +19,7 @@
 ```bash
 git status -sb
 make harness-validate
+make powershell-check
 ```
 
 `Makefile` 强制使用仓库 `.venv`；不得用系统 `python3` 直接运行仓库门禁。虚拟环境不存在时应明确失败，不回退到系统解释器。
@@ -46,12 +47,26 @@ make harness-validate
 - 远程主机操作由用户按版本化操作清单亲自执行；代理只准备源码、验证脚本并根据脱敏原始输出判断，不代替用户连接或重启稳定服务；
 - 合同破坏、安全边界、真实数据、公网暴露和大型跨模块变更必须走 PR 并先确认。
 
+## PowerShell 交付门禁
+
+- 本仓库面向 Windows 主机的 PowerShell 操作清单默认以 Windows
+  PowerShell 5.1 为兼容基线；明确标注 `pwsh` 时才可使用 PowerShell 7
+  专属语法。
+- 超过简单单行的 PowerShell 先写入 `.ps1` 再交付；Markdown 中的
+  `powershell`/`pwsh`/`ps1` 代码块同样受门禁约束。
+- 更改 `.ps1`、`.psm1`、`.psd1` 或 PowerShell 代码块后，必须在 Mac
+  上运行 `make powershell-check`；该命令只解析和静态分析，不执行被检查代码。
+- 不得用 Mac 静态检查声称 Windows 专属 cmdlet、注册表、服务、
+  ACL、计划任务或编码行为已验证；这些仍由用户在版本化 Windows
+  操作清单中最终验证。
+
 ## 完成门禁
 
 普通低风险任务至少执行：
 
 ```bash
 make harness-validate
+make powershell-check
 # 运行与改动直接相关的测试目标；阶段、合同或跨模块变更运行 make test
 git diff --check
 ```
