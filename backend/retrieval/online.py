@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from backend.retrieval.comparison_decomposition import RouteQueryPlan
 from backend.retrieval.elasticsearch import (
     ElasticsearchBm25Index,
     ElasticsearchSearchLatencyBreakdown,
@@ -66,6 +67,15 @@ class ReadyChunkSnapshotRepository(Protocol):
         owner_id: str,
         document_version_ids: Sequence[str],
     ) -> tuple[ChunkRecordV1, ...]: ...
+
+
+class OnlineRouteQueryPlanner(Protocol):
+    def plan(
+        self,
+        question: str,
+        *,
+        document_ids: Sequence[str],
+    ) -> RouteQueryPlan: ...
 
 
 @dataclass(frozen=True)
@@ -225,6 +235,7 @@ class OnlineVersionRrfRetriever:
         candidate_k: int = 20,
         rrf_k: int = 60,
         vector_min_score: float = DEFAULT_VECTOR_MIN_SCORE,
+        route_query_planner: OnlineRouteQueryPlanner | None = None,
         latency_observer: (
             Callable[[OnlineRetrievalLatencyBreakdown], None] | None
         ) = None,
@@ -241,6 +252,7 @@ class OnlineVersionRrfRetriever:
         self.candidate_k = candidate_k
         self.rrf_k = rrf_k
         self.vector_min_score = vector_min_score
+        self.route_query_planner = route_query_planner
         self.latency_observer = latency_observer
 
     def search(
@@ -264,6 +276,26 @@ class OnlineVersionRrfRetriever:
         ready_route_resolution_latency_ms = (
             time.perf_counter() - ready_route_resolution_started
         ) * 1000
+        route_queries = {route.document_id: question for route in routes}
+        if self.route_query_planner is not None:
+            try:
+                query_plan = self.route_query_planner.plan(
+                    question,
+                    document_ids=[route.document_id for route in routes],
+                )
+                if (
+                    query_plan.status == "APPLIED"
+                    and set(query_plan.queries) == set(route_queries)
+                    and all(
+                        isinstance(route_question, str)
+                        and route_question.strip()
+                        for route_question in query_plan.queries.values()
+                    )
+                ):
+                    route_queries = dict(query_plan.queries)
+            except Exception:
+                # The frozen failure policy keeps the authorized original-query path.
+                route_queries = {route.document_id: question for route in routes}
         rankings: list[list[RankedChunk]] = []
         elasticsearch_timings: list[ElasticsearchSearchLatencyBreakdown] = []
         milvus_timings: list[MilvusSearchLatencyBreakdown] = []
@@ -331,13 +363,13 @@ class OnlineVersionRrfRetriever:
                         vector_kwargs["timing_sink"] = milvus_timings.append
                     lexical_future = executor.submit(
                         elasticsearch_index.search,
-                        question,
+                        route_queries[route.document_id],
                         dict(route_scope),
                         **lexical_kwargs,
                     )
                     vector_future = executor.submit(
                         milvus_index.search,
-                        question,
+                        route_queries[route.document_id],
                         dict(route_scope),
                         self.embedding_provider,
                         **vector_kwargs,

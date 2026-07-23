@@ -110,7 +110,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(authority["line_count"], 725)
         self.assertEqual(
-            authority["source_phase"], {"id": "phase-3", "status": "NOT_STARTED"}
+            authority["source_phase"], {"id": "phase-3", "status": "IN_PROGRESS"}
         )
         self.assertEqual(
             authority["completed_source_phases"], ["phase-0", "phase-1", "phase-2"]
@@ -177,6 +177,36 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["independent_performance_debt"]["retrieval_p95_ms_max"], 300
+        )
+
+    def test_phase_three_comparison_local_implementation_is_not_online_quality(self):
+        payload = json.loads(
+            (ROOT / "machine" / "phase3_comparison_dev_gate.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(
+            payload["status"],
+            "LOCAL_IMPLEMENTATION_PASS_AWAITING_PAIRED_ONLINE_DEV",
+        )
+        self.assertEqual(
+            payload["source_phase"], {"id": "phase-3", "status": "IN_PROGRESS"}
+        )
+        self.assertEqual(
+            payload["implementation"]["variable_id"],
+            "BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1",
+        )
+        self.assertFalse(payload["implementation"]["default_enabled"])
+        self.assertEqual(payload["preserved_online_path"]["candidate_k"], 20)
+        self.assertEqual(payload["preserved_online_path"]["rrf_k"], 60)
+        self.assertFalse(payload["preserved_online_path"]["reranker_enabled"])
+        self.assertEqual(
+            payload["paired_online_dev_quality"]["status"],
+            "NOT_RUN",
+        )
+        self.assertTrue(payload["split_isolation"]["test"].startswith("SEALED"))
+        self.assertTrue(
+            payload["split_isolation"]["acceptance"].startswith("SEALED")
         )
 
     def test_validator_rejects_template_as_concrete_phase_result(self):

@@ -8,7 +8,7 @@ ifeq ($(wildcard $(PROJECT_PYTHON)),)
 $(error Project virtualenv is missing at $(PROJECT_PYTHON); create .venv and install the project dependencies first)
 endif
 
-.PHONY: harness-validate powershell-check harness-test contract-test storage-test ingestion-test retrieval-test rag-test api-test evaluation-test validation-test stage1-local-canary real-generation-canary phase2-model-selection fixed-reranker-test online-reranker-test fixed-reranker-input-package fixed-reranker-gate evaluation-contract-check formal-evaluation-fixture evaluation-smoke sqlite-fts-fixture-smoke vector-fixture-smoke rrf-fixture-smoke test
+.PHONY: harness-validate powershell-check harness-test contract-test storage-test ingestion-test retrieval-test rag-test api-test evaluation-test validation-test stage1-local-canary real-generation-canary phase2-model-selection phase3-comparison-dev-plan fixed-reranker-test online-reranker-test fixed-reranker-input-package fixed-reranker-gate evaluation-contract-check formal-evaluation-fixture evaluation-smoke sqlite-fts-fixture-smoke vector-fixture-smoke rrf-fixture-smoke test
 
 harness-validate:
 	$(PROJECT_PYTHON) scripts/validate_harness_contract.py
@@ -61,6 +61,10 @@ real-generation-canary:
 
 phase2-model-selection:
 	$(PROJECT_PYTHON) scripts/run_phase2_model_selection.py
+
+phase3-comparison-dev-plan:
+	$(PROJECT_PYTHON) scripts/validate_phase3_comparison_dev_plan.py \
+		--expected-input-sha256 13b7ddfb0185ba03f251664366d5ab28a0cae64adda9ef9a57da563be0ae2c6e
 
 fixed-reranker-test:
 	$(PROJECT_PYTHON) -m unittest -v tests.evaluation.test_fixed_reranker

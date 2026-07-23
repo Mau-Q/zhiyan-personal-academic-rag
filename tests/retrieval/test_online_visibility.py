@@ -5,6 +5,7 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import patch
 
+from backend.retrieval.comparison_decomposition import RouteQueryPlan
 from backend.retrieval.online import (
     OnlineRetrievalLatencyBreakdown,
     OnlineScopeForbiddenError,
@@ -175,8 +176,9 @@ class FakeElasticsearchIndex:
         self.transport = transport
 
     def search(self, question, scope, **kwargs):
-        del question, scope
+        del scope
         timing_sink = kwargs.pop("timing_sink", None)
+        self.transport.questions[self.index_name] = question
         self.transport.expected[self.index_name] = kwargs["expected_chunks"]
         self.transport.source_fingerprints[self.index_name] = kwargs[
             "source_fingerprint_chunks"
@@ -199,8 +201,9 @@ class FakeMilvusIndex:
         self.transport = transport
 
     def search(self, question, scope, provider, **kwargs):
-        del question, scope, provider
+        del scope, provider
         timing_sink = kwargs.pop("timing_sink", None)
+        self.transport.questions[self.collection_name] = question
         self.transport.expected[self.collection_name] = kwargs["expected_chunks"]
         self.transport.source_fingerprints[self.collection_name] = kwargs[
             "source_fingerprint_chunks"
@@ -223,6 +226,7 @@ class RankingTransport:
         self.rankings = rankings
         self.expected = {}
         self.source_fingerprints = {}
+        self.questions = {}
 
 
 class FakeChunkSnapshots:
@@ -236,6 +240,146 @@ class FakeChunkSnapshots:
 
 
 class OnlineVersionRrfRetrieverTests(unittest.TestCase):
+    def test_applied_route_query_plan_changes_only_route_query_text(self):
+        first_route = OnlineVersionRoute(
+            owner_id=OWNER_ID,
+            document_id="document_001",
+            document_version_id="version_001",
+            elasticsearch_index="es_version_001",
+            milvus_collection="milvus_version_001",
+        )
+        second_route = OnlineVersionRoute(
+            owner_id=OWNER_ID,
+            document_id="document_002",
+            document_version_id="version_002",
+            elasticsearch_index="es_version_002",
+            milvus_collection="milvus_version_002",
+        )
+        first = chunk("document_001", "version_001", 1)
+        second = chunk("document_002", "version_002", 1)
+        elasticsearch = RankingTransport(
+            {
+                "es_version_001": [RankedChunk("es", 1, 4.0, first)],
+                "es_version_002": [RankedChunk("es", 1, 3.0, second)],
+            }
+        )
+        milvus = RankingTransport(
+            {
+                "milvus_version_001": [],
+                "milvus_version_002": [],
+            }
+        )
+
+        class StaticPlanner:
+            calls = []
+
+            def plan(self, question, *, document_ids):
+                self.calls.append((question, tuple(document_ids)))
+                return RouteQueryPlan(
+                    status="APPLIED",
+                    queries={
+                        "document_001": "first-side query",
+                        "document_002": "second-side query",
+                    },
+                    failure_code=None,
+                )
+
+        planner = StaticPlanner()
+        retriever = OnlineVersionRrfRetriever(
+            resolver=StaticResolver([first_route, second_route]),
+            elasticsearch_transport=elasticsearch,
+            milvus_transport=milvus,
+            embedding_provider=FakeEmbeddingProvider(),
+            chunk_snapshots=FakeChunkSnapshots([first, second]),
+            route_query_planner=planner,
+        )
+
+        with patch(
+            "backend.retrieval.online.ElasticsearchBm25Index",
+            FakeElasticsearchIndex,
+        ), patch("backend.retrieval.online.MilvusVectorIndex", FakeMilvusIndex):
+            retriever.retrieve(
+                "original comparison",
+                {"user_id": OWNER_ID, "tenant_id": OWNER_ID},
+                owner_id=OWNER_ID,
+                document_ids=["document_001", "document_002"],
+                top_k=2,
+            )
+
+        self.assertEqual(
+            planner.calls,
+            [
+                (
+                    "original comparison",
+                    ("document_001", "document_002"),
+                )
+            ],
+        )
+        self.assertEqual(
+            elasticsearch.questions,
+            {
+                "es_version_001": "first-side query",
+                "es_version_002": "second-side query",
+            },
+        )
+        self.assertEqual(
+            milvus.questions,
+            {
+                "milvus_version_001": "first-side query",
+                "milvus_version_002": "second-side query",
+            },
+        )
+        self.assertEqual(retriever.candidate_k, 20)
+        self.assertEqual(retriever.rrf_k, 60)
+
+    def test_invalid_or_failed_route_query_plan_falls_back_to_original_query(self):
+        route = OnlineVersionRoute(
+            owner_id=OWNER_ID,
+            document_id="document_001",
+            document_version_id="version_001",
+            elasticsearch_index="es_version_001",
+            milvus_collection="milvus_version_001",
+        )
+        expected = chunk("document_001", "version_001", 1)
+        elasticsearch = RankingTransport(
+            {"es_version_001": [RankedChunk("es", 1, 1.0, expected)]}
+        )
+        milvus = RankingTransport({"milvus_version_001": []})
+
+        class FailingPlanner:
+            def plan(self, question, *, document_ids):
+                del question, document_ids
+                raise RuntimeError("simulated decomposition failure")
+
+        retriever = OnlineVersionRrfRetriever(
+            resolver=StaticResolver([route]),
+            elasticsearch_transport=elasticsearch,
+            milvus_transport=milvus,
+            embedding_provider=FakeEmbeddingProvider(),
+            chunk_snapshots=FakeChunkSnapshots([expected]),
+            route_query_planner=FailingPlanner(),
+        )
+
+        with patch(
+            "backend.retrieval.online.ElasticsearchBm25Index",
+            FakeElasticsearchIndex,
+        ), patch("backend.retrieval.online.MilvusVectorIndex", FakeMilvusIndex):
+            retriever.retrieve(
+                "original question",
+                {"user_id": OWNER_ID, "tenant_id": OWNER_ID},
+                owner_id=OWNER_ID,
+                document_ids=["document_001"],
+            )
+
+        self.assertEqual(
+            elasticsearch.questions["es_version_001"],
+            "original question",
+        )
+        self.assertEqual(
+            milvus.questions["milvus_version_001"],
+            "original question",
+        )
+
     def test_persisted_snapshot_must_match_exact_ready_route_versions(self):
         route = OnlineVersionRoute(
             owner_id=OWNER_ID,

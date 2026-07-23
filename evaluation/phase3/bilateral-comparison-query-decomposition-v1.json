@@ -1,0 +1,52 @@
+{
+  "schema_version": "bilateral_comparison_query_decomposition_config_v1",
+  "variable_id": "BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1",
+  "default_enabled": false,
+  "failure_policy": "FALLBACK_TO_ORIGINAL_QUERY",
+  "comparison_markers": [
+    "比较",
+    "对比",
+    "差异",
+    "不同",
+    "区别",
+    "异同",
+    "compare",
+    "comparison",
+    "contrast",
+    "difference"
+  ],
+  "transition_markers": [
+    "同时",
+    "另外",
+    "另一方面",
+    "此外",
+    "meanwhile",
+    "additionally"
+  ],
+  "document_identities": [
+    {
+      "document_id": "doc_arxiv_2601_03260",
+      "aliases": [
+        "SciNet",
+        "SciNet: Evaluating AI Agents in Relation-Aware Scientific Literature Retrieval",
+        "2601.03260"
+      ]
+    },
+    {
+      "document_id": "doc_arxiv_2602_11409",
+      "aliases": [
+        "TRACER",
+        "TRACER: Trajectory Risk Aggregation for Critical Episodes in Agentic Reasoning",
+        "2602.11409"
+      ]
+    },
+    {
+      "document_id": "doc_arxiv_2603_04915",
+      "aliases": [
+        "EVMbench",
+        "EVMbench: Evaluating AI Agents on Smart Contract Security",
+        "2603.04915"
+      ]
+    }
+  ]
+}

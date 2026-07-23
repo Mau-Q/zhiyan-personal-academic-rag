@@ -555,6 +555,24 @@
         "docs/CURRENT_PHASE.md",
         "tests/harness/test_repository_harness.py"
       ]
+    },
+    {
+      "id": "phase3_bilateral_comparison_query_decomposition",
+      "status": "PARTIAL",
+      "owner": "SHARED",
+      "evidence": [
+        "backend/retrieval/comparison_decomposition.py",
+        "backend/retrieval/online.py",
+        "evaluation/phase3/bilateral-comparison-query-decomposition-v1.json",
+        "scripts/validate_phase3_comparison_dev_plan.py",
+        "tests/evaluation/test_phase3_comparison_dev_plan.py",
+        "tests/retrieval/test_comparison_decomposition.py",
+        "tests/retrieval/test_online_visibility.py",
+        "machine/phase3_comparison_dev_gate.json",
+        "docs/PHASE_3_COMPARISON_DEV_GATE.md",
+        "docs/REQUIREMENTS_TRACEABILITY.md",
+        "docs/CURRENT_PHASE.md"
+      ]
     }
   ]
 }

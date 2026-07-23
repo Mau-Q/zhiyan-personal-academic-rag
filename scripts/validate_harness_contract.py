@@ -23,10 +23,12 @@ REQUIRED_FILES = (
     "docs/CURRENT_PHASE.md",
     "docs/PHASE_0_SCOPE_RESOURCE_SLO.md",
     "docs/PHASE_3_ENTRY_FREEZE.md",
+    "docs/PHASE_3_COMPARISON_DEV_GATE.md",
     "machine/project_state.json",
     "machine/feature_list.json",
     "machine/phase_zero_scope_resource_slo.json",
     "machine/phase3_entry_freeze.json",
+    "machine/phase3_comparison_dev_gate.json",
     "machine/phase_result.schema.json",
     "machine/phase_result.template.json",
     "scripts/validate_harness_contract.py",
@@ -110,7 +112,7 @@ def check_project_state() -> None:
         "sha256": "43fd5d4af4d38884c2449b9ff39fcee537cf27af5a7a700747a932be5f74dc78",
         "line_count": 725,
         "traceability_doc": "docs/REQUIREMENTS_TRACEABILITY.md",
-        "source_phase": {"id": "phase-3", "status": "NOT_STARTED"},
+        "source_phase": {"id": "phase-3", "status": "IN_PROGRESS"},
         "completed_source_phases": ["phase-0", "phase-1", "phase-2"],
     }:
         raise ValueError("project_state source_authority is invalid")
@@ -144,7 +146,7 @@ def check_project_state() -> None:
         source_authority["sha256"],
         f"`{source_authority['line_count']}`",
         "方案阶段 0/1/2 COMPLETE",
-        "方案阶段 3 NOT_STARTED",
+        "方案阶段 3 IN_PROGRESS",
     ):
         if expected not in traceability_text:
             raise ValueError(f"source authority identity missing from traceability: {expected}")
@@ -413,6 +415,80 @@ def check_phase3_entry_freeze() -> None:
         raise ValueError("phase 3 performance debt must remain an independent gate")
 
 
+def check_phase3_comparison_dev_gate() -> None:
+    payload = _read_json("machine/phase3_comparison_dev_gate.json")
+    if payload.get("schema_version") != "phase3_comparison_dev_gate_v1":
+        raise ValueError("phase 3 comparison dev gate schema_version is invalid")
+    if payload.get("status") != (
+        "LOCAL_IMPLEMENTATION_PASS_AWAITING_PAIRED_ONLINE_DEV"
+    ):
+        raise ValueError("phase 3 comparison dev gate status is invalid")
+    if payload.get("source_phase") != {"id": "phase-3", "status": "IN_PROGRESS"}:
+        raise ValueError("phase 3 comparison dev gate source phase is invalid")
+
+    implementation = payload.get("implementation")
+    if (
+        not isinstance(implementation, dict)
+        or implementation.get("decision_id") != "PD-040"
+        or implementation.get("variable_id")
+        != "BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1"
+        or implementation.get("default_enabled") is not False
+        or implementation.get("failure_policy") != "FALLBACK_TO_ORIGINAL_QUERY"
+    ):
+        raise ValueError("phase 3 comparison implementation boundary drifted")
+    config_path = implementation.get("config")
+    if not isinstance(config_path, str) or not (ROOT / config_path).is_file():
+        raise ValueError("phase 3 comparison config path is invalid")
+    if implementation.get("config_sha256") != (
+        "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2b"
+    ):
+        raise ValueError("phase 3 comparison config identity drifted")
+
+    online = payload.get("preserved_online_path")
+    if (
+        not isinstance(online, dict)
+        or online.get("candidate_k") != 20
+        or online.get("rrf_k") != 60
+        or online.get("final_top_k") != 3
+        or online.get("reranker_enabled") is not False
+        or online.get("additional_es_requests") != 0
+        or online.get("additional_milvus_requests") != 0
+        or online.get("new_llm_calls") != 0
+    ):
+        raise ValueError("phase 3 preserved online path drifted")
+
+    evidence = payload.get("local_dev_plan_evidence")
+    if (
+        not isinstance(evidence, dict)
+        or evidence.get("status") != "PASS"
+        or evidence.get("target_case_count") != 4
+        or evidence.get("control_original_query_preserved") != 4
+        or evidence.get("treatment_applied") != 4
+        or evidence.get("decomposition_p95_ms_max") != 5
+    ):
+        raise ValueError("phase 3 local dev plan evidence is invalid")
+    paired = payload.get("paired_online_dev_quality")
+    if not isinstance(paired, dict) or paired.get("status") != "NOT_RUN":
+        raise ValueError("phase 3 paired online dev must remain not run")
+    isolation = payload.get("split_isolation")
+    if (
+        not isinstance(isolation, dict)
+        or not str(isolation.get("test", "")).startswith("SEALED")
+        or not str(isolation.get("acceptance", "")).startswith("SEALED")
+    ):
+        raise ValueError("phase 3 comparison split isolation drifted")
+    performance = payload.get("independent_performance_gate")
+    if (
+        not isinstance(performance, dict)
+        or performance.get("retrieval_p95_ms_max") != 300
+        or performance.get(
+            "must_not_be_combined_with_comparison_quality_change"
+        )
+        is not True
+    ):
+        raise ValueError("phase 3 independent performance gate drifted")
+
+
 def check_harness_links() -> None:
     for relative_path in ("AGENTS.md", "docs/HARNESS_ARCHITECTURE.md"):
         text = (ROOT / relative_path).read_text(encoding="utf-8")
@@ -474,6 +550,7 @@ def main() -> int:
         ("current_phase", check_current_phase),
         ("phase_zero_scope_resource_slo", check_phase_zero_scope_resource_slo),
         ("phase3_entry_freeze", check_phase3_entry_freeze),
+        ("phase3_comparison_dev_gate", check_phase3_comparison_dev_gate),
         ("harness_links", check_harness_links),
         ("content_safety", check_harness_content_safety),
         ("tracked_artifact_boundary", check_tracked_artifact_boundary),

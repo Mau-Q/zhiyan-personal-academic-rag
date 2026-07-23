@@ -1,0 +1,71 @@
+{
+  "schema_version": "phase3_comparison_dev_gate_v1",
+  "status": "LOCAL_IMPLEMENTATION_PASS_AWAITING_PAIRED_ONLINE_DEV",
+  "source_phase": {
+    "id": "phase-3",
+    "status": "IN_PROGRESS"
+  },
+  "entry_freeze": {
+    "decision_id": "PD-039",
+    "artifact": "machine/phase3_entry_freeze.json",
+    "target_ids_sha256": "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8"
+  },
+  "implementation": {
+    "decision_id": "PD-040",
+    "variable_id": "BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1",
+    "code": "backend/retrieval/comparison_decomposition.py",
+    "config": "evaluation/phase3/bilateral-comparison-query-decomposition-v1.json",
+    "config_sha256": "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2b",
+    "reserved_switch": "PHASE3_COMPARISON_DECOMPOSITION_ENABLED",
+    "default_enabled": false,
+    "failure_policy": "FALLBACK_TO_ORIGINAL_QUERY",
+    "runtime_integration": "OPTIONAL_ROUTE_QUERY_PLANNER_AFTER_READY_OWNER_RESOLUTION",
+    "identity_metadata_boundary": "FROZEN_SOURCE_ALIASES_MUST_BE_EXACTLY_REMAPPED_TO_ALREADY_AUTHORIZED_OWNER_SCOPED_RUNTIME_DOCUMENT_IDS_AND_DO_NOT_AUTHORIZE_ROUTES"
+  },
+  "preserved_online_path": {
+    "postgres_ready_owner_precondition": true,
+    "persistent_document_version_chunk_identity_validation": true,
+    "elasticsearch_milvus_parallel_per_route": true,
+    "candidate_k": 20,
+    "rrf_k": 60,
+    "final_top_k": 3,
+    "reranker_enabled": false,
+    "additional_es_requests": 0,
+    "additional_milvus_requests": 0,
+    "new_llm_calls": 0
+  },
+  "local_dev_plan_evidence": {
+    "status": "PASS",
+    "execution_boundary": "DEV_QUERY_PLAN_ONLY_NO_RETRIEVAL_NO_TEST_NO_ACCEPTANCE",
+    "input_sha256": "13b7ddfb0185ba03f251664366d5ab28a0cae64adda9ef9a57da563be0ae2c6e",
+    "private_report_sha256": "4b56fffc65685b315edcf1703a22c0493fcab2b9d6fa977123f70ae10c5a70d3",
+    "target_case_count": 4,
+    "control_original_query_preserved": 4,
+    "treatment_applied": 4,
+    "decomposition_latency_sample_count": 120,
+    "decomposition_p95_ms_observed": 0.016271,
+    "decomposition_p95_ms_max": 5
+  },
+  "paired_online_dev_quality": {
+    "status": "NOT_RUN",
+    "reason": "No remote host was accessed and no online ES-Milvus-RRF paired replay was performed in the local implementation gate.",
+    "control_baseline": null,
+    "treatment_gain": null,
+    "critical_non_regression": null
+  },
+  "split_isolation": {
+    "dev": "OPEN_ONLY_FOR_FROZEN_VARIABLE",
+    "test": "SEALED_UNTIL_IMPLEMENTATION_CONFIG_DEV_DECISION_AND_COMMIT_ARE_FROZEN",
+    "acceptance": "SEALED_REQUIRES_EXPLICIT_AUTHORIZATION"
+  },
+  "rollback": {
+    "action": "Set PHASE3_COMPARISON_DECOMPOSITION_ENABLED=false or omit the route query planner.",
+    "data_schema_index_model_cleanup_required": false
+  },
+  "independent_performance_gate": {
+    "status": "PENDING_SEPARATE_GATE",
+    "retrieval_p95_ms_max": 300,
+    "phase2_base_retrieval_p95_ms": 376.394385,
+    "must_not_be_combined_with_comparison_quality_change": true
+  }
+}
