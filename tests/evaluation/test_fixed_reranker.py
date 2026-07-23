@@ -14,6 +14,7 @@ from backend.evaluation.reranker import (
     rerank_result,
 )
 from backend.evaluation.retrieval_metrics import RetrievalRankingResultV1
+from scripts.run_fixed_reranker_gate import _portable_text_sha256, _sha256
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -198,6 +199,20 @@ class FixedRerankerTests(unittest.TestCase):
                 digest.update(sha256(value).digest())
 
             self.assertEqual(directory_sha256(root), digest.hexdigest())
+
+    def test_tracked_text_digest_normalizes_windows_newlines_only(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            lf_path = root / "lf.json"
+            crlf_path = root / "crlf.json"
+            lf_path.write_bytes(b'{\n  "value": true\n}\n')
+            crlf_path.write_bytes(b'{\r\n  "value": true\r\n}\r\n')
+
+            self.assertEqual(
+                _portable_text_sha256(lf_path),
+                _portable_text_sha256(crlf_path),
+            )
+            self.assertNotEqual(_sha256(lf_path), _sha256(crlf_path))
 
     def test_decision_falls_back_when_relative_gain_is_too_small(self) -> None:
         config = load_config(CONFIG)

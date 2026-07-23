@@ -81,6 +81,11 @@ def _sha256(path: Path) -> str:
     return sha256(path.read_bytes()).hexdigest()
 
 
+def _portable_text_sha256(path: Path) -> str:
+    normalized = path.read_text(encoding="utf-8").encode("utf-8")
+    return sha256(normalized).hexdigest()
+
+
 def _percentile(values: list[float], percentile: float) -> float | None:
     if not values:
         return None
@@ -209,11 +214,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "snapshot_sha256": scorer.snapshot_sha256,
         },
         "input_sha256": {
-            "config": _sha256(args.config),
+            "config": _portable_text_sha256(args.config),
             "manifest": _sha256(args.manifest),
             "chunks": _sha256(args.chunks),
             "candidates": _sha256(args.candidates),
-            "document_catalog": _sha256(args.document_catalog),
+            "document_catalog": _portable_text_sha256(args.document_catalog),
         },
         "output_sha256": {
             "rankings": _sha256(rankings_path),
