@@ -3,8 +3,8 @@
 ## 1. 当前结论
 
 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的本地实现候选与冻结配置已完成，
-方案阶段 3 由 `NOT_STARTED` 进入 `IN_PROGRESS`。本地结论仅为
-`SIXTH_ATTEMPT_MILVUS_ROUTE_IDENTITY_FAILED_LOGICAL_ROW_FIX_READY`：
+方案阶段 3 由 `NOT_STARTED` 进入 `IN_PROGRESS`。当前结论为
+`SEVENTH_ATTEMPT_DEV_QUALITY_FAILED_CLEAN_VARIABLE_REJECTED`：
 
 - 默认开关仍为 `false`，未改变默认 RRF；
 - 4 个冻结 `dev` 样本的 Control 均保持原问题，Treatment 规划均为
@@ -27,8 +27,11 @@
 - 第六次运行 `_06` 已将故障收敛为
   `RUN_CONTROL / ONLINE_MILVUS_ROUTE_IDENTITY_FAILED`，并再次完成 9/9
   清理、READY 失败关闭和删除后 403；无需恢复，但仍没有质量指标；
-- 尚未完成真实 PostgreSQL READY + ES/Milvus + RRF 配对质量回放，因此没有
-  检索质量增益、关键类不退化或 300 ms 通过结论；
+- 第七次运行 `_07` 已完成真实 PostgreSQL READY + ES/Milvus + RRF 配对回放；
+  Control/Treatment 对目标四题均为双侧 Top-3 命中 `0/4`，Recall@3 无增益、
+  `nDCG@3 -0.017739`，固定 15 题 `14/15`，裁决保持变量关闭；
+- `_07` 清理 9/9、READY 失败关闭和删除后 403 通过，无需恢复；非目标和增量
+  成本门禁通过，但不构成目标质量通过或 300 ms 结论；
 - `test` 与 `acceptance` 均未读取、未运行。
 
 机器状态见 `machine/phase3_comparison_dev_gate.json`，实现决策见 `PD-040`，
@@ -97,11 +100,11 @@ make phase3-comparison-dev-plan
 报告只保存问题和路由查询的 SHA-256、字符数、状态和延迟，不保存问题或拆分后
 文本。本地 P95 只证明纯转换成本，不替代 Windows 在线检索增量延迟。
 
-## 5. 未完成的同一质量 Gate
+## 5. 已完成的同一质量 Gate
 
-下一节点仍属于首个失败类型质量 Gate，不另起能力变量。用户入口位于
+首个失败类型质量 Gate 没有另起能力变量。用户入口位于
 `deploy/remote/phase3-comparison-validation/`，使用隔离 owner 创建三篇论文的
-临时 READY 版本；固定数据准备和清理不是第二个质量变量：
+临时 READY 版本；固定数据准备和清理不是第二个质量变量。实际执行遵守：
 
 1. 在同一 READY/owner、文档版本、Chunk、ES/Milvus、Embedding、候选和 RRF
    配置上先运行原问题 Control；
@@ -235,6 +238,27 @@ Milvus 路径失败，不能确定根因或形成质量结论。
 provider 和 source fingerprint 校验均保留。此次未更改 ANN、Embedding、
 默认 RRF、比较变量、候选 20、RRF `k=60`、Top-3、阈值或 holdout。
 
+第七次 Windows Run ID `phase3_comparison_dev_20260723_07` 在提交
+`ff370b512f88b7d847fa17f080946aab4050048c` 上越过全部身份、Control、
+Treatment 和清理阶段，形成可信质量失败：
+
+| 项目 | Control | Treatment | 绝对变化 |
+|---|---:|---:|---:|
+| 目标双侧 Top-3 命中 | `0/4` | `0/4` | `0` |
+| 目标宏观 Recall@3 | `0.145833` | `0.145833` | `0` |
+| 目标宏观 nDCG@3 | `0.220967` | `0.203228` | `-0.017739` |
+| 非目标 Recall@3 | `0.622917` | `0.622917` | `0` |
+| 非目标 nDCG@10 | `0.632761` | `0.632761` | `0` |
+
+固定 15 题为 `14/15`，类别为 `8/9 answerable + 3/3 no-evidence +
+3/3 forbidden`，Control/Treatment 边界不完全一致。增量检索 P95 为
+`24.101115 ms <= 50 ms`，纯拆分 P95 为 `0.12922 ms <= 5 ms`；成本通过
+不能抵消目标增益和固定 Canary 失败。报告 SHA-256 为
+`3810CE9228F7CE9C65B5BE0E031F1F5CA6A471FA665BF5D8C12A6E7CAC6E01390`，
+裁决 SHA-256 为
+`99530D236B8CA50B53DE18557C9D43C7BCC63695A3C98FC9DBA889B33CDAA036`。
+最终决定为 `KEEP_COMPARISON_DECOMPOSITION_DISABLED`。
+
 ## 6. 远程结果回收与裁决
 
 Windows runner 现在把实际 Git HEAD 和 Run ID 写入完整报告。PowerShell 入口在
@@ -253,9 +277,9 @@ Windows runner 现在把实际 Git HEAD 和 Run ID 写入完整报告。PowerShe
 6. 远程 FAIL 或报告不可采信时都保持比较拆分关闭。
 
 当前裁决器保留前三次拒绝、第四次可信通用 FAIL、第五次可信 Milvus 路径
-FAIL 和第六次可信 Milvus 身份 FAIL 证据；第六次仍没有形成 Control/Treatment
-指标，在线配对 dev 仍无可
-采信质量结论。
+FAIL、第六次可信 Milvus 身份 FAIL，以及第七次完整可信质量 FAIL。`_07`
+证明首个比较拆分变量不能晋级：不得调参、不得复用 Run ID、不得解封 `test`。
+由于 9/9 清理、READY 失败关闭和删除后 403 均通过，本次不进入恢复 Gate。
 
 ## 7. 不能合并的边界
 

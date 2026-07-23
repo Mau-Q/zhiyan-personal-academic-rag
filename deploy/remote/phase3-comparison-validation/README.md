@@ -46,76 +46,27 @@ unzip -p runtime/handoffs/phase3-comparison-paired-dev-input-v1.zip manifest.jso
 读取任何 Acceptance 套件或查找隐含路径。使用既有安全文件传输方式将 ZIP
 交给 Windows 用户。
 
-## 2. Windows：仅在 Mac 推送成功后运行
+## 2. Windows：`_07` 已完成，不得复跑
 
-`phase3_comparison_dev_20260723_06` 已越过入库和 READY 路由解析，
-但在 `RUN_CONTROL` 以 `ONLINE_MILVUS_ROUTE_IDENTITY_FAILED` 失败，未形成 Control 或
-Treatment 指标。报告 SHA-256 为
-`FCBD2B472E21AD5554FB3EBB0389CDE649FDFE80C4036C8BCC64A194FC4F70CB`，
-裁决 SHA-256 为
-`A43F13F6E06F3D0C1B9ABA405529A31A82B754477292220D9EAC831CDCC6B779D`。
-清理 9/9、READY 失败关闭和删除后 403 均通过，无需恢复 Gate。
+`phase3_comparison_dev_20260723_07` 已在提交
+`ff370b512f88b7d847fa17f080946aab4050048c` 上完成完整 Control/Treatment，
+稳定结果为 `QUALITY_OR_COST_THRESHOLD_NOT_MET`：
 
-本次独立修复只把版本集合的在线精确计数证明从 collection stats 改为逻辑
-Chunk 主键快照，保留 schema、版本入口、owner/document/version、provider、
-source fingerprint、READY 和完整版本行身份校验；不改 ANN、Embedding、默认
-RRF、比较变量或检索参数。修复提交推送后，使用全新 Run ID `_07` 重试同一
-dev Gate。
+- Control/Treatment 对四个目标均为双侧 Top-3 命中 `0/4`；
+- Recall@3 无增益，`nDCG@3` 下降 `0.017739`；
+- 固定 15 题为 `14/15`，Control/Treatment 边界不完全一致；
+- 增量检索 P95 `24.101115 ms`、拆分 P95 `0.12922 ms`，成本门禁通过；
+- 清理 9/9、READY 失败关闭和删除后 403 通过，无需恢复。
 
-先确保服务已经由用户正常维护并可通过本机环回端口访问。脚本不会安装依赖、
-启动容器或重启服务。输入 ZIP 已位于仓库忽略目录
-`runtime\handoffs`。在仓库根目录完整运行：
+报告 SHA-256：
+`3810CE9228F7CE9C65B5BE0E031F1F5CA6A471FA665BF5D8C12A6E7CAC6E01390`。
+裁决 SHA-256：
+`99530D236B8CA50B53DE18557C9D43C7BCC63695A3C98FC9DBA889B33CDAA036`。
+裁决为 `KEEP_COMPARISON_DECOMPOSITION_DISABLED`。
 
-```text
-Set-Location 'C:\Users\Administrator\zhiyan-personal-academic-rag'
-
-git status -sb
-git pull --ff-only origin main
-git rev-parse HEAD
-
-$PackagePath = (
-    'C:\Users\Administrator\zhiyan-personal-academic-rag\' +
-    'runtime\handoffs\phase3-comparison-paired-dev-input-v1.zip'
-)
-$ExpectedPackageSha256 = (
-    '89EA5829EFD7C299E3FF51FDC5048E2D78D172BCDE1D320322813B95C1DFDADB'
-)
-$ExpectedManifestSha256 = (
-    '05C36A393A51A8AA705E17D1AC3895DF074B9273F8AF6BFAD06C9904C458C63F'
-)
-
-if (-not (Test-Path -LiteralPath $PackagePath -PathType Leaf)) {
-    throw "输入包不存在：$PackagePath"
-}
-$ActualPackageSha256 = (
-    Get-FileHash -LiteralPath $PackagePath -Algorithm SHA256
-).Hash
-if ($ActualPackageSha256 -ne $ExpectedPackageSha256) {
-    throw "输入包 SHA-256 不匹配：$ActualPackageSha256"
-}
-
-powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass `
-    -File '.\deploy\remote\phase3-comparison-validation\run_phase3_comparison_paired_dev_gate.ps1' `
-    -InputPackagePath $PackagePath `
-    -ExpectedPackageSha256 $ExpectedPackageSha256 `
-    -ExpectedManifestSha256 $ExpectedManifestSha256 `
-    -RunId 'phase3_comparison_dev_20260723_07'
-```
-
-如未设置 `DATABASE_URL`，脚本以安全提示读取 PostgreSQL 密码，并在结束时删除
-临时环境变量。`ELASTICSEARCH_URL`、`MILVUS_URI`、`OLLAMA_URL` 和
-`DATABASE_URL` 均由 Python runner 强制为 loopback。脚本结束时也删除由它
-解压的临时输入目录，原始 ZIP 不受影响。
-
-任何红色终止都停止并回传当前 JSON summary，不要调整参数重跑。summary 中
-的 `primary_stage` 与固定组件级 `primary_error_code` 用于定位质量步骤之前
-的失败；不得回传原始异常消息。
-
-只回传终端输出的 JSON summary、裁决文件和两个文件的 SHA-256；不要回传输入
-ZIP、问题文本、证据文本、路径、连接串或密码。完整报告保存在
-`runtime/phase3-comparison-paired-dev-<RUN_ID>-report.json`，裁决文件保存在
-同目录命名空间下的 `...-adjudication.json`，均不提交。裁决 PASS 也只表示
-默认关闭的 dev 候选可以进入冻结提交，不会自动解封 `test`。
+当前没有获准执行的新 Windows Run ID 或 PowerShell 命令。不得复用 `_07`，
+不得调参重跑，不得进入 `test/acceptance`。下一节点必须先在 Mac 上基于冻结
+dev 证据选择并冻结一个新的单一变量，形成独立本地提交和新的版本化运行入口。
 
 ## 3. 停止规则
 

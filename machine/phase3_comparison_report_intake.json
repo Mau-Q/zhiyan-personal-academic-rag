@@ -1,10 +1,10 @@
 {
   "schema_version": "phase3_comparison_report_intake_v1",
   "decision_id": "PD-042",
-  "status": "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FAILURE_LOGICAL_ROW_FIX_READY",
+  "status": "SEVENTH_ATTEMPT_TRUSTWORTHY_DEV_QUALITY_FAIL_CLEAN",
   "source_gate": {
     "artifact": "machine/phase3_comparison_dev_gate.json",
-    "status": "SIXTH_ATTEMPT_MILVUS_ROUTE_IDENTITY_FAILED_LOGICAL_ROW_FIX_READY"
+    "status": "SEVENTH_ATTEMPT_DEV_QUALITY_FAILED_CLEAN_VARIABLE_REJECTED"
   },
   "repair_decision_id": "PD-043",
   "cleanup_audit_decision_id": "PD-044",
@@ -13,6 +13,7 @@
   "control_failure_diagnostic_decision_id": "PD-049",
   "milvus_failure_diagnostic_decision_id": "PD-050",
   "milvus_route_identity_fix_decision_id": "PD-051",
+  "seventh_attempt_quality_decision_id": "PD-052",
   "implementation": {
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -141,9 +142,39 @@
         "deleted_answer_api_status": 403,
         "test": "NOT_READ_NOT_RUN",
         "acceptance": "NOT_READ_NOT_RUN"
+      },
+      {
+        "run_id": "phase3_comparison_dev_20260723_07",
+        "head_commit": "ff370b512f88b7d847fa17f080946aab4050048c",
+        "report_sha256": "3810ce9228f7ce9c65b5ebe031f1f5ca6a471fa665bf5d8c12a6e7cac6e01390",
+        "adjudication_sha256": "99530d236b8ca50b53de18557c9d43c7bcc63695a3c98fc9dba889b33cdaa036",
+        "status": "FAIL_COMPLETE_QUALITY_THRESHOLD_NOT_MET_CLEANUP_PASS",
+        "error_code": "QUALITY_OR_COST_THRESHOLD_NOT_MET",
+        "primary_stage": "COMPLETE",
+        "input_manifest_sha256": "05c36a393a51a8aa705e17d1ac3895df074b9273f8af6bfad06c9904c458c63f",
+        "config_sha256": "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2b",
+        "target_ids_sha256": "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8",
+        "control_strict_two_sided_passed": 0,
+        "treatment_strict_two_sided_passed": 0,
+        "strict_two_sided_absolute_gain": 0.0,
+        "macro_recall_at_3_absolute_gain": 0.0,
+        "macro_ndcg_at_3_absolute_gain": -0.017739,
+        "fixed_15_canary_passed": 14,
+        "control_retrieval_p95_ms": 704.53041,
+        "treatment_retrieval_p95_ms": 728.631525,
+        "incremental_retrieval_p95_ms": 24.101115,
+        "decomposition_p95_ms": 0.12922,
+        "cleanup_status": "PASS",
+        "cleanup_jobs_succeeded": 9,
+        "ready_reconciliation_failed_closed": true,
+        "deleted_answer_api_status": 403,
+        "recovery_required": false,
+        "test": "NOT_READ_NOT_RUN",
+        "acceptance": "NOT_READ_NOT_RUN",
+        "performance_gate": "PENDING_SEPARATE_300MS_GATE"
       }
     ],
-    "interpretation": "The sixth report is identity-bound and proves a clean lifecycle close, but it stopped in RUN_CONTROL before any complete Control metric and therefore cannot establish quality. ONLINE_MILVUS_ROUTE_IDENTITY_FAILED narrows the failure to the version-collection search identity check. The next independent Gate replaces only the unreliable exact collection-stats equality with a logical primary-key snapshot while preserving all READY, owner, version, provider, source, schema, active-row, and vector identity checks."
+    "interpretation": "The seventh report is identity-bound and completed Control and Treatment after the logical Milvus row fix. The frozen query-decomposition variable produced no two-sided Top-3 or Recall@3 gain, reduced macro nDCG@3 by 0.017739, and did not satisfy the fixed 15-case Canary boundary. Cleanup passed 9/9 with READY failed closed and deleted Answer API 403, so the report is a trustworthy quality failure, no recovery is required, the variable remains disabled, and test stays sealed."
   },
   "cleanup_audit_boundary": {
     "target_run_id": "phase3_comparison_dev_20260723_03",
@@ -250,7 +281,7 @@
     "performance_gate": "NOT_RUN"
   },
   "milvus_route_identity_fix": {
-    "status": "READY_AWAITING_NEW_WINDOWS_RUN",
+    "status": "VERIFIED_BY_SEVENTH_WINDOWS_COMPLETE_CONTROL_TREATMENT",
     "decision_id": "PD-051",
     "source_run_id": "phase3_comparison_dev_20260723_06",
     "source_primary_error_code": "ONLINE_MILVUS_ROUTE_IDENTITY_FAILED",
@@ -263,5 +294,35 @@
     "test": "NOT_READ_NOT_RUN",
     "acceptance": "NOT_READ_NOT_RUN",
     "performance_gate": "NOT_RUN"
+  },
+  "seventh_attempt_quality_result": {
+    "status": "FAIL_CLEAN",
+    "decision_id": "PD-052",
+    "run_id": "phase3_comparison_dev_20260723_07",
+    "head_commit": "ff370b512f88b7d847fa17f080946aab4050048c",
+    "report_sha256": "3810ce9228f7ce9c65b5ebe031f1f5ca6a471fa665bf5d8c12a6e7cac6e01390",
+    "adjudication_sha256": "99530d236b8ca50b53de18557c9d43c7bcc63695a3c98fc9dba889b33cdaa036",
+    "error_code": "QUALITY_OR_COST_THRESHOLD_NOT_MET",
+    "decision": "KEEP_COMPARISON_DECOMPOSITION_DISABLED",
+    "control_strict_two_sided_passed": 0,
+    "treatment_strict_two_sided_passed": 0,
+    "strict_two_sided_absolute_gain": 0.0,
+    "macro_recall_at_3_absolute_gain": 0.0,
+    "macro_ndcg_at_3_absolute_gain": -0.017739,
+    "fixed_15_canary_passed": 14,
+    "control_retrieval_p95_ms": 704.53041,
+    "treatment_retrieval_p95_ms": 728.631525,
+    "incremental_retrieval_p95_ms": 24.101115,
+    "decomposition_p95_ms": 0.12922,
+    "cleanup_status": "PASS",
+    "cleanup_jobs_succeeded": 9,
+    "ready_reconciliation_failed_closed": true,
+    "deleted_answer_api_status": 403,
+    "recovery_required": false,
+    "rerun_authorized": false,
+    "default_enabled": false,
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN",
+    "performance_gate": "PENDING_SEPARATE_300MS_GATE"
   }
 }

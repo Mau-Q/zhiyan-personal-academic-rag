@@ -2,9 +2,9 @@
 
 ## Status
 
-`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FIX_READY / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
+`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_FIRST_VARIABLE_DEV_FAILED_CLEAN / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
-Phase ID：`source-phase3-comparison-sixth-attempt-clean-milvus-route-identity-fix-ready`
+Phase ID：`source-phase3-comparison-first-variable-dev-failed-clean`
 
 ## Completed
 
@@ -175,7 +175,7 @@ Phase ID：`source-phase3-comparison-sixth-attempt-clean-milvus-route-identity-f
 - 受控在线 Reranker 窄适配器已本地实现：现有 PostgreSQL READY/owner、持久化 Chunk 身份和检索后重验保持前置，ES/Milvus RRF 最多返回 20 个已授权候选，固定 Cross-Encoder 只排序并输出前 3；标题/模型/分数故障显式回退同一批 RRF，身份漂移仍失败关闭。用户在提交 `fb54918` 完成 ES/Milvus 并行远程复跑：30/30 `APPLIED`、无回退/扩张/越界、三路清理与删除后 403 通过，但 base retrieval `P95=344.676365 ms`、Reranker `P95=131.885375 ms`、combined `P95=472.190015 ms`，报告 SHA-256 为 `132DFFDECDAD02F9C5280FADFBD09B5AE100C1DB31FE07118BF97B6E0C1B2602`。默认路由继续保持原 RRF；当前本地只增加基础召回分段观测，等待远程归因。
 - 用户随后在提交 `3303bed` 和 Run ID `online_retrieval_profile_20260723_01` 完成 Windows 分段归因：30/30 `APPLIED`，分段状态 `PASS`，base retrieval `P95=376.394385 ms`、Reranker `P95=132.456 ms`、combined `P95=504.71613 ms`；主要成本为 Query Embedding `P95=189.838925 ms` 和 READY 路由解析 `P95=145.48693 ms`，ES 总工作 `P95=35.634955 ms`、Milvus ANN `P95=6.03377 ms`、RRF `P95=0.12001 ms`。三路清理和删除后 403 通过，报告 SHA-256 为 `235FE36A97B7F4E462AD502595CB0CF38C139022703B6C4EA1E93E19D3AC765B`。
 - 阶段 2 现按最高方案第 10.3 节完成：Hybrid 对比、固定 Reranker 增益与保留/回退决定、引用/ACL/版本/定位硬门禁和普通学术问答稳定回放均已完成。默认继续使用原 RRF，固定 Reranker 保留为非默认可选组件；300 ms 性能未通过，作为显式性能债进入阶段 3 独立 Gate，不冒充生产性能验收。
-- 阶段 3 入口已冻结，并完成唯一变量 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的默认关闭本地实现候选：4 个冻结 `dev` 的 Control 原问题保持 `4/4`、Treatment 确定性规划 `4/4`，120 次纯拆分本地 P95 为 `0.016271 ms`；隔离三文档在线 runner、私有 dev 输入包和 Windows PowerShell 5.1 用户入口已通过本地契约/静态检查，但尚未运行真实在线配对检索，故不写成质量增益或不退化通过。`test/acceptance` 保持封存，固定 Reranker 和默认 RRF 不变。
+- 阶段 3 入口已冻结，并完成唯一变量 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的默认关闭本地实现候选：4 个冻结 `dev` 的 Control 原问题保持 `4/4`、Treatment 确定性规划 `4/4`，120 次纯拆分本地 P95 为 `0.016271 ms`；隔离三文档在线 runner、私有 dev 输入包和 Windows PowerShell 5.1 用户入口已通过本地契约/静态检查。该本地实现时点尚未运行真实在线配对检索，故当时不写成质量增益或不退化通过。`test/acceptance` 保持封存，固定 Reranker 和默认 RRF 不变。
 - 阶段 3 配对 dev 报告的独立裁决入口已准备：报告必须绑定实际 Git HEAD、Run ID 和 SHA-256，并重新验证输入/配置/目标身份、指标算术、9 路清理、删除后 403 与 holdout 隔离；PASS 只形成默认关闭的 dev 候选草案，不能自动解封 `test`。
 - 首次 Windows Run ID `phase3_comparison_dev_20260723_01` 在连接服务前因 `core.autocrlf=true` 把冻结 JSON 检出为 CRLF 而被拒绝；报告 SHA-256 为 `AC081A26FD331F00659BE3E950537A9B22D46E75C1F3303B1BFEFBD7D7706827`，裁决 SHA-256 为 `EB0CE6F786963B65E859496405F4F12018C93AB43015B0E759D306141B1714F6`。该尝试没有运行在线 Control/Treatment、没有写入基础设施，也不是质量证据；运行器现只将纯 CRLF 规范化为 LF 后核对原冻结 SHA，内容漂移仍失败关闭，等待新提交和新 Run ID 重试。
 - 第二次 Windows Run ID `phase3_comparison_dev_20260723_02` 在提交 `ac1e5994f8e35648750d912b9a778c2a46682c3c` 上通过配置身份后以 `CLEANUP_PROOF_FAILED` 结束；报告 SHA-256 为 `423D736D496BE0AFA1CC06A90E3402B060C519F74C17D9C4939E31A50304E276`，裁决 SHA-256 为 `74A599288445F1C2267F892A81B5F6B8BD3D5002D4A67E6BE6700645D3516981`，错误码为 `REPORT_CLEANUP_PROOF_INVALID`。旧通用异常路径没有保留主失败或清理阶段，`identity=null`，因此该报告既不是质量证据，也不能证明隔离 owner 已清理。
@@ -193,13 +193,15 @@ Phase ID：`source-phase3-comparison-sixth-attempt-clean-milvus-route-identity-f
 - 当前独立诊断只在既有 Milvus 搜索调用内部标注 `ROUTE_IDENTITY / QUERY_EMBEDDING / ANN_SEARCH / RESPONSE_CONTRACT` 四个稳定失败阶段，并由 Gate runner 映射为固定码；不新增请求、不输出异常文本、不改变 Milvus/Embedding 调用、默认 RRF 或质量变量。
 - 第六次 Windows Run ID `phase3_comparison_dev_20260723_06` 在提交 `4771fe39ade2039a3251a6f8699a99fd1fb69b4d` 上于 `RUN_CONTROL` 返回 `ONLINE_MILVUS_ROUTE_IDENTITY_FAILED`；报告 SHA-256 为 `FCBD2B472E21AD5554FB3EBB0389CDE649FDFE80C4036C8BCC64A194FC4F70CB`，裁决 SHA-256 为 `A43F13F6E06F3D0C1B9ABA405529A31A82B754477292220D9EAC831CDCC6B779D`。Control/Treatment 指标仍未形成；清理 9/9、READY 失败关闭和删除后 403 通过，无需恢复。比较拆分保持关闭，test/Acceptance 未读取，性能 Gate 未运行。
 - 当前独立修复只更正版本化 Milvus 集合的在线身份计数证明：不再把可能滞后的 collection stats 行数当作精确逻辑实体数，改为一次只返回 `chunk_id` 的逻辑快照，校验数量、唯一性和既有版本路由身份；provider、source fingerprint、schema、READY/owner 和完整版本行校验仍保留。未改变 ANN、Embedding、默认 RRF、比较变量、候选、阈值或 holdout。
+- 第七次 Windows Run ID `phase3_comparison_dev_20260723_07` 在提交 `ff370b512f88b7d847fa17f080946aab4050048c` 上完成完整 Control/Treatment，报告以 `QUALITY_OR_COST_THRESHOLD_NOT_MET` 可信失败：四个冻结目标的 Control/Treatment 双侧 Top-3 命中均为 `0/4`，Recall@3 无增益，`nDCG@3` 下降 `0.017739`；固定 15 题为 `14/15` 且两分支边界不完全一致。报告 SHA-256 为 `3810CE9228F7CE9C65B5BE0E031F1F5CA6A471FA665BF5D8C12A6E7CAC6E01390`，裁决 SHA-256 为 `99530D236B8CA50B53DE18557C9D43C7BCC63695A3C98FC9DBA889B33CDAA036`，决定保持比较拆分关闭。
+- `_07` 同时证明身份违规为 0、非目标 answerable 与 dev no-evidence 不退化、增量检索 P95 `24.101115 ms <= 50 ms`、拆分 P95 `0.12922 ms <= 5 ms`；这些通过项不能覆盖目标质量与固定 Canary 失败。清理 9/9、READY 失败关闭和删除后 403 通过，无需恢复；`test/Acceptance` 未读取，300 ms 性能 Gate 未运行。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：阶段 3 比较拆分已进入默认关闭的本地实现，但第六次 Windows 报告在首个完整 Control 指标前定位到 Milvus 版本集合身份计数证明；生命周期已干净收口，当前只修复该在线身份合同并等待 `_07`，尚未进入 `test`；正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层继续后置；固定 Reranker 在当前 300 ms SLO 下不默认启用；
+- 未完成能力：阶段 3 首个比较拆分变量已在可信在线 dev Gate 失败并保持关闭，尚未选择或冻结下一单一假设，也未进入 `test`；正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层继续后置；固定 Reranker 在当前 300 ms SLO 下不默认启用；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -225,7 +227,7 @@ Phase ID：`source-phase3-comparison-sixth-attempt-clean-milvus-route-identity-f
 - 数据身份/生命周期合同必须通过 JSON Schema 与失败关闭语义测试；
 - 不得将本地协调协议写成远程 PostgreSQL、真实 ES/Milvus 写入、持久化物理清理或在线权限切换已完成，不得将 Fake LLM 写成最高方案阶段 2 已完成。
 - `make real-generation-canary` 必须使用固定模型摘要和 Prompt/解码配置，覆盖稳定回放、引用编号、`NO_EVIDENCE` 不调用模型与 403；公开 Fixture 结果不得写成远程 READY 实跑。
-- `machine/phase3_entry_freeze.json` 必须保持入口时点的 4 个唯一 `dev` ID、单变量、`test/acceptance` 封存和独立性能债；`machine/phase3_comparison_dev_gate.json` 必须把本地实现与尚未运行的在线配对质量分开记录，且不得出现 `test/acceptance` 结果。
+- `machine/phase3_entry_freeze.json` 必须保持入口时点的 4 个唯一 `dev` ID、单变量、`test/acceptance` 封存和独立性能债；`machine/phase3_comparison_dev_gate.json` 必须如实记录 `_07` 的在线 dev 失败、干净清理与关闭决定，不得出现 `test/acceptance` 结果。
 
 ## Git
 
@@ -237,14 +239,14 @@ Phase ID：`source-phase3-comparison-sixth-attempt-clean-milvus-route-identity-f
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 为 `IN_PROGRESS`。第六次 Windows 运行未形成质量指标，但生命周期清理完整通过并把 Control 故障定位到 Milvus 版本集合身份校验；当前只完成了逻辑行身份修复。当前评测边界为 `PHASE3_COMPARISON_SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FAILURE_LOGICAL_ROW_FIX_READY_NEW_RUN_ID_REQUIRED_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL`。失败定位与身份修复都不构成质量增益、不退化或 300 ms 证据；默认 RRF、Reranker 关闭和比较拆分关闭均不变。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 为 `IN_PROGRESS`。第七次 Windows 运行已形成可信在线 dev 质量结论：`BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 对冻结目标没有增益且 `nDCG@3` 下降，固定 Canary 也未满足硬门禁，因此变量被拒绝并保持关闭；生命周期清理完整，无需恢复。当前评测边界为 `PHASE3_COMPARISON_FIRST_VARIABLE_DEV_FAILED_CLEAN_DISABLED_TEST_ACCEPTANCE_SEALED_NEW_HYPOTHESIS_NOT_FROZEN`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL`。本次约 `700 ms` 的绝对延迟只作 dev 观测，不构成独立 300 ms Gate；默认 RRF、Reranker 关闭和比较拆分关闭均不变。
 
 ## Next gate
 
-1. **全新 Windows Run ID `_07`：** 固定输入和参数运行 Control；若仍失败，报告必须给出固定 `primary_error_code`，并完成 9 任务清理；
-2. **Treatment 与裁决：** 只有 Control 完整运行并复现冻结失败形态后才运行唯一 Treatment；报告继续绑定 HEAD、Run ID、输入/配置/目标 SHA、清理和 holdout；
-3. **失败不调参：** 任一红色、清理不完整或身份漂移都停止，不复用旧 Run ID；
-4. **继续封存 test 与性能：** dev PASS 也只形成默认关闭候选；test/Acceptance 和 300 ms 性能仍是后续独立 Gate。
+1. **本地冻结新假设：** 只基于已冻结 dev 失败证据，比较可解释的候选机制并选择一个新的主要变量；不得修改或调参重跑已失败的 V1；
+2. **先定合同再实现：** 新变量必须默认关闭，继续保留 READY/owner、持久化身份、ES/Milvus、候选 20、RRF `k=60`、Top-3、无 Reranker 和 holdout 隔离；
+3. **没有新 Windows Run ID：** 在新变量、配置、指标与回滚边界形成独立本地提交前，不生成或运行新的 Windows 命令；
+4. **继续封存 test 与性能：** `test/Acceptance` 和 300 ms 性能仍是后续独立 Gate。
 
 ## Prohibited shortcuts
 

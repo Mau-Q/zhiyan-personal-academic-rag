@@ -179,7 +179,7 @@ class RepositoryHarnessTests(unittest.TestCase):
             payload["independent_performance_debt"]["retrieval_p95_ms_max"], 300
         )
 
-    def test_phase_three_comparison_user_runner_is_not_online_quality(self):
+    def test_phase_three_comparison_dev_failure_keeps_variable_disabled(self):
         feature_payload = json.loads(
             (ROOT / "machine" / "feature_list.json").read_text(encoding="utf-8")
         )
@@ -191,7 +191,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         self.assertEqual(phase3_feature["status"], "PARTIAL")
         self.assertEqual(
             phase3_feature["gate_status"],
-            "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FAILURE_LOGICAL_ROW_FIX_READY_FOR_NEW_DEV_RUN",
+            "SEVENTH_ATTEMPT_TRUSTWORTHY_DEV_QUALITY_FAIL_CLEAN_VARIABLE_DISABLED_TEST_SEALED",
         )
         payload = json.loads(
             (ROOT / "machine" / "phase3_comparison_dev_gate.json").read_text(
@@ -200,7 +200,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "SIXTH_ATTEMPT_MILVUS_ROUTE_IDENTITY_FAILED_LOGICAL_ROW_FIX_READY",
+            "SEVENTH_ATTEMPT_DEV_QUALITY_FAILED_CLEAN_VARIABLE_REJECTED",
         )
         self.assertEqual(
             payload["source_phase"], {"id": "phase-3", "status": "IN_PROGRESS"}
@@ -215,11 +215,15 @@ class RepositoryHarnessTests(unittest.TestCase):
         self.assertFalse(payload["preserved_online_path"]["reranker_enabled"])
         self.assertEqual(
             payload["paired_online_dev_quality"]["status"],
-            "NOT_RUN",
+            "FAIL",
+        )
+        self.assertEqual(
+            payload["paired_online_dev_quality"]["decision"],
+            "KEEP_COMPARISON_DECOMPOSITION_DISABLED",
         )
         self.assertEqual(
             payload["paired_online_user_entry"]["status"],
-            "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FIX_READY_FOR_NEW_RUN",
+            "SEVENTH_ATTEMPT_COMPLETE_NO_RERUN_AUTHORIZED",
         )
         self.assertEqual(
             payload["windows_attempts"][0]["status"],
@@ -315,6 +319,33 @@ class RepositoryHarnessTests(unittest.TestCase):
             "PASS",
         )
         self.assertEqual(
+            payload["windows_attempts"][6]["status"],
+            "FAIL_COMPLETE_QUALITY_THRESHOLD_NOT_MET_CLEANUP_PASS",
+        )
+        self.assertEqual(
+            payload["windows_attempts"][6]["report_sha256"],
+            "3810ce9228f7ce9c65b5ebe031f1f5ca6a471fa665bf5d8c12a6e7cac6e01390",
+        )
+        self.assertEqual(
+            payload["windows_attempts"][6]["adjudication_sha256"],
+            "99530d236b8ca50b53de18557c9d43c7bcc63695a3c98fc9dba889b33cdaa036",
+        )
+        self.assertEqual(
+            payload["windows_attempts"][6]["control_strict_two_sided_passed"],
+            0,
+        )
+        self.assertEqual(
+            payload["windows_attempts"][6]["treatment_strict_two_sided_passed"],
+            0,
+        )
+        self.assertEqual(
+            payload["windows_attempts"][6]["macro_ndcg_at_3_absolute_gain"],
+            -0.017739,
+        )
+        self.assertEqual(payload["windows_attempts"][6]["cleanup_status"], "PASS")
+        self.assertFalse(payload["windows_attempts"][6]["recovery_required"])
+        self.assertTrue(payload["windows_attempts"][6]["online_quality_executed"])
+        self.assertEqual(
             payload["control_failure_diagnostic_hardening"][
                 "additional_requests"
             ],
@@ -359,7 +390,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FAILURE_LOGICAL_ROW_FIX_READY",
+            "SEVENTH_ATTEMPT_TRUSTWORTHY_DEV_QUALITY_FAIL_CLEAN",
         )
         self.assertEqual(payload["decision_id"], "PD-042")
         self.assertEqual(
@@ -456,6 +487,31 @@ class RepositoryHarnessTests(unittest.TestCase):
         self.assertEqual(
             payload["milvus_route_identity_fix"]["decision_id"],
             "PD-051",
+        )
+        self.assertEqual(
+            payload["evidence"]["attempts"][6]["error_code"],
+            "QUALITY_OR_COST_THRESHOLD_NOT_MET",
+        )
+        self.assertEqual(
+            payload["evidence"]["attempts"][6]["cleanup_status"],
+            "PASS",
+        )
+        self.assertEqual(
+            payload["seventh_attempt_quality_result"]["decision_id"],
+            "PD-052",
+        )
+        self.assertEqual(
+            payload["seventh_attempt_quality_result"]["decision"],
+            "KEEP_COMPARISON_DECOMPOSITION_DISABLED",
+        )
+        self.assertFalse(
+            payload["seventh_attempt_quality_result"]["recovery_required"]
+        )
+        self.assertFalse(
+            payload["seventh_attempt_quality_result"]["rerun_authorized"]
+        )
+        self.assertFalse(
+            payload["seventh_attempt_quality_result"]["default_enabled"]
         )
 
     def test_validator_rejects_template_as_concrete_phase_result(self):

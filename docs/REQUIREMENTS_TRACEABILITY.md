@@ -38,7 +38,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | SR-03 | PDF/OCR、章节页码、三种 Chunk Baseline、版本和幂等入库 | `PARTIAL` | 三种切片策略已完成同源对比；远程 `filesystem_v1` PDF 对象重开、PostgreSQL Chunk 快照、重放恢复和 INACTIVE 后清理闭环已通过 | OCR 与正式 MinIO 应用适配未完成，不把 MVP 文件对象后端冒充最终架构 |
 | SR-04 | Elasticsearch 论文级和 Chunk 级 BM25 | `PARTIAL` | 远程 ES 9.4.3；316 Chunk Canary 14/15；175 题 85/175；版本写入器、READY 持久化 Answer API 和删除清理均远程通过 | 中文分词选型和目标规模性能基线未完成 |
 | SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `PARTIAL` | 远程 Milvus 2.6.18 + BGE-M3；316 Chunk Canary 12/15；175 题 109/175；版本 Collection、READY 持久化 Answer API 和删除清理均远程通过 | 目标规模性能基线未完成；不以远程 500 题或调参作为当前门禁 |
-| SR-06 | 基础规范化和最小路由；改写、多查询和多跳按失败后置 | `PARTIAL` | API 问题输入合同与默认检索链路；`machine/phase3_entry_freeze.json` 冻结 4 个双文档比较失衡 `dev` 样本；唯一变量的默认关闭实现、Control 原问题 `4/4`、Treatment 规划 `4/4`、隔离 Windows 用户运行入口及报告独立裁决器已完成；首次 Windows 尝试在服务连接前暴露并失败关闭纯 CRLF 配置身份问题，现已用 LF 规范化身份修复且内容漂移仍拒绝 | 尚未运行真实 PostgreSQL READY + ES/Milvus + RRF 配对 dev 回放与不退化判定；不得把运行器、裁决器或预服务拒绝写成质量通过，也不得扩大为通用改写、多查询或多跳 |
+| SR-06 | 基础规范化和最小路由；改写、多查询和多跳按失败后置 | `PARTIAL` | API 问题输入合同与默认检索链路；`machine/phase3_entry_freeze.json` 冻结 4 个双文档比较失衡 `dev` 样本；`_07` 已完成真实 PostgreSQL READY + ES/Milvus + RRF 配对回放，证明 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 对目标双侧 Top-3 命中无增益且 `nDCG@3` 下降，裁决保持关闭 | 首个变量已在 dev 失败，不能调参、复用 Run ID 或进入 `test`；下一步只能基于冻结 dev 证据选择并冻结一个新的单一假设，不得扩大为通用改写、多查询或多跳 |
 | SR-07 | ES/Milvus 并行、RRF、去重、多样性、Cross-Encoder 重排 | `PARTIAL` | 本地 SQLite BM25 + BGE-M3 RRF 15/15；远程 RRF Canary 14/15；固定 BGE Reranker 将 `nDCG@10` 从 `0.647269` 提升到 `0.747810`、`Precision@5 +0.02`，RTX 4090 pair-scoring `P95=188.22683 ms`；最终 Windows 分段 Gate 30/30 应用且安全/清理通过，base `P95=376.394385 ms`、combined `P95=504.71613 ms`，主要成本为 Query Embedding `P95=189.838925 ms` 与 READY 路由解析 `P95=145.48693 ms` | 默认明确保持原 RRF，固定 Reranker 仅为可选组件；300 ms 性能债、去重/多样性和扩展消融进入阶段 3 独立 Gate，不放宽 SLO |
 | SR-08 | 证据上下文、真实 LLM、强制引用、校验与拒答 | `PARTIAL` | Evidence/Citation、`NO_EVIDENCE`；llama3.2 与 Qwen 均已通过远程 READY + ES/Milvus RRF 真实生成闭环，Qwen 报告 SHA-256 `0CB1B569D8A782FC526266E1A7193EF6299B66D5DBC72DCC989FDB951B8A1160`；固定公开 Evidence 模型选型 v4 以 Qwen `4/4` 对 llama3.2 `3/4` 晋级；3 文档 9 题 v2 已远程 `3/3` 文档、`9/9` 问题通过，最终第 3 篇报告 SHA-256 `3C106423AB3575B11B3B0142A66F19A2C949B8BAED3457F1BCA101A9931302FA` | Claim 语义支持校验和冲突处理仍未完成；答案字节一致只作观测，不替代引用集合与确定性门禁 |
 | SR-09 | 问答 API、SSE、内部 Evidence 合同和鉴权原文定位 | `PARTIAL` | 非流式 Answer API、SSE 文件合同、PDF 页码 | SSE 运行、独立 Evidence 消费和鉴权预览未实现；对外 Agent Evidence API 保持后置 |
@@ -55,7 +55,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | 阶段 0：范围与 Baseline | `COMPLETE` | 175 题人工校验、ES/Milvus 同集单路 Baseline、三种 Chunk 受控 Baseline、单用户范围/资源/SLO 及数据身份/生命周期目标合同均已冻结 | 冻结目标不等于运行时达标 |
 | 阶段 1：数据与索引最小闭环 | `COMPLETE` | 远程 v2 已通过 PDF/Chunk 持久化、owner/版本 READY 对账、ES/Milvus 在线 Evidence、同 Run ID 恢复、删除后 403 和三路清理；报告 SHA-256 `6B2AB3BAAD55AE8FA506C0D1FD7A310D9EF3A3833A93E33DD1A2D8A0938A9D8C` | 正式 MinIO、OCR 和目标规模性能不属于阶段 1 退出条件 |
 | 阶段 2：基础 RAG MVP | `COMPLETE` | 非流式 API、Evidence、拒答、远程 RRF Canary、llama3.2/Qwen READY 真实生成闭环、模型选型和 3 文档 9 题 v2 均通过；固定 BGE Reranker 的增益、目标硬件成本和在线边界已验证，最终决定为原 RRF 默认、Reranker 可选且不默认启用 | Windows 分段 Gate 的 combined `P95=504.71613 ms` 未通过 300 ms；这是显式后移的性能债，不写成 SLO 或生产验收完成 |
-| 阶段 3：针对失败类型增强 | `IN_PROGRESS` | 入口 Gate 已冻结 4 个 `dev` 双文档比较失衡样本和单一变量；`_06` 已把 `RUN_CONTROL` 故障归因为 `ONLINE_MILVUS_ROUTE_IDENTITY_FAILED`，生命周期清理 9/9、READY 关闭和 403 通过；版本集合逻辑行身份校验已独立修复 | 尚无可采信在线质量指标；只能用全新 Run ID `_07` 重试同一 dev Gate。`test/acceptance` 封存，300 ms 性能 Gate 独立 |
+| 阶段 3：针对失败类型增强 | `IN_PROGRESS` | 入口 Gate 冻结的首个变量已完成可信在线 dev 裁决：Control/Treatment 均为目标双侧命中 `0/4`，Recall@3 无增益、`nDCG@3 -0.017739`，固定 Canary `14/15`；清理 9/9、READY 关闭和 403 通过 | 首个变量被拒绝并保持关闭；`test/acceptance` 继续封存，300 ms 性能 Gate 独立。下一 Gate 只允许冻结一个新的主要假设 |
 | 阶段 4：Claim–Evidence 可靠性 | `NOT_STARTED` | 尚未建立结构化 Claim、Claim–Evidence 映射及确定性支持检查 | 不用模型自评冒充确定性支持检查 |
 | 阶段 5：复杂科研问答与复用 | `NOT_STARTED` | 暂未完成比较、多跳、时效问答与 Agent Evidence API | 进入前需满足 MVP、权限委托、审计与运维条件 |
 
@@ -157,3 +157,16 @@ Control/Treatment 指标仍未形成，但清理 9/9、READY 失败关闭和删�
 通过，无需恢复。独立修复只把版本集合的精确计数证明从可能滞后的 collection
 stats 改为逻辑主键快照；既有 READY/owner、完整版本行、活动状态、向量、
 provider、source fingerprint 和 schema 校验不放宽，ANN、RRF 与质量变量不变。
+
+第七次 Run ID `phase3_comparison_dev_20260723_07` 在提交
+`ff370b512f88b7d847fa17f080946aab4050048c` 上完成完整 Control/Treatment，
+稳定结果为 `QUALITY_OR_COST_THRESHOLD_NOT_MET`。Control 与 Treatment 的四个
+冻结目标均为双侧 Top-3 命中 `0/4`，宏观 Recall@3 绝对增益为 `0`，
+`nDCG@3` 绝对增益为 `-0.017739`；固定 15 题为 `14/15`，且两分支边界不完全
+一致。非目标 answerable、dev no-evidence 与增量成本没有退化，但不能抵消目标
+增益和固定 Canary 硬门禁失败。报告 SHA-256
+`3810CE9228F7CE9C65B5BE0E031F1F5CA6A471FA665BF5D8C12A6E7CAC6E01390`，
+裁决 SHA-256
+`99530D236B8CA50B53DE18557C9D43C7BCC63695A3C98FC9DBA889B33CDAA036`，
+决定为 `KEEP_COMPARISON_DECOMPOSITION_DISABLED`。清理 9/9、READY 失败关闭
+与删除后 403 通过，无需恢复；`test/Acceptance` 未读取，300 ms Gate 未运行。

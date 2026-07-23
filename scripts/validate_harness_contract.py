@@ -193,7 +193,7 @@ def check_feature_list() -> None:
         not isinstance(phase3_feature, dict)
         or phase3_feature.get("status") != "PARTIAL"
         or phase3_feature.get("gate_status")
-        != "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FAILURE_LOGICAL_ROW_FIX_READY_FOR_NEW_DEV_RUN"
+        != "SEVENTH_ATTEMPT_TRUSTWORTHY_DEV_QUALITY_FAIL_CLEAN_VARIABLE_DISABLED_TEST_SEALED"
     ):
         raise ValueError("phase 3 comparison feature gate status drifted")
 
@@ -437,7 +437,7 @@ def check_phase3_comparison_dev_gate() -> None:
     if payload.get("schema_version") != "phase3_comparison_dev_gate_v1":
         raise ValueError("phase 3 comparison dev gate schema_version is invalid")
     if payload.get("status") != (
-        "SIXTH_ATTEMPT_MILVUS_ROUTE_IDENTITY_FAILED_LOGICAL_ROW_FIX_READY"
+        "SEVENTH_ATTEMPT_DEV_QUALITY_FAILED_CLEAN_VARIABLE_REJECTED"
     ):
         raise ValueError("phase 3 comparison dev gate status is invalid")
     if payload.get("source_phase") != {"id": "phase-3", "status": "IN_PROGRESS"}:
@@ -490,14 +490,34 @@ def check_phase3_comparison_dev_gate() -> None:
     ):
         raise ValueError("phase 3 local dev plan evidence is invalid")
     paired = payload.get("paired_online_dev_quality")
-    if not isinstance(paired, dict) or paired.get("status") != "NOT_RUN":
-        raise ValueError("phase 3 paired online dev must remain not run")
+    if (
+        not isinstance(paired, dict)
+        or paired.get("status") != "FAIL"
+        or paired.get("decision") != "KEEP_COMPARISON_DECOMPOSITION_DISABLED"
+        or paired.get("control_baseline", {}).get("strict_two_sided_passed") != 0
+        or paired.get("treatment", {}).get("strict_two_sided_passed") != 0
+        or paired.get("treatment_gain", {}).get(
+            "macro_recall_at_3_absolute_gain"
+        )
+        != 0.0
+        or paired.get("treatment_gain", {}).get(
+            "macro_ndcg_at_3_absolute_gain"
+        )
+        != -0.017739
+        or paired.get("fixed_15_canary_passed") != 14
+        or paired.get("incremental_retrieval_p95_ms") != 24.101115
+        or paired.get("decomposition_p95_ms") != 0.12922
+        or paired.get("test") != "NOT_READ_NOT_RUN"
+        or paired.get("acceptance") != "NOT_READ_NOT_RUN"
+        or paired.get("performance_gate") != "PENDING_SEPARATE_300MS_GATE"
+    ):
+        raise ValueError("phase 3 paired online dev quality failure drifted")
     user_entry = payload.get("paired_online_user_entry")
     if (
         not isinstance(user_entry, dict)
         or user_entry.get("decision_id") != "PD-041"
         or user_entry.get("status")
-        != "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FIX_READY_FOR_NEW_RUN"
+        != "SEVENTH_ATTEMPT_COMPLETE_NO_RERUN_AUTHORIZED"
         or user_entry.get("cleanup_audit_decision_id") != "PD-044"
         or user_entry.get("cleanup_recovery_decision_id") != "PD-045"
         or user_entry.get("quality_top_k") != 3
@@ -509,7 +529,7 @@ def check_phase3_comparison_dev_gate() -> None:
     attempts = payload.get("windows_attempts")
     if (
         not isinstance(attempts, list)
-        or len(attempts) != 6
+        or len(attempts) != 7
         or any(not isinstance(attempt, dict) for attempt in attempts)
         or attempts[0].get("run_id") != "phase3_comparison_dev_20260723_01"
         or attempts[0].get("status") != "REJECTED_BEFORE_SERVICES"
@@ -587,6 +607,39 @@ def check_phase3_comparison_dev_gate() -> None:
         or attempts[5].get("online_quality_executed") is not False
         or attempts[5].get("test") != "NOT_READ_NOT_RUN"
         or attempts[5].get("acceptance") != "NOT_READ_NOT_RUN"
+        or attempts[6].get("run_id") != "phase3_comparison_dev_20260723_07"
+        or attempts[6].get("head_commit")
+        != "ff370b512f88b7d847fa17f080946aab4050048c"
+        or attempts[6].get("status")
+        != "FAIL_COMPLETE_QUALITY_THRESHOLD_NOT_MET_CLEANUP_PASS"
+        or attempts[6].get("report_error_code")
+        != "QUALITY_OR_COST_THRESHOLD_NOT_MET"
+        or attempts[6].get("primary_stage") != "COMPLETE"
+        or attempts[6].get("primary_error_code") is not None
+        or attempts[6].get("input_manifest_sha256")
+        != "05c36a393a51a8aa705e17d1ac3895df074b9273f8af6bfad06c9904c458c63f"
+        or attempts[6].get("config_sha256")
+        != "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2b"
+        or attempts[6].get("target_ids_sha256")
+        != "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8"
+        or attempts[6].get("report_sha256")
+        != "3810ce9228f7ce9c65b5ebe031f1f5ca6a471fa665bf5d8c12a6e7cac6e01390"
+        or attempts[6].get("adjudication_sha256")
+        != "99530d236b8ca50b53de18557c9d43c7bcc63695a3c98fc9dba889b33cdaa036"
+        or attempts[6].get("control_strict_two_sided_passed") != 0
+        or attempts[6].get("treatment_strict_two_sided_passed") != 0
+        or attempts[6].get("macro_ndcg_at_3_absolute_gain") != -0.017739
+        or attempts[6].get("fixed_15_canary_passed") != 14
+        or attempts[6].get("control_retrieval_p95_ms") != 704.53041
+        or attempts[6].get("treatment_retrieval_p95_ms") != 728.631525
+        or attempts[6].get("cleanup_status") != "PASS"
+        or attempts[6].get("cleanup_jobs_succeeded") != 9
+        or attempts[6].get("ready_reconciliation_failed_closed") is not True
+        or attempts[6].get("deleted_answer_api_status") != 403
+        or attempts[6].get("recovery_required") is not False
+        or attempts[6].get("online_quality_executed") is not True
+        or attempts[6].get("test") != "NOT_READ_NOT_RUN"
+        or attempts[6].get("acceptance") != "NOT_READ_NOT_RUN"
     ):
         raise ValueError("phase 3 rejected Windows attempt evidence drifted")
     for field in (
@@ -770,7 +823,8 @@ def check_phase3_comparison_dev_gate() -> None:
     identity_fix = payload.get("milvus_route_identity_fix")
     if (
         not isinstance(identity_fix, dict)
-        or identity_fix.get("status") != "READY_AWAITING_NEW_WINDOWS_RUN"
+        or identity_fix.get("status")
+        != "VERIFIED_BY_SEVENTH_WINDOWS_COMPLETE_CONTROL_TREATMENT"
         or identity_fix.get("decision_id") != "PD-051"
         or identity_fix.get("source_run_id")
         != "phase3_comparison_dev_20260723_06"
@@ -800,8 +854,9 @@ def check_phase3_comparison_report_intake() -> None:
         or payload.get("control_failure_diagnostic_decision_id") != "PD-049"
         or payload.get("milvus_failure_diagnostic_decision_id") != "PD-050"
         or payload.get("milvus_route_identity_fix_decision_id") != "PD-051"
+        or payload.get("seventh_attempt_quality_decision_id") != "PD-052"
         or payload.get("status")
-        != "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FAILURE_LOGICAL_ROW_FIX_READY"
+        != "SEVENTH_ATTEMPT_TRUSTWORTHY_DEV_QUALITY_FAIL_CLEAN"
     ):
         raise ValueError("phase 3 report intake identity is invalid")
     implementation = payload.get("implementation")
@@ -875,7 +930,7 @@ def check_phase3_comparison_report_intake() -> None:
     attempts = evidence.get("attempts")
     if (
         not isinstance(attempts, list)
-        or len(attempts) != 6
+        or len(attempts) != 7
         or any(not isinstance(attempt, dict) for attempt in attempts)
         or attempts[0].get("status") != "REJECTED_BEFORE_SERVICES"
         or attempts[0].get("error_code") != "REPORT_CONFIG_IDENTITY_MISMATCH"
@@ -931,6 +986,37 @@ def check_phase3_comparison_report_intake() -> None:
         or attempts[5].get("deleted_answer_api_status") != 403
         or attempts[5].get("test") != "NOT_READ_NOT_RUN"
         or attempts[5].get("acceptance") != "NOT_READ_NOT_RUN"
+        or attempts[6].get("run_id") != "phase3_comparison_dev_20260723_07"
+        or attempts[6].get("head_commit")
+        != "ff370b512f88b7d847fa17f080946aab4050048c"
+        or attempts[6].get("status")
+        != "FAIL_COMPLETE_QUALITY_THRESHOLD_NOT_MET_CLEANUP_PASS"
+        or attempts[6].get("error_code")
+        != "QUALITY_OR_COST_THRESHOLD_NOT_MET"
+        or attempts[6].get("primary_stage") != "COMPLETE"
+        or attempts[6].get("input_manifest_sha256")
+        != "05c36a393a51a8aa705e17d1ac3895df074b9273f8af6bfad06c9904c458c63f"
+        or attempts[6].get("config_sha256")
+        != "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2b"
+        or attempts[6].get("target_ids_sha256")
+        != "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8"
+        or attempts[6].get("report_sha256")
+        != "3810ce9228f7ce9c65b5ebe031f1f5ca6a471fa665bf5d8c12a6e7cac6e01390"
+        or attempts[6].get("adjudication_sha256")
+        != "99530d236b8ca50b53de18557c9d43c7bcc63695a3c98fc9dba889b33cdaa036"
+        or attempts[6].get("control_strict_two_sided_passed") != 0
+        or attempts[6].get("treatment_strict_two_sided_passed") != 0
+        or attempts[6].get("macro_ndcg_at_3_absolute_gain") != -0.017739
+        or attempts[6].get("fixed_15_canary_passed") != 14
+        or attempts[6].get("control_retrieval_p95_ms") != 704.53041
+        or attempts[6].get("treatment_retrieval_p95_ms") != 728.631525
+        or attempts[6].get("cleanup_status") != "PASS"
+        or attempts[6].get("cleanup_jobs_succeeded") != 9
+        or attempts[6].get("ready_reconciliation_failed_closed") is not True
+        or attempts[6].get("deleted_answer_api_status") != 403
+        or attempts[6].get("recovery_required") is not False
+        or attempts[6].get("test") != "NOT_READ_NOT_RUN"
+        or attempts[6].get("acceptance") != "NOT_READ_NOT_RUN"
     ):
         raise ValueError("phase 3 report intake rejected evidence drifted")
     audit = payload.get("cleanup_audit_boundary")
@@ -1085,7 +1171,8 @@ def check_phase3_comparison_report_intake() -> None:
     identity_fix = payload.get("milvus_route_identity_fix")
     if (
         not isinstance(identity_fix, dict)
-        or identity_fix.get("status") != "READY_AWAITING_NEW_WINDOWS_RUN"
+        or identity_fix.get("status")
+        != "VERIFIED_BY_SEVENTH_WINDOWS_COMPLETE_CONTROL_TREATMENT"
         or identity_fix.get("decision_id") != "PD-051"
         or identity_fix.get("source_run_id")
         != "phase3_comparison_dev_20260723_06"
@@ -1099,6 +1186,39 @@ def check_phase3_comparison_report_intake() -> None:
         or identity_fix.get("performance_gate") != "NOT_RUN"
     ):
         raise ValueError("phase 3 report intake Milvus identity fix drifted")
+    seventh = payload.get("seventh_attempt_quality_result")
+    if (
+        not isinstance(seventh, dict)
+        or seventh.get("status") != "FAIL_CLEAN"
+        or seventh.get("decision_id") != "PD-052"
+        or seventh.get("run_id") != "phase3_comparison_dev_20260723_07"
+        or seventh.get("head_commit")
+        != "ff370b512f88b7d847fa17f080946aab4050048c"
+        or seventh.get("report_sha256")
+        != "3810ce9228f7ce9c65b5ebe031f1f5ca6a471fa665bf5d8c12a6e7cac6e01390"
+        or seventh.get("adjudication_sha256")
+        != "99530d236b8ca50b53de18557c9d43c7bcc63695a3c98fc9dba889b33cdaa036"
+        or seventh.get("error_code") != "QUALITY_OR_COST_THRESHOLD_NOT_MET"
+        or seventh.get("decision") != "KEEP_COMPARISON_DECOMPOSITION_DISABLED"
+        or seventh.get("control_strict_two_sided_passed") != 0
+        or seventh.get("treatment_strict_two_sided_passed") != 0
+        or seventh.get("macro_recall_at_3_absolute_gain") != 0.0
+        or seventh.get("macro_ndcg_at_3_absolute_gain") != -0.017739
+        or seventh.get("fixed_15_canary_passed") != 14
+        or seventh.get("control_retrieval_p95_ms") != 704.53041
+        or seventh.get("treatment_retrieval_p95_ms") != 728.631525
+        or seventh.get("cleanup_status") != "PASS"
+        or seventh.get("cleanup_jobs_succeeded") != 9
+        or seventh.get("ready_reconciliation_failed_closed") is not True
+        or seventh.get("deleted_answer_api_status") != 403
+        or seventh.get("recovery_required") is not False
+        or seventh.get("rerun_authorized") is not False
+        or seventh.get("default_enabled") is not False
+        or seventh.get("test") != "NOT_READ_NOT_RUN"
+        or seventh.get("acceptance") != "NOT_READ_NOT_RUN"
+        or seventh.get("performance_gate") != "PENDING_SEPARATE_300MS_GATE"
+    ):
+        raise ValueError("phase 3 seventh attempt quality result drifted")
 
 
 def check_harness_links() -> None:

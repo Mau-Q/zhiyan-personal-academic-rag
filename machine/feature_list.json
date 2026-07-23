@@ -560,7 +560,7 @@
       "id": "phase3_bilateral_comparison_query_decomposition",
       "status": "PARTIAL",
       "owner": "SHARED",
-      "gate_status": "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FAILURE_LOGICAL_ROW_FIX_READY_FOR_NEW_DEV_RUN",
+      "gate_status": "SEVENTH_ATTEMPT_TRUSTWORTHY_DEV_QUALITY_FAIL_CLEAN_VARIABLE_DISABLED_TEST_SEALED",
       "evidence": [
         "backend/retrieval/comparison_decomposition.py",
         "backend/retrieval/online.py",

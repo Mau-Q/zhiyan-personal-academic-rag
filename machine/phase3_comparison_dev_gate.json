@@ -1,6 +1,6 @@
 {
   "schema_version": "phase3_comparison_dev_gate_v1",
-  "status": "SIXTH_ATTEMPT_MILVUS_ROUTE_IDENTITY_FAILED_LOGICAL_ROW_FIX_READY",
+  "status": "SEVENTH_ATTEMPT_DEV_QUALITY_FAILED_CLEAN_VARIABLE_REJECTED",
   "source_phase": {
     "id": "phase-3",
     "status": "IN_PROGRESS"
@@ -50,7 +50,7 @@
   },
   "paired_online_user_entry": {
     "decision_id": "PD-041",
-    "status": "SIXTH_ATTEMPT_CLEAN_MILVUS_ROUTE_IDENTITY_FIX_READY_FOR_NEW_RUN",
+    "status": "SEVENTH_ATTEMPT_COMPLETE_NO_RERUN_AUTHORIZED",
     "package_builder": "scripts/build_phase3_comparison_dev_package.py",
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "report_adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -172,14 +172,78 @@
       "test": "NOT_READ_NOT_RUN",
       "acceptance": "NOT_READ_NOT_RUN",
       "performance_gate": "PENDING_SEPARATE_300MS_GATE"
+    },
+    {
+      "run_id": "phase3_comparison_dev_20260723_07",
+      "head_commit": "ff370b512f88b7d847fa17f080946aab4050048c",
+      "status": "FAIL_COMPLETE_QUALITY_THRESHOLD_NOT_MET_CLEANUP_PASS",
+      "report_error_code": "QUALITY_OR_COST_THRESHOLD_NOT_MET",
+      "primary_stage": "COMPLETE",
+      "primary_error_code": null,
+      "input_manifest_sha256": "05c36a393a51a8aa705e17d1ac3895df074b9273f8af6bfad06c9904c458c63f",
+      "config_sha256": "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2b",
+      "target_ids_sha256": "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8",
+      "report_sha256": "3810ce9228f7ce9c65b5ebe031f1f5ca6a471fa665bf5d8c12a6e7cac6e01390",
+      "adjudication_status": "FAIL",
+      "adjudication_decision": "KEEP_COMPARISON_DECOMPOSITION_DISABLED",
+      "adjudication_sha256": "99530d236b8ca50b53de18557c9d43c7bcc63695a3c98fc9dba889b33cdaa036",
+      "control_strict_two_sided_passed": 0,
+      "treatment_strict_two_sided_passed": 0,
+      "strict_two_sided_absolute_gain": 0.0,
+      "macro_recall_at_3_absolute_gain": 0.0,
+      "macro_ndcg_at_3_absolute_gain": -0.017739,
+      "fixed_15_canary_passed": 14,
+      "control_retrieval_p95_ms": 704.53041,
+      "treatment_retrieval_p95_ms": 728.631525,
+      "incremental_retrieval_p95_ms": 24.101115,
+      "decomposition_p95_ms": 0.12922,
+      "cleanup_status": "PASS",
+      "cleanup_jobs_succeeded": 9,
+      "ready_reconciliation_failed_closed": true,
+      "deleted_answer_api_status": 403,
+      "recovery_required": false,
+      "online_quality_executed": true,
+      "test": "NOT_READ_NOT_RUN",
+      "acceptance": "NOT_READ_NOT_RUN",
+      "performance_gate": "PENDING_SEPARATE_300MS_GATE"
     }
   ],
   "paired_online_dev_quality": {
-    "status": "NOT_RUN",
-    "reason": "The sixth Windows attempt reached RUN_CONTROL and classified the failure as ONLINE_MILVUS_ROUTE_IDENTITY_FAILED before the first complete Control metric. Cleanup passed 9/9 with READY failed closed and deleted Answer API 403, so no recovery is required; no online quality result is accepted.",
-    "control_baseline": null,
-    "treatment_gain": null,
-    "critical_non_regression": null
+    "status": "FAIL",
+    "reason": "The seventh Windows attempt completed identity-bound Control and Treatment. Treatment did not improve any of the four frozen two-sided Top-3 targets, macro Recall@3 did not improve, macro nDCG@3 declined by 0.017739, and the fixed 15-case Canary passed only 14/15 with a non-identical Control/Treatment boundary. Cleanup passed 9/9 with READY failed closed and deleted Answer API 403, so this is a trustworthy quality failure and no recovery is required.",
+    "decision": "KEEP_COMPARISON_DECOMPOSITION_DISABLED",
+    "control_baseline": {
+      "strict_two_sided_passed": 0,
+      "total": 4,
+      "macro_recall_at_3": 0.145833,
+      "macro_ndcg_at_3": 0.220967
+    },
+    "treatment": {
+      "strict_two_sided_passed": 0,
+      "total": 4,
+      "macro_recall_at_3": 0.145833,
+      "macro_ndcg_at_3": 0.203228
+    },
+    "treatment_gain": {
+      "strict_two_sided_absolute_gain": 0.0,
+      "macro_recall_at_3_absolute_gain": 0.0,
+      "macro_ndcg_at_3_absolute_gain": -0.017739
+    },
+    "critical_non_regression": {
+      "case_count": 80,
+      "recall_at_3_drop": 0.0,
+      "ndcg_at_10_drop": 0.0
+    },
+    "dev_no_evidence_no_worse_than_control": true,
+    "fixed_15_canary_passed": 14,
+    "fixed_15_canary_total": 15,
+    "control_retrieval_p95_ms": 704.53041,
+    "treatment_retrieval_p95_ms": 728.631525,
+    "incremental_retrieval_p95_ms": 24.101115,
+    "decomposition_p95_ms": 0.12922,
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN",
+    "performance_gate": "PENDING_SEPARATE_300MS_GATE"
   },
   "split_isolation": {
     "dev": "OPEN_ONLY_FOR_FROZEN_VARIABLE",
@@ -315,7 +379,7 @@
     "performance_gate": "NOT_RUN"
   },
   "milvus_route_identity_fix": {
-    "status": "READY_AWAITING_NEW_WINDOWS_RUN",
+    "status": "VERIFIED_BY_SEVENTH_WINDOWS_COMPLETE_CONTROL_TREATMENT",
     "decision_id": "PD-051",
     "source_run_id": "phase3_comparison_dev_20260723_06",
     "source_head_commit": "4771fe39ade2039a3251a6f8699a99fd1fb69b4d",
