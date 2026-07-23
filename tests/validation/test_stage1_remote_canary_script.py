@@ -12,6 +12,7 @@ from backend.ingestion.persistent import RuntimeSnapshotPersistenceError
 from backend.rag.generation import GenerationServiceError
 from scripts.run_stage1_remote_canary import (
     AcademicQaGateError,
+    AnswerHttpGateError,
     EXPECTED_CLEANUP_JOBS,
     REPOSITORY_ROOT,
     REPORT_SCHEMA_VERSION,
@@ -249,6 +250,59 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
             "REAL_GENERATION_INITIAL_FAILED_CLOSED",
         )
         self.assertEqual(_sanitized_error_code(ValueError("secret")), "ValueError")
+
+    def test_answer_http_failure_reports_only_status_and_allowlisted_code(self):
+        with self.assertRaises(AnswerHttpGateError) as raised:
+            _require_answer_api_gate(
+                status_code=403,
+                payload={
+                    "code": "RAG_FORBIDDEN_SCOPE",
+                    "message": "private response detail",
+                },
+                generation_enabled=True,
+                http_error_code="RAG_FORBIDDEN_SCOPE",
+            )
+
+        error = raised.exception
+        self.assertEqual(
+            _sanitized_error_code(error),
+            "PERSISTED_SNAPSHOT_ANSWER_HTTP_FAILED",
+        )
+        self.assertEqual(
+            error.sanitized_detail(),
+            {
+                "generation_phase": "initial",
+                "http_status": 403,
+                "api_error_code": "RAG_FORBIDDEN_SCOPE",
+            },
+        )
+        report = _build_failure_report("phase2_qa_01", error)
+        self.assertEqual(report["answer_http_failure"], error.sanitized_detail())
+        self.assertNotIn("private", json.dumps(report))
+
+    def test_answer_http_failure_redacts_unallowlisted_api_code(self):
+        with self.assertRaises(AnswerHttpGateError) as raised:
+            _require_answer_api_gate(
+                status_code=503,
+                payload={"code": "private:error:value"},
+                generation_enabled=True,
+                replay=True,
+                http_error_code="private:error:value",
+            )
+
+        error = raised.exception
+        self.assertEqual(
+            _sanitized_error_code(error),
+            "REAL_GENERATION_REPLAY_HTTP_FAILED",
+        )
+        self.assertEqual(
+            error.sanitized_detail(),
+            {
+                "generation_phase": "replay",
+                "http_status": 503,
+                "api_error_code": None,
+            },
+        )
 
     def test_generation_model_and_digest_must_be_supplied_together(self):
         result = subprocess.run(

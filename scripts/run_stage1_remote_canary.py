@@ -67,6 +67,7 @@ REPORT_SCHEMA_VERSION = "stage1_remote_canary_report_v2"
 EXPECTED_CLEANUP_JOBS = 3
 _RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,47}$")
 _SUITE_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+_SANITIZED_API_ERROR_CODE_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
 _SANITIZED_RUNTIME_CODES = frozenset(
     {
         "PDF_OBJECT_REOPEN_FAILED",
@@ -163,6 +164,41 @@ class AcademicQaGateError(RuntimeError):
         }
 
 
+class AnswerHttpGateError(RuntimeError):
+    """Preserve only the HTTP status and an allowlisted API error identifier."""
+
+    def __init__(
+        self,
+        *,
+        status_code: int,
+        replay: bool,
+        api_error_code: str | None,
+    ) -> None:
+        if not isinstance(status_code, int) or isinstance(status_code, bool):
+            raise ValueError("answer HTTP status must be an integer")
+        self.code = (
+            "REAL_GENERATION_REPLAY_HTTP_FAILED"
+            if replay
+            else "PERSISTED_SNAPSHOT_ANSWER_HTTP_FAILED"
+        )
+        self.generation_phase = "replay" if replay else "initial"
+        self.status_code = status_code
+        self.api_error_code = (
+            api_error_code
+            if isinstance(api_error_code, str)
+            and _SANITIZED_API_ERROR_CODE_PATTERN.fullmatch(api_error_code)
+            else None
+        )
+        super().__init__(self.code)
+
+    def sanitized_detail(self) -> dict[str, object]:
+        return {
+            "generation_phase": self.generation_phase,
+            "http_status": self.status_code,
+            "api_error_code": self.api_error_code,
+        }
+
+
 class _ObservedGenerationProvider:
     """Capture only an allowlisted failure code for the private Canary report."""
 
@@ -251,6 +287,8 @@ def _build_failure_report(run_id: str, exc: Exception) -> dict[str, object]:
     }
     if isinstance(exc, AcademicQaGateError):
         failure["academic_qa_failure"] = exc.sanitized_detail()
+    if isinstance(exc, AnswerHttpGateError):
+        failure["answer_http_failure"] = exc.sanitized_detail()
     return failure
 
 
@@ -334,6 +372,8 @@ def _load_academic_question_suite(
 def _sanitized_error_code(exc: Exception) -> str:
     if isinstance(exc, AcademicQaGateError):
         return exc.code
+    if isinstance(exc, AnswerHttpGateError):
+        return exc.code
     if isinstance(exc, RuntimeSnapshotPersistenceError):
         return exc.code
     if type(exc) is RuntimeError and str(exc) in _SANITIZED_RUNTIME_CODES:
@@ -355,13 +395,18 @@ def _require_answer_api_gate(
     generation_enabled: bool,
     replay: bool = False,
     generation_failure_code: str | None = None,
+    http_error_code: str | None = None,
 ) -> None:
     if replay:
         prefix = "REAL_GENERATION_REPLAY"
     else:
         prefix = "PERSISTED_SNAPSHOT_ANSWER"
     if status_code != 200:
-        raise RuntimeError(f"{prefix}_HTTP_FAILED")
+        raise AnswerHttpGateError(
+            status_code=status_code,
+            replay=replay,
+            api_error_code=http_error_code,
+        )
     if payload.get("status") != "COMPLETED":
         if generation_enabled and _warnings_contain(
             payload, "_FAILED_CLOSED_EVIDENCE_ONLY"
@@ -486,6 +531,9 @@ def _run_academic_question_case(
         status_code=response.status_code,
         payload=payload,
         generation_enabled=generation_provider is not None,
+        http_error_code=(
+            payload.get("code") if isinstance(payload.get("code"), str) else None
+        ),
         generation_failure_code=(
             generation_observer.failure_code if generation_observer is not None else None
         ),
@@ -508,6 +556,11 @@ def _run_academic_question_case(
             payload=replay_payload,
             generation_enabled=True,
             replay=True,
+            http_error_code=(
+                replay_payload.get("code")
+                if isinstance(replay_payload.get("code"), str)
+                else None
+            ),
             generation_failure_code=(
                 generation_observer.failure_code if generation_observer is not None else None
             ),

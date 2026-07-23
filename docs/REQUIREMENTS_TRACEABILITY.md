@@ -40,7 +40,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `PARTIAL` | 远程 Milvus 2.6.18 + BGE-M3；316 Chunk Canary 12/15；175 题 109/175；版本 Collection、READY 持久化 Answer API 和删除清理均远程通过 | 目标规模性能基线未完成；不以远程 500 题或调参作为当前门禁 |
 | SR-06 | 基础规范化和最小路由；改写、多查询和多跳按失败后置 | `PARTIAL` | API 问题输入合同与默认检索链路 | 最小路由合同尚未冻结；高级能力继续保持后置 |
 | SR-07 | ES/Milvus 并行、RRF、去重、多样性、Cross-Encoder 重排 | `PARTIAL` | 本地 SQLite BM25 + BGE-M3 RRF 15/15；ES/Milvus 统一候选接口、版本化配置与远程 RRF Canary 14/15，与 ES 单路持平 | 去重/多样性、重排和扩展消融未完成；当前无净增益，暂缓增加复杂度 |
-| SR-08 | 证据上下文、真实 LLM、强制引用、校验与拒答 | `PARTIAL` | Evidence/Citation、`NO_EVIDENCE`；llama3.2 与 Qwen 均已通过远程 READY + ES/Milvus RRF 真实生成闭环，Qwen 报告 SHA-256 `0CB1B569D8A782FC526266E1A7193EF6299B66D5DBC72DCC989FDB951B8A1160`；固定公开 Evidence 模型选型 v4 以 Qwen `4/4` 对 llama3.2 `3/4` 晋级，报告 SHA-256 `E031B1B4532571850FD4527D4930E80A3C144074DBB55F8055A54A51EDB7E038` | 3 文档 9 题 v1 远程执行发现并经 PDF 核实一个位置标签假阴性，v2 私有包已可追溯校正但尚未远程执行；Claim 语义支持校验和冲突处理仍未完成 |
+| SR-08 | 证据上下文、真实 LLM、强制引用、校验与拒答 | `PARTIAL` | Evidence/Citation、`NO_EVIDENCE`；llama3.2 与 Qwen 均已通过远程 READY + ES/Milvus RRF 真实生成闭环，Qwen 报告 SHA-256 `0CB1B569D8A782FC526266E1A7193EF6299B66D5DBC72DCC989FDB951B8A1160`；固定公开 Evidence 模型选型 v4 以 Qwen `4/4` 对 llama3.2 `3/4` 晋级，报告 SHA-256 `E031B1B4532571850FD4527D4930E80A3C144074DBB55F8055A54A51EDB7E038` | 3 文档 9 题 v2 已有前 2 文档各 `3/3` 远程通过；第 3 文档两次在 Answer API 非 200 停止，待脱敏 HTTP 分类后收口；Claim 语义支持校验和冲突处理仍未完成 |
 | SR-09 | 问答 API、SSE、内部 Evidence 合同和鉴权原文定位 | `PARTIAL` | 非流式 Answer API、SSE 文件合同、PDF 页码 | SSE 运行、独立 Evidence 消费和鉴权预览未实现；对外 Agent Evidence API 保持后置 |
 | SR-10 | Trace、反馈、指标、告警和运营闭环 | `PARTIAL` | Trace 合同与评测报告结构 | 持久化、反馈 API、看板、告警和难例回流未实现 |
 | SR-11 | 固定 175 题 MVP 初始集、约 500 条稳定迭代集、800～1500 条正式验收集 | `PARTIAL` | 175 题已按 `105/35/35` 拆分完成人工校验，166 条原样通过、9 条修订、4 条专家签署；ES 85/175、Milvus 109/175；500 题四路工程结果保留 | 无证据校准和安全策略层缺口需分流；800～1500 题正式独立盲测尚未进入 |
@@ -67,5 +67,5 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 2. **已完成远程 Gate：** 用户在提交 `91aca5a` 复用 PostgreSQL READY + ES/Milvus RRF Evidence 完成同一真实生成配置的稳定回放、引用门禁、删除后 403 和三路清理；
 3. **已完成模型选型 Gate：** 固定 Evidence/Prompt/解码比较 `qwen3:14b` 与 `llama3.2:latest`，远程 v2 以 `4/4` 对 `2/4` 决定 `PROMOTE_QWEN3_14B`；
 4. **已完成远程 Qwen Gate：** 冻结摘要的 Qwen 已完成真实生成、引用、ACL、版本、删除后 403 和三路清理闭环；
-5. **当前独立 Gate：** 3 篇指定论文、9 个普通科研问题的 v2 私有验收包已可追溯校正；用户需以新 Run ID 在不修改检索参数的前提下逐文档执行并返回脱敏报告；
+5. **当前独立 Gate：** v2 第 1、2 篇已各 `3/3` 通过；第 3 篇以同 Run ID 在不修改检索参数的前提下执行脱敏 Answer HTTP 诊断；
 6. **阶段 2 后续：** 保留 Hybrid 与最佳单路的既有比较；Reranker、MinIO/OCR/性能分别保持独立变量。

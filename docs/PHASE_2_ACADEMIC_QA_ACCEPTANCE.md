@@ -26,4 +26,8 @@
 
 同 Run ID 脱敏诊断定位到 `local3.answerable.tracer.ingredients`：原始目标只接受 PDF 第 3 页，实际 Top-3 Evidence 为第 1、2 页；诊断报告 SHA-256 为 `37B4345C0B16A34237EF90CE5037DCF798FE855ACAAA98798E4611D5D8CAB5D4`。PDF 文字与第 1～3 页渲染复核确认三项组成在第 1 页摘要/引言、第 2 页图和贡献说明、第 3 页方法概述均有有效表述。因此该结果是位置标签覆盖不完整导致的假阴性，不是已证实的召回缺口。
 
-v2 只对该 Case 建立可追溯校正：保留来源范围第 3 页，将可接受范围扩为第 1～3 页；其余 8 个 Case、问题、PDF、模型、Prompt 和检索参数完全不变。新私有包状态为 `READY_FOR_USER_REMOTE_EXECUTION`，ZIP SHA-256 为 `CDCFA981ECA1BE2B7C06D97D42775A3EF9FA00F1E078C0BD5424A35336E95EED`，Manifest SHA-256 为 `A8DEE26281EE1C953D1024C2686FCA28E0D0195855CDDE81ED142E791618FD39`，位于被忽略的 `runtime/phases/source-phase2-academic-qa-acceptance-v2-local/input/`。远程 v2 的 3 文档 9 题仍未执行，不得写成已通过。
+v2 只对该 Case 建立可追溯校正：保留来源范围第 3 页，将可接受范围扩为第 1～3 页；其余 8 个 Case、问题、PDF、模型、Prompt 和检索参数完全不变。新私有包状态为 `READY_FOR_USER_REMOTE_EXECUTION`，ZIP SHA-256 为 `CDCFA981ECA1BE2B7C06D97D42775A3EF9FA00F1E078C0BD5424A35336E95EED`，Manifest SHA-256 为 `A8DEE26281EE1C953D1024C2686FCA28E0D0195855CDDE81ED142E791618FD39`，位于被忽略的 `runtime/phases/source-phase2-academic-qa-acceptance-v2-local/input/`。
+
+远程 v2 已完成第 1、2 篇各 `3/3` 问：真实 Qwen 生成、引用稳定回放、定位、三路清理和删除后 403 均通过，报告 SHA-256 分别为 `4FB08864CB22B611294CAD0159DF6DB60E7496D89D16ADA6819A8E94E4FB9FB1` 和 `F92F9989FC28A6807B298E45369CEC72755169ACC2882FD57582C66915177E9E`。第 3 篇初次及同 Run ID 恢复均以 `PERSISTED_SNAPSHOT_ANSWER_HTTP_FAILED` 停止，两份确定性失败报告 SHA-256 均为 `6C01FFC7CA2D8EF4C97F4B6E58AC492DAEBE421F50B0479E12346E2E81EA99FC`，且 `academic_qa_failure=null`。因此当前是 `2/3 DOCUMENTS PASS / DOCUMENT 3 ANSWER HTTP DIAGNOSTIC PENDING`，不得写成 9 题通过或检索失败。
+
+为了不再盲目重试，远程 Canary 在保留原稳定错误码的同时，为 Answer API 非 200 报告新增 `answer_http_failure`：只包含 `initial/replay`、HTTP 状态和匹配 `^[A-Z][A-Z0-9_]{0,63}$` 的 API 错误码，不输出响应消息、问题、回答或 Evidence。

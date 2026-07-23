@@ -214,11 +214,11 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1 已完成，阶段 2 仍为 `IN_PROGRESS`。评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V1_DOC1_PASS_DOC2_LOCATION_FALSE_NEGATIVE_V2_PACKAGE_READY`。远程证据已证明两种模型均可消费 PostgreSQL READY + ES/Milvus RRF Evidence，并完成引用、稳定回放、删除后 403 和三路清理；固定四题 v4 进一步确认 Qwen `4/4` 晋级。普通科研问答 v1 的第 2 篇失败已由 PDF 第 1～3 页复核确认为位置标签假阴性；v2 保留历史来源并只扩展这一 Case 的有效页范围，远程 v2 尚未执行。运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
+最高方案阶段 0、阶段 1 已完成，阶段 2 仍为 `IN_PROGRESS`。评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_DOC1_PASS_DOC2_PASS_DOC3_HTTP_DIAGNOSTIC_PENDING`。远程证据已证明两种模型均可消费 PostgreSQL READY + ES/Milvus RRF Evidence，并完成引用、稳定回放、删除后 403 和三路清理；固定四题 v4 进一步确认 Qwen `4/4` 晋级。普通科研问答 v2 已有第 1、2 篇各 `3/3` 通过；第 3 篇初次及同 Run ID 恢复均在 Answer API 非 200 停止，尚未进入生成、引用或位置门禁。本地已补充只暴露 HTTP 状态和白名单 API 错误码的脱敏分类，模型、Prompt 和检索参数未改动。运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
 
 ## Next gate
 
-1. **阶段 2 验收包 v2 远程 Gate：** 用户以新 Run ID 执行校正后的 3 文档 9 题包，记录真实生成、引用、ACL、版本、定位、删除后 403 和三路清理；不复用 v1 的第 1 篇结果冒充完整 v2 报告；
+1. **阶段 2 验收包 v2 HTTP 诊断 Gate：** 保留第 1、2 篇已通过报告，第 3 篇以同 Run ID 和新报告路径执行一次脱敏诊断，只返回 HTTP 状态、白名单 API 错误码、报告摘要和 SHA-256；不调整模型、Prompt、检索或基础设施；
 2. **Reranker 独立 Gate：** 只有 v2 仍出现经 PDF 核验的真实排序缺口时，才单独验证一个 Cross-Encoder；不与生成、模型选型、MinIO、OCR 或性能变量混改。
 
 ## Prohibited shortcuts
