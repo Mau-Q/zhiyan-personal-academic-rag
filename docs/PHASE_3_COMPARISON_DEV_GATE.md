@@ -4,7 +4,7 @@
 
 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的本地实现候选与冻结配置已完成，
 方案阶段 3 由 `NOT_STARTED` 进入 `IN_PROGRESS`。本地结论仅为
-`CLEANUP_RECOVERY_READY_AWAITING_WINDOWS_EXECUTION`：
+`CLEANUP_RECOVERY_COMPLETE_PAIRED_ONLINE_DEV_RETRY_READY`：
 
 - 默认开关仍为 `false`，未改变默认 RRF；
 - 4 个冻结 `dev` 样本的 Control 均保持原问题，Treatment 规划均为
@@ -16,8 +16,8 @@
   裁决器已准备；前两次拒绝报告已保留已确认的身份，但不构成在线质量证据；
 - 第二次报告的通用清理异常遮蔽了主失败与具体阶段；运行器已改为同时保留
   `primary_error_code` 和分阶段清理错误，另有只读 PostgreSQL 残留审计入口；
-- 只读审计已确认 3 个版本全部失活，但 9 个清理任务全部 `PENDING`，316 个
-  Chunk 与 3 个 PDF 对象仍在；精确恢复入口已准备但尚未由用户运行；
+- 只读审计确认的 9 个 `PENDING` 任务已由精确恢复入口全部处理成功，Chunk、
+  PDF 与全局非终态任务均清零，事后审计为 `PASS/CLEAN`；
 - 尚未运行真实 PostgreSQL READY + ES/Milvus + RRF 配对回放，因此没有
   检索质量增益、关键类不退化或 300 ms 通过结论；
 - `test` 与 `acceptance` 均未读取、未运行。
@@ -147,6 +147,15 @@ Control/Treatment，也不能证明隔离 owner 已清理。
 计数；完成后必须是 9 个 `SUCCEEDED`、全局非终态为 0、Chunk/PDF 为 0，并由
 原只读审计器生成独立事后报告。任何前置漂移、删除失败或事后审计失败都停止，
 不得自动重试或进入质量 Gate。
+
+用户已在提交 `64ef344daa5382d0b043ff444300963fb076c068` 完成该恢复：
+9/9 `SUCCEEDED`，Chunk `316→0`、PDF `3→0`、全局非终态 `9→0`。恢复报告
+SHA-256 为
+`E9A9566ECFEDE9C30310F9831D8EBF22249CB5081EDA69BA6F7DEA48E26CB8FA`；
+自动事后审计为 `PASS / CLEAN`，SHA-256 为
+`F3C12A2F2F7C4D8E0F75EE8DB7B483B44C6509CF65FA0F0EE03779E296252790`。
+本次没有运行质量、test、Acceptance 或性能 Gate。旧 `_02` 仍不可作为质量
+证据；下一次只能使用全新 Run ID。
 
 ## 6. 远程结果回收与裁决
 

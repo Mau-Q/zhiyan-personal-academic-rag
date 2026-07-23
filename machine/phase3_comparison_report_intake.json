@@ -1,14 +1,15 @@
 {
   "schema_version": "phase3_comparison_report_intake_v1",
   "decision_id": "PD-042",
-  "status": "CLEANUP_RECOVERY_READY_AFTER_CONFIRMED_PENDING_RESIDUAL",
+  "status": "PAIRED_ONLINE_DEV_RETRY_READY_AFTER_CLEAN_RECOVERY",
   "source_gate": {
     "artifact": "machine/phase3_comparison_dev_gate.json",
-    "status": "CLEANUP_RECOVERY_READY_AWAITING_WINDOWS_EXECUTION"
+    "status": "CLEANUP_RECOVERY_COMPLETE_PAIRED_ONLINE_DEV_RETRY_READY"
   },
   "repair_decision_id": "PD-043",
   "cleanup_audit_decision_id": "PD-044",
   "cleanup_recovery_decision_id": "PD-045",
+  "cleanup_recovery_completion_decision_id": "PD-046",
   "implementation": {
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -92,9 +93,23 @@
     "acceptance": "NOT_READ_NOT_RUN",
     "audit_sha256": "a3fbddc29acaaab0e72edcd889f14a198f238f523a08588d5d486765999498cf",
     "observed_state": "THREE_INACTIVE_VERSIONS_NINE_PENDING_CLEANUP_JOBS_316_CHUNKS_THREE_PDF_OBJECTS",
-    "quality_rerun_authorized": false,
+    "quality_rerun_authorized": true,
     "manual_cleanup_authorized": false,
     "performance_gate": "NOT_COMBINED",
-    "next_gate": "EXACT_NINE_JOB_CLEANUP_RECOVERY_THEN_READ_ONLY_AUDIT"
+    "next_gate": "NEW_RUN_ID_PAIRED_ONLINE_DEV_QUALITY_GATE"
+  },
+  "cleanup_recovery_evidence": {
+    "head_commit": "64ef344daa5382d0b043ff444300963fb076c068",
+    "recovery_sha256": "e9a9566ecfede9c30310f9831d8ebf22249cb5081eda69ba6f7dea48e26cb8fa",
+    "jobs_succeeded": 9,
+    "post_chunk_rows": 0,
+    "post_pdf_object_rows": 0,
+    "post_global_nonterminal_cleanup_job_count": 0,
+    "post_recovery_audit_sha256": "f3c12a2f2f7c4d8e0f75ee8db7b483b44c6509cf65fa0f0ee03779e296252790",
+    "post_recovery_audit": "PASS_CLEAN",
+    "quality_gate_run": false,
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN",
+    "performance_gate": "NOT_RUN"
   }
 }

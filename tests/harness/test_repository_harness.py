@@ -187,7 +187,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "CLEANUP_RECOVERY_READY_AWAITING_WINDOWS_EXECUTION",
+            "CLEANUP_RECOVERY_COMPLETE_PAIRED_ONLINE_DEV_RETRY_READY",
         )
         self.assertEqual(
             payload["source_phase"], {"id": "phase-3", "status": "IN_PROGRESS"}
@@ -206,7 +206,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["paired_online_user_entry"]["status"],
-            "SECOND_WINDOWS_ATTEMPT_RESIDUAL_CONFIRMED_RECOVERY_READY",
+            "SECOND_WINDOWS_ATTEMPT_CLEANLY_RECOVERED_NEW_QUALITY_RUN_READY",
         )
         self.assertEqual(
             payload["windows_attempts"][0]["status"],
@@ -236,6 +236,11 @@ class RepositoryHarnessTests(unittest.TestCase):
             "RUN_EXISTING_PERSISTENT_CLEANUP_WORKER_MAX_NINE",
         )
         self.assertFalse(payload["cleanup_recovery_gate"]["quality_gate_run"])
+        self.assertEqual(payload["cleanup_recovery_result"]["jobs_succeeded"], 9)
+        self.assertEqual(
+            payload["cleanup_recovery_result"]["post_recovery_audit_decision"],
+            "CLEAN",
+        )
         self.assertFalse(
             payload["paired_online_user_entry"][
                 "absolute_300ms_slo_adjudication"
@@ -254,7 +259,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "CLEANUP_RECOVERY_READY_AFTER_CONFIRMED_PENDING_RESIDUAL",
+            "PAIRED_ONLINE_DEV_RETRY_READY_AFTER_CLEAN_RECOVERY",
         )
         self.assertEqual(payload["decision_id"], "PD-042")
         self.assertEqual(
@@ -291,12 +296,16 @@ class RepositoryHarnessTests(unittest.TestCase):
             payload["cleanup_audit_boundary"]["postgresql_transaction"],
             "READ_ONLY",
         )
-        self.assertFalse(
+        self.assertTrue(
             payload["cleanup_audit_boundary"]["quality_rerun_authorized"]
         )
         self.assertEqual(
             payload["cleanup_audit_boundary"]["next_gate"],
-            "EXACT_NINE_JOB_CLEANUP_RECOVERY_THEN_READ_ONLY_AUDIT",
+            "NEW_RUN_ID_PAIRED_ONLINE_DEV_QUALITY_GATE",
+        )
+        self.assertEqual(
+            payload["cleanup_recovery_evidence"]["post_recovery_audit"],
+            "PASS_CLEAN",
         )
 
     def test_validator_rejects_template_as_concrete_phase_result(self):

@@ -1,6 +1,6 @@
 {
   "schema_version": "phase3_comparison_dev_gate_v1",
-  "status": "CLEANUP_RECOVERY_READY_AWAITING_WINDOWS_EXECUTION",
+  "status": "CLEANUP_RECOVERY_COMPLETE_PAIRED_ONLINE_DEV_RETRY_READY",
   "source_phase": {
     "id": "phase-3",
     "status": "IN_PROGRESS"
@@ -50,7 +50,7 @@
   },
   "paired_online_user_entry": {
     "decision_id": "PD-041",
-    "status": "SECOND_WINDOWS_ATTEMPT_RESIDUAL_CONFIRMED_RECOVERY_READY",
+    "status": "SECOND_WINDOWS_ATTEMPT_CLEANLY_RECOVERED_NEW_QUALITY_RUN_READY",
     "package_builder": "scripts/build_phase3_comparison_dev_package.py",
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "report_adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -128,9 +128,11 @@
     "residual_outcome": "REQUIRES_SEPARATE_RECOVERY_GATE"
   },
   "cleanup_recovery_gate": {
-    "status": "READY_AWAITING_USER_RUN",
+    "status": "PASS",
     "decision_id": "PD-045",
+    "completion_decision_id": "PD-046",
     "run_id": "phase3_comparison_dev_20260723_02",
+    "head_commit": "64ef344daa5382d0b043ff444300963fb076c068",
     "precondition": "THREE_INACTIVE_VERSIONS_NINE_PENDING_ATTEMPT_ZERO_JOBS_THREE_BACKENDS_316_CHUNKS_THREE_PDF_OBJECTS_NO_OTHER_GLOBAL_NONTERMINAL_JOBS",
     "single_action": "RUN_EXISTING_PERSISTENT_CLEANUP_WORKER_MAX_NINE",
     "postcondition": "NINE_SUCCEEDED_ZERO_GLOBAL_NONTERMINAL_ZERO_CHUNKS_ZERO_PDF_OBJECTS_THEN_READ_ONLY_AUDIT_CLEAN",
@@ -139,6 +141,24 @@
     "performance_gate_run": false,
     "service_restart_allowed": false,
     "manual_delete_allowed": false
+  },
+  "cleanup_recovery_result": {
+    "status": "PASS",
+    "jobs_observed": 9,
+    "jobs_succeeded": 9,
+    "pre_cleanup_status": "PENDING_9",
+    "post_cleanup_status": "SUCCEEDED_9",
+    "post_chunk_rows": 0,
+    "post_pdf_object_rows": 0,
+    "post_global_nonterminal_cleanup_job_count": 0,
+    "recovery_sha256": "e9a9566ecfede9c30310f9831d8ebf22249cb5081eda69ba6f7dea48e26cb8fa",
+    "post_recovery_audit_status": "PASS",
+    "post_recovery_audit_decision": "CLEAN",
+    "post_recovery_audit_sha256": "f3c12a2f2f7c4d8e0f75ee8db7b483b44c6509cf65fa0f0ee03779e296252790",
+    "quality_gate_run": false,
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN",
+    "performance_gate": "NOT_RUN"
   },
   "independent_performance_gate": {
     "status": "PENDING_SEPARATE_GATE",

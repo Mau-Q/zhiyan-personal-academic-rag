@@ -55,7 +55,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | 阶段 0：范围与 Baseline | `COMPLETE` | 175 题人工校验、ES/Milvus 同集单路 Baseline、三种 Chunk 受控 Baseline、单用户范围/资源/SLO 及数据身份/生命周期目标合同均已冻结 | 冻结目标不等于运行时达标 |
 | 阶段 1：数据与索引最小闭环 | `COMPLETE` | 远程 v2 已通过 PDF/Chunk 持久化、owner/版本 READY 对账、ES/Milvus 在线 Evidence、同 Run ID 恢复、删除后 403 和三路清理；报告 SHA-256 `6B2AB3BAAD55AE8FA506C0D1FD7A310D9EF3A3833A93E33DD1A2D8A0938A9D8C` | 正式 MinIO、OCR 和目标规模性能不属于阶段 1 退出条件 |
 | 阶段 2：基础 RAG MVP | `COMPLETE` | 非流式 API、Evidence、拒答、远程 RRF Canary、llama3.2/Qwen READY 真实生成闭环、模型选型和 3 文档 9 题 v2 均通过；固定 BGE Reranker 的增益、目标硬件成本和在线边界已验证，最终决定为原 RRF 默认、Reranker 可选且不默认启用 | Windows 分段 Gate 的 combined `P95=504.71613 ms` 未通过 300 ms；这是显式后移的性能债，不写成 SLO 或生产验收完成 |
-| 阶段 3：针对失败类型增强 | `IN_PROGRESS` | 入口 Gate 已冻结 4 个 `dev` 双文档比较失衡样本、基线/增益/不退化线和单一变量；默认关闭实现、4/4 Control/Treatment 纯规划检查、报告裁决与跨平台身份修复已完成；只读审计已确认 `_02` 的精确残留并准备单动作恢复入口 | 3 个版本均失活但 9 个三路任务仍 `PENDING`，316 Chunk/3 PDF 尚未物理清理；先完成精确恢复和事后只读审计，再决定新质量 Run ID。`test/acceptance` 封存；300 ms 性能硬化保持独立 |
+| 阶段 3：针对失败类型增强 | `IN_PROGRESS` | 入口 Gate 已冻结 4 个 `dev` 双文档比较失衡样本、基线/增益/不退化线和单一变量；默认关闭实现、4/4 Control/Treatment 纯规划检查与报告裁决已完成；`_02` 残留已 9/9 清理且事后审计 `PASS/CLEAN` | 允许用全新 Run ID 重试同一冻结配对 dev；尚无可采信质量增益或不退化结论。`test/acceptance` 封存；300 ms 性能硬化保持独立 |
 | 阶段 4：Claim–Evidence 可靠性 | `NOT_STARTED` | 尚未建立结构化 Claim、Claim–Evidence 映射及确定性支持检查 | 不用模型自评冒充确定性支持检查 |
 | 阶段 5：复杂科研问答与复用 | `NOT_STARTED` | 暂未完成比较、多跳、时效问答与 Agent Evidence API | 进入前需满足 MVP、权限委托、审计与运维条件 |
 
@@ -99,5 +99,11 @@ Chunk/PDF 快照清零以及全局非终态清理任务计数。在该审计返�
 Milvus、runtime snapshot 各 3 个任务均为 `PENDING`，仍有 316 Chunk 和 3 PDF
 对象；审计 SHA-256 为
 `A3FBDDC29ACAAAB0E72EDCD889F14A198F238F523A08588D5D486765999498CF`。
-恢复入口只处理这 9 个既有任务，并在完成后重新运行只读审计；PASS 分支仍只
-允许形成默认关闭的 dev 候选草案。
+恢复入口只处理这 9 个既有任务，并在完成后重新运行只读审计。用户在提交
+`64ef344daa5382d0b043ff444300963fb076c068` 上取得 9/9 `SUCCEEDED`、
+Chunk/PDF/全局非终态均为 0；恢复报告 SHA-256
+`E9A9566ECFEDE9C30310F9831D8EBF22249CB5081EDA69BA6F7DEA48E26CB8FA`，
+事后审计 `PASS/CLEAN`，SHA-256
+`F3C12A2F2F7C4D8E0F75EE8DB7B483B44C6509CF65FA0F0EE03779E296252790`。
+该结果不补造 `_02` 质量证据，只允许以新 Run ID 重试同一 dev Gate；PASS 分支
+仍只形成默认关闭的候选草案。

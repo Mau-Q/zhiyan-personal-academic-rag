@@ -48,19 +48,21 @@ unzip -p runtime/handoffs/phase3-comparison-paired-dev-input-v1.zip manifest.jso
 
 ## 2. Windows：仅在 Mac 推送成功后运行
 
-当前不要再次运行质量 Gate。`phase3_comparison_dev_20260723_02` 的只读审计
-已确认 9 个任务仍为 `PENDING`。在新的恢复提交推送后运行：
+`phase3_comparison_dev_20260723_02` 的 9 个残留任务已在恢复提交上全部
+`SUCCEEDED`，Chunk/PDF/全局非终态清零且事后审计 `PASS/CLEAN`。旧 `_02`
+仍不是质量证据；新的状态收口提交推送后，才允许用新 Run ID 重跑同一质量
+Gate：
 
 ```text
-powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\deploy\remote\phase3-comparison-validation\recover_phase3_comparison_cleanup.ps1 -ExpectedHeadCommit <NEW_COMMIT_SHA>
+$packagePath = 'C:\private\phase3-comparison-paired-dev-input-v1.zip'
+$packageSha256 = (Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\deploy\remote\phase3-comparison-validation\run_phase3_comparison_paired_dev_gate.ps1 -InputPackagePath $packagePath -ExpectedPackageSha256 $packageSha256 -ExpectedManifestSha256 05c36a393a51a8aa705e17d1ac3895df074b9273f8af6bfad06c9904c458c63f -RunId phase3_comparison_dev_20260723_03
 ```
 
-脚本已填入 `_02`、数据库和索引前缀；它先核对精确冻结残留，只用既有 Worker
-领取这 9 个任务，然后自动运行只读事后审计。不重启服务、不读取
-`test/acceptance`、不运行质量或性能 Gate。回传最后 JSON summary 中的
-`recovery_sha256` 与 `audit_sha256`。只有
-`recovery_status=PASS / audit_decision=CLEAN` 才能准备新的质量 Run ID；任何
-红色终止都停止并保留两个报告，不要手工清理或重复执行。
+ZIP 已在 `_02` 中通过固定 Manifest 与 6 个工件 SHA 校验；这里重新计算容器
+SHA 防止命令执行期间变化，固定 Manifest SHA 不变。脚本继续执行完整身份、
+Control 停止规则、Treatment、清理和裁决。任何红色终止都停止并回传完整
+summary、报告/裁决 SHA；不要调整参数重跑。
 
 以下原质量入口仅在后续状态文件明确解除冻结后使用。
 

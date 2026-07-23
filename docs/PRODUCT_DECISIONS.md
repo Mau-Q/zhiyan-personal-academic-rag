@@ -47,5 +47,6 @@
 | PD-043 | ACCEPTED | 阶段 3 冻结 JSON 配置的运行时身份使用 LF 规范化后的 UTF-8 字节 SHA-256；Windows Git 的纯 CRLF 检出与冻结 LF 配置视为同一身份，孤立 CR、BOM 或任意内容变化仍失败关闭 | 首次 Windows 尝试因 `core.autocrlf=true` 在连接服务前被配置字节哈希拒绝，未形成在线质量证据。修复不改配置内容、冻结 SHA、默认开关、候选、RRF、阈值或 holdout，只允许用新提交和新 Run ID 重试同一 dev Gate |
 | PD-044 | ACCEPTED | 第二次 Windows 配对 dev 报告因清理证明失败而不可采信；在任何质量复跑前，先用版本固定、owner-scoped、PostgreSQL `READ ONLY` 审计证明版本全部失活、清理任务终态成功且 Chunk/PDF 快照清零 | 运行器必须分别保留主失败码和清理阶段失败码，不再用通用清理异常覆盖原始原因。审计不查询 ES/Milvus、不重启服务、不执行清理、不读取 `test/acceptance`；若发现残留，只能进入独立恢复 Gate，不能手工删除或与质量增强、300 ms 性能 Gate 合并 |
 | PD-045 | ACCEPTED | `_02` 只读审计确认 3 个版本均 `INACTIVE`，但 9 个三路任务均为 `PENDING/attempt=0`，316 Chunk 与 3 PDF 快照仍在；恢复 Gate 只允许现有持久化 Worker 领取这 9 个精确任务一次 | 变更前必须重新证明没有其他全局非终态任务、版本/任务/backend/计数与审计完全一致；完成条件为 9 个任务 `SUCCEEDED`、Chunk/PDF 清零并通过独立只读审计。不得重跑质量、读取 `test/acceptance`、重启服务、手工删除或顺带处理性能债 |
+| PD-046 | ACCEPTED | `_02` 精确恢复 Gate 已 9/9 `SUCCEEDED`，Chunk/PDF/全局非终态任务均清零，事后只读审计 `PASS/CLEAN`；允许以全新 Run ID 重试同一冻结配对 dev 质量 Gate | 恢复成功只清除旧运行残留，不补造 `_02` 质量证据。新运行继续固定 dev 输入、配置、候选 20、RRF `k=60`、Top-3、默认关闭与 Control 停止规则；`test/acceptance` 和 300 ms 性能 Gate仍不参与 |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。
