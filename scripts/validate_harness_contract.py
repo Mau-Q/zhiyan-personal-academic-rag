@@ -421,7 +421,7 @@ def check_phase3_comparison_dev_gate() -> None:
     if payload.get("schema_version") != "phase3_comparison_dev_gate_v1":
         raise ValueError("phase 3 comparison dev gate schema_version is invalid")
     if payload.get("status") != (
-        "USER_RUNNER_READY_AWAITING_PAIRED_ONLINE_DEV"
+        "USER_RUNNER_RETRY_READY_AWAITING_PAIRED_ONLINE_DEV"
     ):
         raise ValueError("phase 3 comparison dev gate status is invalid")
     if payload.get("source_phase") != {"id": "phase-3", "status": "IN_PROGRESS"}:
@@ -433,6 +433,7 @@ def check_phase3_comparison_dev_gate() -> None:
         or implementation.get("decision_id") != "PD-040"
         or implementation.get("variable_id")
         != "BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1"
+        or implementation.get("config_identity_decision_id") != "PD-043"
         or implementation.get("default_enabled") is not False
         or implementation.get("failure_policy") != "FALLBACK_TO_ORIGINAL_QUERY"
     ):
@@ -444,6 +445,10 @@ def check_phase3_comparison_dev_gate() -> None:
         "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2b"
     ):
         raise ValueError("phase 3 comparison config identity drifted")
+    if implementation.get("config_identity_canonicalization") != (
+        "LF_CANONICAL_TEXT_BYTES_CRLF_EQUIVALENT_CONTENT_DRIFT_REJECTED"
+    ):
+        raise ValueError("phase 3 comparison config canonicalization drifted")
 
     online = payload.get("preserved_online_path")
     if (
@@ -475,13 +480,25 @@ def check_phase3_comparison_dev_gate() -> None:
     if (
         not isinstance(user_entry, dict)
         or user_entry.get("decision_id") != "PD-041"
-        or user_entry.get("status") != "LOCAL_STATIC_AND_CONTRACT_PASS_NOT_RUN_ON_WINDOWS"
+        or user_entry.get("status")
+        != "WINDOWS_PRE_SERVICE_REJECTED_CONFIG_LINE_ENDING_REPAIR_READY_FOR_RETRY"
         or user_entry.get("quality_top_k") != 3
         or user_entry.get("absolute_300ms_slo_adjudication") is not False
         or "TEST_ACCEPTANCE_EXCLUDED"
         not in str(user_entry.get("input_boundary", ""))
     ):
         raise ValueError("phase 3 paired online user entry boundary drifted")
+    attempt = payload.get("windows_attempt")
+    if (
+        not isinstance(attempt, dict)
+        or attempt.get("run_id") != "phase3_comparison_dev_20260723_01"
+        or attempt.get("status") != "REJECTED_BEFORE_SERVICES"
+        or attempt.get("adjudication_error_code")
+        != "REPORT_CONFIG_IDENTITY_MISMATCH"
+        or attempt.get("online_quality_executed") is not False
+        or attempt.get("infrastructure_mutation_started") is not False
+    ):
+        raise ValueError("phase 3 rejected Windows attempt evidence drifted")
     for field in (
         "package_builder",
         "runner",
@@ -517,7 +534,8 @@ def check_phase3_comparison_report_intake() -> None:
     if (
         payload.get("schema_version") != "phase3_comparison_report_intake_v1"
         or payload.get("decision_id") != "PD-042"
-        or payload.get("status") != "PREPARED_NOT_RUN"
+        or payload.get("repair_decision_id") != "PD-043"
+        or payload.get("status") != "RETRY_READY_AFTER_PRE_SERVICE_REJECTION"
     ):
         raise ValueError("phase 3 report intake identity is invalid")
     implementation = payload.get("implementation")
@@ -542,6 +560,8 @@ def check_phase3_comparison_report_intake() -> None:
         or identity.get("run_id") != "CALLER_PINNED"
         or identity.get("report_sha256") != "CALLER_PINNED"
         or identity.get("input_manifest_sha256") != "CALLER_PINNED"
+        or identity.get("config_identity_canonicalization")
+        != "LF_CANONICAL_TEXT_BYTES_CRLF_EQUIVALENT_CONTENT_DRIFT_REJECTED"
     ):
         raise ValueError("phase 3 report intake identity binding drifted")
     trust = payload.get("trust_preconditions")
@@ -576,12 +596,18 @@ def check_phase3_comparison_report_intake() -> None:
     ):
         raise ValueError("phase 3 report intake gate isolation drifted")
     evidence = payload.get("evidence")
+    if not isinstance(evidence, dict):
+        raise ValueError("phase 3 report intake evidence is invalid")
+    remote_report = evidence.get("remote_report")
+    adjudication = evidence.get("adjudication")
     if (
-        not isinstance(evidence, dict)
-        or evidence.get("remote_report") is not None
-        or evidence.get("adjudication") is not None
+        not isinstance(remote_report, dict)
+        or remote_report.get("status") != "REJECTED_BEFORE_SERVICES"
+        or not isinstance(adjudication, dict)
+        or adjudication.get("status") != "REJECTED"
+        or adjudication.get("error_code") != "REPORT_CONFIG_IDENTITY_MISMATCH"
     ):
-        raise ValueError("phase 3 report intake must not fabricate remote evidence")
+        raise ValueError("phase 3 report intake rejected evidence drifted")
 
 
 def check_harness_links() -> None:

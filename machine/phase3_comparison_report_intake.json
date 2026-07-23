@@ -1,11 +1,12 @@
 {
   "schema_version": "phase3_comparison_report_intake_v1",
   "decision_id": "PD-042",
-  "status": "PREPARED_NOT_RUN",
+  "status": "RETRY_READY_AFTER_PRE_SERVICE_REJECTION",
   "source_gate": {
     "artifact": "machine/phase3_comparison_dev_gate.json",
-    "status": "USER_RUNNER_READY_AWAITING_PAIRED_ONLINE_DEV"
+    "status": "USER_RUNNER_RETRY_READY_AWAITING_PAIRED_ONLINE_DEV"
   },
+  "repair_decision_id": "PD-043",
   "implementation": {
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -22,6 +23,7 @@
     "report_sha256": "CALLER_PINNED",
     "input_manifest_sha256": "CALLER_PINNED",
     "config_sha256": "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2b",
+    "config_identity_canonicalization": "LF_CANONICAL_TEXT_BYTES_CRLF_EQUIVALENT_CONTENT_DRIFT_REJECTED",
     "target_ids_sha256": "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8"
   },
   "trust_preconditions": {
@@ -56,8 +58,17 @@
     "performance": "PENDING_SEPARATE_300MS_GATE"
   },
   "evidence": {
-    "remote_report": null,
-    "adjudication": null,
-    "interpretation": "No Windows run or remote report exists in this preparation Gate."
+    "remote_report": {
+      "run_id": "phase3_comparison_dev_20260723_01",
+      "head_commit": "c8785f7220089302e54db8d06c6a6adde0dbc898",
+      "sha256": "ac081a26fd331f00659be3e950537a9b22d46e75c1f3303b1bfefbd7d7706827",
+      "status": "REJECTED_BEFORE_SERVICES"
+    },
+    "adjudication": {
+      "sha256": "eb0ce6f786963b65e859496405f4f12018c93ab43015b0e759d306141b1714f6",
+      "status": "REJECTED",
+      "error_code": "REPORT_CONFIG_IDENTITY_MISMATCH"
+    },
+    "interpretation": "The first Windows attempt proved a CRLF-only checkout drift under core.autocrlf=true and stopped before service connection; it is not online quality evidence."
   }
 }

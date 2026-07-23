@@ -111,6 +111,13 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _lf_canonical_sha256(path: Path) -> str:
+    payload = path.read_bytes()
+    if b"\r" in payload.replace(b"\r\n", b""):
+        raise GateError("CONFIG_LINE_ENDING_INVALID")
+    return hashlib.sha256(payload.replace(b"\r\n", b"\n")).hexdigest()
+
+
 def _repository_head() -> str:
     completed = subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -617,7 +624,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
         args.input_root,
         expected_manifest_sha256=args.expected_manifest_sha256,
     )
-    if _sha256(CONFIG_PATH) != CONFIG_SHA256:
+    if _lf_canonical_sha256(CONFIG_PATH) != CONFIG_SHA256:
         raise GateError("COMPARISON_CONFIG_IDENTITY_MISMATCH")
     source_document_ids = tuple(
         identity["document_id"]

@@ -10,16 +10,18 @@
 - 4 个冻结 `dev` 样本的 Control 均保持原问题，Treatment 规划均为
   `APPLIED`；
 - 私有 dev 输入包构建器、隔离三文档在线 runner 和 Windows PowerShell 5.1
-  用户运行入口已完成本地契约测试与静态检查；
+  用户运行入口已完成本地契约测试与静态检查；首次 Windows 尝试在连接服务前
+  因 `core.autocrlf=true` 造成的纯 CRLF 配置字节漂移被拒绝；
 - 远程报告的 SHA-256、Git HEAD、Run ID、指标算术、清理与 holdout 隔离
-  裁决器已准备，但没有远程报告可供运行；
+  裁决器已准备；首次拒绝报告已按哈希保留，但不构成在线质量证据；
 - 尚未运行真实 PostgreSQL READY + ES/Milvus + RRF 配对回放，因此没有
   检索质量增益、关键类不退化或 300 ms 通过结论；
 - `test` 与 `acceptance` 均未读取、未运行。
 
 机器状态见 `machine/phase3_comparison_dev_gate.json`，实现决策见 `PD-040`，
 用户运行入口决策见 `PD-041`。
-报告裁决边界见 `machine/phase3_comparison_report_intake.json` 和 `PD-042`。
+报告裁决边界见 `machine/phase3_comparison_report_intake.json`、`PD-042` 和
+跨平台配置身份决策 `PD-043`。
 
 ## 2. 单变量实现
 
@@ -40,6 +42,11 @@
 运行报告，不调用 LLM，也不硬编码四个目标问题。在线执行时必须把冻结来源
 文档 ID 全量、唯一地映射到 PostgreSQL 已解析的 owner-scoped 运行时文档 ID；
 映射缺失、重复或多余时拒绝构造 planner。
+
+配置身份 SHA 使用 LF 规范化后的 UTF-8 字节计算。Windows `core.autocrlf=true`
+产生的纯 CRLF 工作树与冻结 LF 文件等价；孤立 CR、BOM 或任何内容变化均不被
+规范化掩盖，仍以 `COMPARISON_CONFIG_IDENTITY_MISMATCH` 失败关闭。冻结配置
+内容和 SHA-256 没有改变。
 
 ## 3. 允许的确定性结构
 
@@ -91,8 +98,18 @@ make phase3-comparison-dev-plan
    和增量成本；
 5. 将配置、dev 决策和候选提交冻结后，才允许一次性进入 `test`。
 
-用户运行器尚未在 Windows 执行，不能把本地静态检查写成真实在线证据。运行器
-只有在 316 个冻结 Chunk 与运行时持久化 Chunk 全量一一对应、三篇 READY
+首次 Windows Run ID `phase3_comparison_dev_20260723_01` 在服务连接和数据写入
+前被拒绝：报告 SHA-256 为
+`AC081A26FD331F00659BE3E950537A9B22D46E75C1F3303B1BFEFBD7D7706827`，
+裁决 SHA-256 为
+`EB0CE6F786963B65E859496405F4F12018C93AB43015B0E759D306141B1714F6`。
+冻结 LF 配置 SHA-256 为
+`87B969A1B0F006C3406AB01A24837C5FF129D08BEDD0B2460A57122F9D0B0F2B`，
+Windows CRLF 工作树 SHA-256 为
+`491509223178E63BAFA7EBECDFC4F0A2EFEDD6A1FCD6FDD935476966423F9889`；
+该差异已由相同内容的 CRLF 本地回放复现。它不证明
+真实在线质量、清理或性能，重试必须使用新提交与新 Run ID。运行器只有在
+316 个冻结 Chunk 与运行时持久化 Chunk 全量一一对应、三篇 READY
 对账通过后才运行 Control；最终必须完成 9 个清理任务、READY 对账失败关闭和
 删除后 Answer API 403。非目标 `nDCG@10` 只使用原候选 20 内的评测诊断
 Top-10，产品/API Top-3 不改变。
@@ -114,7 +131,7 @@ Windows runner 现在把实际 Git HEAD 和 Run ID 写入完整报告。PowerShe
    `test` 仍需新的冻结提交和独立 Gate；
 6. 远程 FAIL 或报告不可采信时都保持比较拆分关闭。
 
-当前裁决器只有公开合成测试证据，没有读取或伪造任何 Windows 结果。
+当前裁决器保留一次连接服务前的真实拒绝证据；在线配对 dev 仍未运行。
 
 ## 7. 不能合并的边界
 

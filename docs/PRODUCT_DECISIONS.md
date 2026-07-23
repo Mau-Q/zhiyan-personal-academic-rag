@@ -44,5 +44,6 @@
 | PD-040 | ACCEPTED | `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 以默认关闭的可选 route-query planner 进入本地实现候选；与授权文档 ID 绑定的稳定别名只作身份元数据，不能授权路由 | 只允许两个身份均显式锚定，或一侧显式锚定且存在固定转折的确定性结构；其他情况、无别名、非两路、空输出或异常全部回退原问题。4 个冻结 dev 的纯规划 `4/4` 只证明可回放实现，不证明 ES/Milvus/RRF 增益；真实配对 dev、不退化、一次性 test、Acceptance 和独立 300 ms Gate 继续分开判定 |
 | PD-041 | ACCEPTED | 阶段 3 首个质量变量的 Windows PowerShell 5.1 用户运行入口采用隔离 owner 的三文档临时 READY 生命周期，在同一身份与索引上严格先 Control、后 Treatment，并以 9 个清理任务和删除后 403 作为报告成立条件 | 输入包只含 105 条 `dev`、316 个冻结 Chunk、固定 15 题和三篇 PDF；Control 不复现 `0/4` 时停止。非目标 `nDCG@10` 只是候选 20 内的评测诊断，产品 Top-3 不变；本地静态通过不等于 Windows 已运行、质量通过或 300 ms SLO 通过，`test/acceptance` 与独立性能 Gate 继续分离 |
 | PD-042 | ACCEPTED | Windows 配对 dev 报告必须由独立裁决器同时验证报告 SHA-256、运行器 Git HEAD、Run ID、输入/配置/目标身份、指标算术、9 路清理、删除后 403 和 holdout 隔离，才允许形成 dev 去留草案 | 远程 PASS 只能得到“默认关闭的 dev 候选等待冻结提交”，不能自动启用能力或解封 `test`；远程 FAIL 或不可可信报告一律保持关闭。Acceptance 和绝对 300 ms 性能 Gate 不参与裁决，也不得由该工具触发 |
+| PD-043 | ACCEPTED | 阶段 3 冻结 JSON 配置的运行时身份使用 LF 规范化后的 UTF-8 字节 SHA-256；Windows Git 的纯 CRLF 检出与冻结 LF 配置视为同一身份，孤立 CR、BOM 或任意内容变化仍失败关闭 | 首次 Windows 尝试因 `core.autocrlf=true` 在连接服务前被配置字节哈希拒绝，未形成在线质量证据。修复不改配置内容、冻结 SHA、默认开关、候选、RRF、阈值或 holdout，只允许用新提交和新 Run ID 重试同一 dev Gate |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。

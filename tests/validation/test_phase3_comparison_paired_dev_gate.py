@@ -16,6 +16,7 @@ from scripts.run_phase3_comparison_paired_dev_gate import (
     CONFIRMATION,
     EXPECTED_CLEANUP_JOBS,
     GateError,
+    _lf_canonical_sha256,
     _latency_summary,
     _require_empty_cleanup_queue,
     _require_exact_cleanup_scope,
@@ -72,6 +73,43 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
         self.assertEqual(EXPECTED_CLEANUP_JOBS, 9)
         self.assertNotIn("test", " ".join(ASSETS))
         self.assertNotIn("acceptance", " ".join(ASSETS))
+
+    def test_config_identity_accepts_only_lf_or_equivalent_crlf_bytes(self):
+        source = (
+            ROOT
+            / "evaluation"
+            / "phase3"
+            / "bilateral-comparison-query-decomposition-v1.json"
+        ).read_bytes()
+        self.assertEqual(
+            _lf_canonical_sha256(
+                ROOT
+                / "evaluation"
+                / "phase3"
+                / "bilateral-comparison-query-decomposition-v1.json"
+            ),
+            CONFIG_SHA256,
+        )
+        with tempfile.TemporaryDirectory(dir="runtime") as temporary:
+            root = Path(temporary)
+            crlf = root / "config-crlf.json"
+            crlf.write_bytes(source.replace(b"\n", b"\r\n"))
+            self.assertEqual(_lf_canonical_sha256(crlf), CONFIG_SHA256)
+
+            changed = root / "config-content-drift.json"
+            changed.write_bytes(
+                source.replace(b'"default_enabled": false', b'"default_enabled": true')
+            )
+            self.assertNotEqual(_lf_canonical_sha256(changed), CONFIG_SHA256)
+
+            bom = root / "config-bom.json"
+            bom.write_bytes(b"\xef\xbb\xbf" + source)
+            self.assertNotEqual(_lf_canonical_sha256(bom), CONFIG_SHA256)
+
+            invalid = root / "config-lone-cr.json"
+            invalid.write_bytes(source + b"\r")
+            with self.assertRaisesRegex(GateError, "CONFIG_LINE_ENDING_INVALID"):
+                _lf_canonical_sha256(invalid)
 
     def test_parser_requires_explicit_isolated_gate_arguments(self):
         args = build_parser().parse_args(

@@ -187,7 +187,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "USER_RUNNER_READY_AWAITING_PAIRED_ONLINE_DEV",
+            "USER_RUNNER_RETRY_READY_AWAITING_PAIRED_ONLINE_DEV",
         )
         self.assertEqual(
             payload["source_phase"], {"id": "phase-3", "status": "IN_PROGRESS"}
@@ -206,7 +206,15 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["paired_online_user_entry"]["status"],
-            "LOCAL_STATIC_AND_CONTRACT_PASS_NOT_RUN_ON_WINDOWS",
+            "WINDOWS_PRE_SERVICE_REJECTED_CONFIG_LINE_ENDING_REPAIR_READY_FOR_RETRY",
+        )
+        self.assertEqual(
+            payload["windows_attempt"]["status"],
+            "REJECTED_BEFORE_SERVICES",
+        )
+        self.assertFalse(payload["windows_attempt"]["online_quality_executed"])
+        self.assertFalse(
+            payload["windows_attempt"]["infrastructure_mutation_started"]
         )
         self.assertFalse(
             payload["paired_online_user_entry"][
@@ -224,7 +232,10 @@ class RepositoryHarnessTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        self.assertEqual(payload["status"], "PREPARED_NOT_RUN")
+        self.assertEqual(
+            payload["status"],
+            "RETRY_READY_AFTER_PRE_SERVICE_REJECTION",
+        )
         self.assertEqual(payload["decision_id"], "PD-042")
         self.assertEqual(
             payload["required_report_identity"]["head_commit"],
@@ -248,8 +259,14 @@ class RepositoryHarnessTests(unittest.TestCase):
             payload["split_and_gate_isolation"]["test"],
             "NO_AUTOMATIC_UNLOCK_OR_EXECUTION",
         )
-        self.assertIsNone(payload["evidence"]["remote_report"])
-        self.assertIsNone(payload["evidence"]["adjudication"])
+        self.assertEqual(
+            payload["evidence"]["remote_report"]["status"],
+            "REJECTED_BEFORE_SERVICES",
+        )
+        self.assertEqual(
+            payload["evidence"]["adjudication"]["error_code"],
+            "REPORT_CONFIG_IDENTITY_MISMATCH",
+        )
 
     def test_validator_rejects_template_as_concrete_phase_result(self):
         template = json.loads(

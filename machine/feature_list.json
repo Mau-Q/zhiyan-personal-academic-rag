@@ -578,6 +578,7 @@
         "machine/phase3_comparison_dev_gate.json",
         "machine/phase3_comparison_report_intake.json",
         "docs/PHASE_3_COMPARISON_DEV_GATE.md",
+        "docs/PRODUCT_DECISIONS.md",
         "docs/REQUIREMENTS_TRACEABILITY.md",
         "docs/CURRENT_PHASE.md"
       ]

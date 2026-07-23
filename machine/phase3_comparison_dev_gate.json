@@ -1,6 +1,6 @@
 {
   "schema_version": "phase3_comparison_dev_gate_v1",
-  "status": "USER_RUNNER_READY_AWAITING_PAIRED_ONLINE_DEV",
+  "status": "USER_RUNNER_RETRY_READY_AWAITING_PAIRED_ONLINE_DEV",
   "source_phase": {
     "id": "phase-3",
     "status": "IN_PROGRESS"
@@ -16,6 +16,8 @@
     "code": "backend/retrieval/comparison_decomposition.py",
     "config": "evaluation/phase3/bilateral-comparison-query-decomposition-v1.json",
     "config_sha256": "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2b",
+    "config_identity_decision_id": "PD-043",
+    "config_identity_canonicalization": "LF_CANONICAL_TEXT_BYTES_CRLF_EQUIVALENT_CONTENT_DRIFT_REJECTED",
     "reserved_switch": "PHASE3_COMPARISON_DECOMPOSITION_ENABLED",
     "default_enabled": false,
     "failure_policy": "FALLBACK_TO_ORIGINAL_QUERY",
@@ -48,7 +50,7 @@
   },
   "paired_online_user_entry": {
     "decision_id": "PD-041",
-    "status": "LOCAL_STATIC_AND_CONTRACT_PASS_NOT_RUN_ON_WINDOWS",
+    "status": "WINDOWS_PRE_SERVICE_REJECTED_CONFIG_LINE_ENDING_REPAIR_READY_FOR_RETRY",
     "package_builder": "scripts/build_phase3_comparison_dev_package.py",
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "report_adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -63,9 +65,22 @@
     "ndcg_at_10_boundary": "EVALUATION_DIAGNOSTIC_WITHIN_EXISTING_CANDIDATE_20_PRODUCT_FINAL_TOP3_UNCHANGED",
     "absolute_300ms_slo_adjudication": false
   },
+  "windows_attempt": {
+    "run_id": "phase3_comparison_dev_20260723_01",
+    "head_commit": "c8785f7220089302e54db8d06c6a6adde0dbc898",
+    "status": "REJECTED_BEFORE_SERVICES",
+    "adjudication_error_code": "REPORT_CONFIG_IDENTITY_MISMATCH",
+    "report_sha256": "ac081a26fd331f00659be3e950537a9b22d46e75c1f3303b1bfefbd7d7706827",
+    "adjudication_sha256": "eb0ce6f786963b65e859496405f4f12018c93ab43015b0e759d306141b1714f6",
+    "expected_lf_config_sha256": "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2b",
+    "observed_crlf_config_sha256": "491509223178e63bafa7ebecdfc4f0a2efedd6a1fcd6fdd935476966423f9889",
+    "git_core_autocrlf": true,
+    "online_quality_executed": false,
+    "infrastructure_mutation_started": false
+  },
   "paired_online_dev_quality": {
     "status": "NOT_RUN",
-    "reason": "No remote host was accessed and no online ES-Milvus-RRF paired replay was performed in the local implementation gate.",
+    "reason": "The first user-run Windows attempt was rejected before service connection because core.autocrlf changed only the config line endings; no online ES-Milvus-RRF paired replay was performed.",
     "control_baseline": null,
     "treatment_gain": null,
     "critical_non_regression": null

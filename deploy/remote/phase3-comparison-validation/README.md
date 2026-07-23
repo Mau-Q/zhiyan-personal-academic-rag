@@ -20,6 +20,8 @@
   清理任务，并证明删除后 Answer API 返回 403。
 - 完整报告写入实际 Git HEAD 和 Run ID；随后由独立裁决器用报告 SHA-256
   重新验证身份、指标算术、清理和 holdout 隔离。
+- 冻结配置身份按 LF 规范化字节计算；Windows `core.autocrlf=true` 产生的纯
+  CRLF 检出可回放为同一 SHA，内容变化、BOM 或孤立 CR 仍失败关闭。
 
 非目标 `nDCG@10` 使用同一候选 20 内的评测诊断 Top-10，不改变产品/API
 Top-3。输入包只含 `dev`、冻结 Chunk、固定 Canary 和三篇 PDF；不含或读取
