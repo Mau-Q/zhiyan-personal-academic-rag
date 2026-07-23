@@ -82,6 +82,8 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
                 "0" * 64,
                 "--run-id",
                 "phase3_dev_001",
+                "--expected-head-commit",
+                "a" * 40,
                 "--confirm",
                 CONFIRMATION,
                 "--output",
@@ -98,6 +100,13 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
         self.assertLess(script.index("git fetch origin main"), script.index("Expand-Archive"))
         self.assertLess(script.index("Get-FileHash"), script.index("Expand-Archive"))
         self.assertIn("RUN_ISOLATED_PHASE3_COMPARISON_DEV_GATE", script)
+        self.assertIn("'--expected-head-commit'", script)
+        self.assertIn(
+            "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
+            script,
+        )
+        self.assertIn("'--expected-input-manifest-sha256'", script)
+        self.assertIn("$adjudication.status -ne 'PASS'", script)
         self.assertIn("$report.cleanup.jobs_succeeded -ne 9", script)
         self.assertIn("$report.cleanup.deleted_answer_api_status -ne 403", script)
         self.assertIn("Remove-Item -LiteralPath $inputRoot -Recurse -Force", script)

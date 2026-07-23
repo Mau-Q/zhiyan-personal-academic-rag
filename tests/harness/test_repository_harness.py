@@ -218,6 +218,39 @@ class RepositoryHarnessTests(unittest.TestCase):
             payload["split_isolation"]["acceptance"].startswith("SEALED")
         )
 
+    def test_phase_three_report_intake_cannot_unlock_test(self):
+        payload = json.loads(
+            (ROOT / "machine" / "phase3_comparison_report_intake.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(payload["status"], "PREPARED_NOT_RUN")
+        self.assertEqual(payload["decision_id"], "PD-042")
+        self.assertEqual(
+            payload["required_report_identity"]["head_commit"],
+            "CALLER_PINNED_AND_MATCHED_TO_RUNNER_CHECKOUT",
+        )
+        self.assertEqual(
+            payload["trust_preconditions"]["test"],
+            "NOT_READ_NOT_RUN",
+        )
+        self.assertEqual(
+            payload["trust_preconditions"]["acceptance"],
+            "NOT_READ_NOT_RUN",
+        )
+        self.assertFalse(
+            payload["trust_preconditions"]["absolute_300ms_slo_conclusion_allowed"]
+        )
+        for outcome in payload["outcomes"].values():
+            self.assertFalse(outcome["default_enabled"])
+            self.assertTrue(outcome["test_gate"].startswith("SEALED"))
+        self.assertEqual(
+            payload["split_and_gate_isolation"]["test"],
+            "NO_AUTOMATIC_UNLOCK_OR_EXECUTION",
+        )
+        self.assertIsNone(payload["evidence"]["remote_report"])
+        self.assertIsNone(payload["evidence"]["adjudication"])
+
     def test_validator_rejects_template_as_concrete_phase_result(self):
         template = json.loads(
             (ROOT / "machine" / "phase_result.template.json").read_text(encoding="utf-8")

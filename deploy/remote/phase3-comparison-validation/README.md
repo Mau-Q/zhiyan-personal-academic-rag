@@ -18,6 +18,8 @@
   dev no-evidence、固定 15 题、拆分 P95 和增量检索 P95；
 - 报告写入前将三个版本置为 INACTIVE，完成 ES、Milvus、运行时快照共 9 个
   清理任务，并证明删除后 Answer API 返回 403。
+- 完整报告写入实际 Git HEAD 和 Run ID；随后由独立裁决器用报告 SHA-256
+  重新验证身份、指标算术、清理和 holdout 隔离。
 
 非目标 `nDCG@10` 使用同一候选 20 内的评测诊断 Top-10，不改变产品/API
 Top-3。输入包只含 `dev`、冻结 Chunk、固定 Canary 和三篇 PDF；不含或读取
@@ -56,9 +58,11 @@ powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\deploy\remote\
 `DATABASE_URL` 均由 Python runner 强制为 loopback。脚本结束时也删除由它
 解压的临时输入目录，原始 ZIP 不受影响。
 
-只回传终端输出的 JSON summary 与完整报告文件的 SHA-256；不要回传输入 ZIP、
-问题文本、证据文本、路径、连接串或密码。完整报告保存在
-`runtime/phase3-comparison-paired-dev-<RUN_ID>-report.json`，也不提交。
+只回传终端输出的 JSON summary、裁决文件和两个文件的 SHA-256；不要回传输入
+ZIP、问题文本、证据文本、路径、连接串或密码。完整报告保存在
+`runtime/phase3-comparison-paired-dev-<RUN_ID>-report.json`，裁决文件保存在
+同目录命名空间下的 `...-adjudication.json`，均不提交。裁决 PASS 也只表示
+默认关闭的 dev 候选可以进入冻结提交，不会自动解封 `test`。
 
 ## 3. 停止规则
 

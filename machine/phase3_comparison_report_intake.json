@@ -1,0 +1,63 @@
+{
+  "schema_version": "phase3_comparison_report_intake_v1",
+  "decision_id": "PD-042",
+  "status": "PREPARED_NOT_RUN",
+  "source_gate": {
+    "artifact": "machine/phase3_comparison_dev_gate.json",
+    "status": "USER_RUNNER_READY_AWAITING_PAIRED_ONLINE_DEV"
+  },
+  "implementation": {
+    "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
+    "adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
+    "windows_entry": "deploy/remote/phase3-comparison-validation/run_phase3_comparison_paired_dev_gate.ps1",
+    "tests": [
+      "tests/validation/test_phase3_comparison_paired_dev_gate.py",
+      "tests/validation/test_phase3_comparison_report_adjudication.py"
+    ]
+  },
+  "required_report_identity": {
+    "schema_version": "phase3_comparison_paired_dev_report_v1",
+    "head_commit": "CALLER_PINNED_AND_MATCHED_TO_RUNNER_CHECKOUT",
+    "run_id": "CALLER_PINNED",
+    "report_sha256": "CALLER_PINNED",
+    "input_manifest_sha256": "CALLER_PINNED",
+    "config_sha256": "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2b",
+    "target_ids_sha256": "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8"
+  },
+  "trust_preconditions": {
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN",
+    "cleanup_jobs_succeeded": 9,
+    "deleted_answer_api_status": 403,
+    "ready_reconciliation_failed_closed": true,
+    "absolute_300ms_slo_conclusion_allowed": false
+  },
+  "outcomes": {
+    "pass": {
+      "decision": "DEV_CANDIDATE_PASS_AWAITING_FREEZE_COMMIT",
+      "default_enabled": false,
+      "test_gate": "SEALED_REQUIRES_SEPARATE_FREEZE_COMMIT_AND_GATE"
+    },
+    "fail": {
+      "decision": "KEEP_COMPARISON_DECOMPOSITION_DISABLED",
+      "default_enabled": false,
+      "test_gate": "SEALED_DEV_GATE_DID_NOT_PASS"
+    },
+    "rejected": {
+      "decision": "KEEP_COMPARISON_DECOMPOSITION_DISABLED",
+      "default_enabled": false,
+      "test_gate": "SEALED_REPORT_NOT_TRUSTWORTHY"
+    }
+  },
+  "split_and_gate_isolation": {
+    "dev": "ONLY_REMOTE_REPORT_MAY_BE_ADJUDICATED",
+    "test": "NO_AUTOMATIC_UNLOCK_OR_EXECUTION",
+    "acceptance": "SEALED_REQUIRES_EXPLICIT_AUTHORIZATION",
+    "performance": "PENDING_SEPARATE_300MS_GATE"
+  },
+  "evidence": {
+    "remote_report": null,
+    "adjudication": null,
+    "interpretation": "No Windows run or remote report exists in this preparation Gate."
+  }
+}

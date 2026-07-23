@@ -177,6 +177,8 @@ try {
         $ExpectedManifestSha256.ToLowerInvariant(),
         '--run-id',
         $RunId,
+        '--expected-head-commit',
+        $headCommit,
         '--confirm',
         'RUN_ISOLATED_PHASE3_COMPARISON_DEV_GATE',
         '--output',
@@ -190,6 +192,35 @@ try {
         throw 'Phase 3 paired dev Gate did not write a report.'
     }
     $report = Get-Content -LiteralPath $outputPath -Raw | ConvertFrom-Json
+    $reportSha256 = (
+        Get-FileHash -LiteralPath $outputPath -Algorithm SHA256
+    ).Hash
+    $adjudicationPath = (
+        "runtime\phase3-comparison-paired-dev-$RunId-adjudication.json"
+    )
+    $adjudicationArguments = @(
+        'scripts/adjudicate_phase3_comparison_paired_dev_report.py',
+        '--report',
+        $outputPath,
+        '--expected-report-sha256',
+        $reportSha256.ToLowerInvariant(),
+        '--expected-head-commit',
+        $headCommit,
+        '--expected-run-id',
+        $RunId,
+        '--expected-input-manifest-sha256',
+        $ExpectedManifestSha256.ToLowerInvariant(),
+        '--output',
+        $adjudicationPath
+    )
+    & $PythonPath @adjudicationArguments
+    $adjudicationExitCode = $LASTEXITCODE
+    if (-not (Test-Path -LiteralPath $adjudicationPath -PathType Leaf)) {
+        throw 'Phase 3 report adjudicator did not write a decision.'
+    }
+    $adjudication = (
+        Get-Content -LiteralPath $adjudicationPath -Raw | ConvertFrom-Json
+    )
     $summary = [ordered]@{
         schema_version = 'phase3_comparison_paired_dev_summary_v1'
         head_commit = $headCommit
@@ -216,12 +247,22 @@ try {
         performance_boundary = $report.performance_boundary
         test_status = $report.split_isolation.test
         acceptance_status = $report.split_isolation.acceptance
-        report_sha256 = (
-            Get-FileHash -LiteralPath $outputPath -Algorithm SHA256
+        report_sha256 = $reportSha256
+        adjudication_status = $adjudication.status
+        adjudication_decision = $adjudication.decision
+        adjudicated_test_gate = $adjudication.test_gate
+        adjudicated_acceptance = $adjudication.acceptance
+        adjudication_sha256 = (
+            Get-FileHash -LiteralPath $adjudicationPath -Algorithm SHA256
         ).Hash
     }
     $summary | ConvertTo-Json -Depth 4
-    if ($pythonExitCode -ne 0 -or $report.status -ne 'PASS') {
+    if (
+        $pythonExitCode -ne 0 -or
+        $report.status -ne 'PASS' -or
+        $adjudicationExitCode -ne 0 -or
+        $adjudication.status -ne 'PASS'
+    ) {
         throw 'Phase 3 paired dev Gate failed closed.'
     }
     if (

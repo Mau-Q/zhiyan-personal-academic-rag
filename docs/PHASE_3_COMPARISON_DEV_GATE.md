@@ -11,12 +11,15 @@
   `APPLIED`；
 - 私有 dev 输入包构建器、隔离三文档在线 runner 和 Windows PowerShell 5.1
   用户运行入口已完成本地契约测试与静态检查；
+- 远程报告的 SHA-256、Git HEAD、Run ID、指标算术、清理与 holdout 隔离
+  裁决器已准备，但没有远程报告可供运行；
 - 尚未运行真实 PostgreSQL READY + ES/Milvus + RRF 配对回放，因此没有
   检索质量增益、关键类不退化或 300 ms 通过结论；
 - `test` 与 `acceptance` 均未读取、未运行。
 
 机器状态见 `machine/phase3_comparison_dev_gate.json`，实现决策见 `PD-040`，
 用户运行入口决策见 `PD-041`。
+报告裁决边界见 `machine/phase3_comparison_report_intake.json` 和 `PD-042`。
 
 ## 2. 单变量实现
 
@@ -94,7 +97,26 @@ make phase3-comparison-dev-plan
 删除后 Answer API 403。非目标 `nDCG@10` 只使用原候选 20 内的评测诊断
 Top-10，产品/API Top-3 不改变。
 
-## 6. 不能合并的边界
+## 6. 远程结果回收与裁决
+
+Windows runner 现在把实际 Git HEAD 和 Run ID 写入完整报告。PowerShell 入口在
+报告落盘后计算 SHA-256，并调用
+`scripts/adjudicate_phase3_comparison_paired_dev_report.py` 独立复核：
+
+1. 报告 SHA-256、HEAD、Run ID、输入 Manifest、配置和目标 ID 必须同时匹配；
+2. `test/acceptance` 必须都是 `NOT_READ_NOT_RUN`，报告不得给出 300 ms SLO
+   结论；
+3. PASS 报告的目标增益、不退化、固定 15 题、成本必须重新验算且相互一致；
+4. 无论质量结论如何，3 个版本、9 个清理任务、READY 失败关闭和删除后 403
+   都是报告可采信的前提；
+5. 远程 PASS 只生成
+   `DEV_CANDIDATE_PASS_AWAITING_FREEZE_COMMIT`，默认开关仍为 `false`，
+   `test` 仍需新的冻结提交和独立 Gate；
+6. 远程 FAIL 或报告不可采信时都保持比较拆分关闭。
+
+当前裁决器只有公开合成测试证据，没有读取或伪造任何 Windows 结果。
+
+## 7. 不能合并的边界
 
 本地实现、公开测试和 dev 规划检查可以合并为一个提交；真实配对 dev 回放可在
 后续执行节点补齐。但以下门禁不能用同一次改动合并判定：

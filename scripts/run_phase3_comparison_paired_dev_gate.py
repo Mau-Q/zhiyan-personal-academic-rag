@@ -9,6 +9,7 @@ import json
 import math
 import os
 import re
+import subprocess
 import sys
 import time
 import urllib.parse
@@ -71,6 +72,7 @@ CONFIG_SHA256 = "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2
 EXPECTED_CLEANUP_JOBS = 9
 _RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,47}$")
 _HEX64 = re.compile(r"^[a-f0-9]{64}$")
+_GIT_COMMIT = re.compile(r"^[a-f0-9]{40}$")
 _ANSWERABLE = {"ANSWERABLE", "PARTIALLY_ANSWERABLE"}
 
 
@@ -88,6 +90,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--input-root", type=Path, required=True)
     parser.add_argument("--expected-manifest-sha256", required=True)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--expected-head-commit", required=True)
     parser.add_argument("--confirm", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--latency-repetitions", type=int, default=30)
@@ -106,6 +109,20 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _repository_head() -> str:
+    completed = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    head = completed.stdout.strip()
+    if not _GIT_COMMIT.fullmatch(head):
+        raise GateError("REPOSITORY_HEAD_INVALID")
+    return head
 
 
 def _percentile(values: Sequence[float], percentile: float) -> float:
@@ -1102,6 +1119,8 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
             ),
         }
     report["cleanup"] = cleanup_summary
+    report["run_id"] = args.run_id
+    report["head_commit"] = args.expected_head_commit
     if cleanup_summary is None or cleanup_summary.get("status") != "PASS":
         report["status"] = "FAIL"
         report["error_code"] = "CLEANUP_PROOF_FAILED"
@@ -1113,6 +1132,7 @@ def main() -> int:
     if (
         args.confirm != CONFIRMATION
         or not _RUN_ID.fullmatch(args.run_id)
+        or not _GIT_COMMIT.fullmatch(args.expected_head_commit)
         or args.latency_repetitions < 30
         or args.latency_repetitions > 100
         or "canary" not in args.es_index_prefix
@@ -1126,6 +1146,8 @@ def main() -> int:
     try:
         _validate_safe_runtime_path(args.output)
         _validate_safe_runtime_path(args.pdf_object_root)
+        if _repository_head() != args.expected_head_commit:
+            raise GateError("REPOSITORY_HEAD_MISMATCH")
         report = run_gate(args)
         _write_report(args.output, report)
     except Exception as exc:
@@ -1133,6 +1155,8 @@ def main() -> int:
             "schema_version": REPORT_SCHEMA_VERSION,
             "status": "FAIL",
             "error_code": _sanitized_code(exc),
+            "run_id": args.run_id,
+            "head_commit": args.expected_head_commit,
             "cleanup": {"status": "NOT_STARTED"},
             "split_isolation": {
                 "dev": "VALIDATION_REFUSED",

@@ -2,9 +2,9 @@
 
 ## Status
 
-`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_COMPARISON_USER_RUNNER_READY_AWAITING_PAIRED_DEV / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
+`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_COMPARISON_RUNNER_AND_INTAKE_READY_AWAITING_PAIRED_DEV / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
-Phase ID：`source-phase3-comparison-user-runner-ready-awaiting-paired-dev`
+Phase ID：`source-phase3-comparison-runner-and-intake-ready-awaiting-paired-dev`
 
 ## Completed
 
@@ -176,6 +176,7 @@ Phase ID：`source-phase3-comparison-user-runner-ready-awaiting-paired-dev`
 - 用户随后在提交 `3303bed` 和 Run ID `online_retrieval_profile_20260723_01` 完成 Windows 分段归因：30/30 `APPLIED`，分段状态 `PASS`，base retrieval `P95=376.394385 ms`、Reranker `P95=132.456 ms`、combined `P95=504.71613 ms`；主要成本为 Query Embedding `P95=189.838925 ms` 和 READY 路由解析 `P95=145.48693 ms`，ES 总工作 `P95=35.634955 ms`、Milvus ANN `P95=6.03377 ms`、RRF `P95=0.12001 ms`。三路清理和删除后 403 通过，报告 SHA-256 为 `235FE36A97B7F4E462AD502595CB0CF38C139022703B6C4EA1E93E19D3AC765B`。
 - 阶段 2 现按最高方案第 10.3 节完成：Hybrid 对比、固定 Reranker 增益与保留/回退决定、引用/ACL/版本/定位硬门禁和普通学术问答稳定回放均已完成。默认继续使用原 RRF，固定 Reranker 保留为非默认可选组件；300 ms 性能未通过，作为显式性能债进入阶段 3 独立 Gate，不冒充生产性能验收。
 - 阶段 3 入口已冻结，并完成唯一变量 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的默认关闭本地实现候选：4 个冻结 `dev` 的 Control 原问题保持 `4/4`、Treatment 确定性规划 `4/4`，120 次纯拆分本地 P95 为 `0.016271 ms`；隔离三文档在线 runner、私有 dev 输入包和 Windows PowerShell 5.1 用户入口已通过本地契约/静态检查，但尚未运行真实在线配对检索，故不写成质量增益或不退化通过。`test/acceptance` 保持封存，固定 Reranker 和默认 RRF 不变。
+- 阶段 3 配对 dev 报告的独立裁决入口已准备：报告必须绑定实际 Git HEAD、Run ID 和 SHA-256，并重新验证输入/配置/目标身份、指标算术、9 路清理、删除后 403 与 holdout 隔离；PASS 只形成默认关闭的 dev 候选草案，不能自动解封 `test`。当前没有 Windows 报告，裁决器未对真实结果运行。
 
 ## 输入
 
@@ -220,14 +221,15 @@ Phase ID：`source-phase3-comparison-user-runner-ready-awaiting-paired-dev`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 已完成入口冻结、默认关闭的比较拆分本地实现候选和用户运行入口，因此为 `IN_PROGRESS`。当前评测边界为 `PHASE3_COMPARISON_USER_RUNNER_READY_CONTROL_4_OF_4_TREATMENT_PLAN_4_OF_4_PAIRED_ONLINE_DEV_NOT_RUN_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_3_OF_3_DOCUMENTS_9_OF_9_CASES_PASS`。本地规划与运行器静态证据不证明真实 ES/Milvus RRF 增益、关键类不退化或在线增量延迟。Windows 阶段 2 分段证据仍为 base `P95=376.394385 ms`、combined `P95=504.71613 ms`，默认继续使用原 RRF，固定 Reranker 和比较拆分都保持关闭；阶段 2 完成与阶段 3 本地实现均不代表 300 ms 或生产性能验收通过。运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 已完成入口冻结、默认关闭的比较拆分本地实现候选、用户运行入口和报告裁决准备，因此为 `IN_PROGRESS`。当前评测边界为 `PHASE3_COMPARISON_RUNNER_AND_INTAKE_READY_CONTROL_4_OF_4_TREATMENT_PLAN_4_OF_4_PAIRED_ONLINE_DEV_NOT_RUN_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_3_OF_3_DOCUMENTS_9_OF_9_CASES_PASS`。本地规划、运行器和裁决器静态证据不证明真实 ES/Milvus RRF 增益、关键类不退化或在线增量延迟。Windows 阶段 2 分段证据仍为 base `P95=376.394385 ms`、combined `P95=504.71613 ms`，默认继续使用原 RRF，固定 Reranker 和比较拆分都保持关闭；阶段 2 完成与阶段 3 本地实现均不代表 300 ms 或生产性能验收通过。运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
 
 ## Next gate
 
 1. **同一质量 Gate 的 Windows 用户执行节点：** 只在本提交由用户推送后，按版本化入口创建隔离 owner 的三文档临时 READY 范围；验证 316 个持久化 Chunk 身份后先跑原问题 Control，再只开比较拆分 Treatment；若 Control 不能重现冻结失败形态，立即停止 Treatment，仍完成 9 路清理，且不读取 `test`；
-2. **dev 质量与不退化判定：** 目标 4 题达到冻结增益，同时核对非目标 ANSWERABLE、固定 FORBIDDEN、dev NO_EVIDENCE、身份违规、固定 15 题 Canary 和增量延迟；不满足则保持默认关闭；
-3. **封存 test 的一次性 Gate：** 只有实现、配置、dev 结果和候选提交全部冻结后才可运行；不得以 test 结果反向调参，Acceptance 仍需用户另行明确授权；
-4. **独立性能携带 Gate：** 固定现有模型/snapshot、候选边界、RRF 和 300 ms 门槛，评估基础检索性能债；不得与比较拆分或其他失败类型能力同时实施。
+2. **dev 报告独立裁决：** Windows 完整报告必须由版本化裁决器核对报告 SHA-256、实际 HEAD、Run ID、输入/配置/目标身份、指标算术、清理和 holdout 隔离；不满足则报告不可采信并保持默认关闭；
+3. **dev 决策冻结提交：** 只有裁决 PASS 才能在新的本地 Gate 固化 dev 候选；该提交仍保持开关默认关闭，且不得顺便运行 `test`；
+4. **封存 test 的一次性 Gate：** 只有实现、配置、dev 结果和候选提交全部冻结后才可运行；不得以 test 结果反向调参，Acceptance 仍需用户另行明确授权；
+5. **独立性能携带 Gate：** 固定现有模型/snapshot、候选边界、RRF 和 300 ms 门槛，评估基础检索性能债；不得与比较拆分或其他失败类型能力同时实施。
 
 ## Prohibited shortcuts
 

@@ -29,6 +29,7 @@ REQUIRED_FILES = (
     "machine/phase_zero_scope_resource_slo.json",
     "machine/phase3_entry_freeze.json",
     "machine/phase3_comparison_dev_gate.json",
+    "machine/phase3_comparison_report_intake.json",
     "machine/phase_result.schema.json",
     "machine/phase_result.template.json",
     "scripts/validate_harness_contract.py",
@@ -481,7 +482,14 @@ def check_phase3_comparison_dev_gate() -> None:
         not in str(user_entry.get("input_boundary", ""))
     ):
         raise ValueError("phase 3 paired online user entry boundary drifted")
-    for field in ("package_builder", "runner", "windows_powershell_51_entry", "runbook"):
+    for field in (
+        "package_builder",
+        "runner",
+        "report_adjudicator",
+        "report_intake",
+        "windows_powershell_51_entry",
+        "runbook",
+    ):
         relative_path = user_entry.get(field)
         if not isinstance(relative_path, str) or not (ROOT / relative_path).is_file():
             raise ValueError(f"phase 3 paired online user entry {field} is missing")
@@ -502,6 +510,78 @@ def check_phase3_comparison_dev_gate() -> None:
         is not True
     ):
         raise ValueError("phase 3 independent performance gate drifted")
+
+
+def check_phase3_comparison_report_intake() -> None:
+    payload = _read_json("machine/phase3_comparison_report_intake.json")
+    if (
+        payload.get("schema_version") != "phase3_comparison_report_intake_v1"
+        or payload.get("decision_id") != "PD-042"
+        or payload.get("status") != "PREPARED_NOT_RUN"
+    ):
+        raise ValueError("phase 3 report intake identity is invalid")
+    implementation = payload.get("implementation")
+    if not isinstance(implementation, dict):
+        raise ValueError("phase 3 report intake implementation is invalid")
+    for field in ("runner", "adjudicator", "windows_entry"):
+        relative_path = implementation.get(field)
+        if not isinstance(relative_path, str) or not (ROOT / relative_path).is_file():
+            raise ValueError(f"phase 3 report intake {field} is missing")
+    tests = implementation.get("tests")
+    if (
+        not isinstance(tests, list)
+        or len(tests) != 2
+        or any(not isinstance(path, str) or not (ROOT / path).is_file() for path in tests)
+    ):
+        raise ValueError("phase 3 report intake tests are invalid")
+    identity = payload.get("required_report_identity")
+    if (
+        not isinstance(identity, dict)
+        or identity.get("head_commit")
+        != "CALLER_PINNED_AND_MATCHED_TO_RUNNER_CHECKOUT"
+        or identity.get("run_id") != "CALLER_PINNED"
+        or identity.get("report_sha256") != "CALLER_PINNED"
+        or identity.get("input_manifest_sha256") != "CALLER_PINNED"
+    ):
+        raise ValueError("phase 3 report intake identity binding drifted")
+    trust = payload.get("trust_preconditions")
+    if (
+        not isinstance(trust, dict)
+        or trust.get("test") != "NOT_READ_NOT_RUN"
+        or trust.get("acceptance") != "NOT_READ_NOT_RUN"
+        or trust.get("cleanup_jobs_succeeded") != 9
+        or trust.get("deleted_answer_api_status") != 403
+        or trust.get("absolute_300ms_slo_conclusion_allowed") is not False
+    ):
+        raise ValueError("phase 3 report intake trust boundary drifted")
+    outcomes = payload.get("outcomes")
+    if not isinstance(outcomes, dict) or set(outcomes) != {
+        "pass",
+        "fail",
+        "rejected",
+    }:
+        raise ValueError("phase 3 report intake outcomes are invalid")
+    if any(
+        not isinstance(outcome, dict)
+        or outcome.get("default_enabled") is not False
+        for outcome in outcomes.values()
+    ):
+        raise ValueError("phase 3 report intake must preserve default-off behavior")
+    isolation = payload.get("split_and_gate_isolation")
+    if (
+        not isinstance(isolation, dict)
+        or isolation.get("test") != "NO_AUTOMATIC_UNLOCK_OR_EXECUTION"
+        or not str(isolation.get("acceptance", "")).startswith("SEALED")
+        or isolation.get("performance") != "PENDING_SEPARATE_300MS_GATE"
+    ):
+        raise ValueError("phase 3 report intake gate isolation drifted")
+    evidence = payload.get("evidence")
+    if (
+        not isinstance(evidence, dict)
+        or evidence.get("remote_report") is not None
+        or evidence.get("adjudication") is not None
+    ):
+        raise ValueError("phase 3 report intake must not fabricate remote evidence")
 
 
 def check_harness_links() -> None:
@@ -566,6 +646,7 @@ def main() -> int:
         ("phase_zero_scope_resource_slo", check_phase_zero_scope_resource_slo),
         ("phase3_entry_freeze", check_phase3_entry_freeze),
         ("phase3_comparison_dev_gate", check_phase3_comparison_dev_gate),
+        ("phase3_comparison_report_intake", check_phase3_comparison_report_intake),
         ("harness_links", check_harness_links),
         ("content_safety", check_harness_content_safety),
         ("tracked_artifact_boundary", check_tracked_artifact_boundary),
