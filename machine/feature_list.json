@@ -467,7 +467,7 @@
     },
     {
       "id": "phase2_academic_qa_acceptance",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "SHARED",
       "evidence": [
         "evaluation/generation/phase2-academic-qa-acceptance-v1.json",
