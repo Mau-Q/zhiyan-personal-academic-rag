@@ -495,6 +495,24 @@
         "deploy/remote/reranker-validation/run_fixed_reranker_gate.ps1",
         "docs/FIXED_RERANKER_EVALUATION.md"
       ]
+    },
+    {
+      "id": "online_fixed_cross_encoder_reranker",
+      "status": "PARTIAL",
+      "owner": "SHARED",
+      "evidence": [
+        "backend/retrieval/online_reranker.py",
+        "backend/rag/online_consumer.py",
+        "backend/api/app.py",
+        "evaluation/reranker/online-fixed-cross-encoder-windows-rtx4090-v1.json",
+        "scripts/run_stage1_remote_canary.py",
+        "deploy/remote/reranker-validation/run_online_reranker_gate.ps1",
+        "tests/retrieval/test_online_reranker.py",
+        "tests/api/test_online_ready_rag_answers_api.py",
+        "tests/validation/test_stage1_remote_canary_script.py",
+        "tests/validation/test_online_reranker_remote_script.py",
+        "docs/FIXED_RERANKER_EVALUATION.md"
+      ]
     }
   ]
 }

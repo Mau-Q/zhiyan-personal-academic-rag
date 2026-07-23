@@ -1,0 +1,16 @@
+{
+  "schema_version": "online_fixed_cross_encoder_config_v1",
+  "candidate_top_k": 20,
+  "failure_policy": "FALLBACK_TO_AUTHORIZED_RRF",
+  "model": {
+    "provider": "sentence_transformers_cross_encoder",
+    "model_id": "BAAI/bge-reranker-v2-m3",
+    "revision": "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e",
+    "snapshot_sha256": "f9dd638f0b27b57667d99b01f83ca4dbb3c82983911a1ef31a4601c7b890eaec",
+    "max_length": 512,
+    "batch_size": 16,
+    "device": "cuda",
+    "trust_remote_code": false,
+    "input_template": "question_title_section_text_v1"
+  }
+}

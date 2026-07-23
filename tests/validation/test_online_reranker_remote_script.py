@@ -1,0 +1,79 @@
+from __future__ import annotations
+
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[2]
+SCRIPT = (
+    ROOT
+    / "deploy"
+    / "remote"
+    / "reranker-validation"
+    / "run_online_reranker_gate.ps1"
+)
+
+
+class OnlineRerankerRemoteScriptTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.script = SCRIPT.read_text(encoding="utf-8")
+
+    def test_repository_and_cuda_identity_are_checked_before_mutation(self) -> None:
+        self.assertIn("git status --porcelain --untracked-files=no", self.script)
+        self.assertIn("git fetch origin main", self.script)
+        self.assertIn("Remote HEAD must equal origin/main", self.script)
+        self.assertIn("torch.__version__ == '2.13.0+cu126'", self.script)
+        self.assertIn("torch.version.cuda == '12.6'", self.script)
+        self.assertIn("'RTX 4090' in torch.cuda.get_device_name(0)", self.script)
+        self.assertLess(
+            self.script.index("Pinned RTX 4090 CUDA preflight"),
+            self.script.index("RUN_ISOLATED_STAGE1_CANARY"),
+        )
+
+    def test_private_inputs_are_verified_without_entering_summary(self) -> None:
+        for label in (
+            "Private PDF path",
+            "Expected PDF SHA-256",
+            "Private academic question-suite path",
+            "Expected question-suite SHA-256",
+            "Exact document title",
+        ):
+            self.assertIn(label, self.script)
+        self.assertGreaterEqual(self.script.count("Get-FileHash -LiteralPath"), 3)
+        summary = self.script.split("[ordered]@{", maxsplit=1)[1]
+        self.assertNotIn("documentTitle", summary)
+        self.assertNotIn("pdfPath", summary)
+        self.assertNotIn("questionSuitePath", summary)
+
+    def test_gate_disables_generation_and_requires_combined_p95(self) -> None:
+        self.assertIn(
+            "online-fixed-cross-encoder-windows-rtx4090-v1.json",
+            self.script,
+        )
+        self.assertIn("'--online-reranker-latency-repetitions'", self.script)
+        self.assertNotIn("'--generation-model'", self.script)
+        self.assertIn("sample_count -lt 30", self.script)
+        self.assertIn("combined_retrieval_latency_ms_p95 -gt 300", self.script)
+        self.assertIn("fallback_count -ne 0", self.script)
+        self.assertIn("candidate_set_expanded -ne $false", self.script)
+
+    def test_summary_is_sanitized_and_lifecycle_closed(self) -> None:
+        for field in (
+            "head_commit",
+            "model_revision",
+            "model_snapshot_sha256",
+            "sample_count",
+            "combined_retrieval_latency_ms_p95",
+            "fallback_count",
+            "candidate_set_expanded",
+            "cleanup_jobs_succeeded",
+            "inactive_answer_api_status",
+            "report_sha256",
+            "stable_error_code",
+        ):
+            self.assertRegex(self.script, rf"(?m)^        {field} = ")
+
+
+if __name__ == "__main__":
+    unittest.main()

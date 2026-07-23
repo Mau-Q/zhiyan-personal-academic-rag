@@ -10,10 +10,13 @@ from pathlib import Path
 
 from backend.ingestion.persistent import RuntimeSnapshotPersistenceError
 from backend.rag.generation import GenerationServiceError
+from backend.rag.online_consumer import OnlineRetrievalObservation
 from scripts.run_stage1_remote_canary import (
     AcademicQaGateError,
     AnswerHttpGateError,
     EXPECTED_CLEANUP_JOBS,
+    ONLINE_RERANKER_COMBINED_P95_LIMIT_MS,
+    ONLINE_RERANKER_MINIMUM_LATENCY_SAMPLES,
     REPOSITORY_ROOT,
     REPORT_SCHEMA_VERSION,
     _ObservedGenerationProvider,
@@ -23,6 +26,7 @@ from scripts.run_stage1_remote_canary import (
     _require_academic_answer_identity_and_location,
     _require_answer_api_gate,
     _sanitized_error_code,
+    _summarize_online_reranker_observations,
     build_parser,
 )
 
@@ -53,6 +57,7 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
             args.pdf_object_root,
             Path("runtime") / "stage1-pdf-objects",
         )
+        self.assertEqual(args.online_reranker_latency_repetitions, 0)
 
     def test_academic_question_suite_pins_digest_pdf_and_target_pages(self):
         with tempfile.TemporaryDirectory(dir="runtime") as temporary:
@@ -201,6 +206,92 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("ACADEMIC_QA_REQUIRES_REAL_GENERATION", result.stderr)
         self.assertNotIn("does-not-exist", result.stderr)
+
+    def test_online_reranker_arguments_must_be_complete_before_services(self):
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/run_stage1_remote_canary.py",
+                "--pdf",
+                "does-not-exist.pdf",
+                "--expected-sha256",
+                "0" * 64,
+                "--run-id",
+                "canary_001",
+                "--confirm",
+                "RUN_ISOLATED_STAGE1_CANARY",
+                "--output",
+                "runtime/should-not-exist.json",
+                "--online-reranker-config",
+                "evaluation/reranker/"
+                "online-fixed-cross-encoder-windows-rtx4090-v1.json",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("ONLINE_RERANKER_CONFIG_INCOMPLETE", result.stderr)
+        self.assertNotIn("does-not-exist", result.stderr)
+
+    def test_online_reranker_latency_summary_requires_applied_bounded_samples(self):
+        observations = [
+            OnlineRetrievalObservation(
+                reranker_status="APPLIED",
+                reranker_failure_code=None,
+                candidate_count=20,
+                output_count=3,
+                base_retrieval_latency_ms=50.0,
+                reranker_latency_ms=100.0 + position,
+                combined_retrieval_latency_ms=150.0 + position,
+            )
+            for position in range(ONLINE_RERANKER_MINIMUM_LATENCY_SAMPLES)
+        ]
+
+        summary = _summarize_online_reranker_observations(observations)
+
+        self.assertEqual(summary["status"], "PASS")
+        self.assertEqual(
+            summary["sample_count"],
+            ONLINE_RERANKER_MINIMUM_LATENCY_SAMPLES,
+        )
+        self.assertLess(
+            summary["combined_retrieval_latency_ms_p95"],
+            ONLINE_RERANKER_COMBINED_P95_LIMIT_MS,
+        )
+        self.assertEqual(summary["fallback_count"], 0)
+        self.assertFalse(summary["candidate_set_expanded"])
+
+        fallback = list(observations)
+        fallback[-1] = OnlineRetrievalObservation(
+            reranker_status="FALLBACK",
+            reranker_failure_code="MODEL_SCORING_UNAVAILABLE",
+            candidate_count=20,
+            output_count=3,
+            base_retrieval_latency_ms=50.0,
+            reranker_latency_ms=1.0,
+            combined_retrieval_latency_ms=51.0,
+        )
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "^ONLINE_RERANKER_FALLBACK_OBSERVED$",
+        ):
+            _summarize_online_reranker_observations(fallback)
+
+    def test_online_reranker_failure_is_deferred_until_lifecycle_cleanup(self):
+        source = (
+            Path("scripts") / "run_stage1_remote_canary.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertLess(
+            source.index('raise RuntimeError("RUNTIME_SNAPSHOT_CLEANUP_FAILED")'),
+            source.index("raise RuntimeError(online_reranker_deferred_error)"),
+        )
+        self.assertLess(
+            source.index('raise RuntimeError("INACTIVE_ANSWER_API_REMAINED_VISIBLE")'),
+            source.index("raise RuntimeError(online_reranker_deferred_error)"),
+        )
 
     def test_mutation_requires_exact_confirmation_before_pdf_or_services(self):
         result = subprocess.run(

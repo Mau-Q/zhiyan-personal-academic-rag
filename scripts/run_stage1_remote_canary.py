@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import re
 import sys
@@ -33,6 +34,7 @@ from backend.rag.generation import (
     GenerationServiceError,
     OllamaGenerationProvider,
 )
+from backend.rag.online_consumer import OnlineRetrievalObservation
 from backend.ingestion.cleanup import (
     PersistentIndexCleanupScheduler,
     PersistentIndexCleanupWorker,
@@ -56,6 +58,15 @@ from backend.retrieval.online import (
     OnlineVersionRrfRetriever,
     PostgresReadyRouteResolver,
 )
+from backend.retrieval.online_reranker import (
+    ONLINE_RERANKER_APPLIED_WARNING,
+    ONLINE_RERANKER_BACKEND,
+    ONLINE_RERANKER_EXECUTION_BOUNDARY,
+    OnlineFixedCrossEncoderReranker,
+    SentenceTransformersOnlineCrossEncoder,
+    StaticDocumentTitleProvider,
+    load_online_reranker_config,
+)
 from backend.retrieval.sqlite_fts import chunks_fingerprint
 from backend.storage.pdf_objects import FilesystemPdfObjectStore
 from backend.storage.postgres import PostgresFactRepository, connect_postgres
@@ -65,6 +76,8 @@ from backend.validation.stage1 import Stage1ReconciliationError, reconcile_ready
 CONFIRMATION = "RUN_ISOLATED_STAGE1_CANARY"
 REPORT_SCHEMA_VERSION = "stage1_remote_canary_report_v2"
 EXPECTED_CLEANUP_JOBS = 3
+ONLINE_RERANKER_MINIMUM_LATENCY_SAMPLES = 30
+ONLINE_RERANKER_COMBINED_P95_LIMIT_MS = 300.0
 _RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,47}$")
 _SUITE_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 _SANITIZED_API_ERROR_CODE_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
@@ -94,6 +107,10 @@ _SANITIZED_RUNTIME_CODES = frozenset(
         "RUNTIME_SNAPSHOT_CLEANUP_FAILED",
         "INACTIVE_VERSION_REMAINED_VISIBLE",
         "INACTIVE_ANSWER_API_REMAINED_VISIBLE",
+        "ONLINE_RERANKER_MODEL_LOAD_FAILED",
+        "ONLINE_RERANKER_FALLBACK_OBSERVED",
+        "ONLINE_RERANKER_LATENCY_SAMPLE_INVALID",
+        "ONLINE_RERANKER_COMBINED_P95_EXCEEDED",
     }
 ) | frozenset(
     f"REAL_GENERATION_{phase}_{code}"
@@ -244,6 +261,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--generation-model-digest")
     parser.add_argument("--question-suite", type=Path)
     parser.add_argument("--expected-question-suite-sha256")
+    parser.add_argument("--online-reranker-config", type=Path)
+    parser.add_argument(
+        "--online-reranker-model-cache",
+        type=Path,
+        default=Path("runtime/models/huggingface"),
+    )
+    parser.add_argument("--online-reranker-document-title")
+    parser.add_argument("--online-reranker-latency-repetitions", type=int, default=0)
     return parser
 
 
@@ -276,6 +301,53 @@ def _write_report(path: Path, payload: dict[str, object]) -> None:
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+
+
+def _percentile(values: Sequence[float], percentile: float) -> float:
+    if not values:
+        raise ValueError("percentile values are empty")
+    ordered = sorted(values)
+    position = (len(ordered) - 1) * percentile
+    lower = math.floor(position)
+    upper = math.ceil(position)
+    if lower == upper:
+        return ordered[lower]
+    return ordered[lower] + (ordered[upper] - ordered[lower]) * (position - lower)
+
+
+def _summarize_online_reranker_observations(
+    observations: Sequence[OnlineRetrievalObservation],
+) -> dict[str, object]:
+    if len(observations) < ONLINE_RERANKER_MINIMUM_LATENCY_SAMPLES:
+        raise RuntimeError("ONLINE_RERANKER_LATENCY_SAMPLE_INVALID")
+    if any(
+        observation.reranker_status != "APPLIED"
+        or observation.reranker_failure_code is not None
+        or observation.candidate_count < observation.output_count
+        or observation.candidate_count > 20
+        or observation.output_count > 3
+        for observation in observations
+    ):
+        raise RuntimeError("ONLINE_RERANKER_FALLBACK_OBSERVED")
+    combined = [
+        observation.combined_retrieval_latency_ms for observation in observations
+    ]
+    reranker = [observation.reranker_latency_ms for observation in observations]
+    combined_p95 = _percentile(combined, 0.95)
+    if combined_p95 > ONLINE_RERANKER_COMBINED_P95_LIMIT_MS:
+        raise RuntimeError("ONLINE_RERANKER_COMBINED_P95_EXCEEDED")
+    return {
+        "status": "PASS",
+        "backend": ONLINE_RERANKER_BACKEND,
+        "sample_count": len(observations),
+        "combined_retrieval_latency_ms_p50": round(_percentile(combined, 0.50), 6),
+        "combined_retrieval_latency_ms_p95": round(combined_p95, 6),
+        "reranker_latency_ms_p50": round(_percentile(reranker, 0.50), 6),
+        "reranker_latency_ms_p95": round(_percentile(reranker, 0.95), 6),
+        "combined_p95_limit_ms": ONLINE_RERANKER_COMBINED_P95_LIMIT_MS,
+        "fallback_count": 0,
+        "candidate_set_expanded": False,
+    }
 
 
 def _build_failure_report(run_id: str, exc: Exception) -> dict[str, object]:
@@ -625,7 +697,37 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
-    if args.question_suite is not None and args.generation_model is None:
+    reranker_requested = any(
+        (
+            args.online_reranker_config is not None,
+            bool(args.online_reranker_document_title),
+            args.online_reranker_latency_repetitions != 0,
+        )
+    )
+    reranker_complete = (
+        args.online_reranker_config is not None
+        and isinstance(args.online_reranker_document_title, str)
+        and bool(args.online_reranker_document_title.strip())
+        and 1 <= args.online_reranker_latency_repetitions <= 100
+    )
+    if reranker_requested and not reranker_complete:
+        print(
+            '{"status":"REFUSED","error_code":"ONLINE_RERANKER_CONFIG_INCOMPLETE"}',
+            file=sys.stderr,
+        )
+        return 2
+    if reranker_complete and args.generation_model is not None:
+        print(
+            '{"status":"REFUSED","error_code":'
+            '"ONLINE_RERANKER_GATE_MUST_DISABLE_GENERATION"}',
+            file=sys.stderr,
+        )
+        return 2
+    if (
+        args.question_suite is not None
+        and args.generation_model is None
+        and not reranker_complete
+    ):
         print(
             '{"status":"REFUSED","error_code":"ACADEMIC_QA_REQUIRES_REAL_GENERATION"}',
             file=sys.stderr,
@@ -654,6 +756,19 @@ def main() -> int:
 
     connection = None
     try:
+        online_reranker_config = None
+        online_reranker_scorer = None
+        if reranker_complete:
+            try:
+                online_reranker_config = load_online_reranker_config(
+                    args.online_reranker_config
+                )
+                online_reranker_scorer = SentenceTransformersOnlineCrossEncoder(
+                    config=online_reranker_config,
+                    cache_dir=args.online_reranker_model_cache,
+                )
+            except Exception as exc:
+                raise RuntimeError("ONLINE_RERANKER_MODEL_LOAD_FAILED") from exc
         pdf_bytes = args.pdf.read_bytes()
         actual_sha256 = sha256(pdf_bytes).hexdigest()
         if actual_sha256 != args.expected_sha256:
@@ -790,11 +905,26 @@ def main() -> int:
             embedding_provider=embedding_provider,
             chunk_snapshots=repository,
         )
+        online_reranker = (
+            OnlineFixedCrossEncoderReranker(
+                config=online_reranker_config,
+                scorer=online_reranker_scorer,
+                title_provider=StaticDocumentTitleProvider(
+                    {version.document_id: args.online_reranker_document_title}
+                ),
+            )
+            if online_reranker_config is not None
+            and online_reranker_scorer is not None
+            else None
+        )
+        online_retrieval_observations: list[OnlineRetrievalObservation] = []
         answer_client = TestClient(
             create_app(
                 retrieval_backend="online_remote_rrf",
                 authenticated_owner_id=owner_id,
                 online_rrf_retriever=online_retriever,
+                online_reranker=online_reranker,
+                online_retrieval_observer=online_retrieval_observations.append,
                 generation_provider=generation_provider,
             )
         )
@@ -827,6 +957,69 @@ def main() -> int:
         generation_byte_stable_replay = all(
             bool(result["generation_byte_stable_replay"]) for result in academic_results
         )
+        online_reranker_report = None
+        online_reranker_deferred_error = None
+        if online_reranker is not None:
+            online_retrieval_observations.clear()
+            for _ in range(args.online_reranker_latency_repetitions):
+                for case in question_cases:
+                    latency_response = answer_client.post(
+                        "/api/v1/rag/answers",
+                        json={
+                            "question": case.question,
+                            "document_ids": [version.document_id],
+                            "stream": False,
+                        },
+                    )
+                    latency_payload = latency_response.json()
+                    if (
+                        latency_response.status_code != 200
+                        or latency_payload.get("status") != "COMPLETED"
+                        or latency_payload.get("warnings")
+                        != [ONLINE_RERANKER_APPLIED_WARNING]
+                    ):
+                        online_reranker_deferred_error = (
+                            "ONLINE_RERANKER_FALLBACK_OBSERVED"
+                        )
+                        break
+                if online_reranker_deferred_error is not None:
+                    break
+            if online_reranker_deferred_error is None:
+                try:
+                    online_reranker_report = _summarize_online_reranker_observations(
+                        online_retrieval_observations
+                    )
+                except RuntimeError as exc:
+                    if str(exc) not in _SANITIZED_RUNTIME_CODES:
+                        raise
+                    online_reranker_deferred_error = str(exc)
+            if online_reranker_report is None:
+                online_reranker_report = {
+                    "status": "FAIL",
+                    "error_code": online_reranker_deferred_error,
+                    "sample_count": len(online_retrieval_observations),
+                }
+            else:
+                online_reranker_report["model"] = {
+                    key: online_reranker_config.model[key]
+                    for key in (
+                        "provider",
+                        "model_id",
+                        "revision",
+                        "snapshot_sha256",
+                        "max_length",
+                        "batch_size",
+                        "device",
+                        "trust_remote_code",
+                        "input_template",
+                    )
+                }
+                online_reranker_report["candidate_top_k"] = (
+                    online_reranker_config.candidate_top_k
+                )
+                online_reranker_report["failure_policy"] = (
+                    online_reranker_config.failure_policy
+                )
 
         scheduler = PersistentIndexCleanupScheduler(repository)
         inactivation = inactivate_and_schedule_cleanup(
@@ -884,6 +1077,8 @@ def main() -> int:
             or inactive_answer_payload.get("code") != "RAG_FORBIDDEN_SCOPE"
         ):
             raise RuntimeError("INACTIVE_ANSWER_API_REMAINED_VISIBLE")
+        if online_reranker_deferred_error is not None:
+            raise RuntimeError(online_reranker_deferred_error)
 
         payload: dict[str, object] = {
             "schema_version": REPORT_SCHEMA_VERSION,
@@ -904,7 +1099,11 @@ def main() -> int:
             "answer_generation_boundary": (
                 generation_provider.configured_identity().execution_boundary
                 if generation_provider is not None
-                else "ONLINE_POSTGRES_READY_ES_MILVUS_RRF_FAKE_LLM"
+                else (
+                    ONLINE_RERANKER_EXECUTION_BOUNDARY
+                    if online_reranker is not None
+                    else "ONLINE_POSTGRES_READY_ES_MILVUS_RRF_FAKE_LLM"
+                )
             ),
             "answer_citation_ids_validated": generation_provider is not None,
             "answer_sha256": first_answer_result["answer_sha256"],
@@ -931,6 +1130,7 @@ def main() -> int:
             "academic_qa_cases": (
                 academic_results if academic_suite is not None else None
             ),
+            "online_reranker": online_reranker_report,
             "inactivation_reason": inactivation.reason.value,
             "cleanup_jobs_succeeded": len(cleanup_results),
             "runtime_snapshot_cleanup_proven": True,

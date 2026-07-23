@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal
 
@@ -14,7 +15,10 @@ from backend.rag.elasticsearch_consumer import answer_elasticsearch_question
 from backend.rag.fixture_consumer import answer_fixture_question
 from backend.rag.generation import GenerationProvider, apply_real_generation
 from backend.rag.milvus_consumer import answer_milvus_question
-from backend.rag.online_consumer import answer_online_ready_question
+from backend.rag.online_consumer import (
+    OnlineRetrievalObservation,
+    answer_online_ready_question,
+)
 from backend.rag.remote_hybrid_consumer import answer_remote_rrf_question
 from backend.rag.sqlite_fts_consumer import answer_sqlite_fts_question
 from backend.rag.vector_consumer import answer_rrf_question, answer_vector_question
@@ -36,6 +40,7 @@ from backend.retrieval.online import (
     OnlineVersionRrfRetriever,
     OnlineVisibilityUnavailableError,
 )
+from backend.retrieval.online_reranker import OnlineFixedCrossEncoderReranker
 from backend.retrieval.remote_config import RemoteRetrievalConfigV1
 from backend.retrieval.remote_hybrid import RemoteRrfHybridRetriever
 from backend.retrieval.sqlite_fts import SQLiteFtsIndex
@@ -98,6 +103,8 @@ def create_app(
     remote_retrieval_config: RemoteRetrievalConfigV1 | None = None,
     authenticated_owner_id: str | None = None,
     online_rrf_retriever: OnlineVersionRrfRetriever | None = None,
+    online_reranker: OnlineFixedCrossEncoderReranker | None = None,
+    online_retrieval_observer: Callable[[OnlineRetrievalObservation], None] | None = None,
     generation_provider: GenerationProvider | None = None,
 ) -> FastAPI:
     chunks = [] if retrieval_backend == "online_remote_rrf" else load_chunks(chunks_path)
@@ -221,6 +228,11 @@ def create_app(
         ),
     }
     boundary = boundaries[retrieval_backend]
+    if retrieval_backend == "online_remote_rrf" and online_reranker is not None:
+        boundary = (
+            "PostgreSQL READY-gated versioned Elasticsearch plus Milvus RRF "
+            "and fixed BGE Cross-Encoder retrieval with Fake LLM"
+        )
     if generation_provider is not None:
         boundary = (
             f"{boundary.removesuffix(' with Fake LLM')} with "
@@ -245,6 +257,8 @@ def create_app(
     app.state.remote_top_k = remote_top_k
     app.state.authenticated_owner_id = authenticated_owner_id
     app.state.online_rrf_retriever = online_rrf_retriever
+    app.state.online_reranker = online_reranker
+    app.state.online_retrieval_observer = online_retrieval_observer
     app.state.generation_provider = generation_provider
 
     @app.exception_handler(RequestValidationError)
@@ -308,6 +322,8 @@ def create_app(
                     app.state.online_rrf_retriever,
                     owner_id=app.state.authenticated_owner_id,
                     document_ids=payload.document_ids,
+                    reranker=app.state.online_reranker,
+                    observation_sink=app.state.online_retrieval_observer,
                 )
             except OnlineScopeForbiddenError:
                 return _error_response(

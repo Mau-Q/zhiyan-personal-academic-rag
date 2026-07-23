@@ -131,3 +131,46 @@ Windows 配置位于
 `nvidia-smi`、CUDA 12.6、RTX 4090 和一次真实 CUDA 张量分配，并在
 脱敏摘要中记录 PyTorch、CUDA、GPU 和驱动身份。模型权重、题目、Chunk、
 排名和运行报告继续只保留在被忽略的 `runtime/`。
+
+## 6. 受控在线集成
+
+固定组件已通过窄适配器接入可选在线路径，但尚未晋级为默认路由：
+
+```text
+PostgreSQL READY/owner/版本解析与检索后重验
+→ ES + Milvus RRF 前 20 个已授权候选
+→ 固定 Cross-Encoder 重排
+→ 前 3 个 Evidence
+→ 既有 Answer 构建或生成
+```
+
+实现位于 `backend/retrieval/online_reranker.py`，在线编排位于
+`backend/rag/online_consumer.py`。配置
+`evaluation/reranker/online-fixed-cross-encoder-windows-rtx4090-v1.json`
+继续固定同一模型、revision、snapshot、输入模板、`max_length=512` 和
+`batch_size=16`。标题由服务端受信提供者按 `document_id` 注入，模型无权
+读取或决定 owner、READY、活动版本或物理路由。
+
+在线边界如下：
+
+- Reranker 只能重新排列已经通过 owner/READY、持久化 Chunk 身份与检索后
+  重验的候选，不能生成、补充或跨文档扩张候选；
+- 标题不可用、模型加载/推理失败或分数非法时，显式回退同一批已授权 RRF
+  候选，并记录稳定失败类别；
+- owner、版本、文档、活动状态或 Chunk 身份无法证明时继续失败关闭，
+  不允许借回退绕过权限和事实源；
+- 未注入在线 Reranker 时行为与原默认路由完全相同。
+
+Windows 综合门禁由
+`deploy/remote/reranker-validation/run_online_reranker_gate.ps1` 执行。
+它复用隔离的 Stage 1 生命周期 Canary，关闭真实生成以保持单变量，并以
+冻结 3 题各重复 10 次取得至少 30 个样本。硬门禁要求全部为
+`APPLIED`、候选不超过 20、输出不超过 3、无回退或候选扩张，且从
+PostgreSQL READY 路由开始、包含 ES/Milvus 召回、RRF 与重排的组合
+`P95 <= 300 ms`。即使性能或回退门禁失败，脚本也先完成 INACTIVE、
+三路清理和删除后 403，再返回稳定错误码。
+
+当前结论是
+`CONTROLLED_ONLINE_RERANKER_LOCAL_IMPLEMENTATION_READY_REMOTE_COMBINED_P95_PENDING`：
+Mac 已完成解析、静态分析与测试，不冒充 Windows RTX 4090 运行结果；
+在用户完成远程综合门禁前，默认在线路由保持不变。

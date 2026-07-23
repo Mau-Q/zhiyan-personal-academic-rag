@@ -92,6 +92,31 @@ answer, Prompt, Evidence, or upstream response body.
 Synthetic Canary IDs and snapshot hashes are safe
 to return; object paths and Chunk payloads are not included.
 
+## Online Reranker combined-latency Gate
+
+After the fixed component Gate passes, the controlled online integration has a
+separate Windows PowerShell 5.1 entrypoint:
+
+```powershell
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\deploy\remote\reranker-validation\run_online_reranker_gate.ps1
+```
+
+Run it only after the reviewed Mac commit has been pushed and Windows
+`HEAD` equals `origin/main`. Keep `DATABASE_URL` and loopback service endpoints
+in the current shell; the script does not print them. It prompts for a new
+non-secret Run ID, the exact PDF and SHA-256, the ignored private three-case
+question suite and SHA-256, and the exact document title.
+
+This Gate disables real generation and changes only the optional post-RRF
+Reranker. It repeats the three cases ten times and requires at least 30
+observations, all with `APPLIED`, no fallback, no candidate expansion,
+candidate count at most 20, output count at most 3, and combined
+`P95 <= 300 ms` from PostgreSQL READY routing through ES/Milvus retrieval, RRF,
+and reranking. It must also complete INACTIVE, all three cleanup jobs, and the
+deleted-document Answer API 403 check. Return only the script's final sanitized
+summary or a screenshot of it; do not return credential assignment lines,
+private paths, questions, document text, model cache paths, or service URLs.
+
 ## Replay and single-side failure check
 
 The earlier v1 run already proved single-side recovery. For the v2 Gate, one normal

@@ -36,5 +36,6 @@
 | PD-032 | ACCEPTED | 固定 Reranker 复用 `sentence-transformers.CrossEncoder`，仓库继续控制模型/snapshot 身份、冻结候选、指标和去留；本地 `test=100` 质量门通过但默认路由不变 | 只在目标 Windows RTX 4090 复用同一配置完成 P95 后作最终启用/回退；不得同时调 Embedding、RRF、候选、Prompt 或生成模型 |
 | PD-033 | ACCEPTED | 通用组件通过窄适配器逐项复用，不引入第二套业务事实或全栈 RAG 主链 | PyMilvus 已采用；Elasticsearch helper、Docling、OpenTelemetry、Ragas 和 Alembic 按 `docs/COMPONENT_REUSE_ROADMAP.md` 的独立触发条件后置，Temporal 和全栈框架当前不接管核心链路 |
 | PD-034 | ACCEPTED | 固定 Reranker 在 Windows RTX 4090 上以相同 revision、snapshot、冻结输入、`max_length=512` 和 `batch_size=16` 完成目标硬件 Gate；质量门保持通过，组件 `P95=188.22683 ms`，决定保留进入受控在线集成 | 本次只测预计算候选后的 pair scoring，不冒充组合检索 P95 或已在线启用；默认 RRF 路由保持不变，下一独立 Gate 必须在 ACL/READY 与 RRF 之后集成并验证候选不扩张、失败回退和组合 P95 |
+| PD-035 | ACCEPTED | 固定 Reranker 作为显式可选后处理器接在 PostgreSQL READY/owner、持久化 Chunk 身份校验和 ES/Milvus RRF 之后，只重排至多 20 个已授权候选并输出前 3 | 标题/模型/分数故障回退同一批已授权 RRF；owner、版本、文档、活动状态或 Chunk 身份漂移继续失败关闭。默认路由只在 Windows 综合 `P95 <= 300 ms`、至少 30 样本、无回退和无候选扩张的独立 Gate 通过后再决定是否改变 |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。
