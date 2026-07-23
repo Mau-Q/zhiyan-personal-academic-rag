@@ -1,0 +1,37 @@
+{
+  "schema_version": "fixed_cross_encoder_config_v1",
+  "run_id": "fixed_cross-encoder-bge-v2-m3-v1",
+  "candidate_backend": "local_rrf",
+  "candidate_top_k": 20,
+  "output_top_k": 20,
+  "evaluation_splits": [
+    "test"
+  ],
+  "metric_k_values": [
+    5,
+    10
+  ],
+  "model": {
+    "provider": "sentence_transformers_cross_encoder",
+    "model_id": "BAAI/bge-reranker-v2-m3",
+    "revision": "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e",
+    "max_length": 512,
+    "batch_size": 16,
+    "device": "mps",
+    "trust_remote_code": false,
+    "input_template": "question_title_section_text_v1"
+  },
+  "decision_policy": {
+    "primary_split": "test",
+    "baseline_backend": "local_rrf",
+    "minimum_relative_ndcg_at_10_gain": 0.08,
+    "minimum_precision_at_5_delta": 0.0,
+    "critical_question_types": [
+      "comparison",
+      "exact_lookup",
+      "multi_hop",
+      "standards_freshness"
+    ],
+    "maximum_critical_ndcg_at_10_regression": 0.02
+  }
+}

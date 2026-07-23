@@ -171,13 +171,14 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 - 同提交的选型 v3 为 `PASS / KEEP_LLAMA3_2`：Qwen `3/4`、llama3.2 `2/4`，报告 SHA-256 为 `64C4A7C741D5DC624D501165A129400D98DF66845F43BFC57D964AA9CD2B3C4E`。唯一失败是冲突用例的表面词检查；两次诊断均已包含 `12周`、`16周`、引用 `[1][2]`，身份和禁词门禁通过。v4 只将其改为冲突值与来源引用的结构门禁，不改生成或检索变量。
 - 用户在提交 `063236a` 完成远程 v4：Qwen `4/4`、llama3.2 `3/4`，结果为 `PASS / PROMOTE_QWEN3_14B / NONE`；`think=false` 且检索参数未改变，报告 SHA-256 为 `E031B1B4532571850FD4527D4930E80A3C144074DBB55F8055A54A51EDB7E038`。Qwen 最终晋级，llama3.2 保留为回退；v3 假阴性报告不覆盖。
 - 阶段 2 固定普通科研问答验收包已完成远程 v2 验收：复用既有三论文人工定位题集，固定 3 篇 PDF、每篇 3 题，共 9 题；生成固定 Qwen 摘要与 `think=false`，检索参数保持不变。3 篇文档各 `3/3`、合计 `9/9` 通过真实生成、引用集合稳定回放、页码定位、三路清理和删除后 403；最终第 3 篇报告 SHA-256 为 `3C106423AB3575B11B3B0142A66F19A2C949B8BAED3457F1BCA101A9931302FA`。自然语言答案字节一致仅作观测，本次为 `false`，不影响确定性引用与安全硬门禁。
+- 固定 Cross-Encoder 本地质量 Gate 已复用 `sentence-transformers.CrossEncoder` 与 `BAAI/bge-reranker-v2-m3@953dc6f6...d41e`，只重排冻结 `local_rrf` 前 20 候选并以 `test=100` 作决策，不读取 Acceptance 指标；`nDCG@10` 从 `0.647269` 提升到 `0.747810`（相对 `+15.5331%`），`Precision@5` 从 `0.231111` 提升到 `0.251111`，四个关键类型均未越过 0.02 回退线。本机 M4 `P95=11839.113 ms` 只作本地观测，结论为 `RETAIN_FIXED_CROSS_ENCODER_PENDING_TARGET_HARDWARE_P95`，默认在线路由尚未改变。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：阶段 2 固定 Reranker 增益验证与保留/回退决策、正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层；
+- 未完成能力：阶段 2 固定 Reranker 的 Windows RTX 4090 P95 与最终启用/回退收口、正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -214,12 +215,12 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1 已完成，阶段 2 仍为 `IN_PROGRESS`。评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_3_OF_3_DOCUMENTS_9_OF_9_CASES_PASS`。远程证据已证明两种模型均可消费 PostgreSQL READY + ES/Milvus RRF Evidence，并完成引用、稳定回放、删除后 403 和三路清理；固定四题 v4 进一步确认 Qwen `4/4` 晋级。普通科研问答 v2 的 3 篇文档各 `3/3`、合计 `9/9` 已通过；第 3 篇先前的 Answer HTTP 失败报告作为失败谱系保留，最终 retry2 以报告 SHA-256 `3C106423AB3575B11B3B0142A66F19A2C949B8BAED3457F1BCA101A9931302FA` 通过。`citation_stable_replay=true`，`byte_stable_replay_observed=false` 仅为自然语言观测项；模型、Prompt 和检索参数未改动。运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
+最高方案阶段 0、阶段 1 已完成，阶段 2 仍为 `IN_PROGRESS`。评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_LOCAL_QUALITY_RETAIN_TARGET_P95_PENDING / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_3_OF_3_DOCUMENTS_9_OF_9_CASES_PASS`。固定 Reranker 在不改变候选、Embedding、RRF 或生成的情况下通过本地质量门，但 M4 P95 不代表目标硬件，线上默认仍保持原路由。远程证据已证明两种生成模型均可消费 PostgreSQL READY + ES/Milvus RRF Evidence，并完成引用、稳定回放、删除后 403 和三路清理；固定四题 v4 进一步确认 Qwen `4/4` 晋级。普通科研问答 v2 的 3 篇文档各 `3/3`、合计 `9/9` 已通过；第 3 篇先前的 Answer HTTP 失败报告作为失败谱系保留，最终 retry2 以报告 SHA-256 `3C106423AB3575B11B3B0142A66F19A2C949B8BAED3457F1BCA101A9931302FA` 通过。`citation_stable_replay=true`，`byte_stable_replay_observed=false` 仅为自然语言观测项；运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
 
 ## Next gate
 
-1. **固定 Reranker 独立 Gate：** 按最高方案第 10.3 节，以冻结候选与评测集验证一个固定 Cross-Encoder，记录 nDCG、Precision@5、关键失败类别和 P95，并作保留或回退到 RRF/最佳单路的明确决策；
-2. **单变量约束：** 本 Gate 不修改生成模型、Prompt、Embedding、候选数、RRF `k`、`top_k` 或基础设施；Reranker 如需新增依赖或模型资产，必须先按依赖边界单独确认。
+1. **目标硬件 Reranker 收口：** 用户在 Windows RTX 4090 上运行版本化脚本，复用同一模型 revision、snapshot、输入模板、`max_length=512`、`batch_size=16`、冻结候选和 `test=100`，返回脱敏 P50/P95、质量指标、摘要与稳定错误码；
+2. **最终去留：** 目标运行身份、质量与 P95 可接受后才允许后续独立 Gate 将 Reranker 接入在线路由；若身份漂移、质量门失败或运行成本不可接受，则明确回退现有 RRF/最佳单路，不为架构完整调题或调检索。
 
 ## Prohibited shortcuts
 

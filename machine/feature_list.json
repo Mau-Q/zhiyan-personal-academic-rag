@@ -478,6 +478,20 @@
         "tests/validation/test_stage1_remote_canary_script.py",
         "docs/PHASE_2_ACADEMIC_QA_ACCEPTANCE.md"
       ]
+    },
+    {
+      "id": "fixed_cross_encoder_reranker_evaluation",
+      "status": "PARTIAL",
+      "owner": "SHARED",
+      "evidence": [
+        "backend/evaluation/reranker.py",
+        "evaluation/reranker/fixed-cross-encoder-v1.json",
+        "evaluation/reranker/fixed-cross-encoder-windows-rtx4090-v1.json",
+        "scripts/run_fixed_reranker_gate.py",
+        "tests/evaluation/test_fixed_reranker.py",
+        "deploy/remote/reranker-validation/run_fixed_reranker_gate.ps1",
+        "docs/FIXED_RERANKER_EVALUATION.md"
+      ]
     }
   ]
 }

@@ -25,3 +25,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## 可选 Reranker 运行依赖
+
+固定 Reranker Gate 通过可选依赖使用以下未修改的第三方项目与模型；
+仓库不提交模型权重：
+
+- Sentence Transformers: <https://github.com/huggingface/sentence-transformers>,
+  Apache License 2.0；
+- `BAAI/bge-reranker-v2-m3`:
+  <https://huggingface.co/BAAI/bge-reranker-v2-m3>,
+  Apache License 2.0。
