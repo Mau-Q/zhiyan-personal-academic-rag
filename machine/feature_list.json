@@ -481,7 +481,7 @@
     },
     {
       "id": "fixed_cross_encoder_reranker_evaluation",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "SHARED",
       "evidence": [
         "backend/evaluation/reranker.py",

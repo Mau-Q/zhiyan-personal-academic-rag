@@ -35,5 +35,6 @@
 | PD-031 | ACCEPTED | 阶段 1 MVP 使用可替换的 `filesystem_v1` 私有对象根目录保存 PDF，PostgreSQL 保存对象定位与不可变 Chunk 快照；正式 MinIO 适配保持独立 | 不新增对象存储 SDK 依赖，不把 PDF 字节塞入 PostgreSQL，也不把 Milvus 自带 MinIO 冒充应用对象存储；在线 Answer API 只消费 PostgreSQL READY 版本的持久化 Chunk 快照 |
 | PD-032 | ACCEPTED | 固定 Reranker 复用 `sentence-transformers.CrossEncoder`，仓库继续控制模型/snapshot 身份、冻结候选、指标和去留；本地 `test=100` 质量门通过但默认路由不变 | 只在目标 Windows RTX 4090 复用同一配置完成 P95 后作最终启用/回退；不得同时调 Embedding、RRF、候选、Prompt 或生成模型 |
 | PD-033 | ACCEPTED | 通用组件通过窄适配器逐项复用，不引入第二套业务事实或全栈 RAG 主链 | PyMilvus 已采用；Elasticsearch helper、Docling、OpenTelemetry、Ragas 和 Alembic 按 `docs/COMPONENT_REUSE_ROADMAP.md` 的独立触发条件后置，Temporal 和全栈框架当前不接管核心链路 |
+| PD-034 | ACCEPTED | 固定 Reranker 在 Windows RTX 4090 上以相同 revision、snapshot、冻结输入、`max_length=512` 和 `batch_size=16` 完成目标硬件 Gate；质量门保持通过，组件 `P95=188.22683 ms`，决定保留进入受控在线集成 | 本次只测预计算候选后的 pair scoring，不冒充组合检索 P95 或已在线启用；默认 RRF 路由保持不变，下一独立 Gate 必须在 ACL/READY 与 RRF 之后集成并验证候选不扩张、失败回退和组合 P95 |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。

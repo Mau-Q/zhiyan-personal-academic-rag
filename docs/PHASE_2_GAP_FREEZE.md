@@ -7,12 +7,12 @@
 | 能力 | 冻结判断 | 本 Gate 是否改变 |
 |---|---|---|
 | Hybrid | ES+Milvus RRF 已实现；远程 15 题为 14/15，与 ES 持平，未晋级默认；175 题不为追求满分继续调参 | 否 |
-| Reranker | 已以固定 `bge-reranker-v2-m3` 重排冻结 `local_rrf` 前 20 候选；本地 `test=100` 质量门通过，目标 RTX 4090 P95 与最终启用/回退待收口 | 本 Gate 只增加 Reranker pair scoring，不改召回、融合或生成 |
+| Reranker | 已以固定 `bge-reranker-v2-m3` 重排冻结 `local_rrf` 前 20 候选；本地 `test=100` 质量门和目标 RTX 4090 组件 P95 均通过，决定保留进入受控在线集成，但默认路由未改变 | 本 Gate 只增加 Reranker pair scoring，不改召回、融合或生成 |
 | Evidence/引用 | 已有结构化 Evidence/Citation；ACL、READY、活动版本、Chunk 身份和页码由检索与事实源先行校验 | 只增加模型引用编号校验 |
 | Fake LLM | 所有既有入口默认仍是 Fake，原 warning 和测试不变 | 新增显式注入的真实生成器，不静默替换默认路径 |
 | Claim 支持度 | 确定性 Claim–Evidence 语义支持属于阶段 4；阶段 2 不用模型自评冒充 | 否 |
 
-因此，“Hybrid 已比较”“本地 Reranker 质量门通过”“目标硬件已决定上线”是三个不同结论。前两项已有证据，第三项仍需用户在 RTX 4090 上完成固定 P95 运行，不能由 M4 结果替代。
+因此，“Hybrid 已比较”“Reranker 组件质量与目标硬件成本已通过”“已经在线启用并满足组合 P95”是三个不同结论。前两项已有证据，第三项仍需独立在线集成 Gate，不能由预计算候选上的 pair-scoring P95 替代。
 
 ## 2. 最小真实生成闭环
 
@@ -69,8 +69,8 @@ Qwen READY 首次运行以 `PERSISTED_SNAPSHOT_ANSWER_HTTP_FAILED` 失败；同 
 ## 4. 阶段 2 剩余差距
 
 - 3 篇指定文档、9 个普通学术问答样本已完成远程 v2 验收：3 篇各 `3/3`、合计 `9/9` 通过真实生成、引用、版本、定位、三路清理和删除后 403；第 3 篇最终报告 SHA-256 为 `3C106423AB3575B11B3B0142A66F19A2C949B8BAED3457F1BCA101A9931302FA`；
-- 固定 Cross-Encoder 已在冻结 `test=100` 上完成本地质量验证：`nDCG@10` 相对提升 `15.5331%`、`Precision@5 +0.02`，四个关键类型不退化，M4 `P95=11839.113 ms`；当前结论是质量保留但默认在线路由不变；
-- 为满足最高方案第 10.3 节的最终去留条件，下一独立 Gate 只在 Windows RTX 4090 上复用同一模型、revision、snapshot、输入模板、`max_length=512`、`batch_size=16` 和冻结 `test=100`，记录目标 P95 后作最终启用/回退；不得与生成或检索参数变化一起引入；
+- 固定 Cross-Encoder 已在冻结 `test=100` 上完成本地质量验证：`nDCG@10` 相对提升 `15.5331%`、`Precision@5 +0.02`，四个关键类型不退化；目标 Windows RTX 4090 复跑保持相同质量和身份，Reranker 阶段 `P50=169.3867 ms / P95=188.22683 ms`，稳定错误码为 `NONE`；
+- 组件去留已决定为保留进入受控在线集成，但默认路由不变；下一独立 Gate 只在 PostgreSQL READY/ACL 和 ES/Milvus RRF 之后重排既有候选，验证候选不扩张、失败回退和包含召回/融合/重排的组合 P95，不与生成、Embedding、RRF 参数变化混合；
 - Claim 语义支持、冲突处理、正式 MinIO、OCR 和目标规模性能继续由各自后续 Gate 跟踪。
 
-阶段 2 因此仍为 `IN_PROGRESS/PARTIAL`。llama3.2 与 Qwen 的远程 READY 真实生成闭环、Qwen 最终晋级、固定普通科研问答远程 `9/9` 和固定 Reranker 本地质量门均已完成；Reranker 目标硬件 P95 与最终在线启用/回退仍未完成。后续不把它与 MinIO/OCR、通用性能或生成变量混合。
+阶段 2 因此仍为 `IN_PROGRESS/PARTIAL`。llama3.2 与 Qwen 的远程 READY 真实生成闭环、Qwen 最终晋级、固定普通科研问答远程 `9/9`，以及固定 Reranker 的本地质量门和目标硬件组件 P95 均已完成；Reranker 的受控在线集成与组合检索 P95 仍未完成。后续不把它与 MinIO/OCR、通用性能或生成变量混合。

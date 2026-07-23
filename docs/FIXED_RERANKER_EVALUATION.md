@@ -82,18 +82,35 @@ MacBook Air M4、16 GB、MPS 的冻结 `test=100` 结果：
 - metrics SHA-256：
   `a6754415768cc4387c5ee9942226264fbc3a803cd04cc5d2932cdd8798b97b28`。
 
-## 5. 当前决策
+## 5. 目标硬件证据与组件去留
 
-本地质量结论为
-`RETAIN_FIXED_CROSS_ENCODER_PENDING_TARGET_HARDWARE_P95`：
+本地质量结论曾为
+`RETAIN_FIXED_CROSS_ENCODER_PENDING_TARGET_HARDWARE_P95`。用户随后在
+Windows RTX 4090 上以提交
+`d31e992713ea60827a5084c456ec050d927e2187` 完成同一冻结 Gate：
 
-- 质量三道门全部通过；
-- 默认在线路由暂不改变；
-- Reranker 不负责无证据阈值、ACL 或拒答，因此现有正式工程集中的
-  no-answer/forbidden 检测缺口不被本次排序增益掩盖；
-- 在目标 Windows RTX 4090 上复用同一模型、revision、输入模板、
-  `max_length=512`、`batch_size=16` 和 `test=100`，记录 P95 后再作
-  最终启用或回退决定。
+- PyTorch `2.13.0+cu126`、CUDA `12.6`、NVIDIA GeForce RTX 4090，
+  驱动 `591.86`；
+- 模型 revision 与 snapshot SHA-256 和本地冻结身份一致；
+- `test=100`、1952 个 pair、31 个截断 pair 与本地运行一致；
+- `nDCG@10=0.747810`、相对增益 `15.5331%`、
+  `Precision@5=0.251111`、增量 `+0.020000`，关键类型门禁通过；
+- Reranker 阶段 `P50=169.3867 ms / P95=188.22683 ms`；
+- `stable_error_code=NONE`；
+- 脱敏 run-report SHA-256：
+  `D010FED8CFDC8D477FE816BD3C7DB6647F406560827B433A15526ED77B97562C`；
+- decision SHA-256：
+  `FF0E3852D37A12A4485E899437EEFAA71DA4203CB2E27718434F762839D8DA9E`。
+
+目标硬件证据满足固定组件的质量与可执行成本检查，组件决策收口为
+`RETAIN_FIXED_CROSS_ENCODER_FOR_CONTROLLED_ONLINE_INTEGRATION`。
+这不是“已在线启用”：本次 P95 只计预计算候选之后的 pair scoring，
+不包含 PostgreSQL READY 路由、ES/Milvus 召回与 RRF。默认在线路由继续
+保持不变；下一独立 Gate 才能把 Reranker 接在权限过滤和 RRF 候选之后，
+并验证候选集合不扩张、失败关闭、回退和组合检索 P95。
+
+Reranker 不负责无证据阈值、ACL 或拒答，因此现有正式工程集中的
+no-answer/forbidden 检测缺口不被本次排序增益掩盖。
 
 Windows 配置位于
 `evaluation/reranker/fixed-cross-encoder-windows-rtx4090-v1.json`，

@@ -15,7 +15,7 @@ ES/Milvus 双索引 READY、失效先行、补偿/清理和引用身份。成熟
 |---|---|---|
 | Milvus SDK | PyMilvus `MilvusClient` | 已在可选 `milvus` 依赖和 `PymilvusTransport` 中使用；业务身份、Schema 指纹、READY 与清理仍由仓库控制 |
 | PDF 文本基础解析 | `pypdf` | 只处理可抽取文本的 PDF；无 OCR、版面或表格恢复 |
-| 固定 Reranker | `sentence-transformers.CrossEncoder` | 只负责固定 revision 的 pair scoring；候选、指标、身份和去留决策仍由仓库控制 |
+| 固定 Reranker | `sentence-transformers.CrossEncoder` | 冻结 `test=100` 质量门及 Windows RTX 4090 组件 P95 已通过，决定保留进入受控在线集成；候选、指标、身份、ACL、READY、失败关闭和默认路由仍由仓库控制 |
 
 ## 后续独立 Gate
 
@@ -97,3 +97,8 @@ Document/Record/Pipeline 抽象不能替代 owner-scoped PostgreSQL 事实、
 FastEmbed 可作为资源受限 Cross-Encoder 的备选实验后端，但不得在同一个
 固定 Reranker Gate 中同时改变模型和推理后端。当前已冻结的
 `sentence-transformers + bge-reranker-v2-m3` 结果必须保留。
+
+固定 Reranker 的后续在线集成仍是独立 Gate：只允许在 owner/READY
+过滤和 ES/Milvus RRF 之后重排既有候选，不得扩张候选或绕过无证据、
+越权和失效决定；必须测量包含召回、融合和重排的组合 P95，并保留无模型
+或模型失败时回退既有 RRF 的能力。
