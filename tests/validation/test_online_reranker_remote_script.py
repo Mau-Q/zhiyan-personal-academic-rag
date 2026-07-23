@@ -93,6 +93,21 @@ class OnlineRerankerRemoteScriptTests(unittest.TestCase):
             "fallback_count",
             "candidate_set_expanded",
             "candidate_bound_violated",
+            "base_retrieval_stage_status",
+            "base_retrieval_stage_sample_count",
+            "ready_route_resolution_latency_ms_p95",
+            "chunk_snapshot_latency_ms_p95",
+            "elasticsearch_validation_work_latency_ms_p95",
+            "elasticsearch_query_work_latency_ms_p95",
+            "elasticsearch_total_work_latency_ms_p95",
+            "milvus_validation_work_latency_ms_p95",
+            "query_embedding_work_latency_ms_p95",
+            "milvus_ann_search_work_latency_ms_p95",
+            "milvus_total_work_latency_ms_p95",
+            "backend_parallel_wall_latency_ms_p95",
+            "ready_revalidation_latency_ms_p95",
+            "rrf_fusion_latency_ms_p95",
+            "retriever_total_latency_ms_p95",
             "cleanup_jobs_succeeded",
             "inactive_answer_api_status",
             "report_sha256",
@@ -101,6 +116,10 @@ class OnlineRerankerRemoteScriptTests(unittest.TestCase):
             self.assertRegex(self.script, rf"(?m)^        {field} = ")
         self.assertIn("$pythonExitCode -ne 0", self.script)
         self.assertIn("$report.status -ne 'FAIL'", self.script)
+        self.assertIn(
+            "$report.online_reranker.base_retrieval_stages.status -ne 'PASS'",
+            self.script,
+        )
 
 
 if __name__ == "__main__":

@@ -8,7 +8,9 @@ import math
 import os
 import re
 import sys
-from collections.abc import Iterable, Mapping, Sequence
+import time
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -46,6 +48,14 @@ _COLLECTION_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,254}$")
 
 class MilvusIndexNotReadyError(ValueError):
     """Raised when Milvus cannot prove a matching usable collection."""
+
+
+@dataclass(frozen=True)
+class MilvusSearchLatencyBreakdown:
+    validation_latency_ms: float
+    query_embedding_latency_ms: float
+    ann_search_latency_ms: float
+    total_latency_ms: float
 
 
 class MilvusTransport(Protocol):
@@ -450,11 +460,14 @@ class MilvusVectorIndex:
         min_score: float = DEFAULT_VECTOR_MIN_SCORE,
         expected_chunks: Sequence[Mapping[str, Any]] | None = None,
         source_fingerprint_chunks: Sequence[Mapping[str, Any]] | None = None,
+        timing_sink: Callable[[MilvusSearchLatencyBreakdown], None] | None = None,
     ) -> list[RankedChunk]:
         if not question.strip():
             raise ValueError("question must not be blank")
         if top_k < 1 or not -1.0 <= min_score <= 1.0:
             raise ValueError("top_k or min_score is invalid")
+        total_started = time.perf_counter()
+        validation_started = time.perf_counter()
         metadata = self.verify_provider(provider)
         fingerprint_chunks = (
             source_fingerprint_chunks
@@ -463,9 +476,15 @@ class MilvusVectorIndex:
         )
         if fingerprint_chunks is not None:
             self.verify_source(fingerprint_chunks)
+        validation_latency_ms = (time.perf_counter() - validation_started) * 1000
+        embedding_started = time.perf_counter()
         vector = _normalize(provider.embed([question])[0])
+        query_embedding_latency_ms = (
+            time.perf_counter() - embedding_started
+        ) * 1000
         if len(vector) != int(metadata["embedding_dimension"]):
             raise MilvusIndexNotReadyError("Milvus query embedding dimension does not match")
+        ann_search_started = time.perf_counter()
         hits = self.transport.search(
             self.collection_name,
             vector=vector,
@@ -504,6 +523,18 @@ class MilvusVectorIndex:
             for rank, (score, chunk) in enumerate(results[:top_k], 1)
         ]
         validate_ranking(ranking, expected_backend=RETRIEVAL_BACKEND)
+        if timing_sink is not None:
+            timing_sink(
+                MilvusSearchLatencyBreakdown(
+                    validation_latency_ms=validation_latency_ms,
+                    query_embedding_latency_ms=query_embedding_latency_ms,
+                    ann_search_latency_ms=(
+                        time.perf_counter() - ann_search_started
+                    )
+                    * 1000,
+                    total_latency_ms=(time.perf_counter() - total_started) * 1000,
+                )
+            )
         return ranking
 
     def retrieve(

@@ -394,8 +394,12 @@
         "backend/storage/migrations/0004_runtime_snapshots.sql",
         "backend/storage/postgres.py",
         "backend/retrieval/online.py",
+        "backend/retrieval/elasticsearch.py",
+        "backend/retrieval/milvus.py",
         "backend/api/app.py",
         "tests/retrieval/test_online_visibility.py",
+        "tests/retrieval/test_elasticsearch_retrieval.py",
+        "tests/retrieval/test_milvus_retrieval.py",
         "tests/api/test_online_ready_rag_answers_api.py",
         "docs/LOCAL_PDF_INGESTION.md"
       ]

@@ -53,6 +53,23 @@ class MilvusVectorRetrievalTests(unittest.TestCase):
         self.assertIn('tenant_id == "tenant_fixture"', self.transport.last_filter)
         self.assertIn("array_contains_any", self.transport.last_filter)
 
+    def test_search_emits_validation_embedding_ann_and_total_latency_breakdown(self):
+        timings = []
+
+        self.index.search(
+            "How are candidates combined?",
+            self.scope,
+            self.provider,
+            expected_chunks=self.chunks,
+            timing_sink=timings.append,
+        )
+
+        self.assertEqual(len(timings), 1)
+        self.assertGreaterEqual(timings[0].validation_latency_ms, 0)
+        self.assertGreaterEqual(timings[0].query_embedding_latency_ms, 0)
+        self.assertGreaterEqual(timings[0].ann_search_latency_ms, 0)
+        self.assertGreaterEqual(timings[0].total_latency_ms, 0)
+
     def test_folder_only_or_invalid_scope_fails_closed(self):
         folder_scope = dict(self.scope, library_ids=[], document_ids=[], folder_ids=["folder-x"])
         self.index.retrieve("test", folder_scope, self.provider, expected_chunks=self.chunks)

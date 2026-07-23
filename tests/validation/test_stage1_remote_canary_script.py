@@ -11,6 +11,7 @@ from pathlib import Path
 from backend.ingestion.persistent import RuntimeSnapshotPersistenceError
 from backend.rag.generation import GenerationServiceError
 from backend.rag.online_consumer import OnlineRetrievalObservation
+from backend.retrieval.online import OnlineRetrievalLatencyBreakdown
 from scripts.run_stage1_remote_canary import (
     AcademicQaGateError,
     AnswerHttpGateError,
@@ -322,6 +323,64 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
         self.assertEqual(report["cleanup_jobs_succeeded"], EXPECTED_CLEANUP_JOBS)
         self.assertTrue(report["inactive_visibility_proven"])
         self.assertEqual(report["inactive_answer_api_status"], 403)
+
+    def test_online_retrieval_stage_breakdown_is_complete_and_aligned(self):
+        observations = [
+            OnlineRetrievalObservation(
+                reranker_status="APPLIED",
+                reranker_failure_code=None,
+                candidate_count=20,
+                output_count=3,
+                base_retrieval_latency_ms=180.0 + position,
+                reranker_latency_ms=70.0,
+                combined_retrieval_latency_ms=250.0 + position,
+            )
+            for position in range(ONLINE_RERANKER_MINIMUM_LATENCY_SAMPLES)
+        ]
+        breakdowns = [
+            OnlineRetrievalLatencyBreakdown(
+                route_count=1,
+                ready_route_resolution_latency_ms=10.0 + position,
+                chunk_snapshot_latency_ms=5.0,
+                elasticsearch_validation_work_latency_ms=15.0,
+                elasticsearch_query_work_latency_ms=20.0,
+                elasticsearch_total_work_latency_ms=35.0,
+                milvus_validation_work_latency_ms=25.0,
+                query_embedding_work_latency_ms=70.0,
+                milvus_ann_search_work_latency_ms=30.0,
+                milvus_total_work_latency_ms=125.0,
+                backend_parallel_wall_latency_ms=126.0,
+                ready_revalidation_latency_ms=4.0,
+                rrf_fusion_latency_ms=1.0,
+                total_latency_ms=176.0 + position,
+            )
+            for position in range(ONLINE_RERANKER_MINIMUM_LATENCY_SAMPLES)
+        ]
+
+        summary = _summarize_online_reranker_observations(
+            observations,
+            retrieval_breakdowns=breakdowns,
+        )
+        stages = summary["base_retrieval_stages"]
+
+        self.assertEqual(stages["status"], "PASS")
+        self.assertEqual(
+            stages["sample_count"],
+            ONLINE_RERANKER_MINIMUM_LATENCY_SAMPLES,
+        )
+        self.assertEqual(stages["route_count_min"], 1)
+        self.assertEqual(stages["route_count_max"], 1)
+        self.assertEqual(stages["query_embedding_work_latency_ms_p95"], 70)
+        self.assertGreater(stages["retriever_total_latency_ms_p95"], 176)
+
+        mismatch = _summarize_online_reranker_observations(
+            observations,
+            retrieval_breakdowns=breakdowns[:-1],
+        )
+        self.assertEqual(
+            mismatch["error_code"],
+            "ONLINE_RETRIEVAL_LATENCY_BREAKDOWN_INVALID",
+        )
 
     def test_online_reranker_failure_is_deferred_until_lifecycle_cleanup(self):
         source = (

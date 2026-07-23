@@ -75,13 +75,13 @@ Qwen READY 首次运行以 `PERSISTED_SNAPSHOT_ANSWER_HTTP_FAILED` 失败；同 
 - 3 篇指定文档、9 个普通学术问答样本已完成远程 v2 验收：3 篇各 `3/3`、合计 `9/9` 通过真实生成、引用、版本、定位、三路清理和删除后 403；第 3 篇最终报告 SHA-256 为 `3C106423AB3575B11B3B0142A66F19A2C949B8BAED3457F1BCA101A9931302FA`；
 - 固定 Cross-Encoder 已在冻结 `test=100` 上完成本地质量验证：`nDCG@10` 相对提升 `15.5331%`、`Precision@5 +0.02`，四个关键类型不退化；目标 Windows RTX 4090 复跑保持相同质量和身份，Reranker 阶段 `P50=169.3867 ms / P95=188.22683 ms`，稳定错误码为 `NONE`；
 - 受控在线窄适配器已本地实现：PostgreSQL READY/ACL 和 ES/Milvus RRF 先返回并重验至多 20 个候选，Reranker 只排序并输出前 3；标题/模型/分数故障回退同一批已授权 RRF，身份漂移仍失败关闭；
-- 首个 Windows 组合 Gate 已达到至少 30 个样本的判定路径，但以 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败；旧失败报告未保存精确延迟和关闭指标，不能据此宣称接近门槛或通过；
-- 下一复跑只改变 ES/Milvus 只读召回由串行为并行，并在失败或成功报告中保留 base/combined/Reranker P50/P95、回退、候选边界、清理和删除后 403；仍要求组合 `P95 <= 300 ms`，通过前默认路由不变；
+- ES/Milvus 并行复跑取得 30/30 `APPLIED`、无回退/扩张/越界、三路清理与删除后 403；base retrieval `P95=344.676365 ms`、Reranker `P95=131.885375 ms`、combined `P95=472.190015 ms`，稳定失败码为 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED`，报告 SHA-256 为 `132DFFDECDAD02F9C5280FADFBD09B5AE100C1DB31FE07118BF97B6E0C1B2602`；
+- 下一 Gate 只增加 READY 路由、Chunk 快照、ES 校验/查询、Milvus 校验、Query Embedding、ANN、并行墙钟、READY 重验和 RRF 的分项延迟；不改模型、检索参数或门槛，分段结果返回前不继续优化 Reranker；
 - Claim 语义支持、冲突处理、正式 MinIO、OCR 和目标规模性能继续由各自后续 Gate 跟踪。
 
 阶段 2 因此仍为 `IN_PROGRESS/PARTIAL`。llama3.2 与 Qwen 的远程 READY
 真实生成闭环、Qwen 最终晋级、固定普通科研问答远程 `9/9`、固定
 Reranker 的本地质量门、目标硬件组件 P95 和受控在线本地实现均已完成；
-首个 Windows 组合检索 Gate 已失败，单变量并行召回复跑与是否改变默认
-路由仍未完成。后续不把它与
+Windows 串行与并行组合检索 Gate 均未通过，默认路由已决定继续保持原
+RRF；基础召回分段归因仍未完成。后续不把它与
 MinIO/OCR、通用性能或生成变量混合。

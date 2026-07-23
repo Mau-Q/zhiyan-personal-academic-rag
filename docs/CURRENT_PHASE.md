@@ -172,14 +172,14 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 - 用户在提交 `063236a` 完成远程 v4：Qwen `4/4`、llama3.2 `3/4`，结果为 `PASS / PROMOTE_QWEN3_14B / NONE`；`think=false` 且检索参数未改变，报告 SHA-256 为 `E031B1B4532571850FD4527D4930E80A3C144074DBB55F8055A54A51EDB7E038`。Qwen 最终晋级，llama3.2 保留为回退；v3 假阴性报告不覆盖。
 - 阶段 2 固定普通科研问答验收包已完成远程 v2 验收：复用既有三论文人工定位题集，固定 3 篇 PDF、每篇 3 题，共 9 题；生成固定 Qwen 摘要与 `think=false`，检索参数保持不变。3 篇文档各 `3/3`、合计 `9/9` 通过真实生成、引用集合稳定回放、页码定位、三路清理和删除后 403；最终第 3 篇报告 SHA-256 为 `3C106423AB3575B11B3B0142A66F19A2C949B8BAED3457F1BCA101A9931302FA`。自然语言答案字节一致仅作观测，本次为 `false`，不影响确定性引用与安全硬门禁。
 - 固定 Cross-Encoder 已复用 `sentence-transformers.CrossEncoder` 与 `BAAI/bge-reranker-v2-m3@953dc6f6...d41e`，只重排冻结 `local_rrf` 前 20 候选并以 `test=100` 作决策，不读取 Acceptance 指标；`nDCG@10` 从 `0.647269` 提升到 `0.747810`（相对 `+15.5331%`），`Precision@5` 从 `0.231111` 提升到 `0.251111`，四个关键类型均未越过 0.02 回退线。用户在提交 `d31e992` 的 Windows RTX 4090 上保持相同模型/snapshot/输入身份，取得 pair-scoring `P50=169.3867 ms / P95=188.22683 ms`，稳定错误码为 `NONE`；组件决定为 `RETAIN_FIXED_CROSS_ENCODER_FOR_CONTROLLED_ONLINE_INTEGRATION`，默认在线路由尚未改变。
-- 受控在线 Reranker 窄适配器已本地实现：现有 PostgreSQL READY/owner、持久化 Chunk 身份和检索后重验保持前置，ES/Milvus RRF 最多返回 20 个已授权候选，固定 Cross-Encoder 只排序并输出前 3；标题/模型/分数故障显式回退同一批 RRF，身份漂移仍失败关闭。用户在 Windows RTX 4090 执行首个综合 Gate，同一 Run ID 恢复后达到组合延迟判定，但以 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败；旧失败报告未保存精确 P95。当前本地只将 ES/Milvus 只读召回并行化并补齐失败指标，新的远程 Run ID 复跑前默认路由不变。
+- 受控在线 Reranker 窄适配器已本地实现：现有 PostgreSQL READY/owner、持久化 Chunk 身份和检索后重验保持前置，ES/Milvus RRF 最多返回 20 个已授权候选，固定 Cross-Encoder 只排序并输出前 3；标题/模型/分数故障显式回退同一批 RRF，身份漂移仍失败关闭。用户在提交 `fb54918` 完成 ES/Milvus 并行远程复跑：30/30 `APPLIED`、无回退/扩张/越界、三路清理与删除后 403 通过，但 base retrieval `P95=344.676365 ms`、Reranker `P95=131.885375 ms`、combined `P95=472.190015 ms`，报告 SHA-256 为 `132DFFDECDAD02F9C5280FADFBD09B5AE100C1DB31FE07118BF97B6E0C1B2602`。默认路由继续保持原 RRF；当前本地只增加基础召回分段观测，等待远程归因。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：阶段 2 固定 Reranker 的 ES/Milvus 并行召回 Windows 组合 P95 复跑与默认路由启用决定，正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层；
+- 未完成能力：阶段 2 基础召回的 Windows 分段延迟归因，正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层；固定 Reranker 在当前 300 ms SLO 下不默认启用；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -216,13 +216,13 @@ Phase ID：`source-phase2-basic-rag-mvp-in-progress`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1 已完成，阶段 2 仍为 `IN_PROGRESS`。评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_ONLINE_COMBINED_P95_EXCEEDED_PARALLEL_RECALL_LOCAL_PENDING_REMOTE / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_3_OF_3_DOCUMENTS_9_OF_9_CASES_PASS`。固定 Reranker 在不改变模型、Embedding、RRF 参数或生成的情况下通过本地质量门和 Windows RTX 4090 组件 P95；首个 READY/ACL 后综合 Gate 以 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败。当前只把 ES/Milvus 只读召回改为并行并补齐失败报告，Windows 新 Run ID 复跑前线上默认仍保持原路由。远程证据已证明两种生成模型均可消费 PostgreSQL READY + ES/Milvus RRF Evidence，并完成引用、稳定回放、删除后 403 和三路清理；固定四题 v4 进一步确认 Qwen `4/4` 晋级。普通科研问答 v2 的 3 篇文档各 `3/3`、合计 `9/9` 已通过；第 3 篇先前的 Answer HTTP 失败报告作为失败谱系保留，最终 retry2 以报告 SHA-256 `3C106423AB3575B11B3B0142A66F19A2C949B8BAED3457F1BCA101A9931302FA` 通过。`citation_stable_replay=true`，`byte_stable_replay_observed=false` 仅为自然语言观测项；运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
+最高方案阶段 0、阶段 1 已完成，阶段 2 仍为 `IN_PROGRESS`。评测执行边界为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_PARALLEL_ONLINE_COMBINED_P95_472_190015_DEFAULT_UNCHANGED_BASE_PROFILE_LOCAL_PENDING_REMOTE / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_3_OF_3_DOCUMENTS_9_OF_9_CASES_PASS`。固定 Reranker 在不改变模型、Embedding、RRF 参数或生成的情况下通过本地质量门和 Windows RTX 4090 组件 P95；ES/Milvus 并行远程组合 Gate 的 base `P95=344.676365 ms`、combined `P95=472.190015 ms`，功能、安全和清理通过但性能失败。线上默认继续保持原 RRF；当前只增加基础召回的脱敏分段观测，不把本地计时测试冒充 Windows 归因。远程证据已证明两种生成模型均可消费 PostgreSQL READY + ES/Milvus RRF Evidence，并完成引用、稳定回放、删除后 403 和三路清理；固定四题 v4 进一步确认 Qwen `4/4` 晋级。普通科研问答 v2 的 3 篇文档各 `3/3`、合计 `9/9` 已通过；第 3 篇先前的 Answer HTTP 失败报告作为失败谱系保留，最终 retry2 以报告 SHA-256 `3C106423AB3575B11B3B0142A66F19A2C949B8BAED3457F1BCA101A9931302FA` 通过。`citation_stable_replay=true`，`byte_stable_replay_observed=false` 仅为自然语言观测项；运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
 
 ## Next gate
 
-1. **本地合并交付 Gate：** 保留在线性能失败的 base/combined/Reranker 指标和关闭证据；每个 READY 路由只将 ES/Milvus 两个只读召回并行化，其他合同和参数不变；
-2. **用户执行 Windows 复跑 Gate：** 推送后在 Windows RTX 4090 使用新的 Run ID 运行 `deploy/remote/reranker-validation/run_online_reranker_gate.ps1`，以冻结 3 题各重复 10 次取得至少 30 个样本；
-3. **远程验收边界：** 所有样本必须 `APPLIED`，候选不超过 20、输出不超过 3、无回退或候选扩张，组合 `P95 <= 300 ms`，并完成 INACTIVE、三路清理和删除后 403；无论通过或失败均返回脱敏分项延迟，通过前默认路由保持不变。
+1. **本地观测 Gate：** 只增加 READY 路由解析、Chunk 快照、ES 校验/查询、Milvus 校验、Query Embedding、ANN、并行墙钟、READY 重验、RRF 与总耗时的 P50/P95；检索结果、参数和 SLO 不变；
+2. **用户执行 Windows 归因 Gate：** 推送后使用新的 Run ID 运行 `deploy/remote/reranker-validation/run_online_reranker_gate.ps1`；首次若在 READY 后 403，保持同一 Run ID 恢复；
+3. **远程输出边界：** 返回最终脱敏摘要中的全部分段 P95、base/combined/Reranker P95、30/30 应用、候选边界、三路清理和删除后 403。该 Gate 只定位 base retrieval 瓶颈，不自行授权调参或放宽 300 ms。
 
 ## Prohibited shortcuts
 

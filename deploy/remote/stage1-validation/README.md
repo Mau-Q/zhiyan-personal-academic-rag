@@ -108,7 +108,7 @@ powershell.exe `
     -QuestionSuitePath '.\runtime\online-reranker-gate-input\doc_arxiv_2603_04915.json' `
     -ExpectedQuestionSuiteSha256 '4f4d293bc8bc00ba2f4469977d43d9c1ffa40556a70762f15d2f47ed954c6bd3' `
     -DocumentTitle 'EVMbench: Evaluating AI Agents on Smart Contract Security' `
-    -RunId 'online_reranker_parallel_20260723_01'
+    -RunId 'online_retrieval_profile_20260723_01'
 ```
 
 Run it only after the reviewed Mac commit has been pushed and Windows
@@ -130,13 +130,21 @@ deleted-document Answer API 403 check. Return only the script's final sanitized
 summary or a screenshot of it; do not return credential assignment lines,
 private paths, questions, document text, model cache paths, or service URLs.
 
-The first controlled online run, `online_reranker_20260723_01`, reached the
-combined-latency decision after same-Run-ID recovery but failed with
-`ONLINE_RERANKER_COMBINED_P95_EXCEEDED`. Its older failure report did not retain
-the exact latency breakdown. The next run above changes only ES/Milvus read
-execution from sequential to parallel and records base retrieval, combined, and
-Reranker P50/P95 plus cleanup evidence on both PASS and this performance FAIL.
-The 300 ms limit and default route remain unchanged.
+The ES/Milvus-parallel run `online_reranker_parallel_20260723_01` completed
+30/30 `APPLIED` observations with no fallback, expansion, or candidate-bound
+violation, followed by three successful cleanup jobs and inactive Answer 403.
+It still failed `ONLINE_RERANKER_COMBINED_P95_EXCEEDED`: base retrieval
+P95 was `344.676365 ms`, Reranker P95 was `131.885375 ms`, and combined P95
+was `472.190015 ms`. Its report SHA-256 is
+`132DFFDECDAD02F9C5280FADFBD09B5AE100C1DB31FE07118BF97B6E0C1B2602`.
+
+Because base retrieval alone exceeds the full 300 ms budget, the next run above
+does not change retrieval behavior. It only records P50/P95 for READY route
+resolution, Chunk snapshot loading, Elasticsearch validation/query, Milvus
+validation, query embedding, Milvus ANN search, backend parallel wall time,
+READY revalidation, RRF fusion, and retriever total. Return all stage P95 fields
+from the final sanitized summary. The 300 ms limit and default route remain
+unchanged.
 
 ## Replay and single-side failure check
 

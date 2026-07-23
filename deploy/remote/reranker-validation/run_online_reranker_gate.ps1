@@ -213,6 +213,21 @@ try {
             fallback_count = $report.online_reranker.fallback_count
             candidate_set_expanded = $report.online_reranker.candidate_set_expanded
             candidate_bound_violated = $report.online_reranker.candidate_bound_violated
+            base_retrieval_stage_status = $report.online_reranker.base_retrieval_stages.status
+            base_retrieval_stage_sample_count = $report.online_reranker.base_retrieval_stages.sample_count
+            ready_route_resolution_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.ready_route_resolution_latency_ms_p95
+            chunk_snapshot_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.chunk_snapshot_latency_ms_p95
+            elasticsearch_validation_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.elasticsearch_validation_work_latency_ms_p95
+            elasticsearch_query_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.elasticsearch_query_work_latency_ms_p95
+            elasticsearch_total_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.elasticsearch_total_work_latency_ms_p95
+            milvus_validation_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.milvus_validation_work_latency_ms_p95
+            query_embedding_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.query_embedding_work_latency_ms_p95
+            milvus_ann_search_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.milvus_ann_search_work_latency_ms_p95
+            milvus_total_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.milvus_total_work_latency_ms_p95
+            backend_parallel_wall_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.backend_parallel_wall_latency_ms_p95
+            ready_revalidation_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.ready_revalidation_latency_ms_p95
+            rrf_fusion_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.rrf_fusion_latency_ms_p95
+            retriever_total_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.retriever_total_latency_ms_p95
             cleanup_jobs_succeeded = $report.cleanup_jobs_succeeded
             inactive_answer_api_status = $report.inactive_answer_api_status
             report_sha256 = (Get-FileHash -LiteralPath $outputPath -Algorithm SHA256).Hash
@@ -235,6 +250,13 @@ try {
     }
     if ($report.online_reranker.combined_retrieval_latency_ms_p95 -gt 300) {
         throw 'Online Reranker combined retrieval P95 exceeded 300 ms.'
+    }
+    if (
+        $report.online_reranker.base_retrieval_stages.status -ne 'PASS' -or
+        $report.online_reranker.base_retrieval_stages.sample_count -ne
+            $report.online_reranker.sample_count
+    ) {
+        throw 'Online retrieval latency breakdown is incomplete.'
     }
     if (
         $report.online_reranker.fallback_count -ne 0 -or
@@ -268,6 +290,21 @@ try {
         fallback_count = $report.online_reranker.fallback_count
         candidate_set_expanded = $report.online_reranker.candidate_set_expanded
         candidate_bound_violated = $report.online_reranker.candidate_bound_violated
+        base_retrieval_stage_status = $report.online_reranker.base_retrieval_stages.status
+        base_retrieval_stage_sample_count = $report.online_reranker.base_retrieval_stages.sample_count
+        ready_route_resolution_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.ready_route_resolution_latency_ms_p95
+        chunk_snapshot_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.chunk_snapshot_latency_ms_p95
+        elasticsearch_validation_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.elasticsearch_validation_work_latency_ms_p95
+        elasticsearch_query_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.elasticsearch_query_work_latency_ms_p95
+        elasticsearch_total_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.elasticsearch_total_work_latency_ms_p95
+        milvus_validation_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.milvus_validation_work_latency_ms_p95
+        query_embedding_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.query_embedding_work_latency_ms_p95
+        milvus_ann_search_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.milvus_ann_search_work_latency_ms_p95
+        milvus_total_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.milvus_total_work_latency_ms_p95
+        backend_parallel_wall_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.backend_parallel_wall_latency_ms_p95
+        ready_revalidation_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.ready_revalidation_latency_ms_p95
+        rrf_fusion_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.rrf_fusion_latency_ms_p95
+        retriever_total_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.retriever_total_latency_ms_p95
         cleanup_jobs_succeeded = $report.cleanup_jobs_succeeded
         inactive_answer_api_status = $report.inactive_answer_api_status
         report_sha256 = (Get-FileHash -LiteralPath $outputPath -Algorithm SHA256).Hash

@@ -89,6 +89,24 @@ class ElasticsearchRetrievalTests(unittest.TestCase):
         self.assertIn("library_scope_ids", encoded)
         self.assertIn("is_active", encoded)
 
+    def test_search_emits_validation_query_and_total_latency_breakdown(self):
+        self.transport.search_hits = [
+            {"_score": 1.25, "_source": self.chunks[0]},
+        ]
+        timings = []
+
+        self.index.search(
+            "hybrid retrieval",
+            self.scope,
+            expected_chunks=self.chunks,
+            timing_sink=timings.append,
+        )
+
+        self.assertEqual(len(timings), 1)
+        self.assertGreaterEqual(timings[0].validation_latency_ms, 0)
+        self.assertGreaterEqual(timings[0].query_latency_ms, 0)
+        self.assertGreaterEqual(timings[0].total_latency_ms, 0)
+
     def test_source_or_configuration_drift_fails_closed(self):
         changed = [dict(chunk) for chunk in self.chunks]
         changed[0]["text"] += " changed"

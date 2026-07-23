@@ -6,12 +6,15 @@ from datetime import datetime, timezone
 from unittest.mock import patch
 
 from backend.retrieval.online import (
+    OnlineRetrievalLatencyBreakdown,
     OnlineScopeForbiddenError,
     OnlineVersionRoute,
     OnlineVersionRrfRetriever,
     OnlineVisibilityUnavailableError,
     PostgresReadyRouteResolver,
 )
+from backend.retrieval.elasticsearch import ElasticsearchSearchLatencyBreakdown
+from backend.retrieval.milvus import MilvusSearchLatencyBreakdown
 from backend.retrieval.results import RankedChunk
 from backend.ingestion.models import ChunkRecordV1
 from backend.storage.models import (
@@ -173,11 +176,21 @@ class FakeElasticsearchIndex:
 
     def search(self, question, scope, **kwargs):
         del question, scope
+        timing_sink = kwargs.pop("timing_sink", None)
         self.transport.expected[self.index_name] = kwargs["expected_chunks"]
         self.transport.source_fingerprints[self.index_name] = kwargs[
             "source_fingerprint_chunks"
         ]
-        return self.transport.rankings[self.index_name]
+        ranking = self.transport.rankings[self.index_name]
+        if timing_sink is not None:
+            timing_sink(
+                ElasticsearchSearchLatencyBreakdown(
+                    validation_latency_ms=0.1,
+                    query_latency_ms=0.2,
+                    total_latency_ms=0.3,
+                )
+            )
+        return ranking
 
 
 class FakeMilvusIndex:
@@ -187,11 +200,22 @@ class FakeMilvusIndex:
 
     def search(self, question, scope, provider, **kwargs):
         del question, scope, provider
+        timing_sink = kwargs.pop("timing_sink", None)
         self.transport.expected[self.collection_name] = kwargs["expected_chunks"]
         self.transport.source_fingerprints[self.collection_name] = kwargs[
             "source_fingerprint_chunks"
         ]
-        return self.transport.rankings[self.collection_name]
+        ranking = self.transport.rankings[self.collection_name]
+        if timing_sink is not None:
+            timing_sink(
+                MilvusSearchLatencyBreakdown(
+                    validation_latency_ms=0.4,
+                    query_embedding_latency_ms=0.5,
+                    ann_search_latency_ms=0.6,
+                    total_latency_ms=1.5,
+                )
+            )
+        return ranking
 
 
 class RankingTransport:
@@ -373,6 +397,49 @@ class OnlineVersionRrfRetrieverTests(unittest.TestCase):
             )
 
         self.assertEqual([item["chunk_id"] for item in results], [expected["chunk_id"]])
+
+    def test_latency_observer_receives_sanitized_stage_breakdown(self):
+        route = OnlineVersionRoute(
+            owner_id=OWNER_ID,
+            document_id="document_001",
+            document_version_id="version_001",
+            elasticsearch_index="es_version_001",
+            milvus_collection="milvus_version_001",
+        )
+        expected = chunk("document_001", "version_001", 1)
+        observations: list[OnlineRetrievalLatencyBreakdown] = []
+        retriever = OnlineVersionRrfRetriever(
+            resolver=StaticResolver([route]),
+            elasticsearch_transport=RankingTransport(
+                {"es_version_001": [RankedChunk("es", 1, 1.0, expected)]}
+            ),
+            milvus_transport=RankingTransport(
+                {"milvus_version_001": [RankedChunk("milvus", 1, 0.9, expected)]}
+            ),
+            embedding_provider=FakeEmbeddingProvider(),
+            chunk_snapshots=FakeChunkSnapshots([expected]),
+            latency_observer=observations.append,
+        )
+
+        with patch(
+            "backend.retrieval.online.ElasticsearchBm25Index",
+            FakeElasticsearchIndex,
+        ), patch("backend.retrieval.online.MilvusVectorIndex", FakeMilvusIndex):
+            retriever.retrieve(
+                "question",
+                {"user_id": OWNER_ID, "tenant_id": OWNER_ID},
+                owner_id=OWNER_ID,
+                document_ids=["document_001"],
+            )
+
+        self.assertEqual(len(observations), 1)
+        observation = observations[0]
+        self.assertEqual(observation.route_count, 1)
+        self.assertEqual(observation.elasticsearch_total_work_latency_ms, 0.3)
+        self.assertEqual(observation.query_embedding_work_latency_ms, 0.5)
+        self.assertEqual(observation.milvus_ann_search_work_latency_ms, 0.6)
+        self.assertGreaterEqual(observation.backend_parallel_wall_latency_ms, 0)
+        self.assertGreaterEqual(observation.total_latency_ms, 0)
 
     def test_parallel_backend_failure_still_fails_closed(self):
         route = OnlineVersionRoute(

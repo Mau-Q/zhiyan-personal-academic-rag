@@ -55,6 +55,7 @@ from backend.retrieval.elasticsearch import UrllibElasticsearchTransport
 from backend.retrieval.embedding import OllamaEmbeddingProvider
 from backend.retrieval.milvus import PymilvusTransport
 from backend.retrieval.online import (
+    OnlineRetrievalLatencyBreakdown,
     OnlineVersionRrfRetriever,
     PostgresReadyRouteResolver,
 )
@@ -111,6 +112,7 @@ _SANITIZED_RUNTIME_CODES = frozenset(
         "ONLINE_RERANKER_FALLBACK_OBSERVED",
         "ONLINE_RERANKER_LATENCY_SAMPLE_INVALID",
         "ONLINE_RERANKER_COMBINED_P95_EXCEEDED",
+        "ONLINE_RETRIEVAL_LATENCY_BREAKDOWN_INVALID",
     }
 ) | frozenset(
     f"REAL_GENERATION_{phase}_{code}"
@@ -317,6 +319,8 @@ def _percentile(values: Sequence[float], percentile: float) -> float:
 
 def _summarize_online_reranker_observations(
     observations: Sequence[OnlineRetrievalObservation],
+    *,
+    retrieval_breakdowns: Sequence[OnlineRetrievalLatencyBreakdown] | None = None,
 ) -> dict[str, object]:
     invalid_application = any(
         observation.reranker_status != "APPLIED"
@@ -358,6 +362,16 @@ def _summarize_online_reranker_observations(
         "candidate_set_expanded": candidate_set_expanded,
         "candidate_bound_violated": candidate_bound_violated,
     }
+    breakdown_invalid = False
+    if retrieval_breakdowns is not None:
+        breakdown_report, breakdown_valid = (
+            _summarize_online_retrieval_latency_breakdowns(
+                retrieval_breakdowns,
+                expected_sample_count=len(observations),
+            )
+        )
+        report["base_retrieval_stages"] = breakdown_report
+        breakdown_invalid = not breakdown_valid
     if observations:
         report.update(
             {
@@ -385,6 +399,8 @@ def _summarize_online_reranker_observations(
         report["error_code"] = "ONLINE_RERANKER_LATENCY_SAMPLE_INVALID"
     elif invalid_application:
         report["error_code"] = "ONLINE_RERANKER_FALLBACK_OBSERVED"
+    elif breakdown_invalid:
+        report["error_code"] = "ONLINE_RETRIEVAL_LATENCY_BREAKDOWN_INVALID"
     elif (
         report["combined_retrieval_latency_ms_p95"]
         > ONLINE_RERANKER_COMBINED_P95_LIMIT_MS
@@ -394,6 +410,73 @@ def _summarize_online_reranker_observations(
         report["status"] = "PASS"
         report["error_code"] = None
     return report
+
+
+def _summarize_online_retrieval_latency_breakdowns(
+    breakdowns: Sequence[OnlineRetrievalLatencyBreakdown],
+    *,
+    expected_sample_count: int,
+) -> tuple[dict[str, object], bool]:
+    stage_fields = {
+        "ready_route_resolution_latency_ms": (
+            "ready_route_resolution_latency_ms"
+        ),
+        "chunk_snapshot_latency_ms": "chunk_snapshot_latency_ms",
+        "elasticsearch_validation_work_latency_ms": (
+            "elasticsearch_validation_work_latency_ms"
+        ),
+        "elasticsearch_query_work_latency_ms": (
+            "elasticsearch_query_work_latency_ms"
+        ),
+        "elasticsearch_total_work_latency_ms": (
+            "elasticsearch_total_work_latency_ms"
+        ),
+        "milvus_validation_work_latency_ms": (
+            "milvus_validation_work_latency_ms"
+        ),
+        "query_embedding_work_latency_ms": "query_embedding_work_latency_ms",
+        "milvus_ann_search_work_latency_ms": (
+            "milvus_ann_search_work_latency_ms"
+        ),
+        "milvus_total_work_latency_ms": "milvus_total_work_latency_ms",
+        "backend_parallel_wall_latency_ms": (
+            "backend_parallel_wall_latency_ms"
+        ),
+        "ready_revalidation_latency_ms": "ready_revalidation_latency_ms",
+        "rrf_fusion_latency_ms": "rrf_fusion_latency_ms",
+        "total_latency_ms": "retriever_total_latency_ms",
+    }
+    valid = (
+        len(breakdowns) == expected_sample_count
+        and expected_sample_count >= ONLINE_RERANKER_MINIMUM_LATENCY_SAMPLES
+        and all(breakdown.route_count > 0 for breakdown in breakdowns)
+    )
+    report: dict[str, object] = {
+        "sample_count": len(breakdowns),
+        "route_count_min": (
+            min(breakdown.route_count for breakdown in breakdowns)
+            if breakdowns
+            else 0
+        ),
+        "route_count_max": (
+            max(breakdown.route_count for breakdown in breakdowns)
+            if breakdowns
+            else 0
+        ),
+    }
+    for source_field, output_prefix in stage_fields.items():
+        values = [
+            float(getattr(breakdown, source_field)) for breakdown in breakdowns
+        ]
+        if not values or any(
+            not math.isfinite(value) or value < 0 for value in values
+        ):
+            valid = False
+            continue
+        report[f"{output_prefix}_p50"] = round(_percentile(values, 0.50), 6)
+        report[f"{output_prefix}_p95"] = round(_percentile(values, 0.95), 6)
+    report["status"] = "PASS" if valid else "FAIL"
+    return report, valid
 
 
 def _build_closed_online_reranker_failure_report(
@@ -966,6 +1049,9 @@ def main() -> int:
             owner_id=owner_id,
             document_ids=[version.document_id],
         )
+        online_retrieval_latency_breakdowns: list[
+            OnlineRetrievalLatencyBreakdown
+        ] = []
         online_retriever = OnlineVersionRrfRetriever(
             resolver=PostgresReadyRouteResolver(
                 repository=repository,
@@ -976,6 +1062,11 @@ def main() -> int:
             milvus_transport=milvus_transport,
             embedding_provider=embedding_provider,
             chunk_snapshots=repository,
+            latency_observer=(
+                online_retrieval_latency_breakdowns.append
+                if online_reranker_config is not None
+                else None
+            ),
         )
         online_reranker = (
             OnlineFixedCrossEncoderReranker(
@@ -1033,6 +1124,7 @@ def main() -> int:
         online_reranker_deferred_error = None
         if online_reranker is not None:
             online_retrieval_observations.clear()
+            online_retrieval_latency_breakdowns.clear()
             for _ in range(args.online_reranker_latency_repetitions):
                 for case in question_cases:
                     latency_response = answer_client.post(
@@ -1057,7 +1149,8 @@ def main() -> int:
                 if online_reranker_deferred_error is not None:
                     break
             online_reranker_report = _summarize_online_reranker_observations(
-                online_retrieval_observations
+                online_retrieval_observations,
+                retrieval_breakdowns=online_retrieval_latency_breakdowns,
             )
             if online_reranker_deferred_error is not None:
                 online_reranker_report["status"] = "FAIL"

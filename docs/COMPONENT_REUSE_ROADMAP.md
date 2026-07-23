@@ -15,7 +15,7 @@ ES/Milvus 双索引 READY、失效先行、补偿/清理和引用身份。成熟
 |---|---|---|
 | Milvus SDK | PyMilvus `MilvusClient` | 已在可选 `milvus` 依赖和 `PymilvusTransport` 中使用；业务身份、Schema 指纹、READY 与清理仍由仓库控制 |
 | PDF 文本基础解析 | `pypdf` | 只处理可抽取文本的 PDF；无 OCR、版面或表格恢复 |
-| 固定 Reranker | `sentence-transformers.CrossEncoder` | 冻结 `test=100` 质量门及 Windows RTX 4090 组件 P95 已通过；首个在线组合 Gate 因 `P95 > 300 ms` 未通过，现仅将 ES/Milvus 只读召回并行化并补齐失败指标，默认路由等待新 Run ID 远程复跑后决定 |
+| 固定 Reranker | `sentence-transformers.CrossEncoder` | 冻结 `test=100` 质量门及 Windows RTX 4090 组件 P95 已通过；ES/Milvus 并行后的在线组合 `P95=472.190015 ms`，其中 base retrieval `P95=344.676365 ms`，不满足 300 ms；默认路由保持原 RRF，当前只做基础召回分段观测 |
 
 ## 后续独立 Gate
 
@@ -101,7 +101,8 @@ FastEmbed 可作为资源受限 Cross-Encoder 的备选实验后端，但不得�
 固定 Reranker 的在线窄适配器已本地实现：只允许在 owner/READY
 过滤和 ES/Milvus RRF 之后重排既有候选，不得扩张候选或绕过无证据、
 越权和失效决定；无模型、标题不可用、推理失败或分数非法时回退同一批
-已授权 RRF，身份无法证明时仍失败关闭。首个 Windows 在线 Gate 已达到
-组合延迟判定但以 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败。下一
-复跑只验证 ES/Milvus 并行召回这一项优化，并保留 base retrieval、
-combined、Reranker 三组延迟及关闭证据；通过前默认路由不变。
+已授权 RRF，身份无法证明时仍失败关闭。ES/Milvus 并行远程复跑已完成，
+30/30 应用且安全/清理门禁通过，但 base retrieval `P95=344.676365 ms`、
+combined `P95=472.190015 ms`，仍未达到 300 ms。下一 Gate 只记录 READY
+解析、快照、ES 校验/查询、Milvus 校验、Query Embedding、ANN、并行墙钟、
+重验和 RRF 的分项 P95；没有分段证据前不继续调 Reranker 或改变默认路由。

@@ -7,10 +7,12 @@ import json
 import math
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -34,6 +36,13 @@ _INDEX_NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 
 class ElasticsearchIndexNotReadyError(ValueError):
     """Raised when Elasticsearch cannot prove a matching usable index."""
+
+
+@dataclass(frozen=True)
+class ElasticsearchSearchLatencyBreakdown:
+    validation_latency_ms: float
+    query_latency_ms: float
+    total_latency_ms: float
 
 
 class ElasticsearchTransport(Protocol):
@@ -355,18 +364,24 @@ class ElasticsearchBm25Index:
         top_k: int = 3,
         expected_chunks: Sequence[Mapping[str, Any]] | None = None,
         source_fingerprint_chunks: Sequence[Mapping[str, Any]] | None = None,
+        timing_sink: (
+            Callable[[ElasticsearchSearchLatencyBreakdown], None] | None
+        ) = None,
     ) -> list[RankedChunk]:
         if not question.strip():
             raise ValueError("question must not be blank")
         if top_k < 1:
             raise ValueError("top_k must be at least 1")
+        total_started = time.perf_counter()
         fingerprint_chunks = (
             source_fingerprint_chunks
             if source_fingerprint_chunks is not None
             else expected_chunks
         )
+        validation_started = time.perf_counter()
         if fingerprint_chunks is not None:
             self.verify_source(fingerprint_chunks)
+        validation_latency_ms = (time.perf_counter() - validation_started) * 1000
         payload = {
             "size": top_k,
             "track_total_hits": False,
@@ -386,6 +401,7 @@ class ElasticsearchBm25Index:
                 }
             },
         }
+        query_started = time.perf_counter()
         response = self.transport.request(
             "POST", f"{self.path}/_search", body=_json_body(payload)
         )
@@ -419,6 +435,14 @@ class ElasticsearchBm25Index:
             for rank, (score, chunk) in enumerate(scored[:top_k], 1)
         ]
         validate_ranking(ranking, expected_backend=RETRIEVAL_BACKEND)
+        if timing_sink is not None:
+            timing_sink(
+                ElasticsearchSearchLatencyBreakdown(
+                    validation_latency_ms=validation_latency_ms,
+                    query_latency_ms=(time.perf_counter() - query_started) * 1000,
+                    total_latency_ms=(time.perf_counter() - total_started) * 1000,
+                )
+            )
         return ranking
 
     def retrieve(

@@ -39,7 +39,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | SR-04 | Elasticsearch 论文级和 Chunk 级 BM25 | `PARTIAL` | 远程 ES 9.4.3；316 Chunk Canary 14/15；175 题 85/175；版本写入器、READY 持久化 Answer API 和删除清理均远程通过 | 中文分词选型和目标规模性能基线未完成 |
 | SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `PARTIAL` | 远程 Milvus 2.6.18 + BGE-M3；316 Chunk Canary 12/15；175 题 109/175；版本 Collection、READY 持久化 Answer API 和删除清理均远程通过 | 目标规模性能基线未完成；不以远程 500 题或调参作为当前门禁 |
 | SR-06 | 基础规范化和最小路由；改写、多查询和多跳按失败后置 | `PARTIAL` | API 问题输入合同与默认检索链路 | 最小路由合同尚未冻结；高级能力继续保持后置 |
-| SR-07 | ES/Milvus 并行、RRF、去重、多样性、Cross-Encoder 重排 | `PARTIAL` | 本地 SQLite BM25 + BGE-M3 RRF 15/15；远程 RRF Canary 14/15，与 ES 单路持平；固定 BGE Reranker 在冻结 `test=100` 上将 `nDCG@10` 从 `0.647269` 提升到 `0.747810`、`Precision@5 +0.02`；Windows RTX 4090 pair-scoring `P95=188.22683 ms`；首个受控在线组合 Gate 以 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败，现已本地并行化 ES/Milvus 只读召回并保留失败指标 | 默认在线路由尚未改变，仍需新 Run ID 在 Windows 取得至少 30 样本、无回退/候选扩张且组合 `P95 <= 300 ms`；去重/多样性和扩展消融仍未完成 |
+| SR-07 | ES/Milvus 并行、RRF、去重、多样性、Cross-Encoder 重排 | `PARTIAL` | 本地 SQLite BM25 + BGE-M3 RRF 15/15；远程 RRF Canary 14/15；固定 BGE Reranker 将 `nDCG@10` 从 `0.647269` 提升到 `0.747810`、`Precision@5 +0.02`，RTX 4090 pair-scoring `P95=188.22683 ms`；ES/Milvus 并行在线复跑 30/30 应用且安全/清理通过，但 base `P95=344.676365 ms`、combined `P95=472.190015 ms` | 默认保持原 RRF；当前只等待 Windows 基础召回分段归因，不继续调 Reranker 或放宽 300 ms；去重/多样性和扩展消融仍未完成 |
 | SR-08 | 证据上下文、真实 LLM、强制引用、校验与拒答 | `PARTIAL` | Evidence/Citation、`NO_EVIDENCE`；llama3.2 与 Qwen 均已通过远程 READY + ES/Milvus RRF 真实生成闭环，Qwen 报告 SHA-256 `0CB1B569D8A782FC526266E1A7193EF6299B66D5DBC72DCC989FDB951B8A1160`；固定公开 Evidence 模型选型 v4 以 Qwen `4/4` 对 llama3.2 `3/4` 晋级；3 文档 9 题 v2 已远程 `3/3` 文档、`9/9` 问题通过，最终第 3 篇报告 SHA-256 `3C106423AB3575B11B3B0142A66F19A2C949B8BAED3457F1BCA101A9931302FA` | Claim 语义支持校验和冲突处理仍未完成；答案字节一致只作观测，不替代引用集合与确定性门禁 |
 | SR-09 | 问答 API、SSE、内部 Evidence 合同和鉴权原文定位 | `PARTIAL` | 非流式 Answer API、SSE 文件合同、PDF 页码 | SSE 运行、独立 Evidence 消费和鉴权预览未实现；对外 Agent Evidence API 保持后置 |
 | SR-10 | Trace、反馈、指标、告警和运营闭环 | `PARTIAL` | Trace 合同与评测报告结构 | 持久化、反馈 API、看板、告警和难例回流未实现 |
@@ -71,5 +71,5 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 6. **已完成本地 Reranker 质量 Gate：** 冻结 `test=100` 上 `nDCG@10` 相对提升 `15.5331%`、`Precision@5 +0.02`，四个关键类型门禁通过；M4 P95 只作本地观测；
 7. **已完成目标硬件 Reranker Gate：** 用户在提交 `d31e992` 的 Windows RTX 4090 上复用相同 revision、snapshot、输入模板、Batch Size 和冻结输入，质量门保持通过，pair-scoring `P50=169.3867 ms / P95=188.22683 ms`，稳定错误码为 `NONE`，组件决定保留进入受控在线集成；
 8. **已完成受控在线本地 Gate：** 固定 Reranker 只接在 PostgreSQL READY/ACL、持久化身份重验与 ES/Milvus RRF 之后；最多重排 20 个已授权候选并输出前 3，标题/模型/分数故障回退同一批 RRF，身份漂移失败关闭；
-9. **首个受控在线远程结果：** Windows RTX 4090 同一 Run ID 恢复后进入至少 30 样本的组合判定，以 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败；旧失败报告未保留精确 P95，默认路由不变；
-10. **当前远程复跑 Gate：** 只将 ES/Milvus 只读召回由串行改为并行并补齐失败指标。用户用新 Run ID 运行，仍要求全部 `APPLIED`、无回退或候选扩张、组合 `P95 <= 300 ms`，并完成 INACTIVE、三路清理和删除后 403；MinIO/OCR/通用性能继续保持独立变量。
+9. **已完成并行在线远程 Gate：** Windows RTX 4090 取得 30/30 `APPLIED`、无回退/扩张/越界、三路清理和删除后 403；base `P95=344.676365 ms`、Reranker `P95=131.885375 ms`、combined `P95=472.190015 ms`，固定 Reranker 不默认启用；
+10. **当前远程归因 Gate：** 只增加 READY、快照、ES、Embedding、Milvus、RRF 和重验的脱敏分段计时，使用新 Run ID；该结果只决定下一项单变量优化是否存在，不改变检索、模型、SLO 或其他阶段边界。

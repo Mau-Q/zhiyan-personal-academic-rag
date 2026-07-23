@@ -3,14 +3,24 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
+import time
+from collections.abc import Callable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from backend.retrieval.elasticsearch import ElasticsearchBm25Index, ElasticsearchTransport
+from backend.retrieval.elasticsearch import (
+    ElasticsearchBm25Index,
+    ElasticsearchSearchLatencyBreakdown,
+    ElasticsearchTransport,
+)
 from backend.retrieval.embedding import EmbeddingProvider
-from backend.retrieval.milvus import DEFAULT_VECTOR_MIN_SCORE, MilvusTransport, MilvusVectorIndex
+from backend.retrieval.milvus import (
+    DEFAULT_VECTOR_MIN_SCORE,
+    MilvusSearchLatencyBreakdown,
+    MilvusTransport,
+    MilvusVectorIndex,
+)
 from backend.retrieval.results import RankedChunk, chunks_only, validate_ranking
 from backend.ingestion.models import ChunkRecordV1
 from backend.storage.models import DocumentVersionLifecycleV1, LifecycleStatus
@@ -65,6 +75,24 @@ class OnlineVersionRoute:
     document_version_id: str
     elasticsearch_index: str
     milvus_collection: str
+
+
+@dataclass(frozen=True)
+class OnlineRetrievalLatencyBreakdown:
+    route_count: int
+    ready_route_resolution_latency_ms: float
+    chunk_snapshot_latency_ms: float
+    elasticsearch_validation_work_latency_ms: float
+    elasticsearch_query_work_latency_ms: float
+    elasticsearch_total_work_latency_ms: float
+    milvus_validation_work_latency_ms: float
+    query_embedding_work_latency_ms: float
+    milvus_ann_search_work_latency_ms: float
+    milvus_total_work_latency_ms: float
+    backend_parallel_wall_latency_ms: float
+    ready_revalidation_latency_ms: float
+    rrf_fusion_latency_ms: float
+    total_latency_ms: float
 
 
 class PostgresReadyRouteResolver:
@@ -197,6 +225,9 @@ class OnlineVersionRrfRetriever:
         candidate_k: int = 20,
         rrf_k: int = 60,
         vector_min_score: float = DEFAULT_VECTOR_MIN_SCORE,
+        latency_observer: (
+            Callable[[OnlineRetrievalLatencyBreakdown], None] | None
+        ) = None,
     ) -> None:
         if candidate_k < 1 or rrf_k < 1:
             raise ValueError("online candidate_k and rrf_k must be positive")
@@ -210,6 +241,7 @@ class OnlineVersionRrfRetriever:
         self.candidate_k = candidate_k
         self.rrf_k = rrf_k
         self.vector_min_score = vector_min_score
+        self.latency_observer = latency_observer
 
     def search(
         self,
@@ -226,9 +258,17 @@ class OnlineVersionRrfRetriever:
             raise OnlineScopeForbiddenError(
                 "server authorization scope does not match authenticated owner"
             )
+        total_started = time.perf_counter()
+        ready_route_resolution_started = time.perf_counter()
         routes = self.resolver.resolve(owner_id=owner_id, document_ids=document_ids)
+        ready_route_resolution_latency_ms = (
+            time.perf_counter() - ready_route_resolution_started
+        ) * 1000
         rankings: list[list[RankedChunk]] = []
+        elasticsearch_timings: list[ElasticsearchSearchLatencyBreakdown] = []
+        milvus_timings: list[MilvusSearchLatencyBreakdown] = []
         try:
+            chunk_snapshot_started = time.perf_counter()
             chunks = [
                 chunk.model_dump(mode="json")
                 for chunk in self.chunk_snapshots.load_online_chunks(
@@ -238,6 +278,9 @@ class OnlineVersionRrfRetriever:
                     ],
                 )
             ]
+            chunk_snapshot_latency_ms = (
+                time.perf_counter() - chunk_snapshot_started
+            ) * 1000
             expected_versions = {
                 route.document_version_id for route in routes
             }
@@ -248,6 +291,7 @@ class OnlineVersionRrfRetriever:
                 raise OnlineVisibilityUnavailableError(
                     "persisted Chunk snapshot does not match READY routes"
                 )
+            backend_parallel_wall_started = time.perf_counter()
             with ThreadPoolExecutor(
                 max_workers=2,
                 thread_name_prefix="online-ready-retrieval",
@@ -261,47 +305,117 @@ class OnlineVersionRrfRetriever:
                     route_scope["document_ids"] = [route.document_id]
                     route_scope["library_ids"] = []
                     route_scope["folder_ids"] = []
+                    elasticsearch_index = ElasticsearchBm25Index(
+                        route.elasticsearch_index,
+                        self.elasticsearch_transport,
+                    )
+                    milvus_index = MilvusVectorIndex(
+                        route.milvus_collection,
+                        self.milvus_transport,
+                    )
+                    lexical_kwargs: dict[str, Any] = {
+                        "top_k": self.candidate_k,
+                        "expected_chunks": expected_chunks,
+                        "source_fingerprint_chunks": staged_source_chunks,
+                    }
+                    vector_kwargs: dict[str, Any] = {
+                        "top_k": self.candidate_k,
+                        "min_score": self.vector_min_score,
+                        "expected_chunks": expected_chunks,
+                        "source_fingerprint_chunks": staged_source_chunks,
+                    }
+                    if self.latency_observer is not None:
+                        lexical_kwargs["timing_sink"] = (
+                            elasticsearch_timings.append
+                        )
+                        vector_kwargs["timing_sink"] = milvus_timings.append
                     lexical_future = executor.submit(
-                        ElasticsearchBm25Index(
-                            route.elasticsearch_index,
-                            self.elasticsearch_transport,
-                        ).search,
+                        elasticsearch_index.search,
                         question,
                         dict(route_scope),
-                        top_k=self.candidate_k,
-                        expected_chunks=expected_chunks,
-                        source_fingerprint_chunks=staged_source_chunks,
+                        **lexical_kwargs,
                     )
                     vector_future = executor.submit(
-                        MilvusVectorIndex(
-                            route.milvus_collection,
-                            self.milvus_transport,
-                        ).search,
+                        milvus_index.search,
                         question,
                         dict(route_scope),
                         self.embedding_provider,
-                        top_k=self.candidate_k,
-                        min_score=self.vector_min_score,
-                        expected_chunks=expected_chunks,
-                        source_fingerprint_chunks=staged_source_chunks,
+                        **vector_kwargs,
                     )
                     lexical = lexical_future.result()
                     vector = vector_future.result()
                     self._validate_route_ranking(route, lexical)
                     self._validate_route_ranking(route, vector)
                     rankings.extend((lexical, vector))
+            backend_parallel_wall_latency_ms = (
+                time.perf_counter() - backend_parallel_wall_started
+            ) * 1000
+            ready_revalidation_started = time.perf_counter()
             self.resolver.revalidate(
                 routes,
                 owner_id=owner_id,
                 document_ids=document_ids,
             )
+            ready_revalidation_latency_ms = (
+                time.perf_counter() - ready_revalidation_started
+            ) * 1000
         except OnlineVisibilityError:
             raise
         except Exception as exc:
             raise OnlineVisibilityUnavailableError(
                 "online version retrieval route failed closed"
             ) from exc
-        return self._fuse(rankings, top_k=top_k)
+        rrf_fusion_started = time.perf_counter()
+        fused = self._fuse(rankings, top_k=top_k)
+        rrf_fusion_latency_ms = (time.perf_counter() - rrf_fusion_started) * 1000
+        if self.latency_observer is not None:
+            if len(elasticsearch_timings) != len(routes) or len(
+                milvus_timings
+            ) != len(routes):
+                raise OnlineVisibilityUnavailableError(
+                    "online retrieval latency breakdown is incomplete"
+                )
+            self.latency_observer(
+                OnlineRetrievalLatencyBreakdown(
+                    route_count=len(routes),
+                    ready_route_resolution_latency_ms=(
+                        ready_route_resolution_latency_ms
+                    ),
+                    chunk_snapshot_latency_ms=chunk_snapshot_latency_ms,
+                    elasticsearch_validation_work_latency_ms=sum(
+                        timing.validation_latency_ms
+                        for timing in elasticsearch_timings
+                    ),
+                    elasticsearch_query_work_latency_ms=sum(
+                        timing.query_latency_ms for timing in elasticsearch_timings
+                    ),
+                    elasticsearch_total_work_latency_ms=sum(
+                        timing.total_latency_ms for timing in elasticsearch_timings
+                    ),
+                    milvus_validation_work_latency_ms=sum(
+                        timing.validation_latency_ms for timing in milvus_timings
+                    ),
+                    query_embedding_work_latency_ms=sum(
+                        timing.query_embedding_latency_ms
+                        for timing in milvus_timings
+                    ),
+                    milvus_ann_search_work_latency_ms=sum(
+                        timing.ann_search_latency_ms for timing in milvus_timings
+                    ),
+                    milvus_total_work_latency_ms=sum(
+                        timing.total_latency_ms for timing in milvus_timings
+                    ),
+                    backend_parallel_wall_latency_ms=(
+                        backend_parallel_wall_latency_ms
+                    ),
+                    ready_revalidation_latency_ms=(
+                        ready_revalidation_latency_ms
+                    ),
+                    rrf_fusion_latency_ms=rrf_fusion_latency_ms,
+                    total_latency_ms=(time.perf_counter() - total_started) * 1000,
+                )
+            )
+        return fused
 
     def retrieve(
         self,

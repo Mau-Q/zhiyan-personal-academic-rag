@@ -178,11 +178,20 @@ PostgreSQL READY 路由开始、包含 ES/Milvus 召回、RRF 与重排的组合
 INACTIVE、三路清理和删除后 403 检查之后才返回，但旧报告同样没有把这些
 关闭证据写入失败摘要。
 
-当前本地优化只将每个 READY 路由的 ES 与 Milvus 两个只读召回并行执行；
+随后只将每个 READY 路由的 ES 与 Milvus 两个只读召回并行执行；
 PostgreSQL READY/ACL、检索后重验、`candidate_k=20`、RRF `k=60`、向量
-阈值、固定模型和 `top_k=3` 均不改变。失败报告现在同时保留 base retrieval、
-combined 与 Reranker 的 P50/P95，以及回退、候选边界、清理和删除后 403
-证据。当前结论是
-`REMOTE_COMBINED_P95_EXCEEDED_PARALLEL_RECALL_LOCAL_PENDING_REMOTE`：
-Mac 测试只证明并发编排与失败关闭，不冒充 Windows 性能结果；新的 Run ID
-远程复跑通过前，默认在线路由保持不变。
+阈值、固定模型和 `top_k=3` 均未改变。用户在提交 `fb54918` 以新 Run ID
+`online_reranker_parallel_20260723_01` 完成远程复跑：30/30 为 `APPLIED`，
+无回退、候选扩张或边界违规，三路清理与删除后 403 通过；但 base retrieval
+`P50=309.47805 ms / P95=344.676365 ms`，Reranker
+`P50=128.504 ms / P95=131.885375 ms`，combined
+`P50=436.2064 ms / P95=472.190015 ms`，仍以
+`ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败。报告 SHA-256 为
+`132DFFDECDAD02F9C5280FADFBD09B5AE100C1DB31FE07118BF97B6E0C1B2602`。
+
+base retrieval 的 P95 已单独超过整个 300 ms 预算，因此继续只优化 Reranker
+无法使组合门禁通过。当前本地 Gate 只增加脱敏分段观测：READY 路由解析、
+Chunk 快照、ES 校验/查询、Milvus 校验、Query Embedding、Milvus ANN、
+并行墙钟、READY 重验与 RRF；不改任何检索结果或参数。当前结论是
+`PARALLEL_REMOTE_COMBINED_P95_EXCEEDED_BASE_RETRIEVAL_PROFILE_LOCAL_PENDING_REMOTE`。
+默认在线路由继续保持原 RRF，固定 Reranker 仅保留为未默认启用的可选组件。
