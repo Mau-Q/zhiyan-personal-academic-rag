@@ -23,7 +23,12 @@ from scripts.prepare_risk_review_package import (
     _write_deterministic_zip,
 )
 
-POLICY_SCHEMA_VERSION = "phase2_academic_qa_acceptance_policy_v1"
+POLICY_SCHEMA_VERSIONS = frozenset(
+    {
+        "phase2_academic_qa_acceptance_policy_v1",
+        "phase2_academic_qa_acceptance_policy_v2",
+    }
+)
 SUITE_SCHEMA_VERSION = "phase2_academic_qa_suite_v1"
 MANIFEST_SCHEMA_VERSION = "phase2_academic_qa_package_manifest_v1"
 
@@ -43,7 +48,8 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 def _load_policy(path: Path) -> dict[str, Any]:
     policy = _load_json(path)
-    if policy.get("schema_version") != POLICY_SCHEMA_VERSION:
+    schema_version = policy.get("schema_version")
+    if schema_version not in POLICY_SCHEMA_VERSIONS:
         raise ValueError("unsupported academic-QA acceptance policy schema")
     selection = policy.get("selection")
     if not isinstance(selection, dict):
@@ -63,6 +69,12 @@ def _load_policy(path: Path) -> dict[str, Any]:
     retrieval = policy.get("retrieval")
     if not isinstance(retrieval, dict) or retrieval.get("parameters_changed") is not False:
         raise ValueError("acceptance retrieval parameters must remain unchanged")
+    corrections = policy.get("location_corrections", [])
+    if schema_version.endswith("_v1") and corrections:
+        raise ValueError("v1 acceptance policy cannot contain location corrections")
+    if schema_version.endswith("_v2") and not corrections:
+        raise ValueError("v2 acceptance policy requires a location correction")
+    _location_correction_map(corrections, selected_case_ids=set(case_ids))
     return policy
 
 
@@ -76,7 +88,87 @@ def _parse_pdf_arguments(values: Sequence[str]) -> dict[str, Path]:
     return result
 
 
-def _required_page_ranges(case: EvaluationCaseV1) -> list[dict[str, int]]:
+def _page_ranges(value: object, *, field: str) -> tuple[tuple[int, int], ...]:
+    if not isinstance(value, list) or not value:
+        raise ValueError(f"{field} must be a non-empty page-range array")
+    ranges: list[tuple[int, int]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            raise ValueError(f"{field} entry must be an object")
+        page_start = item.get("page_start")
+        page_end = item.get("page_end")
+        if (
+            not isinstance(page_start, int)
+            or isinstance(page_start, bool)
+            or not isinstance(page_end, int)
+            or isinstance(page_end, bool)
+            or page_start < 1
+            or page_end < page_start
+        ):
+            raise ValueError(f"{field} contains an invalid page range")
+        identity = (page_start, page_end)
+        if identity in ranges:
+            raise ValueError(f"{field} contains a duplicate page range")
+        ranges.append(identity)
+    return tuple(ranges)
+
+
+def _serialize_page_ranges(values: Sequence[tuple[int, int]]) -> list[dict[str, int]]:
+    return [
+        {"page_start": page_start, "page_end": page_end}
+        for page_start, page_end in values
+    ]
+
+
+def _location_correction_map(
+    value: object,
+    *,
+    selected_case_ids: set[str],
+) -> dict[str, dict[str, object]]:
+    if not isinstance(value, list):
+        raise ValueError("location_corrections must be an array")
+    result: dict[str, dict[str, object]] = {}
+    for correction in value:
+        if not isinstance(correction, dict):
+            raise ValueError("location correction must be an object")
+        case_id = correction.get("case_id")
+        if (
+            not isinstance(case_id, str)
+            or case_id not in selected_case_ids
+            or case_id in result
+        ):
+            raise ValueError("location correction Case ID is invalid or duplicated")
+        if correction.get("basis") != "PDF_VISUAL_VERIFIED_MULTIPLE_VALID_LOCATIONS":
+            raise ValueError("location correction basis is not allowlisted")
+        source = _page_ranges(
+            correction.get("source_page_ranges"),
+            field=f"{case_id}.source_page_ranges",
+        )
+        accepted = _page_ranges(
+            correction.get("accepted_page_ranges"),
+            field=f"{case_id}.accepted_page_ranges",
+        )
+        if any(
+            not any(
+                accepted_start <= source_start and accepted_end >= source_end
+                for accepted_start, accepted_end in accepted
+            )
+            for source_start, source_end in source
+        ):
+            raise ValueError("location correction cannot discard the frozen source range")
+        result[case_id] = {
+            "case_id": case_id,
+            "basis": correction["basis"],
+            "source_page_ranges": source,
+            "accepted_page_ranges": accepted,
+        }
+    return result
+
+
+def _required_page_ranges(
+    case: EvaluationCaseV1,
+    correction: Mapping[str, object] | None = None,
+) -> list[dict[str, int]]:
     if case.category != "ANSWERABLE" or len(case.document_ids) != 1:
         raise ValueError(f"{case.case_id}: acceptance case must be single-document ANSWERABLE")
     targets = case.expected.required_evidence
@@ -92,7 +184,12 @@ def _required_page_ranges(case: EvaluationCaseV1) -> list[dict[str, int]]:
         if identity not in seen:
             seen.add(identity)
             ranges.append({"page_start": identity[0], "page_end": identity[1]})
-    return ranges
+    if correction is None:
+        return ranges
+    source = _serialize_page_ranges(correction["source_page_ranges"])
+    if source != ranges:
+        raise ValueError(f"{case.case_id}: location correction source range drift")
+    return _serialize_page_ranges(correction["accepted_page_ranges"])
 
 
 def _paper_map(path: Path) -> dict[str, dict[str, str]]:
@@ -147,10 +244,14 @@ def prepare_package(
     if any(case_id not in all_cases for case_id in selected_ids):
         raise ValueError("selected academic-QA case is missing")
     selected_cases = [all_cases[case_id] for case_id in selected_ids]
+    corrections = _location_correction_map(
+        policy.get("location_corrections", []),
+        selected_case_ids=set(selected_ids),
+    )
     papers = _paper_map(papers_path)
     grouped: dict[str, list[EvaluationCaseV1]] = defaultdict(list)
     for case in selected_cases:
-        _required_page_ranges(case)
+        _required_page_ranges(case, corrections.get(case.case_id))
         grouped[case.document_ids[0]].append(case)
     expected_per_document = policy["selection"]["required_cases_per_document"]
     if not grouped or any(len(values) != expected_per_document for values in grouped.values()):
@@ -177,7 +278,10 @@ def prepare_package(
                 {
                     "case_id": case.case_id,
                     "question": case.question,
-                    "required_page_ranges": _required_page_ranges(case),
+                    "required_page_ranges": _required_page_ranges(
+                        case,
+                        corrections.get(case.case_id),
+                    ),
                 }
                 for case in grouped[document_id]
             ],
@@ -211,6 +315,19 @@ def prepare_package(
         "document_count": len(documents),
         "generation": policy["generation"],
         "retrieval": policy["retrieval"],
+        "location_corrections": [
+            {
+                "case_id": correction["case_id"],
+                "basis": correction["basis"],
+                "source_page_ranges": _serialize_page_ranges(
+                    correction["source_page_ranges"]
+                ),
+                "accepted_page_ranges": _serialize_page_ranges(
+                    correction["accepted_page_ranges"]
+                ),
+            }
+            for correction in corrections.values()
+        ],
         "documents": documents,
         "privacy": policy["privacy"],
     }

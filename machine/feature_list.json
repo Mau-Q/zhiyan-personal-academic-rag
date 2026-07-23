@@ -471,6 +471,7 @@
       "owner": "SHARED",
       "evidence": [
         "evaluation/generation/phase2-academic-qa-acceptance-v1.json",
+        "evaluation/generation/phase2-academic-qa-acceptance-v2.json",
         "scripts/prepare_phase2_academic_qa_package.py",
         "scripts/run_stage1_remote_canary.py",
         "tests/evaluation/test_prepare_phase2_academic_qa_package.py",

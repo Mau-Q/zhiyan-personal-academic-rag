@@ -8,7 +8,7 @@
 
 ## 2. 私有包与执行门禁
 
-选择策略位于 `evaluation/generation/phase2-academic-qa-acceptance-v1.json`。`scripts/prepare_phase2_academic_qa_package.py` 只接受摘要匹配的题集、论文清单和 PDF，输出确定性 ZIP、Manifest、逐文档 suite 与 `SHA256SUMS`。公开的 `package-report.json` 不保存问题、回答、Evidence 正文或本机绝对路径。
+原始选择策略保留在 `evaluation/generation/phase2-academic-qa-acceptance-v1.json`；PDF 核验后的校正策略位于 `evaluation/generation/phase2-academic-qa-acceptance-v2.json`。`scripts/prepare_phase2_academic_qa_package.py` 只接受摘要匹配的题集、论文清单和 PDF，输出确定性 ZIP、Manifest、逐文档 suite 与 `SHA256SUMS`。v2 校正必须绑定原始页范围、白名单依据和仍覆盖原始页的扩展范围，不能静默替换历史标签。公开的 `package-report.json` 不保存问题、回答、Evidence 正文或本机绝对路径。
 
 `scripts/run_stage1_remote_canary.py` 的可选 suite 模式要求同时提供 suite 文件与冻结 SHA-256，并且必须启用固定真实生成模型。每个问题执行两次 Answer API 调用并验证：
 
@@ -22,8 +22,8 @@
 
 ## 3. 当前证据与未完成项
 
-本地私有包为 3 篇文档、9 个问题，状态 `READY_FOR_USER_REMOTE_EXECUTION`；ZIP SHA-256 为 `333051B2D8A929829CC32F89374CBFAEA28956B560D02A33D3873FC101F820B8`，Manifest SHA-256 为 `A1E0C455154394E1EA08C77E924625CC004D1758EC91E56ABA7342D4FA5DA3B2`。运行实例位于被忽略的 `runtime/phases/source-phase2-academic-qa-acceptance-local/input/`。
+原始 v1 私有包为 3 篇文档、9 个问题，ZIP SHA-256 为 `333051B2D8A929829CC32F89374CBFAEA28956B560D02A33D3873FC101F820B8`，Manifest SHA-256 为 `A1E0C455154394E1EA08C77E924625CC004D1758EC91E56ABA7342D4FA5DA3B2`。其首次远程逐文档执行中，第 1 篇的 3/3 问已通过真实生成、引用稳定回放、定位、三路清理和删除后 403；第 2 篇以 `ACADEMIC_QA_LOCATION_GATE_FAILED` 失败，第 3 篇因失败即停尚未执行。
 
-首次远程逐文档执行中，第 1 篇的 3/3 问已通过真实生成、引用稳定回放、定位、三路清理和删除后 403；第 2 篇以 `ACADEMIC_QA_LOCATION_GATE_FAILED` 真实失败，第 3 篇因失败即停尚未执行。因此当前结论是 `1/3 DOCUMENTS PASS / DOCUMENT 2 LOCATION DIAGNOSTIC PENDING / DOCUMENT 3 NOT RUN`，不得写成 9 题通过。
+同 Run ID 脱敏诊断定位到 `local3.answerable.tracer.ingredients`：原始目标只接受 PDF 第 3 页，实际 Top-3 Evidence 为第 1、2 页；诊断报告 SHA-256 为 `37B4345C0B16A34237EF90CE5037DCF798FE855ACAAA98798E4611D5D8CAB5D4`。PDF 文字与第 1～3 页渲染复核确认三项组成在第 1 页摘要/引言、第 2 页图和贡献说明、第 3 页方法概述均有有效表述。因此该结果是位置标签覆盖不完整导致的假阴性，不是已证实的召回缺口。
 
-下一次同 Run ID 恢复只采集第 2 篇失败 Case 的脱敏页码诊断。先判断人工目标页冻结是否正确；若正确，则把结果保留为固定 Top-3 召回缺口，再进入独立 Reranker 决策，不为通过而修改问题、页码或检索参数。
+v2 只对该 Case 建立可追溯校正：保留来源范围第 3 页，将可接受范围扩为第 1～3 页；其余 8 个 Case、问题、PDF、模型、Prompt 和检索参数完全不变。新私有包状态为 `READY_FOR_USER_REMOTE_EXECUTION`，ZIP SHA-256 为 `CDCFA981ECA1BE2B7C06D97D42775A3EF9FA00F1E078C0BD5424A35336E95EED`，Manifest SHA-256 为 `A8DEE26281EE1C953D1024C2686FCA28E0D0195855CDDE81ED142E791618FD39`，位于被忽略的 `runtime/phases/source-phase2-academic-qa-acceptance-v2-local/input/`。远程 v2 的 3 文档 9 题仍未执行，不得写成已通过。

@@ -51,6 +51,27 @@ class PreparePhase2AcademicQaPackageTests(unittest.TestCase):
         self.assertFalse(policy["generation"]["think"])
         self.assertFalse(policy["retrieval"]["parameters_changed"])
 
+        corrected = json.loads(
+            (ROOT / "evaluation/generation/phase2-academic-qa-acceptance-v2.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(corrected["package_id"], "phase2-academic-qa-acceptance-v2")
+        self.assertEqual(corrected["selection"], policy["selection"])
+        self.assertEqual(corrected["generation"], policy["generation"])
+        self.assertEqual(corrected["retrieval"], policy["retrieval"])
+        self.assertEqual(
+            corrected["location_corrections"],
+            [
+                {
+                    "case_id": "local3.answerable.tracer.ingredients",
+                    "basis": "PDF_VISUAL_VERIFIED_MULTIPLE_VALID_LOCATIONS",
+                    "source_page_ranges": [{"page_start": 3, "page_end": 3}],
+                    "accepted_page_ranges": [{"page_start": 1, "page_end": 3}],
+                }
+            ],
+        )
+
     def _inputs(self, root: Path) -> tuple[Path, Path, Path, dict[str, Path]]:
         pdfs = {"doc_a": root / "a.pdf", "doc_b": root / "b.pdf"}
         pdfs["doc_a"].write_bytes(b"pdf-a")
@@ -157,6 +178,68 @@ class PreparePhase2AcademicQaPackageTests(unittest.TestCase):
                     pdf_paths=pdfs,
                     output_dir=root / "out",
                     created_at=datetime(2026, 7, 22, tzinfo=timezone.utc),
+                )
+
+    def test_v2_applies_only_pdf_verified_location_correction(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            policy, cases, papers, pdfs = self._inputs(root)
+            corrected_policy = json.loads(policy.read_text(encoding="utf-8"))
+            corrected_policy.update(
+                {
+                    "schema_version": "phase2_academic_qa_acceptance_policy_v2",
+                    "package_id": "fixture-phase2-qa-v2",
+                    "location_corrections": [
+                        {
+                            "case_id": "case.a",
+                            "basis": "PDF_VISUAL_VERIFIED_MULTIPLE_VALID_LOCATIONS",
+                            "source_page_ranges": [
+                                {"page_start": 3, "page_end": 3}
+                            ],
+                            "accepted_page_ranges": [
+                                {"page_start": 1, "page_end": 3}
+                            ],
+                        }
+                    ],
+                }
+            )
+            _write_json(policy, corrected_policy)
+
+            report = prepare_package(
+                policy_path=policy,
+                cases_path=cases,
+                papers_path=papers,
+                pdf_paths=pdfs,
+                output_dir=root / "out",
+                created_at=datetime(2026, 7, 23, tzinfo=timezone.utc),
+            )
+
+            suite = json.loads(
+                (root / "out" / "suites" / "doc_a.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(
+                suite["cases"][0]["required_page_ranges"],
+                [{"page_start": 1, "page_end": 3}],
+            )
+            self.assertEqual(
+                report["location_corrections"][0]["case_id"],
+                "case.a",
+            )
+
+            corrected_policy["location_corrections"][0]["source_page_ranges"] = [
+                {"page_start": 2, "page_end": 2}
+            ]
+            _write_json(policy, corrected_policy)
+            with self.assertRaisesRegex(ValueError, "source range drift"):
+                prepare_package(
+                    policy_path=policy,
+                    cases_path=cases,
+                    papers_path=papers,
+                    pdf_paths=pdfs,
+                    output_dir=root / "rejected",
+                    created_at=datetime(2026, 7, 23, tzinfo=timezone.utc),
                 )
 
 
