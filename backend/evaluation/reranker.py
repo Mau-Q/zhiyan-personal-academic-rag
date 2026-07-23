@@ -286,12 +286,19 @@ def rerank_result(
 
 
 def directory_sha256(path: Path) -> str:
-    files = sorted(item for item in path.rglob("*") if item.is_file())
+    files = sorted(
+        (
+            (item.relative_to(path).as_posix(), item)
+            for item in path.rglob("*")
+            if item.is_file()
+        ),
+        key=lambda value: value[0],
+    )
     if not files:
         raise ValueError("model snapshot is empty")
     digest = sha256()
-    for file_path in files:
-        relative = file_path.relative_to(path).as_posix().encode("utf-8")
+    for relative_path, file_path in files:
+        relative = relative_path.encode("utf-8")
         digest.update(len(relative).to_bytes(8, "big"))
         digest.update(relative)
         file_hasher = sha256()

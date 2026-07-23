@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from hashlib import sha256
 from pathlib import Path
 
 from backend.evaluation.reranker import (
@@ -178,6 +179,25 @@ class FixedRerankerTests(unittest.TestCase):
             (root / "a/model.bin").write_bytes(b"two")
             second = directory_sha256(root)
             self.assertNotEqual(first, second)
+
+    def test_directory_digest_uses_portable_case_sensitive_relative_order(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "README.md").write_bytes(b"readme")
+            (root / "assets").mkdir()
+            (root / "assets/model.bin").write_bytes(b"model")
+
+            digest = sha256()
+            for relative_path, value in (
+                ("README.md", b"readme"),
+                ("assets/model.bin", b"model"),
+            ):
+                encoded_path = relative_path.encode("utf-8")
+                digest.update(len(encoded_path).to_bytes(8, "big"))
+                digest.update(encoded_path)
+                digest.update(sha256(value).digest())
+
+            self.assertEqual(directory_sha256(root), digest.hexdigest())
 
     def test_decision_falls_back_when_relative_gain_is_too_small(self) -> None:
         config = load_config(CONFIG)
