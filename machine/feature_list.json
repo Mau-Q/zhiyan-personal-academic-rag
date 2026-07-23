@@ -487,8 +487,11 @@
         "backend/evaluation/reranker.py",
         "evaluation/reranker/fixed-cross-encoder-v1.json",
         "evaluation/reranker/fixed-cross-encoder-windows-rtx4090-v1.json",
+        "scripts/build_fixed_reranker_input_package.py",
         "scripts/run_fixed_reranker_gate.py",
+        "tests/evaluation/test_fixed_reranker_input_package.py",
         "tests/evaluation/test_fixed_reranker.py",
+        "tests/validation/test_fixed_reranker_remote_script.py",
         "deploy/remote/reranker-validation/run_fixed_reranker_gate.ps1",
         "docs/FIXED_RERANKER_EVALUATION.md"
       ]

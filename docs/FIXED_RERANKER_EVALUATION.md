@@ -99,6 +99,13 @@ Windows 配置位于
 `evaluation/reranker/fixed-cross-encoder-windows-rtx4090-v1.json`，
 用户运行入口为
 `deploy/remote/reranker-validation/run_fixed_reranker_gate.ps1`。
+由于正式题目、标注、Chunk 和排名按合同不进入 Git，Mac 先运行
+`make fixed-reranker-input-package`，生成被忽略的
+`runtime/handoffs/fixed-reranker-input-v1.zip`。固定包 SHA-256 为
+`4884a5a9f2101ef203a55b58e25c82f74ac7f035a074760af5fd103eb198e9fe`；
+用户自行传到 Windows 后通过 `-InputPackagePath` 交给脚本。脚本先验证
+整包摘要，再只向被忽略的 `runtime/` 解压，并逐文件复核五份输入摘要。
+
 该脚本面向 Windows PowerShell 5.1；只在 Mac 推送成功且 Windows
 检出同一 `origin/main` 后运行。脚本拒绝已跟踪或已暂存修改；未跟踪的
 评审材料不会阻断本 Gate，因为模型与五份冻结输入仍须逐项通过 SHA-256

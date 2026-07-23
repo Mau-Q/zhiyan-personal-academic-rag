@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [string]$RepositoryRoot
+    [string]$RepositoryRoot,
+    [string]$InputPackagePath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -12,6 +13,14 @@ $PythonPath = Join-Path $RepositoryRoot '.venv\Scripts\python.exe'
 $OutputDirectory = Join-Path $RepositoryRoot 'runtime\evaluation\formal-retrieval-v1\ai-audited-engineering-v1\reranker-bge-v2-m3-windows-rtx4090-v1'
 $TorchPackage = 'torch==2.13.0+cu126'
 $TorchIndexUrl = 'https://download.pytorch.org/whl/cu126'
+$InputPackageSha256 = '4884a5a9f2101ef203a55b58e25c82f74ac7f035a074760af5fd103eb198e9fe'
+$ExpectedPrivateInputs = [ordered]@{
+    'runtime\evaluation\formal-retrieval-v1\ai-audited-engineering-v1\annotations-v1.jsonl' = '9a6f66e2709fc2d7a91cb332de62ec01c30563e44df2efad3458c9ecede8cb68'
+    'runtime\evaluation\formal-retrieval-v1\ai-audited-engineering-v1\items-v1.jsonl' = '940e5b8c8d00d9f70626e65e34fdfce6bac6ec7ab681b8d2b08794976b94d5d4'
+    'runtime\evaluation\formal-retrieval-v1\ai-audited-engineering-v1\manifest.json' = 'b1a3d2aa7a40e38c28818b1b712ccdf14a05eeeaa87826545e0d102d2f400207'
+    'runtime\evaluation\formal-retrieval-v1\ai-audited-engineering-v1\rankings-v1\local_rrf.jsonl' = '777b41c3e2544badcb9ed6fb7208f4556f4a989286a2373ebad5a59028bbc7f5'
+    'runtime\evaluation\mvp-175-remote-baseline-input-v1\chunks-v1.json' = 'f7eb7e4a6c7820abde5523dca906df1d1a052e2e3b2174887781531295c7a282'
+}
 
 if (-not (Test-Path -LiteralPath $PythonPath -PathType Leaf)) {
     throw "Project Python is missing at $PythonPath"
@@ -35,6 +44,45 @@ try {
     $originCommit = (& git rev-parse origin/main).Trim()
     if ($LASTEXITCODE -ne 0 -or $headCommit -ne $originCommit) {
         throw 'Remote HEAD must equal origin/main before the Reranker Gate.'
+    }
+
+    $privateInputsReady = $true
+    foreach ($relativePath in $ExpectedPrivateInputs.Keys) {
+        $privateInputPath = Join-Path -Path $RepositoryRoot -ChildPath $relativePath
+        if (-not (Test-Path -LiteralPath $privateInputPath -PathType Leaf)) {
+            $privateInputsReady = $false
+            break
+        }
+        $privateInputSha256 = (Get-FileHash -LiteralPath $privateInputPath -Algorithm SHA256).Hash
+        if ($privateInputSha256 -ne $ExpectedPrivateInputs[$relativePath]) {
+            $privateInputsReady = $false
+            break
+        }
+    }
+
+    $inputSource = 'PREEXISTING_VERIFIED_RUNTIME'
+    if (-not $privateInputsReady) {
+        if ([string]::IsNullOrWhiteSpace($InputPackagePath)) {
+            throw 'Frozen Reranker inputs are missing or drifted. Transfer the private input package and pass -InputPackagePath.'
+        }
+        $resolvedInputPackage = (Resolve-Path -LiteralPath $InputPackagePath).Path
+        $actualPackageSha256 = (Get-FileHash -LiteralPath $resolvedInputPackage -Algorithm SHA256).Hash
+        if ($actualPackageSha256 -ne $InputPackageSha256) {
+            throw 'Frozen Reranker input package digest drifted.'
+        }
+        Expand-Archive -LiteralPath $resolvedInputPackage -DestinationPath $RepositoryRoot -Force
+        $inputSource = 'VERIFIED_PRIVATE_PACKAGE'
+    }
+
+    foreach ($relativePath in $ExpectedPrivateInputs.Keys) {
+        $privateInputPath = Join-Path -Path $RepositoryRoot -ChildPath $relativePath
+        if (-not (Test-Path -LiteralPath $privateInputPath -PathType Leaf)) {
+            throw "Frozen Reranker input is missing after package import: $relativePath"
+        }
+        $privateInputSha256 = (Get-FileHash -LiteralPath $privateInputPath -Algorithm SHA256).Hash
+        if ($privateInputSha256 -ne $ExpectedPrivateInputs[$relativePath]) {
+            throw "Frozen Reranker input digest drifted after package import: $relativePath"
+        }
     }
 
     $nvidiaSmi = Get-Command -Name 'nvidia-smi.exe' -ErrorAction SilentlyContinue
@@ -122,6 +170,8 @@ try {
     $summary = [ordered]@{
         schema_version = 'fixed_cross_encoder_remote_summary_v1'
         head_commit = $headCommit
+        input_source = $inputSource
+        input_package_sha256 = $InputPackageSha256
         torch_version = $cudaInfo.torch_version
         cuda_runtime = $cudaInfo.cuda_runtime
         gpu_name = $cudaInfo.gpu_name

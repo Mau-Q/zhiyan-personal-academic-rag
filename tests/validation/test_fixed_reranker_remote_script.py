@@ -57,8 +57,43 @@ class FixedRerankerRemoteScriptTests(unittest.TestCase):
             self.script.index("pip install -e '.[reranker]'"),
         )
 
+    def test_private_input_package_is_verified_before_extraction(self) -> None:
+        self.assertIn("[string]$InputPackagePath", self.script)
+        self.assertIn(
+            "$InputPackageSha256 = "
+            "'4884a5a9f2101ef203a55b58e25c82f74ac7f035a074760af5fd103eb198e9fe'",
+            self.script,
+        )
+        for filename in (
+            "annotations-v1.jsonl",
+            "items-v1.jsonl",
+            "manifest.json",
+            "local_rrf.jsonl",
+            "chunks-v1.json",
+        ):
+            self.assertIn(filename, self.script)
+        self.assertIn(
+            "Get-FileHash -LiteralPath $resolvedInputPackage -Algorithm SHA256",
+            self.script,
+        )
+        self.assertIn(
+            "Expand-Archive -LiteralPath $resolvedInputPackage "
+            "-DestinationPath $RepositoryRoot -Force",
+            self.script,
+        )
+        self.assertLess(
+            self.script.index("actualPackageSha256"),
+            self.script.index("Expand-Archive"),
+        )
+        self.assertLess(
+            self.script.index("Expand-Archive"),
+            self.script.index("Get-Command -Name 'nvidia-smi.exe'"),
+        )
+
     def test_sanitized_summary_records_cuda_runtime_identity(self) -> None:
         for field in (
+            "input_source",
+            "input_package_sha256",
             "torch_version",
             "cuda_runtime",
             "gpu_name",
