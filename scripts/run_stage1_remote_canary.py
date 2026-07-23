@@ -318,35 +318,107 @@ def _percentile(values: Sequence[float], percentile: float) -> float:
 def _summarize_online_reranker_observations(
     observations: Sequence[OnlineRetrievalObservation],
 ) -> dict[str, object]:
-    if len(observations) < ONLINE_RERANKER_MINIMUM_LATENCY_SAMPLES:
-        raise RuntimeError("ONLINE_RERANKER_LATENCY_SAMPLE_INVALID")
-    if any(
+    invalid_application = any(
         observation.reranker_status != "APPLIED"
         or observation.reranker_failure_code is not None
         or observation.candidate_count < observation.output_count
         or observation.candidate_count > 20
         or observation.output_count > 3
         for observation in observations
-    ):
-        raise RuntimeError("ONLINE_RERANKER_FALLBACK_OBSERVED")
+    )
+    fallback_count = sum(
+        observation.reranker_status == "FALLBACK"
+        or observation.reranker_failure_code is not None
+        for observation in observations
+    )
+    candidate_set_expanded = any(
+        observation.candidate_count < observation.output_count
+        for observation in observations
+    )
+    candidate_bound_violated = any(
+        observation.candidate_count > 20 or observation.output_count > 3
+        for observation in observations
+    )
+    base = [observation.base_retrieval_latency_ms for observation in observations]
     combined = [
         observation.combined_retrieval_latency_ms for observation in observations
     ]
     reranker = [observation.reranker_latency_ms for observation in observations]
-    combined_p95 = _percentile(combined, 0.95)
-    if combined_p95 > ONLINE_RERANKER_COMBINED_P95_LIMIT_MS:
-        raise RuntimeError("ONLINE_RERANKER_COMBINED_P95_EXCEEDED")
-    return {
-        "status": "PASS",
+    report: dict[str, object] = {
+        "status": "FAIL",
         "backend": ONLINE_RERANKER_BACKEND,
         "sample_count": len(observations),
-        "combined_retrieval_latency_ms_p50": round(_percentile(combined, 0.50), 6),
-        "combined_retrieval_latency_ms_p95": round(combined_p95, 6),
-        "reranker_latency_ms_p50": round(_percentile(reranker, 0.50), 6),
-        "reranker_latency_ms_p95": round(_percentile(reranker, 0.95), 6),
+        "applied_count": sum(
+            observation.reranker_status == "APPLIED"
+            and observation.reranker_failure_code is None
+            for observation in observations
+        ),
         "combined_p95_limit_ms": ONLINE_RERANKER_COMBINED_P95_LIMIT_MS,
-        "fallback_count": 0,
-        "candidate_set_expanded": False,
+        "fallback_count": fallback_count,
+        "candidate_set_expanded": candidate_set_expanded,
+        "candidate_bound_violated": candidate_bound_violated,
+    }
+    if observations:
+        report.update(
+            {
+                "base_retrieval_latency_ms_p50": round(
+                    _percentile(base, 0.50), 6
+                ),
+                "base_retrieval_latency_ms_p95": round(
+                    _percentile(base, 0.95), 6
+                ),
+                "combined_retrieval_latency_ms_p50": round(
+                    _percentile(combined, 0.50), 6
+                ),
+                "combined_retrieval_latency_ms_p95": round(
+                    _percentile(combined, 0.95), 6
+                ),
+                "reranker_latency_ms_p50": round(
+                    _percentile(reranker, 0.50), 6
+                ),
+                "reranker_latency_ms_p95": round(
+                    _percentile(reranker, 0.95), 6
+                ),
+            }
+        )
+    if len(observations) < ONLINE_RERANKER_MINIMUM_LATENCY_SAMPLES:
+        report["error_code"] = "ONLINE_RERANKER_LATENCY_SAMPLE_INVALID"
+    elif invalid_application:
+        report["error_code"] = "ONLINE_RERANKER_FALLBACK_OBSERVED"
+    elif (
+        report["combined_retrieval_latency_ms_p95"]
+        > ONLINE_RERANKER_COMBINED_P95_LIMIT_MS
+    ):
+        report["error_code"] = "ONLINE_RERANKER_COMBINED_P95_EXCEEDED"
+    else:
+        report["status"] = "PASS"
+        report["error_code"] = None
+    return report
+
+
+def _build_closed_online_reranker_failure_report(
+    *,
+    run_id: str,
+    error_code: str,
+    online_reranker_report: Mapping[str, object],
+    resumed_from_ready: bool,
+    cleanup_jobs_succeeded: int,
+    inactive_visibility_proven: bool,
+    inactive_answer_api_status: int,
+) -> dict[str, object]:
+    if error_code not in _SANITIZED_RUNTIME_CODES:
+        raise ValueError("online Reranker failure code is not allowlisted")
+    return {
+        "schema_version": REPORT_SCHEMA_VERSION,
+        "status": "FAIL",
+        "run_id": run_id,
+        "error_code": error_code,
+        "resumed_from_ready": resumed_from_ready,
+        "online_reranker": dict(online_reranker_report),
+        "cleanup_jobs_succeeded": cleanup_jobs_succeeded,
+        "runtime_snapshot_cleanup_proven": True,
+        "inactive_visibility_proven": inactive_visibility_proven,
+        "inactive_answer_api_status": inactive_answer_api_status,
     }
 
 
@@ -984,42 +1056,41 @@ def main() -> int:
                         break
                 if online_reranker_deferred_error is not None:
                     break
-            if online_reranker_deferred_error is None:
-                try:
-                    online_reranker_report = _summarize_online_reranker_observations(
-                        online_retrieval_observations
-                    )
-                except RuntimeError as exc:
-                    if str(exc) not in _SANITIZED_RUNTIME_CODES:
-                        raise
-                    online_reranker_deferred_error = str(exc)
-            if online_reranker_report is None:
-                online_reranker_report = {
-                    "status": "FAIL",
-                    "error_code": online_reranker_deferred_error,
-                    "sample_count": len(online_retrieval_observations),
-                }
+            online_reranker_report = _summarize_online_reranker_observations(
+                online_retrieval_observations
+            )
+            if online_reranker_deferred_error is not None:
+                online_reranker_report["status"] = "FAIL"
+                online_reranker_report["error_code"] = (
+                    online_reranker_deferred_error
+                )
             else:
-                online_reranker_report["model"] = {
-                    key: online_reranker_config.model[key]
-                    for key in (
-                        "provider",
-                        "model_id",
-                        "revision",
-                        "snapshot_sha256",
-                        "max_length",
-                        "batch_size",
-                        "device",
-                        "trust_remote_code",
-                        "input_template",
-                    )
-                }
-                online_reranker_report["candidate_top_k"] = (
-                    online_reranker_config.candidate_top_k
+                report_error_code = online_reranker_report.get("error_code")
+                online_reranker_deferred_error = (
+                    report_error_code
+                    if isinstance(report_error_code, str)
+                    else None
                 )
-                online_reranker_report["failure_policy"] = (
-                    online_reranker_config.failure_policy
+            online_reranker_report["model"] = {
+                key: online_reranker_config.model[key]
+                for key in (
+                    "provider",
+                    "model_id",
+                    "revision",
+                    "snapshot_sha256",
+                    "max_length",
+                    "batch_size",
+                    "device",
+                    "trust_remote_code",
+                    "input_template",
                 )
+            }
+            online_reranker_report["candidate_top_k"] = (
+                online_reranker_config.candidate_top_k
+            )
+            online_reranker_report["failure_policy"] = (
+                online_reranker_config.failure_policy
+            )
 
         scheduler = PersistentIndexCleanupScheduler(repository)
         inactivation = inactivate_and_schedule_cleanup(
@@ -1078,7 +1149,18 @@ def main() -> int:
         ):
             raise RuntimeError("INACTIVE_ANSWER_API_REMAINED_VISIBLE")
         if online_reranker_deferred_error is not None:
-            raise RuntimeError(online_reranker_deferred_error)
+            failure = _build_closed_online_reranker_failure_report(
+                run_id=args.run_id,
+                error_code=online_reranker_deferred_error,
+                online_reranker_report=online_reranker_report,
+                resumed_from_ready=resumed_from_ready,
+                cleanup_jobs_succeeded=len(cleanup_results),
+                inactive_visibility_proven=inactive_proven,
+                inactive_answer_api_status=inactive_answer.status_code,
+            )
+            _write_report(args.output, failure)
+            print(json.dumps(failure, ensure_ascii=False), file=sys.stderr)
+            return 1
 
         payload: dict[str, object] = {
             "schema_version": REPORT_SCHEMA_VERSION,

@@ -170,7 +170,19 @@ PostgreSQL READY 路由开始、包含 ES/Milvus 召回、RRF 与重排的组合
 `P95 <= 300 ms`。即使性能或回退门禁失败，脚本也先完成 INACTIVE、
 三路清理和删除后 403，再返回稳定错误码。
 
-当前结论是
-`CONTROLLED_ONLINE_RERANKER_LOCAL_IMPLEMENTATION_READY_REMOTE_COMBINED_P95_PENDING`：
-Mac 已完成解析、静态分析与测试，不冒充 Windows RTX 4090 运行结果；
-在用户完成远程综合门禁前，默认在线路由保持不变。
+用户在 Windows RTX 4090 上执行首个受控在线运行
+`online_reranker_20260723_01`。同一 Run ID 从初始 Answer 403 恢复后，
+运行达到至少 30 个 `APPLIED`、无回退和无候选扩张的组合延迟判定，但以
+`ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败。旧失败报告只保留稳定错误码，
+没有保留具体 P50/P95，因此不能从该次运行反推或引用精确延迟。错误在
+INACTIVE、三路清理和删除后 403 检查之后才返回，但旧报告同样没有把这些
+关闭证据写入失败摘要。
+
+当前本地优化只将每个 READY 路由的 ES 与 Milvus 两个只读召回并行执行；
+PostgreSQL READY/ACL、检索后重验、`candidate_k=20`、RRF `k=60`、向量
+阈值、固定模型和 `top_k=3` 均不改变。失败报告现在同时保留 base retrieval、
+combined 与 Reranker 的 P50/P95，以及回退、候选边界、清理和删除后 403
+证据。当前结论是
+`REMOTE_COMBINED_P95_EXCEEDED_PARALLEL_RECALL_LOCAL_PENDING_REMOTE`：
+Mac 测试只证明并发编排与失败关闭，不冒充 Windows 性能结果；新的 Run ID
+远程复跑通过前，默认在线路由保持不变。

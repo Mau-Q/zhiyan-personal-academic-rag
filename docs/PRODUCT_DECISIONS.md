@@ -37,5 +37,6 @@
 | PD-033 | ACCEPTED | 通用组件通过窄适配器逐项复用，不引入第二套业务事实或全栈 RAG 主链 | PyMilvus 已采用；Elasticsearch helper、Docling、OpenTelemetry、Ragas 和 Alembic 按 `docs/COMPONENT_REUSE_ROADMAP.md` 的独立触发条件后置，Temporal 和全栈框架当前不接管核心链路 |
 | PD-034 | ACCEPTED | 固定 Reranker 在 Windows RTX 4090 上以相同 revision、snapshot、冻结输入、`max_length=512` 和 `batch_size=16` 完成目标硬件 Gate；质量门保持通过，组件 `P95=188.22683 ms`，决定保留进入受控在线集成 | 本次只测预计算候选后的 pair scoring，不冒充组合检索 P95 或已在线启用；默认 RRF 路由保持不变，下一独立 Gate 必须在 ACL/READY 与 RRF 之后集成并验证候选不扩张、失败回退和组合 P95 |
 | PD-035 | ACCEPTED | 固定 Reranker 作为显式可选后处理器接在 PostgreSQL READY/owner、持久化 Chunk 身份校验和 ES/Milvus RRF 之后，只重排至多 20 个已授权候选并输出前 3 | 标题/模型/分数故障回退同一批已授权 RRF；owner、版本、文档、活动状态或 Chunk 身份漂移继续失败关闭。默认路由只在 Windows 综合 `P95 <= 300 ms`、至少 30 样本、无回退和无候选扩张的独立 Gate 通过后再决定是否改变 |
+| PD-036 | ACCEPTED | 首个受控在线 Reranker Gate 以 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败，默认路由继续不变；允许在同一冻结合同下把 ES 与 Milvus 只读召回并行化后用新 Run ID 复跑 | 不改变模型、Embedding、候选数、向量阈值、RRF `k`、输出数、生成或 300 ms 门槛；失败报告必须保留 base/combined/Reranker 延迟、回退、候选边界、三路清理和删除后 403，Mac 并发测试不替代 Windows 性能结论 |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。

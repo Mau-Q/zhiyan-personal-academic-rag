@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 import unittest
 from datetime import datetime, timezone
 from unittest.mock import patch
@@ -321,6 +322,97 @@ class OnlineVersionRrfRetrieverTests(unittest.TestCase):
                 for item in milvus.source_fingerprints["milvus_version_001"]
             )
         )
+
+    def test_elasticsearch_and_milvus_searches_overlap_per_ready_route(self):
+        route = OnlineVersionRoute(
+            owner_id=OWNER_ID,
+            document_id="document_001",
+            document_version_id="version_001",
+            elasticsearch_index="es_version_001",
+            milvus_collection="milvus_version_001",
+        )
+        expected = chunk("document_001", "version_001", 1)
+        elasticsearch = RankingTransport(
+            {"es_version_001": [RankedChunk("es", 1, 1.0, expected)]}
+        )
+        milvus = RankingTransport(
+            {"milvus_version_001": [RankedChunk("milvus", 1, 0.9, expected)]}
+        )
+        rendezvous = threading.Barrier(2, timeout=2.0)
+
+        class ConcurrentElasticsearchIndex(FakeElasticsearchIndex):
+            def search(self, question, scope, **kwargs):
+                rendezvous.wait()
+                return super().search(question, scope, **kwargs)
+
+        class ConcurrentMilvusIndex(FakeMilvusIndex):
+            def search(self, question, scope, provider, **kwargs):
+                rendezvous.wait()
+                return super().search(question, scope, provider, **kwargs)
+
+        retriever = OnlineVersionRrfRetriever(
+            resolver=StaticResolver([route]),
+            elasticsearch_transport=elasticsearch,
+            milvus_transport=milvus,
+            embedding_provider=FakeEmbeddingProvider(),
+            chunk_snapshots=FakeChunkSnapshots([expected]),
+        )
+
+        with patch(
+            "backend.retrieval.online.ElasticsearchBm25Index",
+            ConcurrentElasticsearchIndex,
+        ), patch(
+            "backend.retrieval.online.MilvusVectorIndex",
+            ConcurrentMilvusIndex,
+        ):
+            results = retriever.retrieve(
+                "question",
+                {"user_id": OWNER_ID, "tenant_id": OWNER_ID},
+                owner_id=OWNER_ID,
+                document_ids=["document_001"],
+            )
+
+        self.assertEqual([item["chunk_id"] for item in results], [expected["chunk_id"]])
+
+    def test_parallel_backend_failure_still_fails_closed(self):
+        route = OnlineVersionRoute(
+            owner_id=OWNER_ID,
+            document_id="document_001",
+            document_version_id="version_001",
+            elasticsearch_index="es_version_001",
+            milvus_collection="milvus_version_001",
+        )
+        expected = chunk("document_001", "version_001", 1)
+        elasticsearch = RankingTransport({"es_version_001": []})
+        milvus = RankingTransport({"milvus_version_001": []})
+
+        class FailingElasticsearchIndex(FakeElasticsearchIndex):
+            def search(self, question, scope, **kwargs):
+                del question, scope, kwargs
+                raise RuntimeError("simulated Elasticsearch failure")
+
+        retriever = OnlineVersionRrfRetriever(
+            resolver=StaticResolver([route]),
+            elasticsearch_transport=elasticsearch,
+            milvus_transport=milvus,
+            embedding_provider=FakeEmbeddingProvider(),
+            chunk_snapshots=FakeChunkSnapshots([expected]),
+        )
+
+        with patch(
+            "backend.retrieval.online.ElasticsearchBm25Index",
+            FailingElasticsearchIndex,
+        ), patch("backend.retrieval.online.MilvusVectorIndex", FakeMilvusIndex):
+            with self.assertRaisesRegex(
+                OnlineVisibilityUnavailableError,
+                "failed closed",
+            ):
+                retriever.retrieve(
+                    "question",
+                    {"user_id": OWNER_ID, "tenant_id": OWNER_ID},
+                    owner_id=OWNER_ID,
+                    document_ids=["document_001"],
+                )
 
     def test_candidate_identity_drift_fails_closed(self):
         route = OnlineVersionRoute(

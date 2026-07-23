@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -247,40 +248,48 @@ class OnlineVersionRrfRetriever:
                 raise OnlineVisibilityUnavailableError(
                     "persisted Chunk snapshot does not match READY routes"
                 )
-            for route in routes:
-                expected_chunks = self._route_chunks(route=route, chunks=chunks)
-                staged_source_chunks = [
-                    {**chunk, "is_active": False} for chunk in expected_chunks
-                ]
-                route_scope = dict(scope)
-                route_scope["document_ids"] = [route.document_id]
-                route_scope["library_ids"] = []
-                route_scope["folder_ids"] = []
-                lexical = ElasticsearchBm25Index(
-                    route.elasticsearch_index,
-                    self.elasticsearch_transport,
-                ).search(
-                    question,
-                    route_scope,
-                    top_k=self.candidate_k,
-                    expected_chunks=expected_chunks,
-                    source_fingerprint_chunks=staged_source_chunks,
-                )
-                vector = MilvusVectorIndex(
-                    route.milvus_collection,
-                    self.milvus_transport,
-                ).search(
-                    question,
-                    route_scope,
-                    self.embedding_provider,
-                    top_k=self.candidate_k,
-                    min_score=self.vector_min_score,
-                    expected_chunks=expected_chunks,
-                    source_fingerprint_chunks=staged_source_chunks,
-                )
-                self._validate_route_ranking(route, lexical)
-                self._validate_route_ranking(route, vector)
-                rankings.extend((lexical, vector))
+            with ThreadPoolExecutor(
+                max_workers=2,
+                thread_name_prefix="online-ready-retrieval",
+            ) as executor:
+                for route in routes:
+                    expected_chunks = self._route_chunks(route=route, chunks=chunks)
+                    staged_source_chunks = [
+                        {**chunk, "is_active": False} for chunk in expected_chunks
+                    ]
+                    route_scope = dict(scope)
+                    route_scope["document_ids"] = [route.document_id]
+                    route_scope["library_ids"] = []
+                    route_scope["folder_ids"] = []
+                    lexical_future = executor.submit(
+                        ElasticsearchBm25Index(
+                            route.elasticsearch_index,
+                            self.elasticsearch_transport,
+                        ).search,
+                        question,
+                        dict(route_scope),
+                        top_k=self.candidate_k,
+                        expected_chunks=expected_chunks,
+                        source_fingerprint_chunks=staged_source_chunks,
+                    )
+                    vector_future = executor.submit(
+                        MilvusVectorIndex(
+                            route.milvus_collection,
+                            self.milvus_transport,
+                        ).search,
+                        question,
+                        dict(route_scope),
+                        self.embedding_provider,
+                        top_k=self.candidate_k,
+                        min_score=self.vector_min_score,
+                        expected_chunks=expected_chunks,
+                        source_fingerprint_chunks=staged_source_chunks,
+                    )
+                    lexical = lexical_future.result()
+                    vector = vector_future.result()
+                    self._validate_route_ranking(route, lexical)
+                    self._validate_route_ranking(route, vector)
+                    rankings.extend((lexical, vector))
             self.resolver.revalidate(
                 routes,
                 owner_id=owner_id,

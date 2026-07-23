@@ -98,14 +98,27 @@ After the fixed component Gate passes, the controlled online integration has a
 separate Windows PowerShell 5.1 entrypoint:
 
 ```powershell
-powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\deploy\remote\reranker-validation\run_online_reranker_gate.ps1
+powershell.exe `
+    -NoLogo `
+    -NoProfile `
+    -ExecutionPolicy Bypass `
+    -File .\deploy\remote\reranker-validation\run_online_reranker_gate.ps1 `
+    -PdfPath '.\runtime\online-reranker-gate-input\2603.04915.pdf' `
+    -ExpectedPdfSha256 'ff3b39d94690de98cff09998c669b20333861d43b797ea000af812bc7f524dcf' `
+    -QuestionSuitePath '.\runtime\online-reranker-gate-input\doc_arxiv_2603_04915.json' `
+    -ExpectedQuestionSuiteSha256 '4f4d293bc8bc00ba2f4469977d43d9c1ffa40556a70762f15d2f47ed954c6bd3' `
+    -DocumentTitle 'EVMbench: Evaluating AI Agents on Smart Contract Security' `
+    -RunId 'online_reranker_parallel_20260723_01'
 ```
 
 Run it only after the reviewed Mac commit has been pushed and Windows
-`HEAD` equals `origin/main`. Keep `DATABASE_URL` and loopback service endpoints
-in the current shell; the script does not print them. It prompts for a new
-non-secret Run ID, the exact PDF and SHA-256, the ignored private three-case
-question suite and SHA-256, and the exact document title.
+`HEAD` equals `origin/main`. The command above pins the existing ignored private
+inputs and requires a new non-secret Run ID. If `DATABASE_URL` is absent, the
+script securely prompts for the password of
+`zhiyan_stage1_canary_app@127.0.0.1:5432/zhiyan_stage1_canary`, URL-encodes it,
+sets the connection only for the Gate, and removes it afterward; it never prints
+the password or complete connection string. An existing `DATABASE_URL` is reused
+and left untouched.
 
 This Gate disables real generation and changes only the optional post-RRF
 Reranker. It repeats the three cases ten times and requires at least 30
@@ -116,6 +129,14 @@ and reranking. It must also complete INACTIVE, all three cleanup jobs, and the
 deleted-document Answer API 403 check. Return only the script's final sanitized
 summary or a screenshot of it; do not return credential assignment lines,
 private paths, questions, document text, model cache paths, or service URLs.
+
+The first controlled online run, `online_reranker_20260723_01`, reached the
+combined-latency decision after same-Run-ID recovery but failed with
+`ONLINE_RERANKER_COMBINED_P95_EXCEEDED`. Its older failure report did not retain
+the exact latency breakdown. The next run above changes only ES/Milvus read
+execution from sequential to parallel and records base retrieval, combined, and
+Reranker P50/P95 plus cleanup evidence on both PASS and this performance FAIL.
+The 300 ms limit and default route remain unchanged.
 
 ## Replay and single-side failure check
 

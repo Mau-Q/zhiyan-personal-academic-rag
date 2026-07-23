@@ -20,6 +20,7 @@ from scripts.run_stage1_remote_canary import (
     REPOSITORY_ROOT,
     REPORT_SCHEMA_VERSION,
     _ObservedGenerationProvider,
+    _build_closed_online_reranker_failure_report,
     _build_failure_report,
     _generation_replay_byte_stable,
     _load_academic_question_suite,
@@ -273,11 +274,54 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
             reranker_latency_ms=1.0,
             combined_retrieval_latency_ms=51.0,
         )
-        with self.assertRaisesRegex(
-            RuntimeError,
-            "^ONLINE_RERANKER_FALLBACK_OBSERVED$",
-        ):
-            _summarize_online_reranker_observations(fallback)
+        fallback_summary = _summarize_online_reranker_observations(fallback)
+        self.assertEqual(fallback_summary["status"], "FAIL")
+        self.assertEqual(
+            fallback_summary["error_code"],
+            "ONLINE_RERANKER_FALLBACK_OBSERVED",
+        )
+        self.assertEqual(fallback_summary["fallback_count"], 1)
+
+    def test_online_reranker_p95_failure_retains_metrics_and_cleanup_evidence(self):
+        observations = [
+            OnlineRetrievalObservation(
+                reranker_status="APPLIED",
+                reranker_failure_code=None,
+                candidate_count=20,
+                output_count=3,
+                base_retrieval_latency_ms=180.0 + position,
+                reranker_latency_ms=140.0 + position,
+                combined_retrieval_latency_ms=320.0 + (2 * position),
+            )
+            for position in range(ONLINE_RERANKER_MINIMUM_LATENCY_SAMPLES)
+        ]
+
+        summary = _summarize_online_reranker_observations(observations)
+        report = _build_closed_online_reranker_failure_report(
+            run_id="online_reranker_parallel_001",
+            error_code="ONLINE_RERANKER_COMBINED_P95_EXCEEDED",
+            online_reranker_report=summary,
+            resumed_from_ready=True,
+            cleanup_jobs_succeeded=EXPECTED_CLEANUP_JOBS,
+            inactive_visibility_proven=True,
+            inactive_answer_api_status=403,
+        )
+
+        self.assertEqual(summary["status"], "FAIL")
+        self.assertEqual(
+            summary["error_code"],
+            "ONLINE_RERANKER_COMBINED_P95_EXCEEDED",
+        )
+        self.assertGreater(
+            summary["combined_retrieval_latency_ms_p95"],
+            ONLINE_RERANKER_COMBINED_P95_LIMIT_MS,
+        )
+        self.assertEqual(summary["fallback_count"], 0)
+        self.assertFalse(summary["candidate_set_expanded"])
+        self.assertEqual(report["online_reranker"], summary)
+        self.assertEqual(report["cleanup_jobs_succeeded"], EXPECTED_CLEANUP_JOBS)
+        self.assertTrue(report["inactive_visibility_proven"])
+        self.assertEqual(report["inactive_answer_api_status"], 403)
 
     def test_online_reranker_failure_is_deferred_until_lifecycle_cleanup(self):
         source = (
@@ -286,11 +330,11 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
 
         self.assertLess(
             source.index('raise RuntimeError("RUNTIME_SNAPSHOT_CLEANUP_FAILED")'),
-            source.index("raise RuntimeError(online_reranker_deferred_error)"),
+            source.index("failure = _build_closed_online_reranker_failure_report("),
         )
         self.assertLess(
             source.index('raise RuntimeError("INACTIVE_ANSWER_API_REMAINED_VISIBLE")'),
-            source.index("raise RuntimeError(online_reranker_deferred_error)"),
+            source.index("failure = _build_closed_online_reranker_failure_report("),
         )
 
     def test_mutation_requires_exact_confirmation_before_pdf_or_services(self):

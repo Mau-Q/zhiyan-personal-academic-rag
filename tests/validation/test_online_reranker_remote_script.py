@@ -46,6 +46,28 @@ class OnlineRerankerRemoteScriptTests(unittest.TestCase):
         self.assertNotIn("pdfPath", summary)
         self.assertNotIn("questionSuitePath", summary)
 
+    def test_fixed_inputs_can_be_passed_once_and_database_secret_is_prompted(self) -> None:
+        for parameter in (
+            "[string]$PdfPath",
+            "[string]$ExpectedPdfSha256",
+            "[string]$QuestionSuitePath",
+            "[string]$ExpectedQuestionSuiteSha256",
+            "[string]$DocumentTitle",
+            "[string]$RunId",
+        ):
+            self.assertIn(parameter, self.script)
+        self.assertIn("-AsSecureString", self.script)
+        self.assertIn("SecureStringToBSTR", self.script)
+        self.assertIn("ZeroFreeBSTR", self.script)
+        self.assertIn("[Uri]::EscapeDataString", self.script)
+        self.assertIn("$databaseUrlCreatedByScript", self.script)
+        self.assertIn(
+            "Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue",
+            self.script,
+        )
+        self.assertNotIn("Write-Output $env:DATABASE_URL", self.script)
+        self.assertNotIn("Write-Host $env:DATABASE_URL", self.script)
+
     def test_gate_disables_generation_and_requires_combined_p95(self) -> None:
         self.assertIn(
             "online-fixed-cross-encoder-windows-rtx4090-v1.json",
@@ -64,15 +86,21 @@ class OnlineRerankerRemoteScriptTests(unittest.TestCase):
             "model_revision",
             "model_snapshot_sha256",
             "sample_count",
+            "applied_count",
+            "base_retrieval_latency_ms_p95",
             "combined_retrieval_latency_ms_p95",
+            "reranker_latency_ms_p95",
             "fallback_count",
             "candidate_set_expanded",
+            "candidate_bound_violated",
             "cleanup_jobs_succeeded",
             "inactive_answer_api_status",
             "report_sha256",
             "stable_error_code",
         ):
             self.assertRegex(self.script, rf"(?m)^        {field} = ")
+        self.assertIn("$pythonExitCode -ne 0", self.script)
+        self.assertIn("$report.status -ne 'FAIL'", self.script)
 
 
 if __name__ == "__main__":

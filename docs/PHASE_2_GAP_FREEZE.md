@@ -7,14 +7,15 @@
 | 能力 | 冻结判断 | 本 Gate 是否改变 |
 |---|---|---|
 | Hybrid | ES+Milvus RRF 已实现；远程 15 题为 14/15，与 ES 持平，未晋级默认；175 题不为追求满分继续调参 | 否 |
-| Reranker | 已以固定 `bge-reranker-v2-m3` 重排冻结 `local_rrf` 前 20 候选；本地 `test=100` 质量门和目标 RTX 4090 组件 P95 均通过；READY/ACL 与 RRF 后的可选在线窄适配器已本地实现，但默认路由未改变 | 在线实现不改召回、融合或生成；Windows 组合 P95 仍是独立 Gate |
+| Reranker | 已以固定 `bge-reranker-v2-m3` 重排冻结 `local_rrf` 前 20 候选；本地 `test=100` 质量门和目标 RTX 4090 组件 P95 均通过；首个 READY/ACL 后在线组合 Gate 因 `P95 > 300 ms` 未通过，默认路由未改变 | 仅并行化 ES/Milvus 只读召回并补齐失败指标；不改模型、召回参数、融合、生成或门槛，等待新 Run ID 复跑 |
 | Evidence/引用 | 已有结构化 Evidence/Citation；ACL、READY、活动版本、Chunk 身份和页码由检索与事实源先行校验 | 只增加模型引用编号校验 |
 | Fake LLM | 所有既有入口默认仍是 Fake，原 warning 和测试不变 | 新增显式注入的真实生成器，不静默替换默认路径 |
 | Claim 支持度 | 确定性 Claim–Evidence 语义支持属于阶段 4；阶段 2 不用模型自评冒充 | 否 |
 
 因此，“Hybrid 已比较”“Reranker 组件质量与目标硬件成本已通过”
 “受控在线实现已本地完成”“已经默认启用并满足组合 P95”是四个不同结论。
-前三项已有对应证据，最后一项仍需 Windows 独立运行 Gate，不能由
+前三项已有对应证据；首个 Windows 组合 Gate 已给出明确失败而不是通过，
+并行召回仍需新 Run ID 独立复跑，不能由
 预计算候选上的 pair-scoring P95 或本地单元测试替代。
 
 ## 2. 最小真实生成闭环
@@ -74,11 +75,13 @@ Qwen READY 首次运行以 `PERSISTED_SNAPSHOT_ANSWER_HTTP_FAILED` 失败；同 
 - 3 篇指定文档、9 个普通学术问答样本已完成远程 v2 验收：3 篇各 `3/3`、合计 `9/9` 通过真实生成、引用、版本、定位、三路清理和删除后 403；第 3 篇最终报告 SHA-256 为 `3C106423AB3575B11B3B0142A66F19A2C949B8BAED3457F1BCA101A9931302FA`；
 - 固定 Cross-Encoder 已在冻结 `test=100` 上完成本地质量验证：`nDCG@10` 相对提升 `15.5331%`、`Precision@5 +0.02`，四个关键类型不退化；目标 Windows RTX 4090 复跑保持相同质量和身份，Reranker 阶段 `P50=169.3867 ms / P95=188.22683 ms`，稳定错误码为 `NONE`；
 - 受控在线窄适配器已本地实现：PostgreSQL READY/ACL 和 ES/Milvus RRF 先返回并重验至多 20 个候选，Reranker 只排序并输出前 3；标题/模型/分数故障回退同一批已授权 RRF，身份漂移仍失败关闭；
-- 下一独立 Gate 在 Windows RTX 4090 上以至少 30 个样本验证无回退、无候选扩张和包含 READY 路由、召回、融合、重排的组合 `P95 <= 300 ms`，不与生成、Embedding、RRF 参数变化混合；通过前默认路由不变；
+- 首个 Windows 组合 Gate 已达到至少 30 个样本的判定路径，但以 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败；旧失败报告未保存精确延迟和关闭指标，不能据此宣称接近门槛或通过；
+- 下一复跑只改变 ES/Milvus 只读召回由串行为并行，并在失败或成功报告中保留 base/combined/Reranker P50/P95、回退、候选边界、清理和删除后 403；仍要求组合 `P95 <= 300 ms`，通过前默认路由不变；
 - Claim 语义支持、冲突处理、正式 MinIO、OCR 和目标规模性能继续由各自后续 Gate 跟踪。
 
 阶段 2 因此仍为 `IN_PROGRESS/PARTIAL`。llama3.2 与 Qwen 的远程 READY
 真实生成闭环、Qwen 最终晋级、固定普通科研问答远程 `9/9`、固定
 Reranker 的本地质量门、目标硬件组件 P95 和受控在线本地实现均已完成；
-Windows 组合检索 P95 与是否改变默认路由仍未完成。后续不把它与
+首个 Windows 组合检索 Gate 已失败，单变量并行召回复跑与是否改变默认
+路由仍未完成。后续不把它与
 MinIO/OCR、通用性能或生成变量混合。
