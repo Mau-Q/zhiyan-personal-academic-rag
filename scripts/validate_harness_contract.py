@@ -180,6 +180,22 @@ def check_feature_list() -> None:
                 raise ValueError(f"feature {feature_id} evidence path is invalid: {relative_path}")
     if status_by_id.get("repository_harness") != "READY":
         raise ValueError("repository_harness feature must be READY")
+    phase3_feature = next(
+        (
+            feature
+            for feature in features
+            if feature.get("id")
+            == "phase3_bilateral_comparison_query_decomposition"
+        ),
+        None,
+    )
+    if (
+        not isinstance(phase3_feature, dict)
+        or phase3_feature.get("status") != "PARTIAL"
+        or phase3_feature.get("gate_status")
+        != "THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY_FOR_NEW_DEV_RUN"
+    ):
+        raise ValueError("phase 3 comparison feature gate status drifted")
 
 
 def validate_phase_result(payload: Any, *, require_concrete: bool) -> None:
@@ -420,9 +436,7 @@ def check_phase3_comparison_dev_gate() -> None:
     payload = _read_json("machine/phase3_comparison_dev_gate.json")
     if payload.get("schema_version") != "phase3_comparison_dev_gate_v1":
         raise ValueError("phase 3 comparison dev gate schema_version is invalid")
-    if payload.get("status") != (
-        "THIRD_WINDOWS_ATTEMPT_CLEANUP_RECOVERY_READY"
-    ):
+    if payload.get("status") != "THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY":
         raise ValueError("phase 3 comparison dev gate status is invalid")
     if payload.get("source_phase") != {"id": "phase-3", "status": "IN_PROGRESS"}:
         raise ValueError("phase 3 comparison dev gate source phase is invalid")
@@ -481,7 +495,7 @@ def check_phase3_comparison_dev_gate() -> None:
         not isinstance(user_entry, dict)
         or user_entry.get("decision_id") != "PD-041"
         or user_entry.get("status")
-        != "THIRD_WINDOWS_ATTEMPT_RESIDUAL_CONFIRMED_RECOVERY_READY"
+        != "THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY_FOR_NEW_RUN"
         or user_entry.get("cleanup_audit_decision_id") != "PD-044"
         or user_entry.get("cleanup_recovery_decision_id") != "PD-045"
         or user_entry.get("quality_top_k") != 3
@@ -568,9 +582,12 @@ def check_phase3_comparison_dev_gate() -> None:
     recovery = payload.get("cleanup_recovery_gate")
     if (
         not isinstance(recovery, dict)
-        or recovery.get("status") != "READY_AWAITING_USER_RUN"
+        or recovery.get("status") != "PASS"
         or recovery.get("decision_id") != "PD-047"
+        or recovery.get("completion_decision_id") != "PD-048"
         or recovery.get("run_id") != "phase3_comparison_dev_20260723_03"
+        or recovery.get("head_commit")
+        != "c9c3705d70de7cb43812a8cd8a6a585da6eebcd9"
         or recovery.get("frozen_audit_sha256")
         != "e9430be17811c60116630f718c182a3ffd0a12ffd83f753ebb5fdfba0420112b"
         or recovery.get("single_action")
@@ -606,6 +623,46 @@ def check_phase3_comparison_dev_gate() -> None:
         or recovery_result.get("performance_gate") != "NOT_RUN"
     ):
         raise ValueError("phase 3 cleanup recovery evidence drifted")
+    recovery_result_03 = payload.get("cleanup_recovery_result_03")
+    if (
+        not isinstance(recovery_result_03, dict)
+        or recovery_result_03.get("run_id")
+        != "phase3_comparison_dev_20260723_03"
+        or recovery_result_03.get("status") != "PASS"
+        or recovery_result_03.get("jobs_observed") != 9
+        or recovery_result_03.get("jobs_succeeded") != 9
+        or recovery_result_03.get("post_chunk_rows") != 0
+        or recovery_result_03.get("post_pdf_object_rows") != 0
+        or recovery_result_03.get(
+            "post_global_nonterminal_cleanup_job_count"
+        )
+        != 0
+        or recovery_result_03.get("recovery_sha256")
+        != "94a10a54ffb6b326740e093db97d148891fd44898e7bc077e25fa4385b780cdb"
+        or recovery_result_03.get("post_recovery_audit_decision") != "CLEAN"
+        or recovery_result_03.get("post_recovery_audit_sha256")
+        != "ffd2e805b857df1d4d7e256a00bf09b15992261a4a31960c7a2d55b8d504dbab"
+        or recovery_result_03.get("quality_gate_run") is not False
+        or recovery_result_03.get("test") != "NOT_READ_NOT_RUN"
+        or recovery_result_03.get("acceptance") != "NOT_READ_NOT_RUN"
+        or recovery_result_03.get("performance_gate") != "NOT_RUN"
+    ):
+        raise ValueError("phase 3 third cleanup recovery evidence drifted")
+    runner_defect = payload.get("known_runner_defect")
+    if (
+        not isinstance(runner_defect, dict)
+        or runner_defect.get("status")
+        != "FIXED_LOCALLY_AWAITING_NEW_WINDOWS_RUN"
+        or runner_defect.get("cause")
+        != "PSYCOPG_DICT_ROW_WAS_TUPLE_UNPACKED_AS_COLUMN_NAMES"
+        or runner_defect.get("repair")
+        != "ACCESS_MAPPING_VALUES_BY_EXPLICIT_KEYS"
+        or runner_defect.get("diagnostic_hardening")
+        != "SANITIZED_PRIMARY_STAGE_REPORTED"
+        or runner_defect.get("quality_variable_changed") is not False
+        or runner_defect.get("quality_rerun_authorized") is not True
+    ):
+        raise ValueError("phase 3 runner defect repair boundary drifted")
 
 
 def check_phase3_comparison_report_intake() -> None:
@@ -618,7 +675,7 @@ def check_phase3_comparison_report_intake() -> None:
         or payload.get("cleanup_recovery_decision_id") != "PD-045"
         or payload.get("cleanup_recovery_completion_decision_id") != "PD-046"
         or payload.get("status")
-        != "CLEANUP_RECOVERY_READY_AFTER_THIRD_ATTEMPT_RESIDUAL"
+        != "PAIRED_ONLINE_DEV_RETRY_READY_AFTER_THIRD_RECOVERY_AND_RUNNER_REPAIR"
     ):
         raise ValueError("phase 3 report intake identity is invalid")
     implementation = payload.get("implementation")
@@ -716,11 +773,11 @@ def check_phase3_comparison_report_intake() -> None:
         != "e9430be17811c60116630f718c182a3ffd0a12ffd83f753ebb5fdfba0420112b"
         or audit.get("observed_state")
         != "THREE_INACTIVE_VERSIONS_NINE_PENDING_CLEANUP_JOBS_316_CHUNKS_THREE_PDF_OBJECTS"
-        or audit.get("quality_rerun_authorized") is not False
+        or audit.get("quality_rerun_authorized") is not True
         or audit.get("manual_cleanup_authorized") is not False
         or audit.get("performance_gate") != "NOT_COMBINED"
         or audit.get("next_gate")
-        != "EXACT_NINE_JOB_CLEANUP_RECOVERY_THEN_READ_ONLY_AUDIT"
+        != "NEW_RUN_ID_PAIRED_ONLINE_DEV_QUALITY_GATE"
     ):
         raise ValueError("phase 3 report intake cleanup audit boundary drifted")
     recovery = payload.get("cleanup_recovery_evidence")
@@ -743,20 +800,46 @@ def check_phase3_comparison_report_intake() -> None:
         or recovery.get("performance_gate") != "NOT_RUN"
     ):
         raise ValueError("phase 3 report intake recovery evidence drifted")
-    pending_recovery = payload.get("pending_cleanup_recovery")
+    completed_recovery = payload.get("completed_cleanup_recovery_03")
     if (
-        not isinstance(pending_recovery, dict)
-        or pending_recovery.get("run_id")
+        not isinstance(completed_recovery, dict)
+        or completed_recovery.get("run_id")
         != "phase3_comparison_dev_20260723_03"
-        or pending_recovery.get("status") != "READY_AWAITING_USER_RUN"
-        or pending_recovery.get("frozen_audit_sha256")
+        or completed_recovery.get("status") != "PASS_CLEAN"
+        or completed_recovery.get("frozen_audit_sha256")
         != "e9430be17811c60116630f718c182a3ffd0a12ffd83f753ebb5fdfba0420112b"
-        or pending_recovery.get("quality_gate_run") is not False
-        or pending_recovery.get("test") != "NOT_READ_NOT_RUN"
-        or pending_recovery.get("acceptance") != "NOT_READ_NOT_RUN"
-        or pending_recovery.get("performance_gate") != "NOT_RUN"
+        or completed_recovery.get("recovery_sha256")
+        != "94a10a54ffb6b326740e093db97d148891fd44898e7bc077e25fa4385b780cdb"
+        or completed_recovery.get("jobs_succeeded") != 9
+        or completed_recovery.get("post_chunk_rows") != 0
+        or completed_recovery.get("post_pdf_object_rows") != 0
+        or completed_recovery.get(
+            "post_global_nonterminal_cleanup_job_count"
+        )
+        != 0
+        or completed_recovery.get("post_recovery_audit_sha256")
+        != "ffd2e805b857df1d4d7e256a00bf09b15992261a4a31960c7a2d55b8d504dbab"
+        or completed_recovery.get("post_recovery_audit") != "PASS_CLEAN"
+        or completed_recovery.get("quality_gate_run") is not False
+        or completed_recovery.get("test") != "NOT_READ_NOT_RUN"
+        or completed_recovery.get("acceptance") != "NOT_READ_NOT_RUN"
+        or completed_recovery.get("performance_gate") != "NOT_RUN"
     ):
-        raise ValueError("phase 3 pending cleanup recovery boundary drifted")
+        raise ValueError("phase 3 completed third cleanup recovery boundary drifted")
+    runner_repair = payload.get("runner_repair")
+    if (
+        not isinstance(runner_repair, dict)
+        or runner_repair.get("status") != "READY_AWAITING_NEW_WINDOWS_RUN"
+        or runner_repair.get("cause")
+        != "PSYCOPG_DICT_ROW_WAS_TUPLE_UNPACKED_AS_COLUMN_NAMES"
+        or runner_repair.get("repair")
+        != "EXPLICIT_OWNER_VERSION_BACKEND_MAPPING_KEY_ACCESS"
+        or runner_repair.get("diagnostic_hardening")
+        != "REPORT_SANITIZED_PRIMARY_STAGE"
+        or runner_repair.get("quality_variable_changed") is not False
+        or runner_repair.get("default_enabled") is not False
+    ):
+        raise ValueError("phase 3 report intake runner repair boundary drifted")
 
 
 def check_harness_links() -> None:

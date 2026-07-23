@@ -621,8 +621,12 @@ def _active_cleanup_scope(connection: Any) -> set[tuple[str, str, str]]:
             """
         )
         return {
-            (str(owner_id), str(document_version_id), str(backend))
-            for owner_id, document_version_id, backend in cursor.fetchall()
+            (
+                str(row["owner_id"]),
+                str(row["document_version_id"]),
+                str(row["backend"]),
+            )
+            for row in cursor.fetchall()
         }
 
 
@@ -720,6 +724,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
     cleanup_results: tuple[Any, ...] = ()
     inactive_403 = False
     reconciliation_failed_closed = False
+    primary_stage = "INGEST_AND_PUBLISH"
     try:
         document_id_map: dict[str, str] = {}
         now = datetime.now(timezone.utc)
@@ -748,6 +753,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
             )
             versions.append(publication.version)
             document_id_map[source_document_id] = publication.version.document_id
+        primary_stage = "VERIFY_READY_SCOPE"
         ready = reconcile_ready_scope(
             repository=repository,
             elasticsearch=elasticsearch,
@@ -757,6 +763,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
         )
         if len(ready.versions) != 3:
             raise GateError("READY_RECONCILIATION_COUNT_INVALID")
+        primary_stage = "VERIFY_RUNTIME_CHUNK_IDENTITY"
         runtime_chunks = repository.load_online_chunks(
             owner_id=owner_id,
             document_version_ids=[
@@ -770,6 +777,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
         )
         del source_to_runtime
 
+        primary_stage = "BUILD_CONTROL"
         resolver = PostgresReadyRouteResolver(
             repository=repository,
             elasticsearch=elasticsearch,
@@ -796,6 +804,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
             )
         )
 
+        primary_stage = "RUN_CONTROL"
         control_results = {
             row["question_id"]: _search(
                 control,
@@ -808,6 +817,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
         }
         control_target = _target_metrics(targets, control_results, runtime_to_source)
         if control_target["strict_two_sided_passed"] != 0:
+            primary_stage = "CONTROL_STOP_RULE"
             report = {
                 "schema_version": REPORT_SCHEMA_VERSION,
                 "status": "FAIL",
@@ -833,6 +843,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
 
         # Treatment is not constructed until the frozen Control failure is
         # reproduced on the exact READY scope.
+        primary_stage = "BUILD_TREATMENT"
         config = remap_document_identities(
             load_bilateral_comparison_config(CONFIG_PATH),
             document_id_map,
@@ -860,6 +871,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
                 online_rrf_retriever=treatment,
             )
         )
+        primary_stage = "RUN_TREATMENT"
         treatment_results = {
             row["question_id"]: _search(
                 treatment,
@@ -876,6 +888,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
             runtime_to_source,
         )
 
+        primary_stage = "RUN_NON_TARGET_REGRESSION"
         non_target = [
             row
             for row in inputs["dev_rows"]
@@ -937,12 +950,14 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
             "ndcg_at_10_max_drop": 0.01,
             "top10_boundary": "EVALUATION_DIAGNOSTIC_ONLY_PRODUCT_FINAL_TOP3_UNCHANGED",
         }
+        primary_stage = "RUN_FIXED_CANARY"
         canary = evaluate_canary(
             inputs["canary"],
             control_client=control_client,
             treatment_client=treatment_client,
             document_id_map=document_id_map,
         )
+        primary_stage = "RUN_DEV_NO_EVIDENCE"
         dev_no_evidence = evaluate_dev_no_evidence(
             [
                 row
@@ -954,6 +969,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
             document_id_map=document_id_map,
         )
 
+        primary_stage = "RUN_INCREMENTAL_COST"
         target_cycle = [targets[index % len(targets)] for index in range(args.latency_repetitions)]
         control_latency.clear()
         treatment_latency.clear()
@@ -1001,6 +1017,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
                 6,
             ),
         }
+        primary_stage = "ADJUDICATE_QUALITY"
         quality_pass = (
             treatment_target["strict_two_sided_passed"] >= 3
             and gains["strict_two_sided_absolute_gain"] >= 0.5
@@ -1055,6 +1072,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
                 "INCREMENTAL_QUALITY_VARIABLE_COST_ONLY_NO_300MS_SLO_CONCLUSION"
             ),
         }
+        primary_stage = "COMPLETE"
     except BaseException as exc:
         primary_error = exc
     finally:
@@ -1170,6 +1188,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
     report["cleanup"] = cleanup_summary
     report["run_id"] = args.run_id
     report["head_commit"] = args.expected_head_commit
+    report["primary_stage"] = primary_stage
     if primary_error is not None:
         report["primary_error_code"] = _sanitized_code(primary_error)
     if cleanup_summary is None or cleanup_summary.get("status") != "PASS":

@@ -1,6 +1,6 @@
 {
   "schema_version": "phase3_comparison_dev_gate_v1",
-  "status": "THIRD_WINDOWS_ATTEMPT_CLEANUP_RECOVERY_READY",
+  "status": "THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY",
   "source_phase": {
     "id": "phase-3",
     "status": "IN_PROGRESS"
@@ -50,7 +50,7 @@
   },
   "paired_online_user_entry": {
     "decision_id": "PD-041",
-    "status": "THIRD_WINDOWS_ATTEMPT_RESIDUAL_CONFIRMED_RECOVERY_READY",
+    "status": "THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY_FOR_NEW_RUN",
     "package_builder": "scripts/build_phase3_comparison_dev_package.py",
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "report_adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -143,10 +143,11 @@
     "residual_outcome": "REQUIRES_SEPARATE_RECOVERY_GATE"
   },
   "cleanup_recovery_gate": {
-    "status": "READY_AWAITING_USER_RUN",
+    "status": "PASS",
     "decision_id": "PD-047",
+    "completion_decision_id": "PD-048",
     "run_id": "phase3_comparison_dev_20260723_03",
-    "head_commit": "PENDING_RECOVERY_PREPARATION_COMMIT",
+    "head_commit": "c9c3705d70de7cb43812a8cd8a6a585da6eebcd9",
     "frozen_audit_sha256": "e9430be17811c60116630f718c182a3ffd0a12ffd83f753ebb5fdfba0420112b",
     "precondition": "THREE_INACTIVE_VERSIONS_NINE_PENDING_ATTEMPT_ZERO_JOBS_THREE_BACKENDS_316_CHUNKS_THREE_PDF_OBJECTS_NO_OTHER_GLOBAL_NONTERMINAL_JOBS",
     "single_action": "RUN_EXISTING_PERSISTENT_CLEANUP_WORKER_MAX_NINE",
@@ -176,13 +177,35 @@
     "acceptance": "NOT_READ_NOT_RUN",
     "performance_gate": "NOT_RUN"
   },
+  "cleanup_recovery_result_03": {
+    "run_id": "phase3_comparison_dev_20260723_03",
+    "status": "PASS",
+    "jobs_observed": 9,
+    "jobs_succeeded": 9,
+    "pre_cleanup_status": "PENDING_9",
+    "post_cleanup_status": "SUCCEEDED_9",
+    "post_chunk_rows": 0,
+    "post_pdf_object_rows": 0,
+    "post_global_nonterminal_cleanup_job_count": 0,
+    "recovery_sha256": "94a10a54ffb6b326740e093db97d148891fd44898e7bc077e25fa4385b780cdb",
+    "post_recovery_audit_status": "PASS",
+    "post_recovery_audit_decision": "CLEAN",
+    "post_recovery_audit_sha256": "ffd2e805b857df1d4d7e256a00bf09b15992261a4a31960c7a2d55b8d504dbab",
+    "quality_gate_run": false,
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN",
+    "performance_gate": "NOT_RUN"
+  },
   "known_runner_defect": {
-    "status": "CONFIRMED_FIX_DEFERRED_UNTIL_RECOVERY_CLEAN",
+    "status": "FIXED_LOCALLY_AWAITING_NEW_WINDOWS_RUN",
     "location": "scripts/run_phase3_comparison_paired_dev_gate.py::_active_cleanup_scope",
     "cause": "PSYCOPG_DICT_ROW_WAS_TUPLE_UNPACKED_AS_COLUMN_NAMES",
     "effect": "EXACT_NINE_JOB_QUEUE_FALSELY_REJECTED_AT_VERIFY_QUEUE_SCOPE",
     "quality_variable_changed": false,
-    "fix_in_cleanup_recovery_gate": false
+    "fix_in_cleanup_recovery_gate": false,
+    "repair": "ACCESS_MAPPING_VALUES_BY_EXPLICIT_KEYS",
+    "diagnostic_hardening": "SANITIZED_PRIMARY_STAGE_REPORTED",
+    "quality_rerun_authorized": true
   },
   "independent_performance_gate": {
     "status": "PENDING_SEPARATE_GATE",

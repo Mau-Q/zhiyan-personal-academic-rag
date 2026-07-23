@@ -49,32 +49,65 @@ unzip -p runtime/handoffs/phase3-comparison-paired-dev-input-v1.zip manifest.jso
 ## 2. Windows：仅在 Mac 推送成功后运行
 
 `phase3_comparison_dev_20260723_03` 没有形成 Control/Treatment 指标，并在
-`VERIFY_QUEUE_SCOPE` 失败关闭。只读审计确认 3 个版本全部 `INACTIVE`、
-9 个任务全部 `PENDING/attempt=0`、316 Chunk、3 PDF，且没有其他全局非终态
-任务。新的恢复准备提交推送后，只运行精确恢复：
+`VERIFY_QUEUE_SCOPE` 失败关闭。精确恢复已完成：9/9 清理任务
+`SUCCEEDED`，Chunk/PDF/全局非终态均为 0，事后审计 `PASS/CLEAN`。恢复
+SHA-256 为
+`94A10A54FFB6B326740E093DB97D148891FD44898E7BC077E25FA4385B780CDB`，
+审计 SHA-256 为
+`FFD2E805B857DF1D4D7E256A00BF09B15992261A4A31960C7A2D55B8D504DBAB`。
 
-```text
-powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\deploy\remote\phase3-comparison-validation\recover_phase3_comparison_cleanup.ps1 -ExpectedHeadCommit <NEW_COMMIT_SHA> -RunId phase3_comparison_dev_20260723_03
-```
-
-恢复器重新验证冻结审计 SHA 对应的完整前置，只让既有 Worker 最多领取这
-9 个任务，并自动运行事后只读审计。它不运行质量、test、Acceptance 或性能，
-也不重启服务。任何红色终止都停止并回传 JSON summary，不要调整参数重跑。
-
-以下原质量入口仅在恢复收口、运行器缺陷独立修复且后续状态文件明确解除冻结后
-使用。
+清理范围误拒绝的原因是 psycopg `dict_row` 被按 tuple 解包。独立修复只把
+owner/version/backend 改为显式 mapping key 读取，并增加脱敏
+`primary_stage`；质量变量、默认开关和检索参数均未改变。修复提交推送后，使用
+全新 Run ID `_04` 重试同一 dev 质量 Gate。
 
 先确保服务已经由用户正常维护并可通过本机环回端口访问。脚本不会安装依赖、
-启动容器或重启服务。然后在仓库根目录调用：
+启动容器或重启服务。输入 ZIP 已位于仓库忽略目录
+`runtime\handoffs`。在仓库根目录完整运行：
 
 ```text
-powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\deploy\remote\phase3-comparison-validation\run_phase3_comparison_paired_dev_gate.ps1 -InputPackagePath C:\Users\Administrator\zhiyan-personal-academic-rag\runtime\handoffs\phase3-comparison-paired-dev-input-v1.zip -ExpectedPackageSha256 <ZIP_SHA256> -ExpectedManifestSha256 <MANIFEST_SHA256> -RunId <NEW_RUN_ID>
+Set-Location 'C:\Users\Administrator\zhiyan-personal-academic-rag'
+
+git status -sb
+git pull --ff-only origin main
+git rev-parse HEAD
+
+$PackagePath = (
+    'C:\Users\Administrator\zhiyan-personal-academic-rag\' +
+    'runtime\handoffs\phase3-comparison-paired-dev-input-v1.zip'
+)
+$ExpectedPackageSha256 = (
+    '89EA5829EFD7C299E3FF51FDC5048E2D78D172BCDE1D320322813B95C1DFDADB'
+)
+$ExpectedManifestSha256 = (
+    '05C36A393A51A8AA705E17D1AC3895DF074B9273F8AF6BFAD06C9904C458C63F'
+)
+
+if (-not (Test-Path -LiteralPath $PackagePath -PathType Leaf)) {
+    throw "输入包不存在：$PackagePath"
+}
+$ActualPackageSha256 = (
+    Get-FileHash -LiteralPath $PackagePath -Algorithm SHA256
+).Hash
+if ($ActualPackageSha256 -ne $ExpectedPackageSha256) {
+    throw "输入包 SHA-256 不匹配：$ActualPackageSha256"
+}
+
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass `
+    -File '.\deploy\remote\phase3-comparison-validation\run_phase3_comparison_paired_dev_gate.ps1' `
+    -InputPackagePath $PackagePath `
+    -ExpectedPackageSha256 $ExpectedPackageSha256 `
+    -ExpectedManifestSha256 $ExpectedManifestSha256 `
+    -RunId 'phase3_comparison_dev_20260723_04'
 ```
 
 如未设置 `DATABASE_URL`，脚本以安全提示读取 PostgreSQL 密码，并在结束时删除
 临时环境变量。`ELASTICSEARCH_URL`、`MILVUS_URI`、`OLLAMA_URL` 和
 `DATABASE_URL` 均由 Python runner 强制为 loopback。脚本结束时也删除由它
 解压的临时输入目录，原始 ZIP 不受影响。
+
+任何红色终止都停止并回传当前 JSON summary，不要调整参数重跑。summary 中
+的 `primary_stage` 与 `primary_error_code` 用于定位质量步骤之前的失败。
 
 只回传终端输出的 JSON summary、裁决文件和两个文件的 SHA-256；不要回传输入
 ZIP、问题文本、证据文本、路径、连接串或密码。完整报告保存在

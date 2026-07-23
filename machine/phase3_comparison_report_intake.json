@@ -1,10 +1,10 @@
 {
   "schema_version": "phase3_comparison_report_intake_v1",
   "decision_id": "PD-042",
-  "status": "CLEANUP_RECOVERY_READY_AFTER_THIRD_ATTEMPT_RESIDUAL",
+  "status": "PAIRED_ONLINE_DEV_RETRY_READY_AFTER_THIRD_RECOVERY_AND_RUNNER_REPAIR",
   "source_gate": {
     "artifact": "machine/phase3_comparison_dev_gate.json",
-    "status": "THIRD_WINDOWS_ATTEMPT_CLEANUP_RECOVERY_READY"
+    "status": "THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY"
   },
   "repair_decision_id": "PD-043",
   "cleanup_audit_decision_id": "PD-044",
@@ -93,7 +93,7 @@
         "cleanup_stage": "VERIFY_QUEUE_SCOPE"
       }
     ],
-    "interpretation": "The third report stopped before Control/Treatment metrics and cannot establish quality. Its cleanup queue scope proof was falsely rejected because dict rows were unpacked as column names; the exact residual still requires recovery before that defect is repaired in a separate Gate."
+    "interpretation": "The third report stopped before Control/Treatment metrics and cannot establish quality. Its cleanup queue scope proof was falsely rejected because dict rows were unpacked as column names. The exact residual was subsequently recovered and audited clean before the runner defect was repaired in this separate Gate."
   },
   "cleanup_audit_boundary": {
     "target_run_id": "phase3_comparison_dev_20260723_03",
@@ -102,10 +102,10 @@
     "acceptance": "NOT_READ_NOT_RUN",
     "audit_sha256": "e9430be17811c60116630f718c182a3ffd0a12ffd83f753ebb5fdfba0420112b",
     "observed_state": "THREE_INACTIVE_VERSIONS_NINE_PENDING_CLEANUP_JOBS_316_CHUNKS_THREE_PDF_OBJECTS",
-    "quality_rerun_authorized": false,
+    "quality_rerun_authorized": true,
     "manual_cleanup_authorized": false,
     "performance_gate": "NOT_COMBINED",
-    "next_gate": "EXACT_NINE_JOB_CLEANUP_RECOVERY_THEN_READ_ONLY_AUDIT"
+    "next_gate": "NEW_RUN_ID_PAIRED_ONLINE_DEV_QUALITY_GATE"
   },
   "cleanup_recovery_evidence": {
     "run_id": "phase3_comparison_dev_20260723_02",
@@ -122,15 +122,28 @@
     "acceptance": "NOT_READ_NOT_RUN",
     "performance_gate": "NOT_RUN"
   },
-  "pending_cleanup_recovery": {
+  "completed_cleanup_recovery_03": {
     "run_id": "phase3_comparison_dev_20260723_03",
-    "status": "READY_AWAITING_USER_RUN",
+    "status": "PASS_CLEAN",
     "frozen_audit_sha256": "e9430be17811c60116630f718c182a3ffd0a12ffd83f753ebb5fdfba0420112b",
-    "precondition": "THREE_INACTIVE_VERSIONS_NINE_PENDING_ATTEMPT_ZERO_JOBS_316_CHUNKS_THREE_PDF_OBJECTS_NO_OTHER_GLOBAL_NONTERMINAL_JOBS",
-    "single_action": "RUN_EXISTING_PERSISTENT_CLEANUP_WORKER_MAX_NINE",
+    "recovery_sha256": "94a10a54ffb6b326740e093db97d148891fd44898e7bc077e25fa4385b780cdb",
+    "jobs_succeeded": 9,
+    "post_chunk_rows": 0,
+    "post_pdf_object_rows": 0,
+    "post_global_nonterminal_cleanup_job_count": 0,
+    "post_recovery_audit_sha256": "ffd2e805b857df1d4d7e256a00bf09b15992261a4a31960c7a2d55b8d504dbab",
+    "post_recovery_audit": "PASS_CLEAN",
     "quality_gate_run": false,
     "test": "NOT_READ_NOT_RUN",
     "acceptance": "NOT_READ_NOT_RUN",
     "performance_gate": "NOT_RUN"
+  },
+  "runner_repair": {
+    "status": "READY_AWAITING_NEW_WINDOWS_RUN",
+    "cause": "PSYCOPG_DICT_ROW_WAS_TUPLE_UNPACKED_AS_COLUMN_NAMES",
+    "repair": "EXPLICIT_OWNER_VERSION_BACKEND_MAPPING_KEY_ACCESS",
+    "diagnostic_hardening": "REPORT_SANITIZED_PRIMARY_STAGE",
+    "quality_variable_changed": false,
+    "default_enabled": false
   }
 }

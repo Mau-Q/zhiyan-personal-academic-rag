@@ -165,6 +165,8 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
         self.assertIn("$report.cleanup.deleted_answer_api_status -ne 403", script)
         self.assertIn("Remove-Item -LiteralPath $inputRoot -Recurse -Force", script)
         summary = script[script.index("$summary = [ordered]@{") :]
+        self.assertIn("primary_stage = $report.primary_stage", summary)
+        self.assertIn("primary_error_code = $report.primary_error_code", summary)
         self.assertNotIn("question", summary.casefold())
         self.assertNotIn("evidence", summary.casefold())
 
@@ -305,10 +307,22 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
         _require_empty_cleanup_queue(Connection([]))
         with self.assertRaisesRegex(GateError, "CLEANUP_QUEUE_NOT_ISOLATED"):
             _require_empty_cleanup_queue(
-                Connection([("other_owner", "other_version", "runtime_snapshot")])
+                Connection(
+                    [
+                        {
+                            "owner_id": "other_owner",
+                            "document_version_id": "other_version",
+                            "backend": "runtime_snapshot",
+                        }
+                    ]
+                )
             )
         expected_rows = [
-            ("canary_owner", version, backend)
+            {
+                "owner_id": "canary_owner",
+                "document_version_id": version,
+                "backend": backend,
+            }
             for version in ("version_1", "version_2", "version_3")
             for backend in (
                 "elasticsearch_chunks",
@@ -323,7 +337,16 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(GateError, "CLEANUP_QUEUE_SCOPE_MISMATCH"):
             _require_exact_cleanup_scope(
-                Connection(expected_rows + [("other", "version_x", "runtime_snapshot")]),
+                Connection(
+                    expected_rows
+                    + [
+                        {
+                            "owner_id": "other",
+                            "document_version_id": "version_x",
+                            "backend": "runtime_snapshot",
+                        }
+                    ]
+                ),
                 owner_id="canary_owner",
                 document_version_ids=["version_1", "version_2", "version_3"],
             )

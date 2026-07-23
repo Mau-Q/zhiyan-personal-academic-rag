@@ -4,7 +4,7 @@
 
 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的本地实现候选与冻结配置已完成，
 方案阶段 3 由 `NOT_STARTED` 进入 `IN_PROGRESS`。本地结论仅为
-`THIRD_WINDOWS_ATTEMPT_CLEANUP_RECOVERY_READY`：
+`THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY`：
 
 - 默认开关仍为 `false`，未改变默认 RRF；
 - 4 个冻结 `dev` 样本的 Control 均保持原问题，Treatment 规划均为
@@ -169,10 +169,18 @@ SHA-256 为
 确认残留与 `_02` 同构，且全局非终态正好只有该 owner 的 9 个任务。
 
 根因是 `_active_cleanup_scope` 在 psycopg `dict_row` 连接上把行按元组解包，
-得到列名而非实际值，从而把正确的 9 任务范围误判为不匹配。本 Gate 不修复该
-运行器缺陷；恢复入口只把既有恢复器扩展到显式冻结的 `_03`，绑定 Run ID、
-确认词、审计 SHA 与完整前置计数。恢复完成并事后审计 `CLEAN` 前，不得修复后
-重跑质量。
+得到列名而非实际值，从而把正确的 9 任务范围误判为不匹配。独立恢复 Gate
+没有修复该运行器缺陷；恢复入口只把既有恢复器扩展到显式冻结的 `_03`，绑定
+Run ID、确认词、审计 SHA 与完整前置计数。恢复完成并事后审计 `CLEAN` 后，
+才进入当前独立运行器修复 Gate。
+
+用户已在提交 `c9c3705d70de7cb43812a8cd8a6a585da6eebcd9` 完成 `_03`
+恢复：9/9 `SUCCEEDED`，Chunk/PDF/全局非终态均为 0。恢复报告 SHA-256
+`94A10A54FFB6B326740E093DB97D148891FD44898E7BC077E25FA4385B780CDB`；
+事后审计 `PASS/CLEAN`，SHA-256
+`FFD2E805B857DF1D4D7E256A00BF09B15992261A4A31960C7A2D55B8D504DBAB`。
+随后独立修复只把 `_active_cleanup_scope` 改为显式 mapping key 取值，并记录
+脱敏 `primary_stage`；质量变量、检索参数和 holdout 均未改变。
 
 ## 6. 远程结果回收与裁决
 

@@ -180,6 +180,19 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
 
     def test_phase_three_comparison_user_runner_is_not_online_quality(self):
+        feature_payload = json.loads(
+            (ROOT / "machine" / "feature_list.json").read_text(encoding="utf-8")
+        )
+        phase3_feature = next(
+            feature
+            for feature in feature_payload["features"]
+            if feature["id"] == "phase3_bilateral_comparison_query_decomposition"
+        )
+        self.assertEqual(phase3_feature["status"], "PARTIAL")
+        self.assertEqual(
+            phase3_feature["gate_status"],
+            "THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY_FOR_NEW_DEV_RUN",
+        )
         payload = json.loads(
             (ROOT / "machine" / "phase3_comparison_dev_gate.json").read_text(
                 encoding="utf-8"
@@ -187,7 +200,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "THIRD_WINDOWS_ATTEMPT_CLEANUP_RECOVERY_READY",
+            "THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY",
         )
         self.assertEqual(
             payload["source_phase"], {"id": "phase-3", "status": "IN_PROGRESS"}
@@ -206,7 +219,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["paired_online_user_entry"]["status"],
-            "THIRD_WINDOWS_ATTEMPT_RESIDUAL_CONFIRMED_RECOVERY_READY",
+            "THIRD_ATTEMPT_RECOVERED_RUNNER_REPAIR_READY_FOR_NEW_RUN",
         )
         self.assertEqual(
             payload["windows_attempts"][0]["status"],
@@ -241,13 +254,29 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["cleanup_recovery_gate"]["status"],
-            "READY_AWAITING_USER_RUN",
+            "PASS",
         )
         self.assertFalse(payload["cleanup_recovery_gate"]["quality_gate_run"])
         self.assertEqual(payload["cleanup_recovery_result"]["jobs_succeeded"], 9)
         self.assertEqual(
             payload["cleanup_recovery_result"]["post_recovery_audit_decision"],
             "CLEAN",
+        )
+        self.assertEqual(
+            payload["cleanup_recovery_result_03"]["recovery_sha256"],
+            "94a10a54ffb6b326740e093db97d148891fd44898e7bc077e25fa4385b780cdb",
+        )
+        self.assertEqual(
+            payload["cleanup_recovery_result_03"][
+                "post_recovery_audit_sha256"
+            ],
+            "ffd2e805b857df1d4d7e256a00bf09b15992261a4a31960c7a2d55b8d504dbab",
+        )
+        self.assertTrue(
+            payload["known_runner_defect"]["quality_rerun_authorized"]
+        )
+        self.assertFalse(
+            payload["known_runner_defect"]["quality_variable_changed"]
         )
         self.assertFalse(
             payload["paired_online_user_entry"][
@@ -267,7 +296,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "CLEANUP_RECOVERY_READY_AFTER_THIRD_ATTEMPT_RESIDUAL",
+            "PAIRED_ONLINE_DEV_RETRY_READY_AFTER_THIRD_RECOVERY_AND_RUNNER_REPAIR",
         )
         self.assertEqual(payload["decision_id"], "PD-042")
         self.assertEqual(
@@ -304,21 +333,26 @@ class RepositoryHarnessTests(unittest.TestCase):
             payload["cleanup_audit_boundary"]["postgresql_transaction"],
             "READ_ONLY",
         )
-        self.assertFalse(
+        self.assertTrue(
             payload["cleanup_audit_boundary"]["quality_rerun_authorized"]
         )
         self.assertEqual(
             payload["cleanup_audit_boundary"]["next_gate"],
-            "EXACT_NINE_JOB_CLEANUP_RECOVERY_THEN_READ_ONLY_AUDIT",
+            "NEW_RUN_ID_PAIRED_ONLINE_DEV_QUALITY_GATE",
         )
         self.assertEqual(
             payload["cleanup_recovery_evidence"]["post_recovery_audit"],
             "PASS_CLEAN",
         )
         self.assertEqual(
-            payload["pending_cleanup_recovery"]["run_id"],
+            payload["completed_cleanup_recovery_03"]["run_id"],
             "phase3_comparison_dev_20260723_03",
         )
+        self.assertEqual(
+            payload["completed_cleanup_recovery_03"]["post_recovery_audit"],
+            "PASS_CLEAN",
+        )
+        self.assertFalse(payload["runner_repair"]["quality_variable_changed"])
 
     def test_validator_rejects_template_as_concrete_phase_result(self):
         template = json.loads(

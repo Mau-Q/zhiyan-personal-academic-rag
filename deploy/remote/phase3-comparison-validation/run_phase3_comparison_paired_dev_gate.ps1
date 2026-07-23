@@ -226,6 +226,8 @@ try {
         head_commit = $headCommit
         status = $report.status
         stable_error_code = $report.error_code
+        primary_stage = $report.primary_stage
+        primary_error_code = $report.primary_error_code
         input_manifest_sha256 = $report.input_manifest_sha256
         config_sha256 = $report.config_sha256
         target_ids_sha256 = $report.target_ids_sha256
