@@ -138,13 +138,30 @@ P95 was `344.676365 ms`, Reranker P95 was `131.885375 ms`, and combined P95
 was `472.190015 ms`. Its report SHA-256 is
 `132DFFDECDAD02F9C5280FADFBD09B5AE100C1DB31FE07118BF97B6E0C1B2602`.
 
-Because base retrieval alone exceeds the full 300 ms budget, the next run above
-does not change retrieval behavior. It only records P50/P95 for READY route
+Because base retrieval alone exceeded the full 300 ms budget, the profiling run
+above did not change retrieval behavior. It recorded P50/P95 for READY route
 resolution, Chunk snapshot loading, Elasticsearch validation/query, Milvus
 validation, query embedding, Milvus ANN search, backend parallel wall time,
 READY revalidation, RRF fusion, and retriever total. Return all stage P95 fields
-from the final sanitized summary. The 300 ms limit and default route remain
+in the final sanitized summary. The 300 ms limit and default route remain
 unchanged.
+
+The profiling run `online_retrieval_profile_20260723_01` subsequently completed
+30/30 `APPLIED` observations with the stage breakdown marked `PASS`, no fallback,
+expansion, or candidate-bound violation, three successful cleanup jobs, and the
+inactive Answer API 403. Base retrieval P95 was `376.394385 ms`, Reranker P95 was
+`132.456 ms`, and combined P95 was `504.71613 ms`. The largest measured stages
+were Query Embedding at `189.838925 ms`, READY route resolution at
+`145.48693 ms`, and backend parallel wall time at `214.176715 ms`; Elasticsearch
+total work was `35.634955 ms`, Milvus ANN was `6.03377 ms`, and RRF was
+`0.12001 ms`. The sanitized report SHA-256 is
+`235FE36A97B7F4E462AD502595CB0CF38C139022703B6C4EA1E93E19D3AC765B`.
+
+This closes the Phase-2 attribution Gate. Do not repeat it merely to obtain a
+passing latency result. The original RRF remains the default and the fixed
+Reranker remains optional. A later, independently versioned performance Gate
+must preserve the model, snapshot, candidate, authorization, identity, and
+300 ms contracts while changing only one runtime variable.
 
 ## Replay and single-side failure check
 

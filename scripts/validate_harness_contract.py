@@ -108,8 +108,8 @@ def check_project_state() -> None:
         "sha256": "43fd5d4af4d38884c2449b9ff39fcee537cf27af5a7a700747a932be5f74dc78",
         "line_count": 725,
         "traceability_doc": "docs/REQUIREMENTS_TRACEABILITY.md",
-        "source_phase": {"id": "phase-2", "status": "IN_PROGRESS"},
-        "completed_source_phases": ["phase-0", "phase-1"],
+        "source_phase": {"id": "phase-3", "status": "NOT_STARTED"},
+        "completed_source_phases": ["phase-0", "phase-1", "phase-2"],
     }:
         raise ValueError("project_state source_authority is invalid")
     if not isinstance(harness, dict) or harness.get("status") != "READY":
@@ -141,8 +141,8 @@ def check_project_state() -> None:
         source_authority["title"],
         source_authority["sha256"],
         f"`{source_authority['line_count']}`",
-        "方案阶段 0/1 COMPLETE",
-        "方案阶段 2 IN_PROGRESS",
+        "方案阶段 0/1/2 COMPLETE",
+        "方案阶段 3 NOT_STARTED",
     ):
         if expected not in traceability_text:
             raise ValueError(f"source authority identity missing from traceability: {expected}")

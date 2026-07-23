@@ -190,8 +190,20 @@ PostgreSQL READY/ACL、检索后重验、`candidate_k=20`、RRF `k=60`、向量
 `132DFFDECDAD02F9C5280FADFBD09B5AE100C1DB31FE07118BF97B6E0C1B2602`。
 
 base retrieval 的 P95 已单独超过整个 300 ms 预算，因此继续只优化 Reranker
-无法使组合门禁通过。当前本地 Gate 只增加脱敏分段观测：READY 路由解析、
-Chunk 快照、ES 校验/查询、Milvus 校验、Query Embedding、Milvus ANN、
-并行墙钟、READY 重验与 RRF；不改任何检索结果或参数。当前结论是
-`PARALLEL_REMOTE_COMBINED_P95_EXCEEDED_BASE_RETRIEVAL_PROFILE_LOCAL_PENDING_REMOTE`。
+无法使组合门禁通过。随后只增加脱敏分段观测，不改任何检索结果或参数。
+用户在提交 `3303bed1c6faead6980dc5246a9d0a0a06d1a751` 和 Run ID
+`online_retrieval_profile_20260723_01` 上取得 30/30 `APPLIED`：
+base retrieval `P50=287.5011 ms / P95=376.394385 ms`，Reranker
+`P50=129.59815 ms / P95=132.456 ms`，combined
+`P50=416.2398 ms / P95=504.71613 ms`。分段状态为 `PASS`，其中 READY
+路由解析 `P95=145.48693 ms`、Query Embedding `P95=189.838925 ms`、
+后端并行墙钟 `P95=214.176715 ms`，ES 总工作 `P95=35.634955 ms`、
+Milvus ANN `P95=6.03377 ms`、RRF `P95=0.12001 ms`。三路清理与删除后
+403 通过，报告 SHA-256 为
+`235FE36A97B7F4E462AD502595CB0CF38C139022703B6C4EA1E93E19D3AC765B`。
+
+最终结论为
+`REMOTE_PROFILE_COMPLETE_COMBINED_P95_EXCEEDED_RRF_DEFAULT_RERANKER_OPTIONAL`。
 默认在线路由继续保持原 RRF，固定 Reranker 仅保留为未默认启用的可选组件。
+阶段 2 的质量、保留/回退决定与功能边界已经完成；推理与 READY 路由性能
+硬化移入阶段 3 的独立 Gate，不能把该阶段结论写成 300 ms 已达标。

@@ -70,18 +70,18 @@ Qwen READY 首次运行以 `PERSISTED_SNAPSHOT_ANSWER_HTTP_FAILED` 失败；同 
 
 同提交的模型选型 v3 因冲突用例没有逐字出现“差异/不一致/冲突”而报告 `KEEP_LLAMA3_2`，但两次诊断均包含 `12周`、`16周` 与引用 `[1][2]`，生成、身份和禁词门禁全部通过。v4 只把该假阴性改为“两项冲突值 + 两条来源引用”的结构门禁；不修改模型、Prompt、Schema、解码或检索。用户在提交 `063236a` 完成远程 v4：Qwen `4/4`、llama3.2 `3/4`，结果 `PASS / PROMOTE_QWEN3_14B / NONE`，报告 SHA-256 为 `E031B1B4532571850FD4527D4930E80A3C144074DBB55F8055A54A51EDB7E038`。v3 原始假阴性报告继续保留。
 
-## 4. 阶段 2 剩余差距
+## 4. 阶段 2 收口证据与后移差距
 
 - 3 篇指定文档、9 个普通学术问答样本已完成远程 v2 验收：3 篇各 `3/3`、合计 `9/9` 通过真实生成、引用、版本、定位、三路清理和删除后 403；第 3 篇最终报告 SHA-256 为 `3C106423AB3575B11B3B0142A66F19A2C949B8BAED3457F1BCA101A9931302FA`；
 - 固定 Cross-Encoder 已在冻结 `test=100` 上完成本地质量验证：`nDCG@10` 相对提升 `15.5331%`、`Precision@5 +0.02`，四个关键类型不退化；目标 Windows RTX 4090 复跑保持相同质量和身份，Reranker 阶段 `P50=169.3867 ms / P95=188.22683 ms`，稳定错误码为 `NONE`；
 - 受控在线窄适配器已本地实现：PostgreSQL READY/ACL 和 ES/Milvus RRF 先返回并重验至多 20 个候选，Reranker 只排序并输出前 3；标题/模型/分数故障回退同一批已授权 RRF，身份漂移仍失败关闭；
 - ES/Milvus 并行复跑取得 30/30 `APPLIED`、无回退/扩张/越界、三路清理与删除后 403；base retrieval `P95=344.676365 ms`、Reranker `P95=131.885375 ms`、combined `P95=472.190015 ms`，稳定失败码为 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED`，报告 SHA-256 为 `132DFFDECDAD02F9C5280FADFBD09B5AE100C1DB31FE07118BF97B6E0C1B2602`；
-- 下一 Gate 只增加 READY 路由、Chunk 快照、ES 校验/查询、Milvus 校验、Query Embedding、ANN、并行墙钟、READY 重验和 RRF 的分项延迟；不改模型、检索参数或门槛，分段结果返回前不继续优化 Reranker；
+- Windows 分段 Gate 在提交 `3303bed` 上完成 30/30 `APPLIED`，base retrieval `P95=376.394385 ms`、Reranker `P95=132.456 ms`、combined `P95=504.71613 ms`；READY 路由解析 `P95=145.48693 ms`、Query Embedding `P95=189.838925 ms`、后端并行墙钟 `P95=214.176715 ms`，ES 总工作仅 `P95=35.634955 ms`、Milvus ANN 仅 `P95=6.03377 ms`。三路清理和删除后 403 通过，报告 SHA-256 为 `235FE36A97B7F4E462AD502595CB0CF38C139022703B6C4EA1E93E19D3AC765B`；
 - Claim 语义支持、冲突处理、正式 MinIO、OCR 和目标规模性能继续由各自后续 Gate 跟踪。
 
-阶段 2 因此仍为 `IN_PROGRESS/PARTIAL`。llama3.2 与 Qwen 的远程 READY
-真实生成闭环、Qwen 最终晋级、固定普通科研问答远程 `9/9`、固定
-Reranker 的本地质量门、目标硬件组件 P95 和受控在线本地实现均已完成；
-Windows 串行与并行组合检索 Gate 均未通过，默认路由已决定继续保持原
-RRF；基础召回分段归因仍未完成。后续不把它与
-MinIO/OCR、通用性能或生成变量混合。
+阶段 2 因此按最高方案第 10.3 节退出条件完成：Hybrid 对比、固定 Reranker
+增益验证和保留/回退决定、引用/ACL/版本/定位硬门禁、指定文档和普通学术
+问答稳定回放均已有证据。Windows 组合检索性能 Gate 未通过，默认路由明确
+保持原 RRF，固定 Reranker 只作为非默认可选组件。该性能债进入阶段 3 的
+独立性能硬化 Gate，不与 MinIO/OCR、生成变量或失败类型增强混合，也不得
+把阶段完成写成 300 ms SLO 或生产性能验收完成。

@@ -39,5 +39,6 @@
 | PD-035 | ACCEPTED | 固定 Reranker 作为显式可选后处理器接在 PostgreSQL READY/owner、持久化 Chunk 身份校验和 ES/Milvus RRF 之后，只重排至多 20 个已授权候选并输出前 3 | 标题/模型/分数故障回退同一批已授权 RRF；owner、版本、文档、活动状态或 Chunk 身份漂移继续失败关闭。默认路由只在 Windows 综合 `P95 <= 300 ms`、至少 30 样本、无回退和无候选扩张的独立 Gate 通过后再决定是否改变 |
 | PD-036 | ACCEPTED | 首个受控在线 Reranker Gate 以 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败，默认路由继续不变；允许在同一冻结合同下把 ES 与 Milvus 只读召回并行化后用新 Run ID 复跑 | 不改变模型、Embedding、候选数、向量阈值、RRF `k`、输出数、生成或 300 ms 门槛；失败报告必须保留 base/combined/Reranker 延迟、回退、候选边界、三路清理和删除后 403，Mac 并发测试不替代 Windows 性能结论 |
 | PD-037 | ACCEPTED | ES/Milvus 并行复跑的 base retrieval `P95=344.676365 ms`、combined `P95=472.190015 ms`，固定 Reranker 不晋级默认在线路由；下一 Gate 只做基础召回分段观测 | 30/30 应用、无回退/扩张/越界、三路清理和删除后 403 证明功能与安全边界通过，但 base 本身已超出 300 ms；在 READY、快照、ES、Embedding、Milvus、RRF、重验的分段证据返回前，不继续调 Reranker、不放宽 SLO |
+| PD-038 | ACCEPTED | Windows 分段 Gate 证明 base retrieval `P95=376.394385 ms`、combined `P95=504.71613 ms`，主要成本为 Query Embedding `P95=189.838925 ms` 与 READY 路由解析 `P95=145.48693 ms`；阶段 2 以原 RRF 默认、固定 Reranker 可选且不默认启用的边界完成 | 最高方案第 10.3 节要求完成 Hybrid 对比、Reranker 增益与保留/回退决策、硬门禁和稳定回放，并不要求 Reranker 必须默认启用；300 ms 未通过作为真实性能债后移至阶段 3 独立性能 Gate，不得写成 SLO 达标或生产验收完成 |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。
