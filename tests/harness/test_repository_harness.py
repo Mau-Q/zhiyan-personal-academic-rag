@@ -187,7 +187,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "CLEANUP_AUDIT_READY_AWAITING_WINDOWS_READ_ONLY_AUDIT",
+            "CLEANUP_RECOVERY_READY_AWAITING_WINDOWS_EXECUTION",
         )
         self.assertEqual(
             payload["source_phase"], {"id": "phase-3", "status": "IN_PROGRESS"}
@@ -206,7 +206,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["paired_online_user_entry"]["status"],
-            "SECOND_WINDOWS_ATTEMPT_UNTRUSTED_CLEANUP_AUDIT_REQUIRED",
+            "SECOND_WINDOWS_ATTEMPT_RESIDUAL_CONFIRMED_RECOVERY_READY",
         )
         self.assertEqual(
             payload["windows_attempts"][0]["status"],
@@ -231,6 +231,11 @@ class RepositoryHarnessTests(unittest.TestCase):
         self.assertFalse(
             payload["cleanup_audit_gate"]["quality_rerun_allowed_before_clean"]
         )
+        self.assertEqual(
+            payload["cleanup_recovery_gate"]["single_action"],
+            "RUN_EXISTING_PERSISTENT_CLEANUP_WORKER_MAX_NINE",
+        )
+        self.assertFalse(payload["cleanup_recovery_gate"]["quality_gate_run"])
         self.assertFalse(
             payload["paired_online_user_entry"][
                 "absolute_300ms_slo_adjudication"
@@ -249,7 +254,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "CLEANUP_AUDIT_REQUIRED_AFTER_UNTRUSTED_SECOND_REPORT",
+            "CLEANUP_RECOVERY_READY_AFTER_CONFIRMED_PENDING_RESIDUAL",
         )
         self.assertEqual(payload["decision_id"], "PD-042")
         self.assertEqual(
@@ -288,6 +293,10 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertFalse(
             payload["cleanup_audit_boundary"]["quality_rerun_authorized"]
+        )
+        self.assertEqual(
+            payload["cleanup_audit_boundary"]["next_gate"],
+            "EXACT_NINE_JOB_CLEANUP_RECOVERY_THEN_READ_ONLY_AUDIT",
         )
 
     def test_validator_rejects_template_as_concrete_phase_result(self):

@@ -4,7 +4,7 @@
 
 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的本地实现候选与冻结配置已完成，
 方案阶段 3 由 `NOT_STARTED` 进入 `IN_PROGRESS`。本地结论仅为
-`CLEANUP_AUDIT_READY_AWAITING_WINDOWS_READ_ONLY_AUDIT`：
+`CLEANUP_RECOVERY_READY_AWAITING_WINDOWS_EXECUTION`：
 
 - 默认开关仍为 `false`，未改变默认 RRF；
 - 4 个冻结 `dev` 样本的 Control 均保持原问题，Treatment 规划均为
@@ -16,6 +16,8 @@
   裁决器已准备；前两次拒绝报告已保留已确认的身份，但不构成在线质量证据；
 - 第二次报告的通用清理异常遮蔽了主失败与具体阶段；运行器已改为同时保留
   `primary_error_code` 和分阶段清理错误，另有只读 PostgreSQL 残留审计入口；
+- 只读审计已确认 3 个版本全部失活，但 9 个清理任务全部 `PENDING`，316 个
+  Chunk 与 3 个 PDF 对象仍在；精确恢复入口已准备但尚未由用户运行；
 - 尚未运行真实 PostgreSQL READY + ES/Milvus + RRF 配对回放，因此没有
   检索质量增益、关键类不退化或 300 ms 通过结论；
 - `test` 与 `acceptance` 均未读取、未运行。
@@ -132,6 +134,19 @@ Control/Treatment，也不能证明隔离 owner 已清理。
 `CLEAN`。全局汇总不输出其他 owner 身份。审计不直接查询 ES/Milvus；物理删除
 只解释为持久化任务成功与运行快照清零的组合证据。若返回残留，下一步是独立
 恢复 Gate，不允许临时 SQL、手工删索引或直接复跑。
+
+该审计已在提交 `740393a7897a7ed9bdff747acfcd27dfa0667ddd` 上执行，结果为
+`FAIL / RESIDUAL_REQUIRES_RECOVERY_GATE`，SHA-256：
+`A3FBDDC29ACAAAB0E72EDCD889F14A198F238F523A08588D5D486765999498CF`。
+具体状态是 3 个 `INACTIVE` 版本、3 个已终态入库任务、9 个
+`PENDING/attempt=0` 清理任务、316 Chunk 和 3 PDF；全局 9 个非终态任务就是
+该 owner 的同一队列，没有其他 owner 混入。
+
+恢复 Gate 只允许 `scripts/recover_phase3_comparison_cleanup.py` 调用既有
+`PersistentIndexCleanupWorker`，最大领取 9 次。变更前再次核对上述完整身份和
+计数；完成后必须是 9 个 `SUCCEEDED`、全局非终态为 0、Chunk/PDF 为 0，并由
+原只读审计器生成独立事后报告。任何前置漂移、删除失败或事后审计失败都停止，
+不得自动重试或进入质量 Gate。
 
 ## 6. 远程结果回收与裁决
 

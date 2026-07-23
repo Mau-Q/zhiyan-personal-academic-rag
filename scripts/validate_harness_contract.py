@@ -421,7 +421,7 @@ def check_phase3_comparison_dev_gate() -> None:
     if payload.get("schema_version") != "phase3_comparison_dev_gate_v1":
         raise ValueError("phase 3 comparison dev gate schema_version is invalid")
     if payload.get("status") != (
-        "CLEANUP_AUDIT_READY_AWAITING_WINDOWS_READ_ONLY_AUDIT"
+        "CLEANUP_RECOVERY_READY_AWAITING_WINDOWS_EXECUTION"
     ):
         raise ValueError("phase 3 comparison dev gate status is invalid")
     if payload.get("source_phase") != {"id": "phase-3", "status": "IN_PROGRESS"}:
@@ -481,8 +481,9 @@ def check_phase3_comparison_dev_gate() -> None:
         not isinstance(user_entry, dict)
         or user_entry.get("decision_id") != "PD-041"
         or user_entry.get("status")
-        != "SECOND_WINDOWS_ATTEMPT_UNTRUSTED_CLEANUP_AUDIT_REQUIRED"
+        != "SECOND_WINDOWS_ATTEMPT_RESIDUAL_CONFIRMED_RECOVERY_READY"
         or user_entry.get("cleanup_audit_decision_id") != "PD-044"
+        or user_entry.get("cleanup_recovery_decision_id") != "PD-045"
         or user_entry.get("quality_top_k") != 3
         or user_entry.get("absolute_300ms_slo_adjudication") is not False
         or "TEST_ACCEPTANCE_EXCLUDED"
@@ -518,6 +519,8 @@ def check_phase3_comparison_dev_gate() -> None:
         "windows_powershell_51_entry",
         "cleanup_auditor",
         "windows_cleanup_audit_entry",
+        "cleanup_recovery_runner",
+        "windows_cleanup_recovery_entry",
         "runbook",
     ):
         relative_path = user_entry.get(field)
@@ -543,16 +546,34 @@ def check_phase3_comparison_dev_gate() -> None:
     cleanup_audit = payload.get("cleanup_audit_gate")
     if (
         not isinstance(cleanup_audit, dict)
-        or cleanup_audit.get("status") != "READY_AWAITING_USER_RUN"
+        or cleanup_audit.get("status")
+        != "FAIL_RESIDUAL_REQUIRES_RECOVERY_GATE"
         or cleanup_audit.get("run_id")
         != "phase3_comparison_dev_20260723_02"
         or cleanup_audit.get("mode")
         != "POSTGRESQL_READ_ONLY_OWNER_SCOPED_PLUS_GLOBAL_NONTERMINAL_COUNT"
+        or cleanup_audit.get("audit_sha256")
+        != "a3fbddc29acaaab0e72edcd889f14a198f238f523a08588d5d486765999498cf"
         or cleanup_audit.get("quality_rerun_allowed_before_clean") is not False
         or cleanup_audit.get("manual_cleanup_allowed") is not False
         or cleanup_audit.get("test_acceptance_read_allowed") is not False
     ):
         raise ValueError("phase 3 cleanup audit boundary drifted")
+    recovery = payload.get("cleanup_recovery_gate")
+    if (
+        not isinstance(recovery, dict)
+        or recovery.get("status") != "READY_AWAITING_USER_RUN"
+        or recovery.get("decision_id") != "PD-045"
+        or recovery.get("run_id") != "phase3_comparison_dev_20260723_02"
+        or recovery.get("single_action")
+        != "RUN_EXISTING_PERSISTENT_CLEANUP_WORKER_MAX_NINE"
+        or recovery.get("quality_gate_run") is not False
+        or recovery.get("test_acceptance_read_allowed") is not False
+        or recovery.get("performance_gate_run") is not False
+        or recovery.get("service_restart_allowed") is not False
+        or recovery.get("manual_delete_allowed") is not False
+    ):
+        raise ValueError("phase 3 cleanup recovery boundary drifted")
 
 
 def check_phase3_comparison_report_intake() -> None:
@@ -562,8 +583,9 @@ def check_phase3_comparison_report_intake() -> None:
         or payload.get("decision_id") != "PD-042"
         or payload.get("repair_decision_id") != "PD-043"
         or payload.get("cleanup_audit_decision_id") != "PD-044"
+        or payload.get("cleanup_recovery_decision_id") != "PD-045"
         or payload.get("status")
-        != "CLEANUP_AUDIT_REQUIRED_AFTER_UNTRUSTED_SECOND_REPORT"
+        != "CLEANUP_RECOVERY_READY_AFTER_CONFIRMED_PENDING_RESIDUAL"
     ):
         raise ValueError("phase 3 report intake identity is invalid")
     implementation = payload.get("implementation")
@@ -575,6 +597,8 @@ def check_phase3_comparison_report_intake() -> None:
         "windows_entry",
         "cleanup_auditor",
         "windows_cleanup_audit_entry",
+        "cleanup_recovery_runner",
+        "windows_cleanup_recovery_entry",
     ):
         relative_path = implementation.get(field)
         if not isinstance(relative_path, str) or not (ROOT / relative_path).is_file():
@@ -650,9 +674,15 @@ def check_phase3_comparison_report_intake() -> None:
         not isinstance(audit, dict)
         or audit.get("target_run_id") != "phase3_comparison_dev_20260723_02"
         or audit.get("postgresql_transaction") != "READ_ONLY"
+        or audit.get("audit_sha256")
+        != "a3fbddc29acaaab0e72edcd889f14a198f238f523a08588d5d486765999498cf"
+        or audit.get("observed_state")
+        != "THREE_INACTIVE_VERSIONS_NINE_PENDING_CLEANUP_JOBS_316_CHUNKS_THREE_PDF_OBJECTS"
         or audit.get("quality_rerun_authorized") is not False
         or audit.get("manual_cleanup_authorized") is not False
         or audit.get("performance_gate") != "NOT_COMBINED"
+        or audit.get("next_gate")
+        != "EXACT_NINE_JOB_CLEANUP_RECOVERY_THEN_READ_ONLY_AUDIT"
     ):
         raise ValueError("phase 3 report intake cleanup audit boundary drifted")
 

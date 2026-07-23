@@ -1,6 +1,6 @@
 {
   "schema_version": "phase3_comparison_dev_gate_v1",
-  "status": "CLEANUP_AUDIT_READY_AWAITING_WINDOWS_READ_ONLY_AUDIT",
+  "status": "CLEANUP_RECOVERY_READY_AWAITING_WINDOWS_EXECUTION",
   "source_phase": {
     "id": "phase-3",
     "status": "IN_PROGRESS"
@@ -50,7 +50,7 @@
   },
   "paired_online_user_entry": {
     "decision_id": "PD-041",
-    "status": "SECOND_WINDOWS_ATTEMPT_UNTRUSTED_CLEANUP_AUDIT_REQUIRED",
+    "status": "SECOND_WINDOWS_ATTEMPT_RESIDUAL_CONFIRMED_RECOVERY_READY",
     "package_builder": "scripts/build_phase3_comparison_dev_package.py",
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "report_adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -59,6 +59,9 @@
     "cleanup_audit_decision_id": "PD-044",
     "cleanup_auditor": "scripts/audit_phase3_comparison_cleanup_state.py",
     "windows_cleanup_audit_entry": "deploy/remote/phase3-comparison-validation/audit_phase3_comparison_cleanup_state.ps1",
+    "cleanup_recovery_decision_id": "PD-045",
+    "cleanup_recovery_runner": "scripts/recover_phase3_comparison_cleanup.py",
+    "windows_cleanup_recovery_entry": "deploy/remote/phase3-comparison-validation/recover_phase3_comparison_cleanup.ps1",
     "runbook": "deploy/remote/phase3-comparison-validation/README.md",
     "input_boundary": "PRIVATE_DEV_ONLY_105_ROWS_316_FROZEN_CHUNKS_FIXED_15_CANARY_THREE_PDFS_TEST_ACCEPTANCE_EXCLUDED",
     "lifecycle": "ISOLATED_OWNER_THREE_READY_VERSIONS_NINE_CLEANUP_JOBS_DELETED_ANSWER_API_403_REQUIRED",
@@ -113,14 +116,29 @@
     "data_schema_index_model_cleanup_required": false
   },
   "cleanup_audit_gate": {
-    "status": "READY_AWAITING_USER_RUN",
+    "status": "FAIL_RESIDUAL_REQUIRES_RECOVERY_GATE",
     "run_id": "phase3_comparison_dev_20260723_02",
+    "head_commit": "740393a7897a7ed9bdff747acfcd27dfa0667ddd",
+    "audit_sha256": "a3fbddc29acaaab0e72edcd889f14a198f238f523a08588d5d486765999498cf",
     "mode": "POSTGRESQL_READ_ONLY_OWNER_SCOPED_PLUS_GLOBAL_NONTERMINAL_COUNT",
     "quality_rerun_allowed_before_clean": false,
     "manual_cleanup_allowed": false,
     "test_acceptance_read_allowed": false,
     "elasticsearch_milvus_direct_query_allowed": false,
     "residual_outcome": "REQUIRES_SEPARATE_RECOVERY_GATE"
+  },
+  "cleanup_recovery_gate": {
+    "status": "READY_AWAITING_USER_RUN",
+    "decision_id": "PD-045",
+    "run_id": "phase3_comparison_dev_20260723_02",
+    "precondition": "THREE_INACTIVE_VERSIONS_NINE_PENDING_ATTEMPT_ZERO_JOBS_THREE_BACKENDS_316_CHUNKS_THREE_PDF_OBJECTS_NO_OTHER_GLOBAL_NONTERMINAL_JOBS",
+    "single_action": "RUN_EXISTING_PERSISTENT_CLEANUP_WORKER_MAX_NINE",
+    "postcondition": "NINE_SUCCEEDED_ZERO_GLOBAL_NONTERMINAL_ZERO_CHUNKS_ZERO_PDF_OBJECTS_THEN_READ_ONLY_AUDIT_CLEAN",
+    "quality_gate_run": false,
+    "test_acceptance_read_allowed": false,
+    "performance_gate_run": false,
+    "service_restart_allowed": false,
+    "manual_delete_allowed": false
   },
   "independent_performance_gate": {
     "status": "PENDING_SEPARATE_GATE",

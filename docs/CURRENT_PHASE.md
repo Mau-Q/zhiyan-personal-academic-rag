@@ -4,7 +4,7 @@
 
 `SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_COMPARISON_RUNNER_REPAIR_READY_AWAITING_PAIRED_DEV_RETRY / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
-Phase ID：`source-phase3-comparison-cleanup-audit-ready-awaiting-windows-read-only-audit`
+Phase ID：`source-phase3-comparison-cleanup-recovery-ready-awaiting-windows-execution`
 
 ## Completed
 
@@ -180,6 +180,8 @@ Phase ID：`source-phase3-comparison-cleanup-audit-ready-awaiting-windows-read-o
 - 首次 Windows Run ID `phase3_comparison_dev_20260723_01` 在连接服务前因 `core.autocrlf=true` 把冻结 JSON 检出为 CRLF 而被拒绝；报告 SHA-256 为 `AC081A26FD331F00659BE3E950537A9B22D46E75C1F3303B1BFEFBD7D7706827`，裁决 SHA-256 为 `EB0CE6F786963B65E859496405F4F12018C93AB43015B0E759D306141B1714F6`。该尝试没有运行在线 Control/Treatment、没有写入基础设施，也不是质量证据；运行器现只将纯 CRLF 规范化为 LF 后核对原冻结 SHA，内容漂移仍失败关闭，等待新提交和新 Run ID 重试。
 - 第二次 Windows Run ID `phase3_comparison_dev_20260723_02` 在提交 `ac1e5994f8e35648750d912b9a778c2a46682c3c` 上通过配置身份后以 `CLEANUP_PROOF_FAILED` 结束；报告 SHA-256 为 `423D736D496BE0AFA1CC06A90E3402B060C519F74C17D9C4939E31A50304E276`，裁决 SHA-256 为 `74A599288445F1C2267F892A81B5F6B8BD3D5002D4A67E6BE6700645D3516981`，错误码为 `REPORT_CLEANUP_PROOF_INVALID`。旧通用异常路径没有保留主失败或清理阶段，`identity=null`，因此该报告既不是质量证据，也不能证明隔离 owner 已清理。
 - 运行器现分别保留 `primary_error_code`、清理阶段、已观察/成功任务数与稳定阶段错误；版本固定的 Windows PowerShell 5.1 审计入口只在 PostgreSQL `READ ONLY` 事务中查询 `_02` owner 的版本、入库任务、三路清理任务、Chunk/PDF 快照聚合及全局非终态清理任务计数，不暴露其他 owner、不直接查询 ES/Milvus、不修改数据、不重启服务、不读取 `test/acceptance`。审计返回 `CLEAN` 前禁止新质量 Run ID；残留只能进入独立恢复 Gate。
+- `_02` 只读审计已返回 `FAIL / RESIDUAL_REQUIRES_RECOVERY_GATE`：3 个版本全部 `INACTIVE`，3 个入库任务终态，9 个清理任务全部 `PENDING/attempt=0`，全局非终态任务正好也是这 9 个，仍有 316 Chunk 和 3 PDF；审计 SHA-256 为 `A3FBDDC29ACAAAB0E72EDCD889F14A198F238F523A08588D5D486765999498CF`。因此没有 READY 泄漏，但物理清理未执行。
+- 精确恢复入口已准备：变更前重验完整残留身份，只让既有持久化 Worker 最多领取这 9 个任务，完成后要求 9 个 `SUCCEEDED`、全局非终态/Chunk/PDF 清零并自动运行只读事后审计；不运行质量、test、Acceptance 或性能，不重启服务，不允许手工删除。
 
 ## 输入
 
@@ -224,12 +226,12 @@ Phase ID：`source-phase3-comparison-cleanup-audit-ready-awaiting-windows-read-o
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 已完成入口冻结、默认关闭的比较拆分本地实现候选、用户运行入口和报告裁决准备，因此为 `IN_PROGRESS`。第一次 Windows 尝试证明并修复了 CRLF 配置身份缺陷；第二次报告因清理证明失败且未保留主失败/清理阶段而不可采信。当前评测边界为 `PHASE3_COMPARISON_CLEANUP_AUDIT_READY_SECOND_REPORT_UNTRUSTED_NO_QUALITY_RERUN_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_3_OF_3_DOCUMENTS_9_OF_9_CASES_PASS`。本地规划、运行器、裁决器与只读审计的静态证据不证明真实 ES/Milvus RRF 增益、关键类不退化、在线增量延迟或 `_02` 已清理。Windows 阶段 2 分段证据仍为 base `P95=376.394385 ms`、combined `P95=504.71613 ms`，默认继续使用原 RRF，固定 Reranker 和比较拆分都保持关闭；阶段 2 完成与阶段 3 本地实现均不代表 300 ms 或生产性能验收通过。运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 已完成入口冻结、默认关闭的比较拆分本地实现候选、用户运行入口和报告裁决准备，因此为 `IN_PROGRESS`。第一次 Windows 尝试证明并修复了 CRLF 配置身份缺陷；第二次报告因清理证明失败且未保留主失败/清理阶段而不可采信；只读审计已确认其精确残留。当前评测边界为 `PHASE3_COMPARISON_CLEANUP_RECOVERY_READY_NINE_PENDING_NO_QUALITY_RERUN_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_3_OF_3_DOCUMENTS_9_OF_9_CASES_PASS`。本地恢复脚本与静态证据不证明 `_02` 已清理，也不证明真实 ES/Milvus RRF 增益、关键类不退化或在线增量延迟。Windows 阶段 2 分段证据仍为 base `P95=376.394385 ms`、combined `P95=504.71613 ms`，默认继续使用原 RRF，固定 Reranker和比较拆分都保持关闭；阶段 2 完成与阶段 3 本地实现均不代表 300 ms 或生产性能验收通过。运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
 
 ## Next gate
 
-1. **Windows `_02` 只读残留审计：** 用户推送本地修复提交后，只运行版本化审计入口；固定 Run ID `phase3_comparison_dev_20260723_02`，仅查询 PostgreSQL owner 范围。若结果不是 `status=PASS / decision=CLEAN`，立即停止，不运行质量 Gate、不手工清理；
-2. **条件式独立恢复 Gate：** 只有审计发现残留时才设计；根据版本、任务和快照聚合确定一个恢复动作，完成后重新只读审计。不得与比较拆分质量、test、Acceptance 或 300 ms 性能合并；
+1. **Windows `_02` 精确恢复：** 用户推送本地恢复提交后，只运行版本化恢复入口；固定 Run ID，前置必须完全匹配 3 INACTIVE、9 PENDING attempt=0、316 Chunk、3 PDF 和无其他全局非终态任务。只调用既有 Worker，任何漂移或失败都停止；
+2. **自动事后只读审计：** 恢复入口随后调用独立审计器；只有 9 `SUCCEEDED`、全局非终态/Chunk/PDF 全为 0 且 `status=PASS / decision=CLEAN` 才收口恢复。不得手工删除或重复执行；
 3. **同一质量 Gate 的 Windows 新运行：** 只有审计证明 `CLEAN` 后，才以新 Run ID 重跑；验证 316 个持久化 Chunk 身份后先跑 Control，再只开比较拆分 Treatment；若 Control 不能重现冻结失败形态，停止 Treatment但仍完成清理，且不读取 `test`；
 4. **dev 报告独立裁决与冻结：** 完整报告必须绑定 SHA-256、实际 HEAD、Run ID、输入/配置/目标身份、指标算术、清理和 holdout；只有裁决 PASS 才能在新的本地 Gate 固化仍默认关闭的 dev 候选；
 5. **封存 test 与独立性能：** test 只能在实现、配置、dev 结果和候选提交全部冻结后一次性运行，Acceptance 仍需明确授权；300 ms 性能 Gate 固定现有模型/snapshot、候选、RRF 与门槛，不与任何失败类型能力同时实施。

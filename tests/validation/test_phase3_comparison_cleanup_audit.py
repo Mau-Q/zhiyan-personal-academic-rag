@@ -6,6 +6,14 @@ from scripts.audit_phase3_comparison_cleanup_state import (
     build_report,
     evaluate_snapshot,
 )
+from scripts.recover_phase3_comparison_cleanup import (
+    EXPECTED_BACKENDS,
+    EXPECTED_OWNER,
+    RecoveryError,
+    _postcondition_pass,
+    _require_frozen_precondition,
+    _summary,
+)
 
 
 def _completed_snapshot(version_count: int = 3) -> dict[str, object]:
@@ -135,6 +143,65 @@ class Phase3ComparisonCleanupAuditTests(unittest.TestCase):
         self.assertFalse(report["proof_boundary"]["test_read_or_run"])
         self.assertFalse(report["proof_boundary"]["acceptance_read_or_run"])
         self.assertFalse(report["proof_boundary"]["quality_rerun_authorized"])
+
+
+def _recovery_snapshot(status: str = "PENDING") -> dict[str, object]:
+    versions = tuple(
+        {
+            "document_version_id": f"version_{index}",
+            "lifecycle_status": "INACTIVE",
+            "is_active": False,
+        }
+        for index in range(3)
+    )
+    cleanup = tuple(
+        {
+            "document_version_id": version["document_version_id"],
+            "backend": backend,
+            "status": status,
+            "attempt_count": 0 if status == "PENDING" else 1,
+            "failure_code": None,
+        }
+        for version in versions
+        for backend in EXPECTED_BACKENDS
+    )
+    return {
+        "versions": versions,
+        "owner_cleanup": cleanup,
+        "global_nonterminal": (
+            tuple(
+                {"owner_id": EXPECTED_OWNER, **row}
+                for row in cleanup
+            )
+            if status == "PENDING"
+            else ()
+        ),
+        "ingestion_job_count": 3,
+        "chunk_rows": 316 if status == "PENDING" else 0,
+        "pdf_object_rows": 3 if status == "PENDING" else 0,
+    }
+
+
+class Phase3ComparisonCleanupRecoveryTests(unittest.TestCase):
+    def test_frozen_pending_snapshot_is_the_only_recovery_precondition(self):
+        snapshot = _recovery_snapshot()
+        _require_frozen_precondition(snapshot)
+        summary = _summary(snapshot)
+        self.assertEqual(summary["cleanup_status_counts"], {"PENDING": 9})
+        self.assertEqual(summary["global_nonterminal_cleanup_job_count"], 9)
+
+        snapshot["chunk_rows"] = 315
+        with self.assertRaisesRegex(
+            RecoveryError,
+            "FROZEN_RECOVERY_PRECONDITION_MISMATCH",
+        ):
+            _require_frozen_precondition(snapshot)
+
+    def test_postcondition_requires_nine_succeeded_and_zero_snapshots(self):
+        snapshot = _recovery_snapshot(status="SUCCEEDED")
+        self.assertTrue(_postcondition_pass(snapshot))
+        snapshot["pdf_object_rows"] = 1
+        self.assertFalse(_postcondition_pass(snapshot))
 
 
 if __name__ == "__main__":

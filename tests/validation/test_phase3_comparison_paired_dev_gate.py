@@ -46,6 +46,13 @@ AUDIT_POWERSHELL_PATH = (
     / "phase3-comparison-validation"
     / "audit_phase3_comparison_cleanup_state.ps1"
 )
+RECOVERY_POWERSHELL_PATH = (
+    ROOT
+    / "deploy"
+    / "remote"
+    / "phase3-comparison-validation"
+    / "recover_phase3_comparison_cleanup.ps1"
+)
 
 
 def _latency(value: float) -> OnlineRetrievalLatencyBreakdown:
@@ -200,6 +207,20 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
             "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY",
             auditor,
         )
+
+    def test_windows_recovery_is_exact_and_runs_post_recovery_audit(self):
+        script = RECOVERY_POWERSHELL_PATH.read_text(encoding="utf-8")
+        self.assertIn("Target: Windows PowerShell 5.1", script)
+        self.assertIn("$headCommit -ne $ExpectedHeadCommit", script)
+        self.assertIn("RECOVER_EXACT_PHASE3_COMPARISON_02_CLEANUP", script)
+        self.assertIn("scripts/recover_phase3_comparison_cleanup.py", script)
+        self.assertIn("scripts/audit_phase3_comparison_cleanup_state.py", script)
+        self.assertIn("-AsSecureString", script)
+        self.assertNotIn("Restart-Service", script)
+        self.assertNotIn("Start-Service", script)
+        self.assertNotIn("Stop-Service", script)
+        self.assertNotIn("run_phase3_comparison_paired_dev_gate.py", script)
+        self.assertIn("$audit.decision -ne 'CLEAN'", script)
 
     def test_package_output_must_be_a_runtime_zip(self):
         _validate_output(Path("runtime/phase3/input.zip"))

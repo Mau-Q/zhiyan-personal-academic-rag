@@ -1,19 +1,22 @@
 {
   "schema_version": "phase3_comparison_report_intake_v1",
   "decision_id": "PD-042",
-  "status": "CLEANUP_AUDIT_REQUIRED_AFTER_UNTRUSTED_SECOND_REPORT",
+  "status": "CLEANUP_RECOVERY_READY_AFTER_CONFIRMED_PENDING_RESIDUAL",
   "source_gate": {
     "artifact": "machine/phase3_comparison_dev_gate.json",
-    "status": "CLEANUP_AUDIT_READY_AWAITING_WINDOWS_READ_ONLY_AUDIT"
+    "status": "CLEANUP_RECOVERY_READY_AWAITING_WINDOWS_EXECUTION"
   },
   "repair_decision_id": "PD-043",
   "cleanup_audit_decision_id": "PD-044",
+  "cleanup_recovery_decision_id": "PD-045",
   "implementation": {
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
     "windows_entry": "deploy/remote/phase3-comparison-validation/run_phase3_comparison_paired_dev_gate.ps1",
     "cleanup_auditor": "scripts/audit_phase3_comparison_cleanup_state.py",
     "windows_cleanup_audit_entry": "deploy/remote/phase3-comparison-validation/audit_phase3_comparison_cleanup_state.ps1",
+    "cleanup_recovery_runner": "scripts/recover_phase3_comparison_cleanup.py",
+    "windows_cleanup_recovery_entry": "deploy/remote/phase3-comparison-validation/recover_phase3_comparison_cleanup.ps1",
     "tests": [
       "tests/validation/test_phase3_comparison_paired_dev_gate.py",
       "tests/validation/test_phase3_comparison_cleanup_audit.py",
@@ -87,8 +90,11 @@
     "postgresql_transaction": "READ_ONLY",
     "test": "NOT_READ_NOT_RUN",
     "acceptance": "NOT_READ_NOT_RUN",
+    "audit_sha256": "a3fbddc29acaaab0e72edcd889f14a198f238f523a08588d5d486765999498cf",
+    "observed_state": "THREE_INACTIVE_VERSIONS_NINE_PENDING_CLEANUP_JOBS_316_CHUNKS_THREE_PDF_OBJECTS",
     "quality_rerun_authorized": false,
     "manual_cleanup_authorized": false,
-    "performance_gate": "NOT_COMBINED"
+    "performance_gate": "NOT_COMBINED",
+    "next_gate": "EXACT_NINE_JOB_CLEANUP_RECOVERY_THEN_READ_ONLY_AUDIT"
   }
 }
