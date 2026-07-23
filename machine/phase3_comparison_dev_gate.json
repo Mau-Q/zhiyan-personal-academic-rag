@@ -1,6 +1,6 @@
 {
   "schema_version": "phase3_comparison_dev_gate_v1",
-  "status": "LOCAL_IMPLEMENTATION_PASS_AWAITING_PAIRED_ONLINE_DEV",
+  "status": "USER_RUNNER_READY_AWAITING_PAIRED_ONLINE_DEV",
   "source_phase": {
     "id": "phase-3",
     "status": "IN_PROGRESS"
@@ -45,6 +45,20 @@
     "decomposition_latency_sample_count": 120,
     "decomposition_p95_ms_observed": 0.016271,
     "decomposition_p95_ms_max": 5
+  },
+  "paired_online_user_entry": {
+    "decision_id": "PD-041",
+    "status": "LOCAL_STATIC_AND_CONTRACT_PASS_NOT_RUN_ON_WINDOWS",
+    "package_builder": "scripts/build_phase3_comparison_dev_package.py",
+    "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
+    "windows_powershell_51_entry": "deploy/remote/phase3-comparison-validation/run_phase3_comparison_paired_dev_gate.ps1",
+    "runbook": "deploy/remote/phase3-comparison-validation/README.md",
+    "input_boundary": "PRIVATE_DEV_ONLY_105_ROWS_316_FROZEN_CHUNKS_FIXED_15_CANARY_THREE_PDFS_TEST_ACCEPTANCE_EXCLUDED",
+    "lifecycle": "ISOLATED_OWNER_THREE_READY_VERSIONS_NINE_CLEANUP_JOBS_DELETED_ANSWER_API_403_REQUIRED",
+    "control_stop_rule": "CONTROL_STRICT_TWO_SIDED_PASS_COUNT_MUST_EQUAL_0_OF_4_BEFORE_TREATMENT",
+    "quality_top_k": 3,
+    "ndcg_at_10_boundary": "EVALUATION_DIAGNOSTIC_WITHIN_EXISTING_CANDIDATE_20_PRODUCT_FINAL_TOP3_UNCHANGED",
+    "absolute_300ms_slo_adjudication": false
   },
   "paired_online_dev_quality": {
     "status": "NOT_RUN",

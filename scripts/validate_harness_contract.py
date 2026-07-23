@@ -420,7 +420,7 @@ def check_phase3_comparison_dev_gate() -> None:
     if payload.get("schema_version") != "phase3_comparison_dev_gate_v1":
         raise ValueError("phase 3 comparison dev gate schema_version is invalid")
     if payload.get("status") != (
-        "LOCAL_IMPLEMENTATION_PASS_AWAITING_PAIRED_ONLINE_DEV"
+        "USER_RUNNER_READY_AWAITING_PAIRED_ONLINE_DEV"
     ):
         raise ValueError("phase 3 comparison dev gate status is invalid")
     if payload.get("source_phase") != {"id": "phase-3", "status": "IN_PROGRESS"}:
@@ -470,6 +470,21 @@ def check_phase3_comparison_dev_gate() -> None:
     paired = payload.get("paired_online_dev_quality")
     if not isinstance(paired, dict) or paired.get("status") != "NOT_RUN":
         raise ValueError("phase 3 paired online dev must remain not run")
+    user_entry = payload.get("paired_online_user_entry")
+    if (
+        not isinstance(user_entry, dict)
+        or user_entry.get("decision_id") != "PD-041"
+        or user_entry.get("status") != "LOCAL_STATIC_AND_CONTRACT_PASS_NOT_RUN_ON_WINDOWS"
+        or user_entry.get("quality_top_k") != 3
+        or user_entry.get("absolute_300ms_slo_adjudication") is not False
+        or "TEST_ACCEPTANCE_EXCLUDED"
+        not in str(user_entry.get("input_boundary", ""))
+    ):
+        raise ValueError("phase 3 paired online user entry boundary drifted")
+    for field in ("package_builder", "runner", "windows_powershell_51_entry", "runbook"):
+        relative_path = user_entry.get(field)
+        if not isinstance(relative_path, str) or not (ROOT / relative_path).is_file():
+            raise ValueError(f"phase 3 paired online user entry {field} is missing")
     isolation = payload.get("split_isolation")
     if (
         not isinstance(isolation, dict)

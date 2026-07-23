@@ -179,7 +179,7 @@ class RepositoryHarnessTests(unittest.TestCase):
             payload["independent_performance_debt"]["retrieval_p95_ms_max"], 300
         )
 
-    def test_phase_three_comparison_local_implementation_is_not_online_quality(self):
+    def test_phase_three_comparison_user_runner_is_not_online_quality(self):
         payload = json.loads(
             (ROOT / "machine" / "phase3_comparison_dev_gate.json").read_text(
                 encoding="utf-8"
@@ -187,7 +187,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "LOCAL_IMPLEMENTATION_PASS_AWAITING_PAIRED_ONLINE_DEV",
+            "USER_RUNNER_READY_AWAITING_PAIRED_ONLINE_DEV",
         )
         self.assertEqual(
             payload["source_phase"], {"id": "phase-3", "status": "IN_PROGRESS"}
@@ -203,6 +203,15 @@ class RepositoryHarnessTests(unittest.TestCase):
         self.assertEqual(
             payload["paired_online_dev_quality"]["status"],
             "NOT_RUN",
+        )
+        self.assertEqual(
+            payload["paired_online_user_entry"]["status"],
+            "LOCAL_STATIC_AND_CONTRACT_PASS_NOT_RUN_ON_WINDOWS",
+        )
+        self.assertFalse(
+            payload["paired_online_user_entry"][
+                "absolute_300ms_slo_adjudication"
+            ]
         )
         self.assertTrue(payload["split_isolation"]["test"].startswith("SEALED"))
         self.assertTrue(

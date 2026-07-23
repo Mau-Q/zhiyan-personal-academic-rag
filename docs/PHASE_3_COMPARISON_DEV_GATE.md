@@ -4,16 +4,19 @@
 
 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的本地实现候选与冻结配置已完成，
 方案阶段 3 由 `NOT_STARTED` 进入 `IN_PROGRESS`。本地结论仅为
-`LOCAL_IMPLEMENTATION_PASS_AWAITING_PAIRED_ONLINE_DEV`：
+`USER_RUNNER_READY_AWAITING_PAIRED_ONLINE_DEV`：
 
 - 默认开关仍为 `false`，未改变默认 RRF；
 - 4 个冻结 `dev` 样本的 Control 均保持原问题，Treatment 规划均为
   `APPLIED`；
+- 私有 dev 输入包构建器、隔离三文档在线 runner 和 Windows PowerShell 5.1
+  用户运行入口已完成本地契约测试与静态检查；
 - 尚未运行真实 PostgreSQL READY + ES/Milvus + RRF 配对回放，因此没有
   检索质量增益、关键类不退化或 300 ms 通过结论；
 - `test` 与 `acceptance` 均未读取、未运行。
 
-机器状态见 `machine/phase3_comparison_dev_gate.json`，实现决策见 `PD-040`。
+机器状态见 `machine/phase3_comparison_dev_gate.json`，实现决策见 `PD-040`，
+用户运行入口决策见 `PD-041`。
 
 ## 2. 单变量实现
 
@@ -73,7 +76,9 @@ make phase3-comparison-dev-plan
 
 ## 5. 未完成的同一质量 Gate
 
-下一节点仍属于首个失败类型质量 Gate，不另起能力变量：
+下一节点仍属于首个失败类型质量 Gate，不另起能力变量。用户入口位于
+`deploy/remote/phase3-comparison-validation/`，使用隔离 owner 创建三篇论文的
+临时 READY 版本；固定数据准备和清理不是第二个质量变量：
 
 1. 在同一 READY/owner、文档版本、Chunk、ES/Milvus、Embedding、候选和 RRF
    配置上先运行原问题 Control；
@@ -83,8 +88,11 @@ make phase3-comparison-dev-plan
    和增量成本；
 5. 将配置、dev 决策和候选提交冻结后，才允许一次性进入 `test`。
 
-远程配对执行器和用户运行清单尚未在本地实现节点中宣称完成；在它们经过
-本地静态/契约测试并形成独立提交前，不要求用户操作远程主机。
+用户运行器尚未在 Windows 执行，不能把本地静态检查写成真实在线证据。运行器
+只有在 316 个冻结 Chunk 与运行时持久化 Chunk 全量一一对应、三篇 READY
+对账通过后才运行 Control；最终必须完成 9 个清理任务、READY 对账失败关闭和
+删除后 Answer API 403。非目标 `nDCG@10` 只使用原候选 20 内的评测诊断
+Top-10，产品/API Top-3 不改变。
 
 ## 6. 不能合并的边界
 

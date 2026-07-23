@@ -2,9 +2,9 @@
 
 ## Status
 
-`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_COMPARISON_LOCAL_IMPLEMENTATION_AWAITING_PAIRED_DEV / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
+`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_COMPARISON_USER_RUNNER_READY_AWAITING_PAIRED_DEV / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
-Phase ID：`source-phase3-comparison-local-implementation-awaiting-paired-dev`
+Phase ID：`source-phase3-comparison-user-runner-ready-awaiting-paired-dev`
 
 ## Completed
 
@@ -175,14 +175,14 @@ Phase ID：`source-phase3-comparison-local-implementation-awaiting-paired-dev`
 - 受控在线 Reranker 窄适配器已本地实现：现有 PostgreSQL READY/owner、持久化 Chunk 身份和检索后重验保持前置，ES/Milvus RRF 最多返回 20 个已授权候选，固定 Cross-Encoder 只排序并输出前 3；标题/模型/分数故障显式回退同一批 RRF，身份漂移仍失败关闭。用户在提交 `fb54918` 完成 ES/Milvus 并行远程复跑：30/30 `APPLIED`、无回退/扩张/越界、三路清理与删除后 403 通过，但 base retrieval `P95=344.676365 ms`、Reranker `P95=131.885375 ms`、combined `P95=472.190015 ms`，报告 SHA-256 为 `132DFFDECDAD02F9C5280FADFBD09B5AE100C1DB31FE07118BF97B6E0C1B2602`。默认路由继续保持原 RRF；当前本地只增加基础召回分段观测，等待远程归因。
 - 用户随后在提交 `3303bed` 和 Run ID `online_retrieval_profile_20260723_01` 完成 Windows 分段归因：30/30 `APPLIED`，分段状态 `PASS`，base retrieval `P95=376.394385 ms`、Reranker `P95=132.456 ms`、combined `P95=504.71613 ms`；主要成本为 Query Embedding `P95=189.838925 ms` 和 READY 路由解析 `P95=145.48693 ms`，ES 总工作 `P95=35.634955 ms`、Milvus ANN `P95=6.03377 ms`、RRF `P95=0.12001 ms`。三路清理和删除后 403 通过，报告 SHA-256 为 `235FE36A97B7F4E462AD502595CB0CF38C139022703B6C4EA1E93E19D3AC765B`。
 - 阶段 2 现按最高方案第 10.3 节完成：Hybrid 对比、固定 Reranker 增益与保留/回退决定、引用/ACL/版本/定位硬门禁和普通学术问答稳定回放均已完成。默认继续使用原 RRF，固定 Reranker 保留为非默认可选组件；300 ms 性能未通过，作为显式性能债进入阶段 3 独立 Gate，不冒充生产性能验收。
-- 阶段 3 入口已冻结，并完成唯一变量 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的默认关闭本地实现候选：4 个冻结 `dev` 的 Control 原问题保持 `4/4`、Treatment 确定性规划 `4/4`，120 次纯拆分本地 P95 为 `0.016271 ms`；尚未运行真实在线配对检索，故不写成质量增益或不退化通过。`test/acceptance` 保持封存，固定 Reranker 和默认 RRF 不变。
+- 阶段 3 入口已冻结，并完成唯一变量 `BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1` 的默认关闭本地实现候选：4 个冻结 `dev` 的 Control 原问题保持 `4/4`、Treatment 确定性规划 `4/4`，120 次纯拆分本地 P95 为 `0.016271 ms`；隔离三文档在线 runner、私有 dev 输入包和 Windows PowerShell 5.1 用户入口已通过本地契约/静态检查，但尚未运行真实在线配对检索，故不写成质量增益或不退化通过。`test/acceptance` 保持封存，固定 Reranker 和默认 RRF 不变。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：阶段 3 比较拆分已进入默认关闭的本地实现，但真实 PostgreSQL READY + ES/Milvus + RRF 配对 dev 质量、不退化和用户运行入口仍待独立实现/验证，尚未进入 `test`；正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层继续后置；固定 Reranker 在当前 300 ms SLO 下不默认启用；
+- 未完成能力：阶段 3 比较拆分已进入默认关闭的本地实现，用户运行入口已就绪但真实 PostgreSQL READY + ES/Milvus + RRF 配对 dev 质量与不退化仍待用户运行验证，尚未进入 `test`；正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层继续后置；固定 Reranker 在当前 300 ms SLO 下不默认启用；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -220,12 +220,12 @@ Phase ID：`source-phase3-comparison-local-implementation-awaiting-paired-dev`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 已完成入口冻结和默认关闭的比较拆分本地实现候选，因此为 `IN_PROGRESS`。当前评测边界为 `PHASE3_COMPARISON_LOCAL_IMPLEMENTATION_CONTROL_4_OF_4_TREATMENT_PLAN_4_OF_4_PAIRED_ONLINE_DEV_NOT_RUN_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_3_OF_3_DOCUMENTS_9_OF_9_CASES_PASS`。本地规划证据只证明 4 条 dev 问题可被确定性处理且拆分成本低于 5 ms，不证明真实 ES/Milvus RRF 增益、关键类不退化或在线增量延迟。Windows 阶段 2 分段证据仍为 base `P95=376.394385 ms`、combined `P95=504.71613 ms`，默认继续使用原 RRF，固定 Reranker 和比较拆分都保持关闭；阶段 2 完成与阶段 3 本地实现均不代表 300 ms 或生产性能验收通过。运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 已完成入口冻结、默认关闭的比较拆分本地实现候选和用户运行入口，因此为 `IN_PROGRESS`。当前评测边界为 `PHASE3_COMPARISON_USER_RUNNER_READY_CONTROL_4_OF_4_TREATMENT_PLAN_4_OF_4_PAIRED_ONLINE_DEV_NOT_RUN_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL / REMOTE_READY_LLAMA3_2_GENERATION_PASS / REMOTE_READY_QWEN3_14B_THINK_FALSE_PASS / QWEN3_14B_MODEL_SELECTION_V4_PROMOTED / PHASE2_ACADEMIC_QA_V2_3_OF_3_DOCUMENTS_9_OF_9_CASES_PASS`。本地规划与运行器静态证据不证明真实 ES/Milvus RRF 增益、关键类不退化或在线增量延迟。Windows 阶段 2 分段证据仍为 base `P95=376.394385 ms`、combined `P95=504.71613 ms`，默认继续使用原 RRF，固定 Reranker 和比较拆分都保持关闭；阶段 2 完成与阶段 3 本地实现均不代表 300 ms 或生产性能验收通过。运行时私有数据与报告继续只保留在被忽略的 `runtime/`。
 
 ## Next gate
 
-1. **同一质量 Gate 的在线执行节点：** 本地实现提交冻结后，先实现并静态验证只读的 Windows 用户运行入口；同一 READY/owner、版本、Chunk、ES/Milvus、Embedding、候选和 RRF 下先跑原问题 Control，再只开比较拆分 Treatment；若 Control 不能重现冻结失败形态，立即停止且不读取 `test`；
-2. **dev 质量与不退化判定：** 目标 4 题达到冻结增益，同时核对非目标 ANSWERABLE、FORBIDDEN、NO_EVIDENCE、身份违规、固定 15 题 Canary 和增量延迟；不满足则保持默认关闭；
+1. **同一质量 Gate 的 Windows 用户执行节点：** 只在本提交由用户推送后，按版本化入口创建隔离 owner 的三文档临时 READY 范围；验证 316 个持久化 Chunk 身份后先跑原问题 Control，再只开比较拆分 Treatment；若 Control 不能重现冻结失败形态，立即停止 Treatment，仍完成 9 路清理，且不读取 `test`；
+2. **dev 质量与不退化判定：** 目标 4 题达到冻结增益，同时核对非目标 ANSWERABLE、固定 FORBIDDEN、dev NO_EVIDENCE、身份违规、固定 15 题 Canary 和增量延迟；不满足则保持默认关闭；
 3. **封存 test 的一次性 Gate：** 只有实现、配置、dev 结果和候选提交全部冻结后才可运行；不得以 test 结果反向调参，Acceptance 仍需用户另行明确授权；
 4. **独立性能携带 Gate：** 固定现有模型/snapshot、候选边界、RRF 和 300 ms 门槛，评估基础检索性能债；不得与比较拆分或其他失败类型能力同时实施。
 
