@@ -38,6 +38,34 @@ class FixedRerankerRemoteScriptTests(unittest.TestCase):
             self.script,
         )
 
+    def test_cuda_runtime_is_pinned_and_allocated_before_the_gate(self) -> None:
+        self.assertIn("$TorchPackage = 'torch==2.13.0+cu126'", self.script)
+        self.assertIn(
+            "$TorchIndexUrl = 'https://download.pytorch.org/whl/cu126'",
+            self.script,
+        )
+        self.assertIn("Get-Command -Name 'nvidia-smi.exe'", self.script)
+        self.assertIn(
+            "pip install --force-reinstall --no-deps $TorchPackage --index-url $TorchIndexUrl",
+            self.script,
+        )
+        self.assertIn("torch.version.cuda == '12.6'", self.script)
+        self.assertIn("'RTX 4090' in gpu_name", self.script)
+        self.assertIn("torch.ones(1, device='cuda')", self.script)
+        self.assertLess(
+            self.script.index("pip install --force-reinstall --no-deps"),
+            self.script.index("pip install -e '.[reranker]'"),
+        )
+
+    def test_sanitized_summary_records_cuda_runtime_identity(self) -> None:
+        for field in (
+            "torch_version",
+            "cuda_runtime",
+            "gpu_name",
+            "nvidia_smi",
+        ):
+            self.assertRegex(self.script, rf"(?m)^        {field} = ")
+
     def test_model_and_frozen_input_digests_remain_pinned(self) -> None:
         self.assertIn(
             "f9dd638f0b27b57667d99b01f83ca4dbb3c82983911a1ef31a4601c7b890eaec",

@@ -102,5 +102,8 @@ Windows 配置位于
 该脚本面向 Windows PowerShell 5.1；只在 Mac 推送成功且 Windows
 检出同一 `origin/main` 后运行。脚本拒绝已跟踪或已暂存修改；未跟踪的
 评审材料不会阻断本 Gate，因为模型与五份冻结输入仍须逐项通过 SHA-256
-身份校验。模型权重、题目、Chunk、排名和运行报告继续只保留在被忽略的
-`runtime/`。
+身份校验。目标运行时固定使用 PyTorch `2.13.0+cu126` 和官方
+`https://download.pytorch.org/whl/cu126` 索引；脚本在模型运行前验证
+`nvidia-smi`、CUDA 12.6、RTX 4090 和一次真实 CUDA 张量分配，并在
+脱敏摘要中记录 PyTorch、CUDA、GPU 和驱动身份。模型权重、题目、Chunk、
+排名和运行报告继续只保留在被忽略的 `runtime/`。

@@ -10,6 +10,8 @@ if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
 $RepositoryRoot = (Resolve-Path -LiteralPath $RepositoryRoot).Path
 $PythonPath = Join-Path $RepositoryRoot '.venv\Scripts\python.exe'
 $OutputDirectory = Join-Path $RepositoryRoot 'runtime\evaluation\formal-retrieval-v1\ai-audited-engineering-v1\reranker-bge-v2-m3-windows-rtx4090-v1'
+$TorchPackage = 'torch==2.13.0+cu126'
+$TorchIndexUrl = 'https://download.pytorch.org/whl/cu126'
 
 if (-not (Test-Path -LiteralPath $PythonPath -PathType Leaf)) {
     throw "Project Python is missing at $PythonPath"
@@ -35,15 +37,37 @@ try {
         throw 'Remote HEAD must equal origin/main before the Reranker Gate.'
     }
 
+    $nvidiaSmi = Get-Command -Name 'nvidia-smi.exe' -ErrorAction SilentlyContinue
+    if ($null -eq $nvidiaSmi) {
+        throw 'NVIDIA driver preflight failed: nvidia-smi.exe is unavailable.'
+    }
+    $nvidiaInfo = @(
+        & $nvidiaSmi.Source '--query-gpu=index,name,driver_version' '--format=csv,noheader'
+    )
+    if ($LASTEXITCODE -ne 0 -or $nvidiaInfo.Count -eq 0) {
+        throw 'NVIDIA driver preflight failed.'
+    }
+
+    & $PythonPath -m pip install --force-reinstall --no-deps $TorchPackage --index-url $TorchIndexUrl
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Installing the pinned CUDA PyTorch wheel failed.'
+    }
+
     & $PythonPath -m pip install -e '.[reranker]'
     if ($LASTEXITCODE -ne 0) {
         throw 'Installing the optional Reranker dependencies failed.'
     }
+    & $PythonPath -m pip check
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Reranker dependency consistency check failed.'
+    }
 
-    & $PythonPath -c "import torch; assert torch.cuda.is_available(), 'CUDA is unavailable'; print(torch.cuda.get_device_name(0))"
+    $cudaProbe = "import json, torch; assert torch.__version__ == '2.13.0+cu126', 'PyTorch build drifted'; assert torch.version.cuda == '12.6', 'CUDA runtime drifted'; assert torch.cuda.is_available(), 'CUDA is unavailable'; gpu_name = torch.cuda.get_device_name(0); assert 'RTX 4090' in gpu_name, 'Target GPU is not RTX 4090'; tensor = torch.ones(1, device='cuda'); torch.cuda.synchronize(); print(json.dumps({'torch_version': torch.__version__, 'cuda_runtime': torch.version.cuda, 'gpu_name': gpu_name}, sort_keys=True))"
+    $cudaInfoJson = & $PythonPath -c $cudaProbe
     if ($LASTEXITCODE -ne 0) {
         throw 'CUDA preflight failed.'
     }
+    $cudaInfo = $cudaInfoJson | ConvertFrom-Json
 
     $arguments = @(
         'scripts/run_fixed_reranker_gate.py',
@@ -98,6 +122,10 @@ try {
     $summary = [ordered]@{
         schema_version = 'fixed_cross_encoder_remote_summary_v1'
         head_commit = $headCommit
+        torch_version = $cudaInfo.torch_version
+        cuda_runtime = $cudaInfo.cuda_runtime
+        gpu_name = $cudaInfo.gpu_name
+        nvidia_smi = ($nvidiaInfo -join '; ')
         model_revision = $runReport.model.revision
         model_snapshot_sha256 = $runReport.model.snapshot_sha256
         item_count = $runReport.item_count
