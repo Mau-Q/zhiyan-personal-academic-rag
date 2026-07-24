@@ -69,10 +69,23 @@ class Phase4MultilingualNliRemoteScriptTests(unittest.TestCase):
             "online_enforcement_enabled = $false",
             "stable_error_code = 'NONE'",
             "NOT_MEASURABLE_NO_HUMAN_ADJUDICATED_NEGATIVES",
+            "diagnostic_pair_count",
+            "diagnostic_sha256",
         ):
             self.assertIn(token, self.text)
         self.assertNotIn("premise =", self.text)
         self.assertNotIn("hypothesis =", self.text)
+
+    def test_diagnostic_replay_preserves_first_report_and_exports_hashes_only(self) -> None:
+        for token in (
+            "[switch]$DiagnosticReplay",
+            "phase4-multilingual-nli-private-diagnostic-v1",
+            "--diagnostic-output",
+            "private-predictions-v1.jsonl",
+            "contains_raw_question_claim_or_chunk_ids",
+            "NLI_PRIVATE_DIAGNOSTIC_HASH_DRIFT",
+        ):
+            self.assertIn(token, self.text)
 
 
 if __name__ == "__main__":

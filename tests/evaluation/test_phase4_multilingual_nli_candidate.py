@@ -6,6 +6,8 @@ from pathlib import Path
 
 from backend.evaluation.claim_evidence_nli import (
     NliCandidateError,
+    NliLabel,
+    NliObservation,
     NliPair,
     PositiveClaimGroup,
     evaluate_nli_candidate,
@@ -14,6 +16,7 @@ from backend.evaluation.claim_evidence_nli import (
 from scripts.run_phase4_multilingual_nli_gate import (
     _lf_canonical_sha256,
     build_workload,
+    write_private_diagnostics,
 )
 
 
@@ -85,6 +88,7 @@ class Phase4MultilingualNliCandidateTests(unittest.TestCase):
                 _lf_canonical_sha256(invalid)
 
     def test_positive_only_diagnostic_can_qualify_for_remote_adjudication(self) -> None:
+        observations: list[NliObservation] = []
         report = evaluate_nli_candidate(
             config=self.config,
             pairs=self.pairs,
@@ -101,6 +105,7 @@ class Phase4MultilingualNliCandidateTests(unittest.TestCase):
                     [0.0, 4.0, -1.0],
                 ]
             ),
+            observation_sink=observations,
         )
 
         self.assertEqual(report["decision"]["positive_retention_gate"], "PASS")
@@ -114,6 +119,8 @@ class Phase4MultilingualNliCandidateTests(unittest.TestCase):
             "NOT_MEASURABLE_NO_HUMAN_ADJUDICATED_NEGATIVES",
         )
         self.assertNotIn("Evidence A", str(report))
+        self.assertEqual([item.pair_key for item in observations], ["a", "b", "c"])
+        self.assertEqual(observations[0].label, NliLabel.ENTAILMENT)
 
     def test_low_positive_retention_rejects_candidate_without_online_change(self) -> None:
         report = evaluate_nli_candidate(
@@ -236,6 +243,34 @@ class Phase4MultilingualNliCandidateTests(unittest.TestCase):
         self.assertEqual(supported, [pairs[0].key])
         self.assertEqual(partial, [])
         self.assertEqual(groups[0].pair_keys, (pairs[0].key,))
+
+    def test_private_prediction_export_contains_no_text_or_raw_ids(self) -> None:
+        observations = [
+            NliObservation(
+                pair_key="hashed-a",
+                label=NliLabel.NEUTRAL,
+                probabilities=(0.1, 0.8, 0.1),
+                token_length=541,
+            )
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "private-predictions.jsonl"
+            metadata = write_private_diagnostics(
+                path=path,
+                config=self.config,
+                observations=observations,
+                candidate_supported_pair_keys=["hashed-a"],
+                candidate_partial_pair_keys=[],
+                human_positive_claims=[PositiveClaimGroup(("hashed-a",))],
+            )
+            text = path.read_text(encoding="utf-8")
+        self.assertEqual(metadata["row_count"], 1)
+        self.assertFalse(metadata["contains_private_text"])
+        self.assertFalse(metadata["contains_raw_question_claim_or_chunk_ids"])
+        self.assertIn('"pair_key": "hashed-a"', text)
+        self.assertIn('"truncated": true', text)
+        self.assertNotIn("Evidence", text)
+        self.assertNotIn("question_id", text)
 
 
 if __name__ == "__main__":

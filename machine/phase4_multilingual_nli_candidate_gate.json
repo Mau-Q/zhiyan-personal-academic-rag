@@ -1,7 +1,7 @@
 {
   "schema_version": "phase4_multilingual_nli_candidate_gate_v1",
   "decision_id": "PD-062",
-  "status": "LOCAL_IMPLEMENTATION_READY_REMOTE_RTX4090_NOT_RUN",
+  "status": "REMOTE_QUALITY_FAIL_DIAGNOSTIC_EXPORT_LOCAL_READY",
   "model": {
     "model_id": "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7",
     "revision": "b5113eb38ab63efdd7f280f8c144ea8b13f978ce",
@@ -29,12 +29,63 @@
   "decision_contract": {
     "candidate_supported_retention_min": 0.85,
     "human_finalized_positive_retention_min": 0.85,
-    "quality_result": "NOT_RUN",
+    "quality_result": "FAIL",
     "precision": "NOT_MEASURABLE_NO_HUMAN_ADJUDICATED_NEGATIVES",
     "negative_rejection": "NOT_MEASURABLE_NO_HUMAN_ADJUDICATED_NEGATIVES",
     "human_agreement": "NOT_MEASURABLE_AI_ASSISTED_CANDIDATE",
     "candidate_pass_only_allows": "LATER_HUMAN_ADJUDICATED_NLI_GATE",
     "online_enforcement_enabled": false
+  },
+  "remote_result": {
+    "intake_decision_id": "PD-064",
+    "report_sha256": "6f266edc0fa57b933260f3996585a53ac2dac065c13f472f7c8d1c5f94c7cf1e",
+    "report_contract": "PASS",
+    "head_commit": "662f7dd59d0627c75d445109f24dc41ec69848e0",
+    "head_commit_source": "USER_SANITIZED_WRAPPER_SUMMARY_MATCHED_REPORT_SHA256",
+    "runtime": {
+      "torch": "2.13.0+cu126",
+      "cuda": "12.6",
+      "gpu": "NVIDIA GeForce RTX 4090"
+    },
+    "workload": {
+      "unique_pairs": 247,
+      "entailment": 128,
+      "neutral": 75,
+      "contradiction": 44,
+      "truncated_pairs": 7,
+      "maximum_pair_tokens": 552
+    },
+    "candidate_supported": {
+      "retained": 9,
+      "total": 21,
+      "retention": 0.428571
+    },
+    "human_finalized_positive": {
+      "retained": 124,
+      "total": 225,
+      "retention": 0.551111
+    },
+    "component_latency_ms": {
+      "pair_count": 16,
+      "repetitions": 30,
+      "p50": 62.0149,
+      "p95": 64.03166,
+      "scope": "NLI_PAIR_SCORING_ONLY_NOT_ONLINE_RAG"
+    },
+    "decision": "KEEP_DETERMINISTIC_AUDIT_ONLY_REJECT_NLI_CANDIDATE",
+    "online_enforcement_enabled": false
+  },
+  "data_diagnostic_context": {
+    "input_identity_and_structure": "PASS_NO_CORRUPTION_DETECTED",
+    "strict_pair_level_nli_gold": "NOT_ESTABLISHED",
+    "human_positive_pairs": 246,
+    "single_chunk_positive_claims": 204,
+    "two_chunk_positive_claims": 21,
+    "zh_claim_non_zh_evidence_pairs": 154,
+    "non_zh_claim_non_zh_evidence_pairs": 92,
+    "candidate_supported_zh_claim_non_zh_evidence": 14,
+    "candidate_supported_non_zh_claim_non_zh_evidence": 7,
+    "interpretation": "DATA_FILE_VALID_LABEL_SEMANTICS_AND_MODEL_DOMAIN_ERROR_REQUIRE_PAIR_LEVEL_DIAGNOSIS"
   },
   "reuse": {
     "sentence_transformers_cross_encoder": "NARROW_ADAPTER",
@@ -47,14 +98,14 @@
     "knowledge_base_integration": "OUT_OF_SCOPE_OTHER_OWNER",
     "frontend": "OUT_OF_SCOPE",
     "demo": "OUT_OF_SCOPE",
-    "remote_execution": "USER_RUN_PENDING",
+    "remote_execution": "QUALITY_GATE_COMPLETE_DIAGNOSTIC_REPLAY_PENDING",
     "test": "NOT_READ_NOT_RUN",
     "acceptance": "NOT_READ_NOT_RUN"
   },
   "local_validation": {
     "focused_fake_scorer_and_contract_tests": {
       "status": "PASS",
-      "count": 13
+      "count": 15
     },
     "real_model_on_mac": "NOT_RUN_BY_CONTRACT",
     "windows_powershell_static": "PASS",
@@ -63,8 +114,9 @@
     "diff_check": "PASS"
   },
   "next_gate": {
-    "id": "USER_RUN_REMOTE_RTX4090_POSITIVE_RETENTION_DIAGNOSTIC",
-    "result_required": "SANITIZED_JSON_ONLY",
+    "id": "USER_RUN_PRIVATE_PREDICTION_DIAGNOSTIC_REPLAY",
+    "result_required": "HASH_ONLY_PRIVATE_PREDICTION_EXPORT",
+    "first_quality_report_must_not_be_overwritten": true,
     "does_not_enable_online_enforcement": true
   }
 }

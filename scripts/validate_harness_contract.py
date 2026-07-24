@@ -270,7 +270,7 @@ def check_feature_list() -> None:
         or nli_feature.get("status") != "PARTIAL"
         or nli_feature.get("gate_status")
         != (
-            "LOCAL_IMPLEMENTATION_READY_REMOTE_RTX4090_NOT_RUN_"
+            "REMOTE_QUALITY_FAIL_DIAGNOSTIC_EXPORT_LOCAL_READY_"
             "ONLINE_ENFORCEMENT_DISABLED"
         )
     ):
@@ -508,7 +508,7 @@ def check_phase4_multilingual_nli_candidate_gate() -> None:
         != "phase4_multilingual_nli_candidate_gate_v1"
         or payload.get("decision_id") != "PD-062"
         or payload.get("status")
-        != "LOCAL_IMPLEMENTATION_READY_REMOTE_RTX4090_NOT_RUN"
+        != "REMOTE_QUALITY_FAIL_DIAGNOSTIC_EXPORT_LOCAL_READY"
     ):
         raise ValueError("phase 4 multilingual NLI identity drifted")
     model = payload.get("model")
@@ -526,7 +526,7 @@ def check_phase4_multilingual_nli_candidate_gate() -> None:
     decision = payload.get("decision_contract")
     if (
         not isinstance(decision, dict)
-        or decision.get("quality_result") != "NOT_RUN"
+        or decision.get("quality_result") != "FAIL"
         or decision.get("candidate_supported_retention_min") != 0.85
         or decision.get("human_finalized_positive_retention_min") != 0.85
         or decision.get("online_enforcement_enabled") is not False
@@ -534,6 +534,37 @@ def check_phase4_multilingual_nli_candidate_gate() -> None:
         != "NOT_MEASURABLE_NO_HUMAN_ADJUDICATED_NEGATIVES"
     ):
         raise ValueError("phase 4 multilingual NLI decision boundary drifted")
+    remote = payload.get("remote_result")
+    if (
+        not isinstance(remote, dict)
+        or remote.get("intake_decision_id") != "PD-064"
+        or remote.get("report_sha256")
+        != "6f266edc0fa57b933260f3996585a53ac2dac065c13f472f7c8d1c5f94c7cf1e"
+        or remote.get("report_contract") != "PASS"
+        or remote.get("head_commit")
+        != "662f7dd59d0627c75d445109f24dc41ec69848e0"
+        or remote.get("candidate_supported")
+        != {"retained": 9, "total": 21, "retention": 0.428571}
+        or remote.get("human_finalized_positive")
+        != {"retained": 124, "total": 225, "retention": 0.551111}
+        or remote.get("decision")
+        != "KEEP_DETERMINISTIC_AUDIT_ONLY_REJECT_NLI_CANDIDATE"
+        or remote.get("online_enforcement_enabled") is not False
+    ):
+        raise ValueError("phase 4 multilingual NLI remote result drifted")
+    diagnostic_context = payload.get("data_diagnostic_context")
+    if (
+        not isinstance(diagnostic_context, dict)
+        or diagnostic_context.get("input_identity_and_structure")
+        != "PASS_NO_CORRUPTION_DETECTED"
+        or diagnostic_context.get("strict_pair_level_nli_gold")
+        != "NOT_ESTABLISHED"
+        or diagnostic_context.get("human_positive_pairs") != 246
+        or diagnostic_context.get("single_chunk_positive_claims") != 204
+        or diagnostic_context.get("two_chunk_positive_claims") != 21
+        or diagnostic_context.get("zh_claim_non_zh_evidence_pairs") != 154
+    ):
+        raise ValueError("phase 4 multilingual NLI data diagnostic context drifted")
     identity = payload.get("cross_platform_identity")
     if (
         not isinstance(identity, dict)
@@ -550,7 +581,8 @@ def check_phase4_multilingual_nli_candidate_gate() -> None:
     scope = payload.get("scope")
     if (
         not isinstance(scope, dict)
-        or scope.get("remote_execution") != "USER_RUN_PENDING"
+        or scope.get("remote_execution")
+        != "QUALITY_GATE_COMPLETE_DIAGNOSTIC_REPLAY_PENDING"
         or scope.get("test") != "NOT_READ_NOT_RUN"
         or scope.get("acceptance") != "NOT_READ_NOT_RUN"
     ):

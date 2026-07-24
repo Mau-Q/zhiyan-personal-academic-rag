@@ -657,7 +657,7 @@
       "id": "phase4_multilingual_nli_candidate",
       "status": "PARTIAL",
       "owner": "A",
-      "gate_status": "LOCAL_IMPLEMENTATION_READY_REMOTE_RTX4090_NOT_RUN_ONLINE_ENFORCEMENT_DISABLED",
+      "gate_status": "REMOTE_QUALITY_FAIL_DIAGNOSTIC_EXPORT_LOCAL_READY_ONLINE_ENFORCEMENT_DISABLED",
       "evidence": [
         "backend/evaluation/claim_evidence_nli.py",
         "evaluation/claim_evidence/phase4-multilingual-nli-rtx4090-v1.json",

@@ -3,7 +3,8 @@ param(
     [string]$RepositoryRoot,
     [Parameter(Mandatory = $true)]
     [string]$InputPackagePath,
-    [string]$ModelCachePath
+    [string]$ModelCachePath,
+    [switch]$DiagnosticReplay
 )
 
 # Target: Windows PowerShell 5.1 on the user-operated RTX 4090 host.
@@ -39,10 +40,17 @@ $importDirectory = Join-Path `
     -Path $RepositoryRoot `
     -ChildPath 'runtime\handoffs\phase4-nli-dev-input-v1'
 $privateInputPath = Join-Path -Path $importDirectory -ChildPath $inputMember
+$outputRunName = 'phase4-multilingual-nli-rtx4090-v1'
+if ($DiagnosticReplay) {
+    $outputRunName = 'phase4-multilingual-nli-private-diagnostic-v1'
+}
 $outputDirectory = Join-Path `
     -Path $RepositoryRoot `
-    -ChildPath 'runtime\phases\phase4-multilingual-nli-rtx4090-v1'
+    -ChildPath (Join-Path -Path 'runtime\phases' -ChildPath $outputRunName)
 $reportPath = Join-Path -Path $outputDirectory -ChildPath 'report.json'
+$diagnosticPath = Join-Path `
+    -Path $outputDirectory `
+    -ChildPath 'private-predictions-v1.jsonl'
 $runnerPath = Join-Path `
     -Path $RepositoryRoot `
     -ChildPath 'scripts\run_phase4_multilingual_nli_gate.py'
@@ -199,12 +207,18 @@ print(json.dumps({
 
     New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
     New-Item -ItemType Directory -Force -Path $ModelCachePath | Out-Null
-    & .\.venv\Scripts\python.exe $runnerPath `
-        --config $configPath `
-        --config-sha256 $expectedConfigSha256.ToLowerInvariant() `
-        --private-input $privateInputPath `
-        --model-cache $ModelCachePath `
-        --output $reportPath
+    $runnerArguments = @(
+        $runnerPath,
+        '--config', $configPath,
+        '--config-sha256', $expectedConfigSha256.ToLowerInvariant(),
+        '--private-input', $privateInputPath,
+        '--model-cache', $ModelCachePath,
+        '--output', $reportPath
+    )
+    if ($DiagnosticReplay) {
+        $runnerArguments += @('--diagnostic-output', $diagnosticPath)
+    }
+    & .\.venv\Scripts\python.exe @runnerArguments
     if ($LASTEXITCODE -ne 0) {
         throw 'NLI_REMOTE_RUNNER_FAILED'
     }
@@ -220,12 +234,33 @@ print(json.dumps({
         $report.benchmark.repetitions -ne 30 -or
         $report.input_sha256.private_input -ne $expectedInputSha256.ToLowerInvariant() -or
         $report.input_sha256.candidate_review -ne $expectedReviewSha256.ToLowerInvariant() -or
+        $report.repository_head -ne $headCommit -or
         $report.decision.online_enforcement_enabled -ne $false -or
         $report.decision.candidate_promoted_to_truth -ne $false -or
         $report.unavailable_metrics.precision -ne 'NOT_MEASURABLE_NO_HUMAN_ADJUDICATED_NEGATIVES' -or
         $report.unavailable_metrics.human_agreement -ne 'NOT_MEASURABLE_AI_ASSISTED_CANDIDATE'
     ) {
         throw 'NLI_REPORT_CONTRACT_INVALID'
+    }
+    $diagnosticSha256 = 'NOT_REQUESTED'
+    $diagnosticPairCount = 0
+    if ($DiagnosticReplay) {
+        if (
+            -not (Test-Path -LiteralPath $diagnosticPath -PathType Leaf) -or
+            $null -eq $report.private_diagnostic_export -or
+            $report.private_diagnostic_export.row_count -ne 247 -or
+            $report.private_diagnostic_export.contains_private_text -ne $false -or
+            $report.private_diagnostic_export.contains_raw_question_claim_or_chunk_ids -ne $false
+        ) {
+            throw 'NLI_PRIVATE_DIAGNOSTIC_CONTRACT_INVALID'
+        }
+        $diagnosticSha256 = (
+            Get-Sha256 -LiteralPath $diagnosticPath
+        ).ToLowerInvariant()
+        if ($diagnosticSha256 -ne $report.private_diagnostic_export.sha256) {
+            throw 'NLI_PRIVATE_DIAGNOSTIC_HASH_DRIFT'
+        }
+        $diagnosticPairCount = $report.private_diagnostic_export.row_count
     }
 
     [pscustomobject]@{
@@ -256,6 +291,9 @@ print(json.dumps({
         component_latency_ms_p95 = $report.benchmark.latency_ms_p95
         quality_decision = $report.decision.decision
         online_enforcement_enabled = $false
+        diagnostic_replay = [bool]$DiagnosticReplay
+        diagnostic_pair_count = $diagnosticPairCount
+        diagnostic_sha256 = $diagnosticSha256
         report_sha256 = (Get-Sha256 -LiteralPath $reportPath).ToLowerInvariant()
         stable_error_code = 'NONE'
     } | ConvertTo-Json -Depth 4

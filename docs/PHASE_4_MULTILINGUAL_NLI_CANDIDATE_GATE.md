@@ -49,5 +49,23 @@ SHA-256 正确；根因是 `core.autocrlf` 将 tracked JSON/CSV 检出为等价 
 私有 ZIP 和内层 JSONL 仍使用原始字节 SHA-256。该修复没有运行模型或产生质量
 结果，下一次仍运行同一冻结 Gate。
 
+修复后 RTX 4090 报告已接收并核验，SHA-256 为
+`6f266edc0fa57b933260f3996585a53ac2dac065c13f472f7c8d1c5f94c7cf1e`。
+候选 supported 保留 `9/21=0.428571`，终审谱系正例保留
+`124/225=0.551111`，均低于 `0.85`；247 个 pair 中 7 个超过 512 tokens，
+组件 P95 为 `64.03166 ms`。这是可信质量失败，决定保持
+`KEEP_DETERMINISTIC_AUDIT_ONLY_REJECT_NLI_CANDIDATE`。
+
+为回答“数据还是模型”，后续只允许 `-DiagnosticReplay` 复跑同一冻结模型与
+输入，写入独立目录，不覆盖首次报告。私有预测导出只含哈希 pair key、模型标签、
+三分类概率、token 长度、截断标记和候选/终审来源，不含正文或原始 ID。导出文件
+回到 Mac 后再与现有私有输入本地关联。
+
+只读结构审计没有发现文件、ID 或绑定损坏。225 个正例 Claim 形成 246 个
+Evidence–Claim pair，其中 204 个 Claim 绑定单 Chunk、21 个绑定两个 Chunk；
+154/246 是中文 Claim 对非中文 Evidence。21 条候选 supported 中该跨语言形态为
+14 条。该分布说明跨语言和标签粒度是合理诊断方向，但没有 pair 级模型预测和严格
+NLI 人工裁决前，不能把质量失败单独归因于数据或模型。
+
 知识库接入、前端、演示、远程服务操作、`test/Acceptance` 和在线策略变更均不在
 本 Gate。

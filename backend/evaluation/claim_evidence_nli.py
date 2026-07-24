@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import math
 from collections import Counter
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping, MutableSequence, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -37,11 +37,22 @@ class NliPair:
     key: str
     premise: str
     hypothesis: str
+    question_id: str = ""
+    claim_id: str = ""
+    chunk_id: str = ""
 
 
 @dataclass(frozen=True)
 class PositiveClaimGroup:
     pair_keys: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class NliObservation:
+    pair_key: str
+    label: NliLabel
+    probabilities: tuple[float, float, float]
+    token_length: int
 
 
 class NliScorer(Protocol):
@@ -280,6 +291,7 @@ def evaluate_nli_candidate(
     candidate_partial_pair_keys: Sequence[str],
     human_positive_claims: Sequence[PositiveClaimGroup],
     scorer: NliScorer,
+    observation_sink: MutableSequence[NliObservation] | None = None,
 ) -> dict[str, Any]:
     if not pairs:
         raise NliCandidateError("NLI_WORKLOAD_EMPTY")
@@ -297,10 +309,24 @@ def evaluate_nli_candidate(
         raise NliCandidateError("NLI_SCORER_OUTPUT_COUNT_INVALID")
     if any(type(length) is not int or length < 1 for length in token_lengths):
         raise NliCandidateError("NLI_SCORER_TOKEN_LENGTH_INVALID")
-    labels = {
-        pair.key: _label(_softmax(row))
-        for pair, row in zip(ordered, logits, strict=True)
-    }
+    probabilities_by_key: dict[str, tuple[float, float, float]] = {}
+    labels: dict[str, NliLabel] = {}
+    for pair, row, token_length in zip(
+        ordered, logits, token_lengths, strict=True
+    ):
+        probabilities = _softmax(row)
+        label = _label(probabilities)
+        probabilities_by_key[pair.key] = probabilities
+        labels[pair.key] = label
+        if observation_sink is not None:
+            observation_sink.append(
+                NliObservation(
+                    pair_key=pair.key,
+                    label=label,
+                    probabilities=probabilities,
+                    token_length=token_length,
+                )
+            )
 
     supported_keys = tuple(candidate_supported_pair_keys)
     partial_keys = tuple(candidate_partial_pair_keys)

@@ -4,7 +4,7 @@
 
 `SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_FIRST_TWO_VARIABLES_DEV_QUALITY_FAILED_DISABLED_TEST_SEALED / SOURCE_PHASE_4_PARTIAL_CLAIM_EVIDENCE_LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
-Phase ID：`phase4-multilingual-nli-local-ready-remote-pending`
+Phase ID：`phase4-multilingual-nli-quality-fail-diagnostic-export-local-ready`
 
 ## Completed
 
@@ -209,7 +209,7 @@ Phase ID：`phase4-multilingual-nli-local-ready-remote-pending`
 - `phase4-claim-evidence-candidate-intake-complete` 已原样接收成员 B PR #15 的三份候选资产并通过冻结私有 `dev` 对账：失败归因 `105/105`，Claim–Evidence `30/30`，关系为 `SUPPORTED=21 / PARTIALLY_SUPPORTED=1 / NOT_APPLICABLE=8`，`INPUT_MISSING=0`。评审者明确为 `member-b-ai-assisted`，候选未经过人工裁决，不晋升为最终真值。
 - 现有确定性轮子在 21 条候选 `SUPPORTED` 上只保留 6 条，在人工终审谱系 225 个正例上只保留 110 条；这只证明高误杀风险，不产生 Precision、负例拒绝率或人工一致率。默认生成因此改为 `AUDIT_ONLY`，显式 enforcement 仅供测试和未来候选，在线硬裁决继续关闭。
 - 已固定多语言 NLI 候选轮子 `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` 的 revision、snapshot、Evidence-premise/Claim-hypothesis 模板、标签顺序和正例保留门槛；Mac 仅以 Fake Scorer 完成合同测试，真实模型未在 Mac 运行。
-- Windows PowerShell 5.1 RTX 4090 用户执行入口已静态通过，绑定公开 `main`、私有 `dev` 输入、候选 CSV、CUDA 12.6/PyTorch、模型 snapshot 和脱敏报告。当前状态仍为 `LOCAL_IMPLEMENTATION_READY_REMOTE_RTX4090_NOT_RUN`，不产生 NLI 质量结论。
+- Windows PowerShell 5.1 RTX 4090 Gate 已形成可信质量失败：21 条候选 supported 仅保留 `9/21=0.428571`，225 个终审谱系正例仅保留 `124/225=0.551111`，均低于 `0.85`；组件 P95 为 `64.03166 ms`，质量失败不能由延迟通过覆盖。报告 SHA-256 为 `6f266edc0fa57b933260f3996585a53ac2dac065c13f472f7c8d1c5f94c7cf1e`，默认 `AUDIT_ONLY` 与在线硬裁决关闭不变。
 - 首次 Windows NLI 尝试确认私有 ZIP 哈希正确，但在模型加载前因 tracked JSON 的 CRLF 检出被原始字节哈希误拒绝为 `NLI_CONFIG_HASH_DRIFT`。本地已复用 Phase 3 的 LF 规范化身份：tracked JSON/CSV 接受等价 CRLF，BOM、孤立 CR 和内容变化仍拒绝；私有 ZIP/JSONL 继续严格原始字节哈希。本次没有模型或质量结果。
 
 ## 输入
@@ -258,14 +258,14 @@ Phase ID：`phase4-multilingual-nli-local-ready-remote-pending`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 仍为 `IN_PROGRESS`，阶段 4 为 `PARTIAL_LOCAL_CORE_READY`。两个阶段 3 变量均因无目标质量增益保持关闭；比赛增强主 Gate 已完成 Claim–Evidence 本地核心、候选二审接收以及固定多语言 NLI 的本地实现与远程入口，当前仓库节点为 `phase4-multilingual-nli-local-ready-remote-pending`。真实 RTX 4090 诊断、人工负例裁决和在线硬裁决均未完成。当前评测边界为 `PHASE3_FIRST_TWO_VARIABLES_FAILED_DISABLED / PHASE4_NLI_LOCAL_READY_REMOTE_NOT_RUN_AUDIT_ONLY / TEST_ACCEPTANCE_NOT_READ_NOT_RUN`。默认 RRF、Reranker 关闭、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 仍为 `IN_PROGRESS`，阶段 4 为 `PARTIAL_LOCAL_CORE_READY`。两个阶段 3 变量均因无目标质量增益保持关闭；固定多语言 NLI 已在 RTX 4090 形成可信质量失败并拒绝作为硬裁决候选，当前仓库节点为 `phase4-multilingual-nli-quality-fail-diagnostic-export-local-ready`。为区分数据口径与模型能力，哈希键级私有预测导出已本地就绪、远程诊断复跑待执行；人工负例裁决和在线硬裁决均未完成。当前评测边界为 `PHASE3_FIRST_TWO_VARIABLES_FAILED_DISABLED / PHASE4_NLI_QUALITY_FAIL_DIAGNOSTIC_PENDING_AUDIT_ONLY / TEST_ACCEPTANCE_NOT_READ_NOT_RUN`。默认 RRF、Reranker 关闭、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
 
 ## Next gate
 
-1. **下一个仍只保留一个大 Gate：** 用户在远程 RTX 4090 运行已冻结入口，取得固定 NLI 对 21 条候选 supported 和 225 个终审谱系正例的保留率与组件延迟；
-2. **结果边界：** 该结果只能决定 NLI 候选是否值得进入后续人工裁决；没有人工负例前，不计算 Precision、负例拒绝率或一致率；
-3. **不扩张当前责任：** 该 Gate 不连接知识库或 RAG 服务，不包含前端、演示、`test/Acceptance`、Agent API 或在线策略变更；
-4. **在线硬裁决后置：** 人工裁决后的正负关系指标达标前，默认 `AUDIT_ONLY` 与全部现有检索开关保持不变；300 ms 性能债继续独立。
+1. **下一个仍只保留一个大 Gate：** 在同一模型、输入、阈值和缓存上执行一次诊断复跑，导出 247 个 pair 的哈希键、标签、概率、长度和来源标记；不得覆盖首次质量报告；
+2. **诊断目标：** 在 Mac 本地关联既有私有文本，区分标签过宽、多 Evidence 需求、跨语言模型误判、长上下文/截断和真实不支持；诊断结果仍不是人工 NLI 金标；
+3. **不扩张当前责任：** 诊断文件不含正文或原始 Question/Claim/Chunk ID，不连接知识库或 RAG 服务，不包含前端、演示、`test/Acceptance`、Agent API 或在线策略变更；
+4. **在线硬裁决后置：** NLI 候选已因正例保留失败拒绝，诊断只回答“数据还是模型”，不得反向解锁候选或调低门槛；300 ms 性能债继续独立。
 
 ## Prohibited shortcuts
 

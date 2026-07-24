@@ -18,3 +18,10 @@ BOM、孤立 CR 和内容变化仍失败关闭。私有 ZIP/JSONL 保持原始�
 最终仅回传脚本输出的脱敏 JSON。不要回传私有 JSONL、模型缓存或异常堆栈。
 `quality_decision` 即使为候选通过，也只表示可以进入后续人工裁决的远程 NLI Gate，
 绝不表示在线硬裁决已启用。
+
+首次质量报告完成后，如需导出不含正文与原始 ID 的私有预测诊断，只在修复提交上
+增加 `-DiagnosticReplay`。输出进入独立的
+`runtime\phases\phase4-multilingual-nli-private-diagnostic-v1\`，不会覆盖首次
+质量报告。
+
+`powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\deploy\remote\phase4-nli-validation\run_phase4_multilingual_nli_gate.ps1 -RepositoryRoot $PWD.Path -InputPackagePath (Join-Path $PWD.Path 'runtime\handoffs\member-b-phase2-4-dev-review-input-v1\member-b-phase2-4-dev-review-input-v1.zip') -DiagnosticReplay`

@@ -8,7 +8,9 @@ import csv
 import hashlib
 import json
 import math
+import re
 import statistics
+import subprocess
 import sys
 import time
 from collections import Counter
@@ -23,6 +25,7 @@ if str(ROOT) not in sys.path:
 from backend.evaluation.claim_evidence_nli import (
     NliCandidateConfig,
     NliCandidateError,
+    NliObservation,
     NliPair,
     NliScorer,
     PositiveClaimGroup,
@@ -35,6 +38,7 @@ from backend.evaluation.reranker import directory_sha256
 DEFAULT_CONFIG = (
     ROOT / "evaluation/claim_evidence/phase4-multilingual-nli-rtx4090-v1.json"
 )
+GIT_COMMIT = re.compile(r"^[0-9a-f]{40}$")
 REVIEW_FIELDS = (
     "question_id",
     "claim_id",
@@ -72,6 +76,23 @@ def _percentile(values: Sequence[float], percentile: float) -> float:
 def _pair_key(question_id: str, claim_id: str, chunk_id: str) -> str:
     value = f"{question_id}\0{claim_id}\0{chunk_id}".encode("utf-8")
     return hashlib.sha256(value).hexdigest()
+
+
+def _repository_head() -> str:
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise NliCandidateError("NLI_REPOSITORY_HEAD_UNAVAILABLE") from exc
+    head = completed.stdout.strip()
+    if not GIT_COMMIT.fullmatch(head):
+        raise NliCandidateError("NLI_REPOSITORY_HEAD_INVALID")
+    return head
 
 
 def _load_private_rows(
@@ -143,7 +164,14 @@ def build_workload(
         hypothesis: str,
     ) -> str:
         key = _pair_key(question_id, claim_id, chunk_id)
-        pair = NliPair(key=key, premise=premise, hypothesis=hypothesis)
+        pair = NliPair(
+            key=key,
+            premise=premise,
+            hypothesis=hypothesis,
+            question_id=question_id,
+            claim_id=claim_id,
+            chunk_id=chunk_id,
+        )
         existing = pairs.get(key)
         if existing is not None and existing != pair:
             raise NliCandidateError("NLI_PAIR_IDENTITY_COLLISION")
@@ -330,6 +358,69 @@ class SentenceTransformersNliScorer(NliScorer):
         return latencies
 
 
+def write_private_diagnostics(
+    *,
+    path: Path,
+    config: NliCandidateConfig,
+    observations: Sequence[NliObservation],
+    candidate_supported_pair_keys: Sequence[str],
+    candidate_partial_pair_keys: Sequence[str],
+    human_positive_claims: Sequence[PositiveClaimGroup],
+) -> dict[str, Any]:
+    candidate_relations = {
+        **{key: "SUPPORTED" for key in candidate_supported_pair_keys},
+        **{key: "PARTIALLY_SUPPORTED" for key in candidate_partial_pair_keys},
+    }
+    human_positive_keys = {
+        key for group in human_positive_claims for key in group.pair_keys
+    }
+    rows = []
+    for observation in observations:
+        rows.append(
+            {
+                "schema_version": "phase4_nli_private_prediction_v1",
+                "pair_key": observation.pair_key,
+                "candidate_relation": candidate_relations.get(
+                    observation.pair_key, "NONE"
+                ),
+                "human_positive_binding": (
+                    observation.pair_key in human_positive_keys
+                ),
+                "model_label": observation.label.value,
+                "probabilities": {
+                    label: round(probability, 9)
+                    for label, probability in zip(
+                        config.model["label_mapping"],
+                        observation.probabilities,
+                        strict=True,
+                    )
+                },
+                "token_length": observation.token_length,
+                "truncated": (
+                    observation.token_length > config.model["max_length"]
+                ),
+            }
+        )
+    if len({row["pair_key"] for row in rows}) != len(rows):
+        raise NliCandidateError("NLI_PRIVATE_DIAGNOSTIC_PAIR_DUPLICATE")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "".join(
+            json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n"
+            for row in rows
+        ),
+        encoding="utf-8",
+    )
+    return {
+        "schema_version": "phase4_nli_private_prediction_export_v1",
+        "row_count": len(rows),
+        "sha256": _sha256(path),
+        "contains_private_text": False,
+        "contains_raw_question_claim_or_chunk_ids": False,
+        "pair_identity": "SHA256_QUESTION_CLAIM_CHUNK_IDS",
+    }
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     config = load_nli_candidate_config(args.config)
     if _lf_canonical_sha256(args.config) != args.config_sha256:
@@ -345,6 +436,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         config=config,
         cache_dir=args.model_cache,
     )
+    observations: list[NliObservation] = []
     report = evaluate_nli_candidate(
         config=config,
         pairs=pairs,
@@ -352,6 +444,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         candidate_partial_pair_keys=partial,
         human_positive_claims=human_claims,
         scorer=scorer,
+        observation_sink=observations,
     )
     benchmark_pairs = [
         (pair.premise, pair.hypothesis)
@@ -380,6 +473,16 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "candidate_review": _lf_canonical_sha256(candidate_path),
         "private_input": _sha256(args.private_input),
     }
+    report["repository_head"] = _repository_head()
+    if args.diagnostic_output is not None:
+        report["private_diagnostic_export"] = write_private_diagnostics(
+            path=args.diagnostic_output,
+            config=config,
+            observations=observations,
+            candidate_supported_pair_keys=supported,
+            candidate_partial_pair_keys=partial,
+            human_positive_claims=human_claims,
+        )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -395,6 +498,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--private-input", type=Path, required=True)
     parser.add_argument("--model-cache", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--diagnostic-output", type=Path)
     return parser
 
 
