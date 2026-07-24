@@ -2,9 +2,9 @@
 
 ## Status
 
-`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_FIRST_TWO_VARIABLES_DEV_QUALITY_FAILED_DISABLED_TEST_SEALED / SOURCE_PHASE_4_PARTIAL_CLAIM_EVIDENCE_LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
+`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_FIRST_TWO_VARIABLES_DEV_QUALITY_FAILED_DISABLED_TEST_SEALED / SOURCE_PHASE_4_PARTIAL_MULTI_EVIDENCE_SET_LOCAL_READY_AUDIT_ONLY_ONLINE_HARD_JUDGMENT_DEFERRED / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
-Phase ID：`phase4-multilingual-nli-data-diagnosis-complete`
+Phase ID：`phase4-multi-evidence-set-local-ready`
 
 ## Completed
 
@@ -213,6 +213,8 @@ Phase ID：`phase4-multilingual-nli-data-diagnosis-complete`
 - 首次 Windows NLI 尝试确认私有 ZIP 哈希正确，但在模型加载前因 tracked JSON 的 CRLF 检出被原始字节哈希误拒绝为 `NLI_CONFIG_HASH_DRIFT`。本地已复用 Phase 3 的 LF 规范化身份：tracked JSON/CSV 接受等价 CRLF，BOM、孤立 CR 和内容变化仍拒绝；私有 ZIP/JSONL 继续严格原始字节哈希。本次没有模型或质量结果。
 - 私有诊断复跑在提交 `71c9f042c09b9d60e7922450a03714c41808eecc` 上完成，247/247 哈希 pair key、标签、概率和长度合同通过，预测 SHA-256 为 `c86747974470ecb4e6834de997a2ed649a3f8573f740ad7b5989ebcf56228b3a`。候选 supported 同语言保留 `6/7`，中文 Claim 对非中文 Evidence 仅 `3/14`；终审谱系同语言 `65/89`，跨语言 `59/136`。单/双 Chunk 接近且截断仅 7 个 group，诊断为模型跨语言与学术排版/领域失效为主，严格 NLI 标签语义未建立为次要问题。
 - Codex 私有语义诊断完整复核 12 条候选漏判，其中 11 条 Evidence 直接表达 Claim、1 条标签口径可能偏宽；另一个 12 条高置信分层样本中 10 条直接蕴含、2 条上下文依赖或偏宽。该结果明确标为 AI 辅助诊断而非人工 NLI 金标，不得用于自动改写数据或估计总体标签错误率。
+- Phase 4 Multi-Evidence Evidence Set 主 Gate 已完成：直接复用结构化 Claim、`citation_ids`、授权 Evidence/Citation 与 `claim_evidence.py`，一个 Claim 可形成一个或多个 Evidence 的确定性集合；集合级校验 owner、活动 document/version/chunk 身份、数值、单位、比较对象、限定条件和冲突，输出 `SUPPORTED_BY_EVIDENCE_SET / PARTIALLY_SUPPORTED / CONFLICTING_EVIDENCE / INSUFFICIENT_EVIDENCE`。
+- 原绑定不足时，只允许从同一请求内加入同文档、同活动版本、双向邻接的最多一个 Chunk；加入必须提升确定性支持或冲突结论，并明确保持检索相关性分数不读、不改。默认继续 `AUDIT_ONLY`，不自动删除 Claim；公开 Answer/Evidence/Citation/Prompt、默认 RRF/Reranker 和 300 ms 性能债不变。
 
 ## 输入
 
@@ -260,14 +262,14 @@ Phase ID：`phase4-multilingual-nli-data-diagnosis-complete`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 仍为 `IN_PROGRESS`，阶段 4 为 `PARTIAL_LOCAL_CORE_READY`。两个阶段 3 变量均因无目标质量增益保持关闭；固定多语言 NLI 已在 RTX 4090 形成可信质量失败并完成数据/模型诊断，当前仓库节点为 `phase4-multilingual-nli-data-diagnosis-complete`。结论是模型跨语言与学术领域失效为主、标签语义错配为次；当前模型被拒绝且不再复跑或调门槛，人工 NLI 正负裁决和在线硬裁决均未完成。当前评测边界为 `PHASE3_FIRST_TWO_VARIABLES_FAILED_DISABLED / PHASE4_NLI_REJECTED_DATA_DIAGNOSIS_COMPLETE_AUDIT_ONLY / TEST_ACCEPTANCE_NOT_READ_NOT_RUN`。默认 RRF、Reranker 关闭、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 仍为 `IN_PROGRESS`，阶段 4 为 `PARTIAL_MULTI_EVIDENCE_SET_LOCAL_READY`。两个阶段 3 变量均因无目标质量增益保持关闭；当前仓库节点为 `phase4-multi-evidence-set-local-ready`。确定性 EvidenceSet 已覆盖单/多 Evidence、身份、部分支持、冲突和最多一个同版本邻块，但只处于 `AUDIT_ONLY`，不冒充语义蕴含或人工金标。固定多语言 NLI 的质量失败和数据/模型诊断保持原结论，当前模型继续拒绝且不复跑或调门槛。当前评测边界为 `PHASE3_FIRST_TWO_VARIABLES_FAILED_DISABLED / PHASE4_MULTI_EVIDENCE_SET_LOCAL_READY_AUDIT_ONLY_NLI_REJECTED / TEST_ACCEPTANCE_NOT_READ_NOT_RUN`。默认 RRF、Reranker 关闭、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
 
 ## Next gate
 
-1. **NLI 分支停止：** 当前模型不再复跑、调阈值或用预测回写数据；若未来比较其他语义模型，先形成严格 pair-level 正负 NLI 人工裁决集；
-2. **比赛增强回到可交付价值：** 下一大 Gate 应从已打通的 RAG 核心中选择不依赖新人工金标的增强，不继续在同一 dev 上刷语义 Judge；
-3. **不扩张当前责任：** 后续仍不连接知识库、不做前端/演示、不读取 `test/Acceptance`，不改变在线硬裁决或 Agent API；
-4. **债务分离：** 默认 `AUDIT_ONLY`、全部检索开关和 300 ms 独立性能债保持不变。
+1. **本 Gate 已收口：** 不继续细分或调参 Multi-Evidence EvidenceSet；它保持本地 `AUDIT_ONLY`，不自动删除 Claim；
+2. **NLI 分支停止：** 当前模型不再复跑、调阈值或用预测回写数据；只有未来明确选择语义 Judge 且先具备严格 pair-level 人工正负金标时才重新评估；
+3. **下一比赛增强另选主变量：** 应选择能直接增加可展示 RAG 价值且不依赖知识库接入、前端或新人工金标的完整 Gate；
+4. **债务分离：** `test/Acceptance` 继续封存，默认 RRF、Reranker、在线硬裁决和 300 ms 独立性能债保持不变。
 
 ## Prohibited shortcuts
 

@@ -30,6 +30,7 @@ REQUIRED_FILES = (
     "docs/PHASE_4_CLAIM_EVIDENCE_CANDIDATE_INTAKE.md",
     "docs/PHASE_4_MULTILINGUAL_NLI_CANDIDATE_GATE.md",
     "docs/PHASE_4_MULTILINGUAL_NLI_DATA_DIAGNOSIS.md",
+    "docs/PHASE_4_MULTI_EVIDENCE_SET_GATE.md",
     "machine/project_state.json",
     "machine/feature_list.json",
     "machine/phase_zero_scope_resource_slo.json",
@@ -41,6 +42,7 @@ REQUIRED_FILES = (
     "machine/phase4_claim_evidence_candidate_intake.json",
     "machine/phase4_multilingual_nli_candidate_gate.json",
     "machine/phase4_multilingual_nli_data_diagnosis.json",
+    "machine/phase4_multi_evidence_set_gate.json",
     "machine/phase_result.schema.json",
     "machine/phase_result.template.json",
     "scripts/validate_harness_contract.py",
@@ -277,6 +279,24 @@ def check_feature_list() -> None:
         )
     ):
         raise ValueError("phase 4 multilingual NLI feature status drifted")
+    multi_evidence_feature = next(
+        (
+            feature
+            for feature in features
+            if feature.get("id") == "phase4_multi_evidence_set"
+        ),
+        None,
+    )
+    if (
+        not isinstance(multi_evidence_feature, dict)
+        or multi_evidence_feature.get("status") != "PARTIAL"
+        or multi_evidence_feature.get("gate_status")
+        != (
+            "LOCAL_MULTI_EVIDENCE_SET_READY_AUDIT_ONLY_"
+            "ONLINE_HARD_JUDGMENT_DISABLED"
+        )
+    ):
+        raise ValueError("phase 4 multi-Evidence Set feature status drifted")
 
 
 def validate_phase_result(payload: Any, *, require_concrete: bool) -> None:
@@ -644,6 +664,76 @@ def check_phase4_multilingual_nli_data_diagnosis() -> None:
         or decision.get("rewrite_dataset_from_model_predictions") is not False
     ):
         raise ValueError("phase 4 multilingual NLI diagnosis boundary drifted")
+
+
+def check_phase4_multi_evidence_set_gate() -> None:
+    payload = _read_json("machine/phase4_multi_evidence_set_gate.json")
+    if (
+        payload.get("schema_version") != "phase4_multi_evidence_set_gate_v1"
+        or payload.get("decision_id") != "PD-066"
+        or payload.get("status")
+        != "LOCAL_MULTI_EVIDENCE_SET_READY_AUDIT_ONLY"
+    ):
+        raise ValueError("phase 4 multi-Evidence Set identity drifted")
+    reuse = payload.get("reuse", {})
+    implementation = payload.get("implementation", {})
+    adjacency = implementation.get("adjacent_policy", {})
+    if (
+        reuse.get("structured_claim_text_and_citation_ids") != "DIRECT_REUSE"
+        or reuse.get("authorized_evidence_and_citation_contracts")
+        != "DIRECT_REUSE"
+        or reuse.get("new_dependencies") != []
+        or implementation.get("statuses")
+        != [
+            "SUPPORTED_BY_EVIDENCE_SET",
+            "PARTIALLY_SUPPORTED",
+            "CONFLICTING_EVIDENCE",
+            "INSUFFICIENT_EVIDENCE",
+        ]
+        or implementation.get("default_mode") != "AUDIT_ONLY"
+        or implementation.get("automatic_claim_deletion") is not False
+        or implementation.get("public_rag_answer_schema_changed") is not False
+        or implementation.get("public_evidence_or_citation_schema_changed")
+        is not False
+        or implementation.get("generation_prompt_identity_changed") is not False
+    ):
+        raise ValueError("phase 4 multi-Evidence Set contract drifted")
+    if (
+        adjacency.get("maximum_added_chunks") != 1
+        or adjacency.get("same_document_required") is not True
+        or adjacency.get("same_active_version_required") is not True
+        or adjacency.get("reciprocal_neighbor_identity_required") is not True
+        or adjacency.get("request_local_candidate_only") is not True
+        or adjacency.get("retrieval_score_read_or_changed") is not False
+    ):
+        raise ValueError("phase 4 multi-Evidence Set adjacency drifted")
+    nli = payload.get("nli_boundary", {})
+    retrieval = payload.get("retrieval_and_performance_boundary", {})
+    scope = payload.get("scope", {})
+    if (
+        nli.get("current_candidate") != "REJECTED"
+        or nli.get("replace_model") is not False
+        or nli.get("tune_threshold") is not False
+        or nli.get("rerun_existing_dev") is not False
+        or nli.get("rewrite_data_from_predictions") is not False
+        or retrieval.get("default_rrf_changed") is not False
+        or retrieval.get("default_reranker_changed") is not False
+        or retrieval.get("performance_debt_changed") is not False
+        or scope.get("test") != "NOT_READ_NOT_RUN"
+        or scope.get("acceptance") != "NOT_READ_NOT_RUN"
+    ):
+        raise ValueError("phase 4 multi-Evidence Set boundary drifted")
+    validation = payload.get("local_validation", {})
+    if validation != {
+        "focused_claim_evidence_tests": "PASS_19",
+        "focused_generation_and_online_regression": "PASS_34_TOTAL",
+        "full_repository_tests": "PASS",
+        "repository_harness": "PASS",
+        "powershell_static": "PASS",
+        "diff_check": "PASS",
+        "sensitive_information_scan": "PASS",
+    }:
+        raise ValueError("phase 4 multi-Evidence Set validation drifted")
 
 
 def check_phase_zero_scope_resource_slo() -> None:
@@ -1890,6 +1980,10 @@ def main() -> int:
         (
             "phase4_multilingual_nli_data_diagnosis",
             check_phase4_multilingual_nli_data_diagnosis,
+        ),
+        (
+            "phase4_multi_evidence_set_gate",
+            check_phase4_multi_evidence_set_gate,
         ),
         ("harness_links", check_harness_links),
         ("content_safety", check_harness_content_safety),

@@ -674,6 +674,21 @@
         "docs/REQUIREMENTS_TRACEABILITY.md",
         "docs/CURRENT_PHASE.md"
       ]
+    },
+    {
+      "id": "phase4_multi_evidence_set",
+      "status": "PARTIAL",
+      "owner": "A",
+      "gate_status": "LOCAL_MULTI_EVIDENCE_SET_READY_AUDIT_ONLY_ONLINE_HARD_JUDGMENT_DISABLED",
+      "evidence": [
+        "backend/rag/claim_evidence.py",
+        "tests/rag/test_claim_evidence.py",
+        "machine/phase4_multi_evidence_set_gate.json",
+        "docs/PHASE_4_MULTI_EVIDENCE_SET_GATE.md",
+        "docs/PRODUCT_DECISIONS.md",
+        "docs/REQUIREMENTS_TRACEABILITY.md",
+        "docs/CURRENT_PHASE.md"
+      ]
     }
   ]
 }
