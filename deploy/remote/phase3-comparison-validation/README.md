@@ -41,6 +41,11 @@ AST，后续 helper 检查级联失败；最后无条件打印的 `PASS` 无效�
 `verify_phase3_comparison_closeout.ps1`。它使用显式根目录和绝对解析路径，
 任一失败立即终止；不会执行旧质量入口或通用 Python 测试批次。
 
+第二次复核已成功快进到提交 `79861c6`，随后因 Windows PowerShell 5.1
+模块路径没有 `PSScriptAnalyzer 1.25.0` 而正确终止。无需在 Windows 安装模块：
+PSScriptAnalyzer 只属于 Mac 提交前静态 Gate；当前 Windows 入口只依赖系统
+内置 Parser 和严格模式行为检查。
+
 ```powershell
 Set-Location 'C:\Users\Administrator\zhiyan-personal-academic-rag'
 

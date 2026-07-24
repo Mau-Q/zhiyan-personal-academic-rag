@@ -528,7 +528,14 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["decision_ids"],
-            ["PD-053", "PD-054", "PD-055", "PD-056", "PD-057"],
+            [
+                "PD-053",
+                "PD-054",
+                "PD-055",
+                "PD-056",
+                "PD-057",
+                "PD-058",
+            ],
         )
         self.assertEqual(
             payload["reuse_review"]["decision"],
@@ -581,6 +588,11 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertFalse(
             payload["windows_closeout_verification"]["quality_gate_rerun"]
+        )
+        self.assertFalse(
+            payload["windows_closeout_verification"][
+                "windows_external_module_required"
+            ]
         )
 
     def test_validator_rejects_template_as_concrete_phase_result(self):

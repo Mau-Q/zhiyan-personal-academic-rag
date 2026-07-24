@@ -1252,6 +1252,7 @@ def check_phase3_comparison_route_coverage_gate() -> None:
         "PD-055",
         "PD-056",
         "PD-057",
+        "PD-058",
     ]:
         raise ValueError("phase 3 route coverage decision ids drifted")
     if payload.get("status") != (
@@ -1402,6 +1403,8 @@ def check_phase3_comparison_route_coverage_gate() -> None:
         or not isinstance(closeout, dict)
         or closeout.get("first_attempt_status")
         != "FAIL_CHECKLIST_DEFECT_NO_QUALITY_EXECUTION"
+        or closeout.get("second_attempt_status")
+        != "FAIL_MISSING_PSSCRIPTANALYZER_NO_QUALITY_EXECUTION"
         or closeout.get("entry")
         != (
             "deploy/remote/phase3-comparison-validation/"
@@ -1410,6 +1413,7 @@ def check_phase3_comparison_route_coverage_gate() -> None:
         or closeout.get("remote_service_contacted") is not False
         or closeout.get("private_input_read") is not False
         or closeout.get("quality_gate_rerun") is not False
+        or closeout.get("windows_external_module_required") is not False
         or closeout.get("status")
         != "LOCAL_VALIDATED_AWAITING_USER_WINDOWS_RECHECK_AFTER_PUSH"
     ):

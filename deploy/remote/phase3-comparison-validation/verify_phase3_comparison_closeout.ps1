@@ -13,12 +13,6 @@ if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
     $RepositoryRoot = Join-Path -Path $PSScriptRoot -ChildPath '..\..\..'
 }
 $RepositoryRoot = (Resolve-Path -LiteralPath $RepositoryRoot).Path
-$settingsPath = Join-Path `
-    -Path $RepositoryRoot `
-    -ChildPath 'config\PSScriptAnalyzerSettings.psd1'
-$staticCheckPath = Join-Path `
-    -Path $RepositoryRoot `
-    -ChildPath 'scripts\check_powershell.ps1'
 $runnerPath = Join-Path `
     -Path $RepositoryRoot `
     -ChildPath (
@@ -47,13 +41,6 @@ try {
         $originCommit -ne $ExpectedHeadCommit
     ) {
         throw 'Windows HEAD and origin/main must equal the expected commit.'
-    }
-
-    & $staticCheckPath `
-        -RepositoryRoot $RepositoryRoot `
-        -SettingsPath $settingsPath
-    if ($LASTEXITCODE -ne 0) {
-        throw 'PowerShell static checks failed.'
     }
 
     $tokens = $null
@@ -120,6 +107,7 @@ try {
         'Phase 3 closeout PowerShell verification passed at commit {0}.' -f `
             $headCommit
     )
+    Write-Output 'Built-in Windows PowerShell parser and strict-mode behavior passed.'
     Write-Output 'No quality Gate, service, or private input was executed.'
 }
 finally {

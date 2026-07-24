@@ -5,7 +5,8 @@
     "PD-054",
     "PD-055",
     "PD-056",
-    "PD-057"
+    "PD-057",
+    "PD-058"
   ],
   "status": "REMOTE_DEV_QUALITY_FAILED_CLEAN_VARIABLE_DISABLED",
   "source_phase": {
@@ -237,8 +238,12 @@
     "python_test_batch": "NOT_USED_AS_WINDOWS_PLATFORM_PROOF",
     "static_check_failure": "PSSCRIPTROOT_EMPTY_DURING_PARAMETER_DEFAULT_BINDING",
     "parser_failure": "RELATIVE_PARSEFILE_PATH_NOT_RESOLVED_AGAINST_POWERSHELL_LOCATION",
-    "fix": "VERSIONED_WINDOWS_POWERSHELL_5_1_CLOSEOUT_VERIFIER_WITH_EXPLICIT_ROOTS_AND_ABSOLUTE_PARSE_PATH",
+    "second_attempt_status": "FAIL_MISSING_PSSCRIPTANALYZER_NO_QUALITY_EXECUTION",
+    "second_attempt_failure": "WINDOWS_POWERSHELL_5_1_MODULE_PATH_HAS_NO_PSSCRIPTANALYZER_1_25_0",
+    "fix": "VERSIONED_WINDOWS_POWERSHELL_5_1_CLOSEOUT_VERIFIER_WITH_ABSOLUTE_BUILTIN_PARSE_PATH_AND_STRICT_MODE_BEHAVIOR_NO_EXTERNAL_MODULE",
     "entry": "deploy/remote/phase3-comparison-validation/verify_phase3_comparison_closeout.ps1",
+    "mac_psscriptanalyzer_gate": "PASS_REQUIRED_BEFORE_LOCAL_COMMIT",
+    "windows_external_module_required": false,
     "remote_service_contacted": false,
     "private_input_read": false,
     "quality_gate_rerun": false,

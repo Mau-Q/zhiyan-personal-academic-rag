@@ -149,3 +149,8 @@ PowerShell 脱敏汇总曾因完整报告不含可选 `primary_error_code` 而�
 `verify_phase3_comparison_closeout.ps1`：显式传入仓库与设置路径、用绝对路径
 解析入口、严格模式检查可选字段，任一错误立即终止。通用 Python 仓库测试批次
 不再充当 Windows 平台证明。
+
+第二次收口复核已证明提交同步与失败关闭有效，但 Windows PowerShell 5.1
+模块路径没有 `PSScriptAnalyzer 1.25.0`。该外部模块只保留在 Mac 提交前静态
+Gate；Windows 不安装新模块，版本化入口改用系统内置 Parser 和严格模式行为
+检查。该调整不接触旧质量 Run ID、服务、私有输入或清理状态。
