@@ -617,6 +617,19 @@
       ]
     },
     {
+      "id": "phase3_future_comparison_failure_localization",
+      "status": "PENDING",
+      "owner": "SHARED",
+      "gate_status": "FUTURE_OPTION_DOCUMENTED_NOT_ACTIVE_DOES_NOT_BLOCK_PHASE4",
+      "evidence": [
+        "docs/PHASE_3_FUTURE_COMPARISON_FAILURE_LOCALIZATION.md",
+        "docs/PRODUCT_DECISIONS.md",
+        "docs/REQUIREMENTS_TRACEABILITY.md",
+        "docs/CURRENT_PHASE.md",
+        "machine/project_state.json"
+      ]
+    },
+    {
       "id": "phase4_claim_evidence_core",
       "status": "PARTIAL",
       "owner": "A",

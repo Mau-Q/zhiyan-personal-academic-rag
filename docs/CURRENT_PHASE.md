@@ -215,6 +215,7 @@ Phase ID：`phase4-multi-evidence-set-local-ready`
 - Codex 私有语义诊断完整复核 12 条候选漏判，其中 11 条 Evidence 直接表达 Claim、1 条标签口径可能偏宽；另一个 12 条高置信分层样本中 10 条直接蕴含、2 条上下文依赖或偏宽。该结果明确标为 AI 辅助诊断而非人工 NLI 金标，不得用于自动改写数据或估计总体标签错误率。
 - Phase 4 Multi-Evidence Evidence Set 主 Gate 已完成：直接复用结构化 Claim、`citation_ids`、授权 Evidence/Citation 与 `claim_evidence.py`，一个 Claim 可形成一个或多个 Evidence 的确定性集合；集合级校验 owner、活动 document/version/chunk 身份、数值、单位、比较对象、限定条件和冲突，输出 `SUPPORTED_BY_EVIDENCE_SET / PARTIALLY_SUPPORTED / CONFLICTING_EVIDENCE / INSUFFICIENT_EVIDENCE`。
 - 原绑定不足时，只允许从同一请求内加入同文档、同活动版本、双向邻接的最多一个 Chunk；加入必须提升确定性支持或冲突结论，并明确保持检索相关性分数不读、不改。默认继续 `AUDIT_ONLY`，不自动删除 Claim；公开 Answer/Evidence/Citation/Prompt、默认 RRF/Reranker 和 300 ms 性能债不变。
+- 阶段 3 的 `COMPARISON_FAILURE_LOCALIZATION` 已作为未来可选增强完成文档冻结，但当前不激活。查询拆分 V1 和 Route Coverage V1 的失败结论只覆盖冻结 4 条 `dev`，不能扩大为整个方法类别无效；未来若重开阶段 3，必须先定位正确 Evidence 在 ES Top-50、Milvus Top-50、RRF Top-50、最终 Top-3、Chunk/邻块/Evidence Set、标签与指标中的丢失层，再选择增强方向。
 
 ## 输入
 
@@ -262,14 +263,15 @@ Phase ID：`phase4-multi-evidence-set-local-ready`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 仍为 `IN_PROGRESS`，阶段 4 为 `PARTIAL_MULTI_EVIDENCE_SET_LOCAL_READY`。两个阶段 3 变量均因无目标质量增益保持关闭；当前仓库节点为 `phase4-multi-evidence-set-local-ready`。确定性 EvidenceSet 已覆盖单/多 Evidence、身份、部分支持、冲突和最多一个同版本邻块，但只处于 `AUDIT_ONLY`，不冒充语义蕴含或人工金标。固定多语言 NLI 的质量失败和数据/模型诊断保持原结论，当前模型继续拒绝且不复跑或调门槛。当前评测边界为 `PHASE3_FIRST_TWO_VARIABLES_FAILED_DISABLED / PHASE4_MULTI_EVIDENCE_SET_LOCAL_READY_AUDIT_ONLY_NLI_REJECTED / TEST_ACCEPTANCE_NOT_READ_NOT_RUN`。默认 RRF、Reranker 关闭、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 仍为 `IN_PROGRESS`，阶段 4 为 `PARTIAL_MULTI_EVIDENCE_SET_LOCAL_READY`。两个阶段 3 变量只在冻结 4 条 `dev` 上无目标质量增益并保持关闭，该证据不否定整个方法类别；当前仓库节点仍为 `phase4-multi-evidence-set-local-ready`。确定性 EvidenceSet 已覆盖单/多 Evidence、身份、部分支持、冲突和最多一个同版本邻块，但只处于 `AUDIT_ONLY`，不冒充语义蕴含或人工金标。固定多语言 NLI 的质量失败和数据/模型诊断保持原结论，当前模型继续拒绝且不复跑或调门槛。未来可选的比较失败定位 Gate 仅记录诊断顺序，当前不激活且不阻塞 Phase 4。当前评测边界为 `PHASE3_FIRST_TWO_VARIABLES_FAILED_DISABLED / PHASE3_COMPARISON_FAILURE_LOCALIZATION_FUTURE_OPTION_NOT_ACTIVE / PHASE4_MULTI_EVIDENCE_SET_LOCAL_READY_AUDIT_ONLY_NLI_REJECTED / TEST_ACCEPTANCE_NOT_READ_NOT_RUN`。默认 RRF、Reranker 关闭、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
 
 ## Next gate
 
 1. **本 Gate 已收口：** 不继续细分或调参 Multi-Evidence EvidenceSet；它保持本地 `AUDIT_ONLY`，不自动删除 Claim；
 2. **NLI 分支停止：** 当前模型不再复跑、调阈值或用预测回写数据；只有未来明确选择语义 Judge 且先具备严格 pair-level 人工正负金标时才重新评估；
-3. **下一比赛增强另选主变量：** 应选择能直接增加可展示 RAG 价值且不依赖知识库接入、前端或新人工金标的完整 Gate；
-4. **债务分离：** `test/Acceptance` 继续封存，默认 RRF、Reranker、在线硬裁决和 300 ms 独立性能债保持不变。
+3. **未来阶段 3 诊断顺序：** 若重新开启比较增强，先运行 `docs/PHASE_3_FUTURE_COMPARISON_FAILURE_LOCALIZATION.md` 定义的单一定位 Gate，确认正确 Evidence 在 ES/Milvus/RRF Top-50、最终 Top-3、Chunk/邻块/Evidence Set 或标签与指标哪一层丢失，再选择术语扩展、结构化比较维度拆分、融合/重排、有限邻块或 Evidence Set；当前两个变量继续关闭且不调参重跑；
+4. **下一比赛增强另选主变量：** 当前仍应选择能直接增加可展示 RAG 价值且不依赖知识库接入、前端或新人工金标的完整 Gate；未来定位项不阻塞当前 Multi-Evidence Evidence Set 收口；
+5. **债务分离：** `test/Acceptance` 继续封存，默认 RRF、Reranker、NLI `AUDIT_ONLY`、在线硬裁决和 300 ms 独立性能债保持不变。
 
 ## Prohibited shortcuts
 
