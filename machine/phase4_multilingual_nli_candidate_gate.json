@@ -1,0 +1,63 @@
+{
+  "schema_version": "phase4_multilingual_nli_candidate_gate_v1",
+  "decision_id": "PD-062",
+  "status": "LOCAL_IMPLEMENTATION_READY_REMOTE_RTX4090_NOT_RUN",
+  "model": {
+    "model_id": "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7",
+    "revision": "b5113eb38ab63efdd7f280f8c144ea8b13f978ce",
+    "snapshot_sha256": "7e973b42bf69d9475c065d4deb04745659badf94ce054fd1de0f9cc1caeeafd5",
+    "input_template": "EVIDENCE_PREMISE_CLAIM_HYPOTHESIS",
+    "mac_execution": "FAKE_SCORER_ONLY",
+    "remote_target": "WINDOWS_POWERSHELL_5_1_RTX4090_CUDA126"
+  },
+  "inputs": {
+    "split": "dev",
+    "questions": 105,
+    "candidate_supported": 21,
+    "candidate_partial": 1,
+    "human_finalized_positive_claims": 225,
+    "candidate_truth_status": "AI_ASSISTED_CANDIDATE_NOT_HUMAN_ADJUDICATED",
+    "adjudicated_negatives_available": false
+  },
+  "decision_contract": {
+    "candidate_supported_retention_min": 0.85,
+    "human_finalized_positive_retention_min": 0.85,
+    "quality_result": "NOT_RUN",
+    "precision": "NOT_MEASURABLE_NO_HUMAN_ADJUDICATED_NEGATIVES",
+    "negative_rejection": "NOT_MEASURABLE_NO_HUMAN_ADJUDICATED_NEGATIVES",
+    "human_agreement": "NOT_MEASURABLE_AI_ASSISTED_CANDIDATE",
+    "candidate_pass_only_allows": "LATER_HUMAN_ADJUDICATED_NLI_GATE",
+    "online_enforcement_enabled": false
+  },
+  "reuse": {
+    "sentence_transformers_cross_encoder": "NARROW_ADAPTER",
+    "existing_reranker_cuda_environment": "DIRECT_REUSE",
+    "existing_private_dev_package": "DIRECT_REUSE_BY_HASH",
+    "existing_claim_evidence_online_path": "UNCHANGED_AUDIT_ONLY",
+    "new_dependencies": []
+  },
+  "scope": {
+    "knowledge_base_integration": "OUT_OF_SCOPE_OTHER_OWNER",
+    "frontend": "OUT_OF_SCOPE",
+    "demo": "OUT_OF_SCOPE",
+    "remote_execution": "USER_RUN_PENDING",
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN"
+  },
+  "local_validation": {
+    "focused_fake_scorer_and_contract_tests": {
+      "status": "PASS",
+      "count": 11
+    },
+    "real_model_on_mac": "NOT_RUN_BY_CONTRACT",
+    "windows_powershell_static": "PASS",
+    "full_repository_tests": "PASS",
+    "repository_harness": "PASS",
+    "diff_check": "PASS"
+  },
+  "next_gate": {
+    "id": "USER_RUN_REMOTE_RTX4090_POSITIVE_RETENTION_DIAGNOSTIC",
+    "result_required": "SANITIZED_JSON_ONLY",
+    "does_not_enable_online_enforcement": true
+  }
+}

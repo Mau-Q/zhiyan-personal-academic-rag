@@ -652,6 +652,26 @@
         "docs/REQUIREMENTS_TRACEABILITY.md",
         "docs/CURRENT_PHASE.md"
       ]
+    },
+    {
+      "id": "phase4_multilingual_nli_candidate",
+      "status": "PARTIAL",
+      "owner": "A",
+      "gate_status": "LOCAL_IMPLEMENTATION_READY_REMOTE_RTX4090_NOT_RUN_ONLINE_ENFORCEMENT_DISABLED",
+      "evidence": [
+        "backend/evaluation/claim_evidence_nli.py",
+        "evaluation/claim_evidence/phase4-multilingual-nli-rtx4090-v1.json",
+        "scripts/run_phase4_multilingual_nli_gate.py",
+        "tests/evaluation/test_phase4_multilingual_nli_candidate.py",
+        "deploy/remote/phase4-nli-validation/run_phase4_multilingual_nli_gate.ps1",
+        "deploy/remote/phase4-nli-validation/README.md",
+        "tests/validation/test_phase4_multilingual_nli_remote_script.py",
+        "machine/phase4_multilingual_nli_candidate_gate.json",
+        "docs/PHASE_4_MULTILINGUAL_NLI_CANDIDATE_GATE.md",
+        "docs/PRODUCT_DECISIONS.md",
+        "docs/REQUIREMENTS_TRACEABILITY.md",
+        "docs/CURRENT_PHASE.md"
+      ]
     }
   ]
 }

@@ -28,6 +28,7 @@ REQUIRED_FILES = (
     "docs/PHASE_3_COMPARISON_ROUTE_COVERAGE_GATE.md",
     "docs/PHASE_4_CLAIM_EVIDENCE_CORE_GATE.md",
     "docs/PHASE_4_CLAIM_EVIDENCE_CANDIDATE_INTAKE.md",
+    "docs/PHASE_4_MULTILINGUAL_NLI_CANDIDATE_GATE.md",
     "machine/project_state.json",
     "machine/feature_list.json",
     "machine/phase_zero_scope_resource_slo.json",
@@ -37,6 +38,7 @@ REQUIRED_FILES = (
     "machine/phase3_comparison_route_coverage_gate.json",
     "machine/phase4_claim_evidence_core_gate.json",
     "machine/phase4_claim_evidence_candidate_intake.json",
+    "machine/phase4_multilingual_nli_candidate_gate.json",
     "machine/phase_result.schema.json",
     "machine/phase_result.template.json",
     "scripts/validate_harness_contract.py",
@@ -255,6 +257,24 @@ def check_feature_list() -> None:
         )
     ):
         raise ValueError("phase 4 candidate intake feature status drifted")
+    nli_feature = next(
+        (
+            feature
+            for feature in features
+            if feature.get("id") == "phase4_multilingual_nli_candidate"
+        ),
+        None,
+    )
+    if (
+        not isinstance(nli_feature, dict)
+        or nli_feature.get("status") != "PARTIAL"
+        or nli_feature.get("gate_status")
+        != (
+            "LOCAL_IMPLEMENTATION_READY_REMOTE_RTX4090_NOT_RUN_"
+            "ONLINE_ENFORCEMENT_DISABLED"
+        )
+    ):
+        raise ValueError("phase 4 multilingual NLI feature status drifted")
 
 
 def validate_phase_result(payload: Any, *, require_concrete: bool) -> None:
@@ -479,6 +499,49 @@ def check_phase4_claim_evidence_candidate_intake() -> None:
         or validation.get("diff_check") != "PASS"
     ):
         raise ValueError("phase 4 candidate validation drifted")
+
+
+def check_phase4_multilingual_nli_candidate_gate() -> None:
+    payload = _read_json("machine/phase4_multilingual_nli_candidate_gate.json")
+    if (
+        payload.get("schema_version")
+        != "phase4_multilingual_nli_candidate_gate_v1"
+        or payload.get("decision_id") != "PD-062"
+        or payload.get("status")
+        != "LOCAL_IMPLEMENTATION_READY_REMOTE_RTX4090_NOT_RUN"
+    ):
+        raise ValueError("phase 4 multilingual NLI identity drifted")
+    model = payload.get("model")
+    if (
+        not isinstance(model, dict)
+        or model.get("revision")
+        != "b5113eb38ab63efdd7f280f8c144ea8b13f978ce"
+        or model.get("snapshot_sha256")
+        != "7e973b42bf69d9475c065d4deb04745659badf94ce054fd1de0f9cc1caeeafd5"
+        or model.get("mac_execution") != "FAKE_SCORER_ONLY"
+        or model.get("remote_target")
+        != "WINDOWS_POWERSHELL_5_1_RTX4090_CUDA126"
+    ):
+        raise ValueError("phase 4 multilingual NLI model boundary drifted")
+    decision = payload.get("decision_contract")
+    if (
+        not isinstance(decision, dict)
+        or decision.get("quality_result") != "NOT_RUN"
+        or decision.get("candidate_supported_retention_min") != 0.85
+        or decision.get("human_finalized_positive_retention_min") != 0.85
+        or decision.get("online_enforcement_enabled") is not False
+        or decision.get("precision")
+        != "NOT_MEASURABLE_NO_HUMAN_ADJUDICATED_NEGATIVES"
+    ):
+        raise ValueError("phase 4 multilingual NLI decision boundary drifted")
+    scope = payload.get("scope")
+    if (
+        not isinstance(scope, dict)
+        or scope.get("remote_execution") != "USER_RUN_PENDING"
+        or scope.get("test") != "NOT_READ_NOT_RUN"
+        or scope.get("acceptance") != "NOT_READ_NOT_RUN"
+    ):
+        raise ValueError("phase 4 multilingual NLI scope drifted")
 
 
 def check_phase_zero_scope_resource_slo() -> None:
@@ -1717,6 +1780,10 @@ def main() -> int:
         (
             "phase4_claim_evidence_candidate_intake",
             check_phase4_claim_evidence_candidate_intake,
+        ),
+        (
+            "phase4_multilingual_nli_candidate_gate",
+            check_phase4_multilingual_nli_candidate_gate,
         ),
         ("harness_links", check_harness_links),
         ("content_safety", check_harness_content_safety),

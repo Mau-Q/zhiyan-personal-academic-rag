@@ -170,3 +170,11 @@ provider、source fingerprint 和 schema 校验不放宽，ANN、RRF 与质量�
 `99530D236B8CA50B53DE18557C9D43C7BCC63695A3C98FC9DBA889B33CDAA036`，
 决定为 `KEEP_COMPARISON_DECOMPOSITION_DISABLED`。清理 9/9、READY 失败关闭
 与删除后 403 通过，无需恢复；`test/Acceptance` 未读取，300 ms Gate 未运行。
+
+Phase 4 的比赛增强现新增固定多语言 NLI 候选，但未形成远程质量结果。模型固定为
+`MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` revision
+`b5113eb38ab63efdd7f280f8c144ea8b13f978ce`，只以 Evidence 为 premise、
+Claim 为 hypothesis 做离线正例保留诊断。Mac 仅运行 Fake Scorer；真实模型只由
+用户在 Windows PowerShell 5.1 RTX 4090 入口运行。当前没有人工裁决负例，因此
+Precision、负例拒绝率和人机一致率不可测；候选通过也不改变 `AUDIT_ONLY` 或
+在线硬裁决。知识库接入、前端、演示和 `test/Acceptance` 继续排除。

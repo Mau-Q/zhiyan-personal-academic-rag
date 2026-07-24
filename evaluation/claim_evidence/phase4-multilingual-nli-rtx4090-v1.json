@@ -1,0 +1,70 @@
+{
+  "schema_version": "phase4_multilingual_nli_candidate_config_v1",
+  "run_id": "phase4-multilingual-nli-rtx4090-v1",
+  "model": {
+    "provider": "sentence_transformers_cross_encoder",
+    "model_id": "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7",
+    "revision": "b5113eb38ab63efdd7f280f8c144ea8b13f978ce",
+    "snapshot_sha256": "7e973b42bf69d9475c065d4deb04745659badf94ce054fd1de0f9cc1caeeafd5",
+    "allowed_files": [
+      "LICENSE",
+      "README.md",
+      "added_tokens.json",
+      "config.json",
+      "model.safetensors",
+      "special_tokens_map.json",
+      "spm.model",
+      "tokenizer.json",
+      "tokenizer_config.json"
+    ],
+    "max_length": 512,
+    "batch_size": 16,
+    "label_mapping": [
+      "entailment",
+      "neutral",
+      "contradiction"
+    ],
+    "input_template": "evidence_premise_claim_hypothesis_v1",
+    "trust_remote_code": false,
+    "mac_execution": "FAKE_SCORER_ONLY",
+    "remote_device": "cuda",
+    "remote_dtype": "float16"
+  },
+  "inputs": {
+    "candidate_review_path": "evaluation/reviews/member_b/dev-claim-evidence-second-review-v1.csv",
+    "candidate_review_sha256": "0e17dba081cdef7ebbaa0cd101ee3b629f62ed65517cb295c1d9918f839afd8c",
+    "private_package_sha256": "ef3fc1288fd78cd886793959c886c0ac2ce62ab822d556fa8527ee7c58e53b18",
+    "private_input_member": "dev-claim-evidence-review-input-v1.jsonl",
+    "private_input_sha256": "13b7ddfb0185ba03f251664366d5ab28a0cae64adda9ef9a57da563be0ae2c6e",
+    "private_input_schema_version": "member_b_claim_evidence_review_input_v1",
+    "question_count": 105,
+    "split": "dev",
+    "candidate_relation_counts": {
+      "SUPPORTED": 21,
+      "PARTIALLY_SUPPORTED": 1,
+      "NOT_APPLICABLE": 8
+    }
+  },
+  "benchmark": {
+    "pair_count": 16,
+    "repetitions": 30,
+    "warmup_repetitions": 3,
+    "latency_scope": "NLI_PAIR_SCORING_ONLY_NOT_ONLINE_RAG"
+  },
+  "decision_policy": {
+    "minimum_candidate_supported_retention": 0.85,
+    "minimum_human_finalized_positive_retention": 0.85,
+    "pass_decision": "ELIGIBLE_FOR_REMOTE_ADJUDICATED_NLI_GATE",
+    "fail_decision": "KEEP_DETERMINISTIC_AUDIT_ONLY_REJECT_NLI_CANDIDATE",
+    "candidate_pass_enables_online_enforcement": false
+  },
+  "scope": {
+    "competition_rag_core": "IN_SCOPE",
+    "knowledge_base_integration": "OUT_OF_SCOPE_OTHER_OWNER",
+    "frontend": "OUT_OF_SCOPE",
+    "demo": "OUT_OF_SCOPE",
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN",
+    "online_enforcement": "DISABLED"
+  }
+}

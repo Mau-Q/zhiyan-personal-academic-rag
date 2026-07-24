@@ -4,7 +4,7 @@
 
 `SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_FIRST_TWO_VARIABLES_DEV_QUALITY_FAILED_DISABLED_TEST_SEALED / SOURCE_PHASE_4_PARTIAL_CLAIM_EVIDENCE_LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
-Phase ID：`phase4-claim-evidence-core-local-ready`
+Phase ID：`phase4-multilingual-nli-local-ready-remote-pending`
 
 ## Completed
 
@@ -208,6 +208,8 @@ Phase ID：`phase4-claim-evidence-core-local-ready`
 - 该能力只达到 `LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED`：不包含知识库接入、前端、演示或远程运行，未读取 `test/Acceptance`，也不把确定性词面检查写成通用语义蕴含。最高方案阶段 3 仍为 `IN_PROGRESS`，阶段 4 仅记为 `PARTIAL`。
 - `phase4-claim-evidence-candidate-intake-complete` 已原样接收成员 B PR #15 的三份候选资产并通过冻结私有 `dev` 对账：失败归因 `105/105`，Claim–Evidence `30/30`，关系为 `SUPPORTED=21 / PARTIALLY_SUPPORTED=1 / NOT_APPLICABLE=8`，`INPUT_MISSING=0`。评审者明确为 `member-b-ai-assisted`，候选未经过人工裁决，不晋升为最终真值。
 - 现有确定性轮子在 21 条候选 `SUPPORTED` 上只保留 6 条，在人工终审谱系 225 个正例上只保留 110 条；这只证明高误杀风险，不产生 Precision、负例拒绝率或人工一致率。默认生成因此改为 `AUDIT_ONLY`，显式 enforcement 仅供测试和未来候选，在线硬裁决继续关闭。
+- 已固定多语言 NLI 候选轮子 `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` 的 revision、snapshot、Evidence-premise/Claim-hypothesis 模板、标签顺序和正例保留门槛；Mac 仅以 Fake Scorer 完成合同测试，真实模型未在 Mac 运行。
+- Windows PowerShell 5.1 RTX 4090 用户执行入口已静态通过，绑定公开 `main`、私有 `dev` 输入、候选 CSV、CUDA 12.6/PyTorch、模型 snapshot 和脱敏报告。当前状态仍为 `LOCAL_IMPLEMENTATION_READY_REMOTE_RTX4090_NOT_RUN`，不产生 NLI 质量结论。
 
 ## 输入
 
@@ -243,6 +245,7 @@ Phase ID：`phase4-claim-evidence-core-local-ready`
 - `machine/phase3_entry_freeze.json` 必须保持入口时点的 4 个唯一 `dev` ID、单变量、`test/acceptance` 封存和独立性能债；`machine/phase3_comparison_dev_gate.json` 必须如实记录 `_07` 的在线 dev 失败、干净清理与关闭决定，不得出现 `test/acceptance` 结果。
 - `machine/phase3_comparison_route_coverage_gate.json` 必须保持第二变量可信质量失败、默认关闭、无新依赖/请求、原候选与 RRF 分数、`test/Acceptance` 封存、旧 Run ID 不可复用和独立 300 ms Gate。
 - `machine/phase4_claim_evidence_core_gate.json` 必须保持零新增依赖、公开 Answer Schema/Prompt 不变、确定性检查不冒充语义蕴含、全部无依据 Claim 失败关闭，以及知识库/前端/演示/远程/holdout 排除边界。
+- `machine/phase4_multilingual_nli_candidate_gate.json` 必须保持 Mac Fake Scorer、远程 RTX 4090 用户运行、正例保留诊断、无人工负例不可测 Precision，以及在线硬裁决关闭边界。
 
 ## Git
 
@@ -254,14 +257,14 @@ Phase ID：`phase4-claim-evidence-core-local-ready`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 仍为 `IN_PROGRESS`，阶段 4 为 `PARTIAL_LOCAL_CORE_READY`。两个阶段 3 变量均因无目标质量增益保持关闭；当前比赛增强主 Gate 已完成 Claim–Evidence 本地核心与候选二审接收，当前仓库节点为 `phase4-claim-evidence-candidate-intake-complete`，但人工裁决和在线硬裁决均未完成。当前评测边界为 `PHASE3_FIRST_TWO_VARIABLES_FAILED_DISABLED / PHASE4_CANDIDATE_INTAKE_COMPLETE_AUDIT_ONLY / TEST_ACCEPTANCE_NOT_READ_NOT_RUN`。默认 RRF、Reranker 关闭、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 仍为 `IN_PROGRESS`，阶段 4 为 `PARTIAL_LOCAL_CORE_READY`。两个阶段 3 变量均因无目标质量增益保持关闭；比赛增强主 Gate 已完成 Claim–Evidence 本地核心、候选二审接收以及固定多语言 NLI 的本地实现与远程入口，当前仓库节点为 `phase4-multilingual-nli-local-ready-remote-pending`。真实 RTX 4090 诊断、人工负例裁决和在线硬裁决均未完成。当前评测边界为 `PHASE3_FIRST_TWO_VARIABLES_FAILED_DISABLED / PHASE4_NLI_LOCAL_READY_REMOTE_NOT_RUN_AUDIT_ONLY / TEST_ACCEPTANCE_NOT_READ_NOT_RUN`。默认 RRF、Reranker 关闭、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
 
 ## Next gate
 
-1. **下一个仍只保留一个大 Gate：** 先对候选分歧和负例形成人工裁决真值，再在同一离线 Gate 比较固定多语言 NLI Cross-Encoder 与既有本地 LLM Judge；
-2. **不扩张当前责任：** 该 Gate 不包含知识库接入、前端、演示、远程部署、`test/Acceptance` 或 Agent API；
-3. **在线硬裁决后置：** 人工裁决后的正例保留、负例拒绝、Precision 和一致率达标前，不引入 NLI/LLM Judge 在线阻断，也不把相关性 Reranker 分数当支持度；
-4. **其他债务继续分开：** 阶段 3 检索变量不再细分或调参，300 ms 性能债仍为独立 Gate。
+1. **下一个仍只保留一个大 Gate：** 用户在远程 RTX 4090 运行已冻结入口，取得固定 NLI 对 21 条候选 supported 和 225 个终审谱系正例的保留率与组件延迟；
+2. **结果边界：** 该结果只能决定 NLI 候选是否值得进入后续人工裁决；没有人工负例前，不计算 Precision、负例拒绝率或一致率；
+3. **不扩张当前责任：** 该 Gate 不连接知识库或 RAG 服务，不包含前端、演示、`test/Acceptance`、Agent API 或在线策略变更；
+4. **在线硬裁决后置：** 人工裁决后的正负关系指标达标前，默认 `AUDIT_ONLY` 与全部现有检索开关保持不变；300 ms 性能债继续独立。
 
 ## Prohibited shortcuts
 
