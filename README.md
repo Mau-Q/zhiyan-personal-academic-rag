@@ -1,146 +1,132 @@
-# 智研个人学术空间 RAG 问答系统
+# 智研个人学术空间 RAG
 
-本仓库用于建设面向个人论文、个人文献库和研究目录的证据约束型 RAG 问答系统。公共文献检索库只是收藏论文的上游来源，不参与个人 RAG 的在线联合召回。
+面向个人论文库的证据约束型 RAG 核心服务。项目以 PostgreSQL 保存文档身份、
+授权范围和生命周期事实，以 Elasticsearch 与 Milvus 提供混合召回，并让生成、
+引用、拒答和证据审计都能回到具体论文版本、页码与 Chunk。
 
-系统必须完成以下可审计链路：
+仓库地址：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
+
+## 已验证主链
 
 ```text
-当前用户与个人库范围
-→ PDF 入库与版本管理
-→ 章节、页码和 Chunk
-→ Elasticsearch + Milvus 混合检索
-→ 融合、去重和重排
-→ 证据上下文
-→ 受证据约束的生成
-→ 引用校验或证据不足拒答
-→ PDF 原文定位
-→ Trace、反馈和评测闭环
+PDF / Chunk
+→ PostgreSQL READY / owner ACL
+→ Elasticsearch + Milvus
+→ RRF
+→ 真实生成
+→ Citation
+→ Multi-Evidence 审计
+→ NO_EVIDENCE
+→ 删除失效与 ES / Milvus / runtime 清理
 ```
 
-## 当前状态
+这条链路已有版本化本地测试和用户执行的脱敏远程证据。它证明当前 RAG
+核心可以按身份和权限失败关闭，不代表所有计划中的产品能力或生产 SLO 已完成。
 
-当前总体状态为 `SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_IN_PROGRESS / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE`。远程 ES/Milvus/RRF 固定 Canary 分别为 `14/15 / 12/15 / 14/15`，固定 175 题的 ES/Milvus 严格通过数为 `85/175 / 109/175`；三种 Chunk 策略的 SQLite BM25/BGE-M3 均为 `15/15 / 12/15`，没有总体胜者。阶段 0 已冻结范围/资源/SLO，以及按 `owner_id` 隔离的 `paper_id ↔ document_id`、版本、双索引 READY 和删除/撤权语义；阶段 1 才接入 PostgreSQL 运行时和索引对账。当前不跑 175 题 RRF、不调参、不增加重排或真实 LLM。
+## 当前阶段
 
-- GitHub：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
-- 最高方案追踪：[`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md)
-- 下一门禁：[`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)
-- 仓库 M0 范围：[`docs/STAGE_0_SCOPE.md`](docs/STAGE_0_SCOPE.md)
-- 双人分工：[`docs/TEAM_WORK_SPLIT.md`](docs/TEAM_WORK_SPLIT.md)
-- 合同入口：[`contracts/README.md`](contracts/README.md)
-- 仓库 Harness 入口：[`AGENTS.md`](AGENTS.md)
-- 薄评测 Harness：[`docs/EVALUATION_HARNESS.md`](docs/EVALUATION_HARNESS.md)
-- SQLite FTS5/BM25：[`docs/SQLITE_FTS_RETRIEVAL.md`](docs/SQLITE_FTS_RETRIEVAL.md)
-- 本地向量与 RRF：[`docs/LOCAL_VECTOR_RRF_RETRIEVAL.md`](docs/LOCAL_VECTOR_RRF_RETRIEVAL.md)
-- 正式检索评测 V1：[`docs/FORMAL_RETRIEVAL_EVALUATION_V1.md`](docs/FORMAL_RETRIEVAL_EVALUATION_V1.md)
-- 风险驱动测试策略：[`docs/RISK_BASED_TESTING_STRATEGY.md`](docs/RISK_BASED_TESTING_STRATEGY.md)
+| 最高方案阶段 | 状态 | 当前边界 |
+|---|---|---|
+| 阶段 0：范围与 Baseline | `COMPLETE` | 范围、资源、SLO 目标、数据身份和评测 Baseline 已冻结 |
+| 阶段 1：数据与索引最小闭环 | `COMPLETE` | PDF/Chunk、PostgreSQL READY、ES/Milvus、删除和三路清理闭环已验证 |
+| 阶段 2：基础 RAG MVP | `COMPLETE` | RRF、真实生成、Citation、拒答、ACL 与稳定回放已验证 |
+| 阶段 3：失败类型增强 | `PARTIAL / WORKSTREAM_CLOSED_WITHOUT_PROMOTION` | 两个 V1 在冻结 `dev` 上未产生稳定净增益，均保持关闭 |
+| 阶段 4：Claim–Evidence 可靠性 | `PARTIAL` | 确定性 Multi-Evidence 审计核心完成；语义 Judge 与在线硬裁决后置 |
+| 阶段 5：复杂科研问答与复用 | `NOT_STARTED` | 不在当前仓库节点的交付范围 |
 
-## 双人开发边界
+动态状态、历史 Gate 和精确证据以
+[`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md) 与
+[`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md)
+为准，README 只保留稳定摘要。
 
-- 成员 A：PDF 入库、本地检索、RAG 回答和核心系统集成；
-- 用户：按仓库提供的版本化清单亲自执行远程主机迁移、部署和验证；
-- 双方通过 GitHub 提交和同一 `main` 版本交接，远程工作不阻塞本地最小链路。
+## 默认决策
 
-## 仓库边界
+- 默认检索路径是 PostgreSQL `READY`/owner 前置校验后的 ES + Milvus
+  rank-only RRF。
+- 固定 Cross-Encoder Reranker 已保留为可选组件，但不默认启用。
+- Multi-Evidence EvidenceSet 保持 `AUDIT_ONLY`，不自动删除 Claim，也不冒充
+  人工真值或通用语义蕴含。
+- 当前多语言 NLI 候选因真实质量 Gate 失败而拒绝，不进入在线硬裁决。
+- 检索 P95 `300 ms` 是独立性能债；功能闭环完成不等于该 SLO 已通过。
 
-本仓库只保存源码、合同、测试、配置样例和可公开 Fixture。以下内容不得提交：
+## 已验证能力与真实边界
 
-- 真实密钥和 `.env`；
-- 私有论文、用户上传文件和未授权数据；
-- PostgreSQL dump、live data 和索引目录；
-- 模型权重、虚拟环境、依赖缓存和运行日志；
-- 当前知识库整理目录中的大型压缩包和 4090 混合部署包。
+已验证：
 
-详细规则见 [`docs/REPOSITORY_POLICY.md`](docs/REPOSITORY_POLICY.md)。
+- 带文本层 PDF 的确定性切片、版本身份、持久化快照和幂等重放；
+- PostgreSQL 事实源、owner 隔离、双索引 `READY` 门禁和失败关闭；
+- 真实 Elasticsearch BM25、Milvus/BGE-M3 与 ES + Milvus RRF；
+- 冻结模型与配置下的真实 Qwen 生成、Citation 稳定映射和
+  `NO_EVIDENCE` 不调用模型；
+- 删除后不可召回、Answer API 返回 403，以及 ES、Milvus、runtime snapshot
+  三路清理与恢复；
+- 单/多 Evidence 的确定性身份、数字、单位、比较、限定和冲突审计。
 
-## 合同验证
+边界：
 
-本地需要已安装项目依赖的 `.venv`。Makefile 会强制使用该虚拟环境，不会回退到系统 Python：
+- 公开 Fixture/Fake 路径只用于合同、权限和失败语义测试，不是当前真实能力的
+  替代证据；
+- 远程结论来自冻结提交上的用户执行与脱敏报告，不表示远程服务此刻持续在线；
+- 确定性 EvidenceSet 不是人工裁决、NLI 金标或通用语义 Judge；
+- 正式 MinIO、OCR、目标规模容量/性能、完整运维告警和生产发布回滚仍未验收。
+
+## 最小开发与测试
+
+需要 Python 3.11+。Makefile 强制使用仓库 `.venv`，不会回退到系统 Python：
 
 ```bash
-make contract-test
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install '.[dev,server]'
 ```
 
-验证只读取仓库内的 Schema、示例和人工 Fixture，不访问远程模型或生产数据。
-
-## 成员 A 在线 Fixture 消费者
-
-```bash
-.venv/bin/python -m backend.rag.fixture_consumer \
-  --question "How are candidates combined before reranking?"
-```
-
-该命令只运行授权过滤、确定性词项检索和 Fake LLM 证据拼装。输出明确包含 `FIXTURE_ONLY_FAKE_LLM`，不能作为真实模型或真实索引效果。完整说明见 [`docs/ONLINE_FIXTURE_CONSUMER.md`](docs/ONLINE_FIXTURE_CONSUMER.md)。
-
-## 本地 PDF 入库
-
-```bash
-.venv/bin/python -m backend.ingestion.cli \
-  --pdf /local/path/paper.pdf \
-  --document-id doc_local_001 \
-  --tenant-id tenant_fixture \
-  --visibility private \
-  --library-scope-id lib_fixture \
-  --strategy section_parent_child_v1 \
-  --output /tmp/chunks-v1.json
-```
-
-该命令只处理有文本层的本地 PDF，不调用网络、OCR、远程模型、数据库或向量库。完整边界见 [`docs/LOCAL_PDF_INGESTION.md`](docs/LOCAL_PDF_INGESTION.md)。
-
-上述命令展示当前可运行的 V1 legacy 合同，其 `tenant_id/visibility` 不是最新最高方案的目标权限语义。目标合同将在阶段 1 以服务端 `owner_id` 和个人库范围替换，本次状态同步不改动运行接口。
-
-真实 TRACER PDF 的本地解析与 Answer API 结果见 [`docs/LOCAL_PDF_CANARY.md`](docs/LOCAL_PDF_CANARY.md)。仓库只记录身份、命令和验收结论，不保存 PDF 或真实 Chunk 输出。
-
-## 仓库 Harness
+提交前最小完整门禁：
 
 ```bash
 make harness-validate
+make test
+make powershell-check
+git diff --check
 ```
 
-仓库 Harness 固化当前阶段、产品决策、执行边界和完成门禁。`AGENTS.md` 是成员与自动化工具的入口，`machine/` 保存机器可读状态，具体阶段运行结果只写入被忽略的 `runtime/phases/`。架构说明见 [`docs/HARNESS_ARCHITECTURE.md`](docs/HARNESS_ARCHITECTURE.md)。
+`make powershell-check` 需要本机 `pwsh`，只做 Windows PowerShell 5.1
+兼容性解析和静态检查，不替代 Windows 行为验证。API 启动与请求示例见
+[`docs/RAG_API_QUICKSTART.md`](docs/RAG_API_QUICKSTART.md)。
 
-## M1 薄评测 Harness
+## 文档导航
 
-```bash
-make evaluation-smoke
-```
+- 当前阶段与下一门禁：[`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)
+- 最高方案需求追踪：[`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md)
+- 长期产品决策：[`docs/PRODUCT_DECISIONS.md`](docs/PRODUCT_DECISIONS.md)
+- 安全与真实性边界：[`docs/PROJECT_GUARDRAILS.md`](docs/PROJECT_GUARDRAILS.md)
+- 实施和收尾规则：[`docs/EXECUTION_CONTRACT.md`](docs/EXECUTION_CONTRACT.md)
+- API 与 Schema 合同：[`contracts/README.md`](contracts/README.md)
+- PostgreSQL 事实源：[`docs/POSTGRESQL_FACT_SOURCE.md`](docs/POSTGRESQL_FACT_SOURCE.md)
+- 阶段 2 收口：[`docs/PHASE_2_CLOSEOUT.md`](docs/PHASE_2_CLOSEOUT.md)
+- Multi-Evidence Gate：[`docs/PHASE_4_MULTI_EVIDENCE_SET_GATE.md`](docs/PHASE_4_MULTI_EVIDENCE_SET_GATE.md)
+- 仓库 Harness 入口：[`AGENTS.md`](AGENTS.md)
 
-该命令用版本化 JSONL 用例调用现有 RAG Answer API，并把机器可读报告写入被 Git 忽略的 `runtime/evaluation/`。当前公开基线只验证 Fixture/Fake LLM 下的状态、证据页码和权限边界；真实三篇论文问题集保留在本地。完整说明见 [`docs/EVALUATION_HARNESS.md`](docs/EVALUATION_HARNESS.md)。
+## 数据与仓库边界
 
-## SQLite FTS5/BM25
+Git 只保存源码、合同、测试、配置样例、公开 Fixture 和脱敏元数据。以下内容不得
+进入版本历史：
 
-```bash
-make sqlite-fts-fixture-smoke
-```
+- `.env`、API Key、数据库密码、连接串和签名凭据；
+- 私有论文、用户 PDF、真实 Chunk、私有问题与未脱敏评测正文；
+- PostgreSQL dump、SQLite live data、ES/Milvus/MinIO 数据目录；
+- 模型权重、Embedding 缓存、虚拟环境和依赖缓存；
+- `runtime/`、日志、Trace 正文、运行报告及本机绝对路径。
 
-该命令使用标准库 `sqlite3` 建立持久化 FTS5 索引，并通过现有 Answer API 和评测 Harness 验证授权、Evidence、拒答和越权阻断。索引写入被忽略的 `runtime/`；答案仍为 Fake LLM。实现与三论文结果见 [`docs/SQLITE_FTS_RETRIEVAL.md`](docs/SQLITE_FTS_RETRIEVAL.md)。
+`.env.example` 只提供无密钥字段示例。完整规则见
+[`docs/REPOSITORY_POLICY.md`](docs/REPOSITORY_POLICY.md)。
 
-## 非流式 RAG API
+## 当前不负责
 
-```bash
-source .venv/bin/activate
-uvicorn backend.api.app:app --host 127.0.0.1 --port 8000
-```
-
-当前只提供 `POST /api/v1/rag/answers`，使用服务端 Fixture 授权范围，客户端只能通过 `document_ids` 收窄范围。安装、请求和错误响应见 [`docs/RAG_API_QUICKSTART.md`](docs/RAG_API_QUICKSTART.md)。
-
-## 计划目录
-
-```text
-backend/
-├── contracts/
-├── ingestion/
-├── storage/
-├── indexing/
-├── retrieval/
-├── rag/
-├── api/
-└── evaluation/
-frontend/
-deploy/
-docs/
-tests/
-```
+当前仓库节点不负责知识库接入、前端、演示、对外 Agent API、阶段 5
+复杂科研问答，也不以 README 宣布这些能力完成。
 
 ## 许可证
 
-公开许可证尚未确定。在完成代码归属、第三方依赖和竞赛公开规则审查前，本仓库保持私有，不授予仓库访问者超出适用法律默认范围的使用许可。
+仓库当前公开，但尚未添加项目级开源许可证。除适用法律默认允许的范围外，
+不要据此假定代码已获复制、修改或分发授权；第三方依赖说明见
+[`docs/THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md)。
