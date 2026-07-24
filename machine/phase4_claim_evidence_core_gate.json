@@ -1,0 +1,83 @@
+{
+  "schema_version": "phase4_claim_evidence_core_gate_v1",
+  "decision_id": "PD-060",
+  "status": "LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED",
+  "scope": {
+    "competition_rag_core": "IN_SCOPE",
+    "knowledge_base_integration": "OUT_OF_SCOPE_OTHER_OWNER",
+    "frontend": "OUT_OF_SCOPE",
+    "demo_entrypoint": "OUT_OF_SCOPE",
+    "remote_execution": "NOT_RUN",
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN"
+  },
+  "phase_boundary": {
+    "current_source_phase": {
+      "id": "phase-3",
+      "status": "IN_PROGRESS"
+    },
+    "phase4_progress": "PARTIAL_LOCAL_CORE_READY",
+    "phase4_complete": false,
+    "online_hard_judgment_enabled": false,
+    "human_agreement_and_false_positive_gate": "PENDING_SEPARATE_DEV_CALIBRATION"
+  },
+  "reuse": {
+    "existing_structured_claims": "DIRECT_REUSE",
+    "existing_authorized_evidence_and_citations": "DIRECT_REUSE",
+    "reading_agent_reliability_patterns": "NARROW_ADAPT_NO_RUNTIME_DEPENDENCY",
+    "existing_relevance_cross_encoder_as_entailment": "REJECTED_WRONG_MODEL_TASK",
+    "ragas_or_haystack_runtime": "DEFERRED_OFFLINE_EVALUATION_ONLY",
+    "new_dependencies": []
+  },
+  "implementation": {
+    "entrypoint": "backend/rag/claim_evidence.py:verify_claim_evidence",
+    "generation_integration": "backend/rag/generation.py:apply_real_generation",
+    "statuses": [
+      "SUPPORTED",
+      "CONFLICTING_EVIDENCE",
+      "INSUFFICIENT_EVIDENCE",
+      "UNSUPPORTED"
+    ],
+    "deterministic_checks": [
+      "REQUEST_LOCAL_CITATION_BINDING",
+      "BOUND_EVIDENCE_NON_EMPTY",
+      "NUMERIC_ANCHOR_COVERAGE",
+      "HIGH_RISK_RELATION_MARKER_COVERAGE",
+      "CORE_LEXICAL_OVERLAP",
+      "SAME_UNIT_NUMERIC_CONFLICT_DISCLOSURE",
+      "SAFE_LIMITATION_CLASSIFICATION"
+    ],
+    "partial_answer_policy": "DROP_UNSUPPORTED_CLAIMS_KEEP_SUPPORTED_OR_SAFE_LIMITATION",
+    "all_unsupported_policy": "DEGRADED_EVIDENCE_ONLY",
+    "public_rag_answer_schema_changed": false,
+    "prompt_identity_changed": false
+  },
+  "local_validation": {
+    "focused_tests": {
+      "status": "PASS",
+      "count": 21,
+      "command": ".venv/bin/python -m unittest tests.rag.test_claim_evidence tests.rag.test_generation tests.api.test_online_ready_rag_answers_api"
+    },
+    "full_repository_tests": "PASS",
+    "repository_harness": "PASS",
+    "powershell_static": "PASS",
+    "diff_check": "PASS"
+  },
+  "next_gate": {
+    "id": "PHASE4_DEV_HUMAN_CALIBRATION",
+    "single_gate": true,
+    "required_metrics": [
+      "CITATION_COMPLETENESS",
+      "UNSUPPORTED_CLAIM_RATE",
+      "FALSE_REJECTION_RATE",
+      "HUMAN_AGREEMENT"
+    ],
+    "must_not_include": [
+      "KNOWLEDGE_BASE_INTEGRATION",
+      "FRONTEND",
+      "DEMO",
+      "TEST_OR_ACCEPTANCE",
+      "ONLINE_NLI_OR_LLM_HARD_JUDGMENT"
+    ]
+  }
+}

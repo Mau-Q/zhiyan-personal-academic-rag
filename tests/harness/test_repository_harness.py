@@ -85,6 +85,32 @@ class RepositoryHarnessTests(unittest.TestCase):
         for heading in ("## 输入", "## 验收", "## Git"):
             self.assertIn(heading, text)
 
+    def test_phase_four_claim_evidence_core_is_local_and_partial(self):
+        payload = json.loads(
+            (
+                ROOT / "machine" / "phase4_claim_evidence_core_gate.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            payload["status"],
+            "LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED",
+        )
+        self.assertEqual(payload["reuse"]["new_dependencies"], [])
+        self.assertFalse(payload["phase_boundary"]["phase4_complete"])
+        self.assertFalse(
+            payload["phase_boundary"]["online_hard_judgment_enabled"]
+        )
+        self.assertEqual(
+            payload["scope"]["knowledge_base_integration"],
+            "OUT_OF_SCOPE_OTHER_OWNER",
+        )
+        self.assertEqual(payload["scope"]["test"], "NOT_READ_NOT_RUN")
+        self.assertEqual(payload["scope"]["acceptance"], "NOT_READ_NOT_RUN")
+        self.assertFalse(
+            payload["implementation"]["public_rag_answer_schema_changed"]
+        )
+        self.assertFalse(payload["implementation"]["prompt_identity_changed"])
+
     def test_simplified_git_policy_is_machine_readable(self):
         state = json.loads(
             (ROOT / "machine" / "project_state.json").read_text(encoding="utf-8")

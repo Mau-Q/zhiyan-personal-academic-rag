@@ -2,9 +2,9 @@
 
 ## Status
 
-`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_FIRST_TWO_VARIABLES_DEV_QUALITY_FAILED_DISABLED_TEST_SEALED / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
+`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_FIRST_TWO_VARIABLES_DEV_QUALITY_FAILED_DISABLED_TEST_SEALED / SOURCE_PHASE_4_PARTIAL_CLAIM_EVIDENCE_LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
-Phase ID：`source-phase3-comparison-route-coverage-quality-failed-clean`
+Phase ID：`phase4-claim-evidence-core-local-ready`
 
 ## Completed
 
@@ -203,13 +203,16 @@ Phase ID：`source-phase3-comparison-route-coverage-quality-failed-clean`
 - 用户首次复核该汇总修复时，验证清单自身失败：29 个 Python 测试为 `1 failure / 3 errors`，`check_powershell.ps1` 在 Windows PowerShell 5.1 参数默认绑定阶段取得空 `$PSScriptRoot`，手工 `ParseFile` 又使用相对路径而没有取得 AST，后续 helper/行为检查级联失败；末尾无条件打印的 `PASS` 无效。本地现将路径初始化移出参数默认值，并提供失败即停的版本化 Windows PowerShell 5.1 收口验证脚本，只验证提交、静态合同、绝对路径解析和可选字段行为，不运行质量 Gate、服务、私有输入或通用 Python 测试批次。
 - 第二次 Windows 收口复核已精确快进到 `79861c6`，版本化脚本正确失败关闭，唯一错误为 Windows PowerShell 5.1 找不到 `PSScriptAnalyzer 1.25.0`；仍未运行质量、服务或私有输入。PSScriptAnalyzer 保持为 Mac 提交前静态 Gate，Windows 入口不安装外部模块，只运行系统内置 Parser 的绝对路径语法解析和严格模式 helper 行为检查。
 - 用户已确认提交 `7764f3e0416706b98c5ea8d131a5525bc7f96f2e` 的版本化 Windows PowerShell 5.1 收口验证成功：系统内置 Parser 和严格模式 helper 行为均通过，且未运行质量、服务或私有输入。汇总修复的跨平台验证至此 `PASS_COMPLETE`，无需再次复核；路由覆盖质量失败、默认关闭、无需恢复、holdout 封存和独立性能债均不变。
+- 比赛增强的下一个主 Gate 已完成轮子评估：直接复用本仓库 `claims[].text + citation_ids` 与授权 Evidence/Citation，窄适配用户既有 reading-agent 的确定性可靠性模式；现有相关性 Cross-Encoder 不作为蕴含器，Ragas/Haystack 只保留为后续离线评测候选，因此没有新增依赖、框架或服务。
+- 本地 Claim–Evidence 核心现可校验请求内引用、数字锚点、高风险关系、核心重合和同单位数值冲突披露；支持安全限制语、删除无依据 Claim 后的显式部分回答，以及全部失败时保留 Evidence 卡片的 `DEGRADED`。公开 Answer Schema 与冻结 Prompt 身份均未改变。
+- 该能力只达到 `LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED`：不包含知识库接入、前端、演示或远程运行，未读取 `test/Acceptance`，也不把确定性词面检查写成通用语义蕴含。最高方案阶段 3 仍为 `IN_PROGRESS`，阶段 4 仅记为 `PARTIAL`。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：阶段 3 首个比较拆分变量和第二个路由覆盖变量均已在可信在线 dev Gate 失败并保持关闭，尚未进入 `test`；正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层继续后置；固定 Reranker 在当前 300 ms SLO 下不默认启用；
+- 未完成能力：阶段 3 首个比较拆分变量和第二个路由覆盖变量均已在可信在线 dev Gate 失败并保持关闭；阶段 4 Claim–Evidence 尚缺独立 dev 人工校准，在线硬裁决关闭；正式 MinIO 适配、OCR、目标规模性能验收、知识库接入、前端和演示均不在当前责任边界；固定 Reranker 在当前 300 ms SLO 下不默认启用；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -237,6 +240,7 @@ Phase ID：`source-phase3-comparison-route-coverage-quality-failed-clean`
 - `make real-generation-canary` 必须使用固定模型摘要和 Prompt/解码配置，覆盖稳定回放、引用编号、`NO_EVIDENCE` 不调用模型与 403；公开 Fixture 结果不得写成远程 READY 实跑。
 - `machine/phase3_entry_freeze.json` 必须保持入口时点的 4 个唯一 `dev` ID、单变量、`test/acceptance` 封存和独立性能债；`machine/phase3_comparison_dev_gate.json` 必须如实记录 `_07` 的在线 dev 失败、干净清理与关闭决定，不得出现 `test/acceptance` 结果。
 - `machine/phase3_comparison_route_coverage_gate.json` 必须保持第二变量可信质量失败、默认关闭、无新依赖/请求、原候选与 RRF 分数、`test/Acceptance` 封存、旧 Run ID 不可复用和独立 300 ms Gate。
+- `machine/phase4_claim_evidence_core_gate.json` 必须保持零新增依赖、公开 Answer Schema/Prompt 不变、确定性检查不冒充语义蕴含、全部无依据 Claim 失败关闭，以及知识库/前端/演示/远程/holdout 排除边界。
 
 ## Git
 
@@ -248,14 +252,14 @@ Phase ID：`source-phase3-comparison-route-coverage-quality-failed-clean`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 为 `IN_PROGRESS`。首个查询拆分变量和第二个 `BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1` 均已完成可信在线 dev 比较并因无目标质量增益保持关闭；第二变量的清理证据完整，无需恢复或重跑。当前评测边界为 `PHASE3_COMPARISON_FIRST_TWO_VARIABLES_DEV_QUALITY_FAILED_DISABLED_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL`。默认 RRF、Reranker 关闭、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 仍为 `IN_PROGRESS`，阶段 4 为 `PARTIAL_LOCAL_CORE_READY`。两个阶段 3 变量均因无目标质量增益保持关闭；当前比赛增强主 Gate 已建立 Claim–Evidence 确定性本地核心，但人工校准与在线硬裁决未开始。当前评测边界为 `PHASE3_FIRST_TWO_VARIABLES_FAILED_DISABLED / PHASE4_CLAIM_EVIDENCE_LOCAL_CORE_ONLY / TEST_ACCEPTANCE_NOT_READ_NOT_RUN`。默认 RRF、Reranker 关闭、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
 
 ## Next gate
 
-1. **停止细分失败变量：** 查询拆分和路由覆盖均已有可信反证，不再调参、复用旧 Run ID 或为同一假设增加小修小补；
-2. **下一次只选一个主 Gate：** 先依据最高方案的剩余阶段 3 风险与失败证据，重新选择一个能直接改善目标 Evidence 的高价值假设；实现前继续检查本仓库、用户既有项目和维护中的上游组件；
-3. **质量与性能分开：** 若下一节点处理阶段 2 的 300 ms 性能债，必须作为独立性能 Gate，不能顺带修改比较质量变量；
-4. **继续封存 holdout：** 两个 dev 变量都未通过，`test/Acceptance` 继续 `NOT_READ_NOT_RUN`。
+1. **下一个仍只保留一个大 Gate：** 使用独立 `dev` Claim–Evidence 人工标签校准引用完整率、无依据主张率、误杀率和人工一致率；
+2. **不扩张当前责任：** 该校准不包含知识库接入、前端、演示、远程部署、`test/Acceptance` 或 Agent API；
+3. **在线硬裁决后置：** 确定性检查稳定且人工指标达标前，不引入 NLI/LLM Judge 在线阻断，也不把相关性 Reranker 分数当支持度；
+4. **其他债务继续分开：** 阶段 3 检索变量不再细分或调参，300 ms 性能债仍为独立 Gate。
 
 ## Prohibited shortcuts
 

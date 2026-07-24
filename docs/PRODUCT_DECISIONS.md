@@ -61,5 +61,6 @@
 | PD-057 | ACCEPTED | 首次 Windows 收口复核因验证清单自身失败，不改变 `_01` 的质量与清理结论：Python 29 项批次为 `1 failure / 3 errors`，静态检查在参数默认绑定时得到空 `$PSScriptRoot`，相对 `ParseFile` 未取得 AST，随后 helper/行为检查级联失败，末尾无条件 `PASS` 属于假阳性 | 不把通用 Python 仓库测试批次当作 Windows 平台证明，也不重跑质量。修复 `check_powershell.ps1` 的参数后初始化，并新增单一版本化 Windows PowerShell 5.1 收口验证脚本：显式仓库/设置路径、绝对解析路径、错误即停、严格模式验证可选字段，且不连接服务、不读取私有输入。Windows 只需在修复提交推送后运行该短入口 |
 | PD-058 | ACCEPTED | 第二次 Windows 收口复核已精确拉取 `79861c6` 并由版本化脚本正确失败关闭，唯一错误是 Windows PowerShell 5.1 模块路径没有 `PSScriptAnalyzer 1.25.0`；没有质量、服务或私有输入执行 | PSScriptAnalyzer 继续作为 Mac 提交前静态 Gate，不要求在用户 Windows 主机安装或复制外部模块。Windows 收口入口只使用系统内置 Parser 对绝对路径脚本做语法解析，并执行严格模式下的可选字段行为检查；任一错误终止且不打印 PASS。该调整不改变质量变量、清理结论、默认 RRF、holdout 或独立性能 Gate |
 | PD-059 | ACCEPTED | 用户确认版本化 Windows PowerShell 5.1 收口验证在提交 `7764f3e0416706b98c5ea8d131a5525bc7f96f2e` 上成功：系统内置 Parser 与严格模式可选字段行为检查均通过 | 本次 PASS 只关闭汇总修复的跨平台验证，不补造或重跑质量证据，不接触服务或私有输入。路由覆盖继续关闭、无需恢复、旧 Run ID 不可复用、`test/Acceptance` 继续封存、300 ms 性能 Gate 保持独立；下一主 Gate 仍为双文档 Evidence 可达性 |
+| PD-060 | ACCEPTED | 比赛增强的下一个主 Gate 复用现有结构化 Claim 与授权 Evidence，窄适配用户既有 reading-agent 的确定性可靠性模式，建立零新增依赖的 Claim–Evidence 核验、数值冲突披露和部分回答失败关闭 | 不把现有相关性 Cross-Encoder、Ragas、Haystack 或模型自评冒充确定性蕴含；知识库接入、前端、演示、远程运行和 `test/Acceptance` 均不在本 Gate。当前只达到本地核心就绪，最高方案阶段 4 仍需独立 dev 人工一致率和误判率校准后才能决定在线硬裁决 |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。

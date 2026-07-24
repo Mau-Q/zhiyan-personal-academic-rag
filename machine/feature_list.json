@@ -615,6 +615,24 @@
         "docs/PRODUCT_DECISIONS.md",
         "docs/CURRENT_PHASE.md"
       ]
+    },
+    {
+      "id": "phase4_claim_evidence_core",
+      "status": "PARTIAL",
+      "owner": "A",
+      "gate_status": "LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED",
+      "evidence": [
+        "backend/rag/claim_evidence.py",
+        "backend/rag/generation.py",
+        "tests/rag/test_claim_evidence.py",
+        "tests/rag/test_generation.py",
+        "tests/api/test_online_ready_rag_answers_api.py",
+        "machine/phase4_claim_evidence_core_gate.json",
+        "docs/PHASE_4_CLAIM_EVIDENCE_CORE_GATE.md",
+        "docs/PRODUCT_DECISIONS.md",
+        "docs/REQUIREMENTS_TRACEABILITY.md",
+        "docs/CURRENT_PHASE.md"
+      ]
     }
   ]
 }

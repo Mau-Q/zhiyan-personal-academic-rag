@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import re
 import unittest
 import urllib.error
 from unittest.mock import patch
 
 from backend.rag.answer_builder import build_answer
+from backend.rag.claim_evidence import GeneratedClaim
 from backend.rag.generation import (
     GenerationServiceError,
     GenerationModelIdentity,
@@ -59,13 +61,19 @@ def base_answer(chunks=CHUNKS):
 
 
 class StubGenerationProvider:
-    def __init__(self, answer: str = "The paper reports evidence one [1].") -> None:
+    def __init__(
+        self,
+        answer: str = "The paper reports evidence one [1].",
+        *,
+        claims: tuple[GeneratedClaim, ...] | None = None,
+    ) -> None:
         self.identity = GenerationModelIdentity(
             provider="test",
             model="real-model-v1",
             digest=DIGEST,
         )
         self.answer = answer
+        self.claims = claims
         self.calls = []
 
     def configured_identity(self):
@@ -73,7 +81,18 @@ class StubGenerationProvider:
 
     def generate(self, question, evidence):
         self.calls.append((question, evidence))
-        return GenerationResult(answer=self.answer, identity=self.identity)
+        citation_ids = tuple(
+            sorted({int(value) for value in re.findall(r"\[(\d+)\]", self.answer)})
+        )
+        text = re.sub(r"\s*\[\d+\]", "", self.answer).strip()
+        claims = self.claims or (
+            GeneratedClaim(text=text, citation_ids=citation_ids),
+        )
+        return GenerationResult(
+            answer=self.answer,
+            identity=self.identity,
+            claims=claims,
+        )
 
 
 class FakeOllamaGenerationProvider(OllamaGenerationProvider):
@@ -114,11 +133,11 @@ class RealGenerationTests(unittest.TestCase):
         )
 
         self.assertEqual(answer["status"], "COMPLETED")
-        self.assertEqual(answer["answer"], "The paper reports evidence one [1].")
+        self.assertEqual(answer["answer"], "The paper reports evidence one. [1]")
         self.assertEqual(len(answer["citations"]), 1)
         self.assertEqual(answer["citations"][0]["evidence_id"], "evidence_001")
         self.assertIn("REAL_GENERATION_TEST_REAL-MODEL-V1", answer["warnings"][0])
-        self.assertIn("CITATION_IDS_VALIDATED", answer["warnings"][0])
+        self.assertIn("CLAIM_EVIDENCE_VALIDATED", answer["warnings"][0])
         self.assertEqual(provider.calls[0][1][0]["version_id"], "version_fixture_001")
 
     def test_invalid_model_citation_fails_closed_to_evidence_cards(self):
@@ -133,6 +152,35 @@ class RealGenerationTests(unittest.TestCase):
         self.assertNotIn("Unsupported citation", answer["answer"])
         self.assertEqual(len(answer["evidence"]), 2)
         self.assertIn("FAILED_CLOSED_EVIDENCE_ONLY", answer["warnings"][0])
+
+    def test_unsupported_claim_is_dropped_while_supported_claim_is_retained(self):
+        provider = StubGenerationProvider(
+            claims=(
+                GeneratedClaim(text="Evidence one is reported.", citation_ids=(1,)),
+                GeneratedClaim(text="The result is 999.", citation_ids=(1,)),
+            ),
+        )
+        answer = apply_real_generation(
+            "What does the paper report?", SCOPE, base_answer(), provider
+        )
+
+        self.assertEqual(answer["status"], "COMPLETED")
+        self.assertEqual(answer["answer"], "Evidence one is reported. [1]")
+        self.assertIn("PARTIAL_ANSWER_UNSUPPORTED_DROPPED", answer["warnings"][0])
+
+    def test_all_unsupported_claims_fail_closed_to_evidence_cards(self):
+        provider = StubGenerationProvider(
+            claims=(
+                GeneratedClaim(text="The result is 999.", citation_ids=(1,)),
+            ),
+        )
+        answer = apply_real_generation(
+            "What does the paper report?", SCOPE, base_answer(), provider
+        )
+
+        self.assertEqual(answer["status"], "DEGRADED")
+        self.assertNotIn("999", answer["answer"])
+        self.assertIn("CLAIM_EVIDENCE_FAILED_CLOSED", answer["warnings"][0])
 
     def test_no_evidence_does_not_call_generation_model(self):
         provider = StubGenerationProvider()
@@ -149,6 +197,10 @@ class RealGenerationTests(unittest.TestCase):
         result = provider.generate("Question?", base_answer()["evidence"])
 
         self.assertEqual(result.answer, "Supported result. [1]")
+        self.assertEqual(
+            result.claims,
+            (GeneratedClaim(text="Supported result.", citation_ids=(1,)),),
+        )
         self.assertEqual(result.prompt_eval_count, 80)
         path, payload = provider.requests[1]
         self.assertEqual(path, "/api/chat")

@@ -12,6 +12,11 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from backend.rag.answer_builder import request_identity
+from backend.rag.claim_evidence import (
+    ClaimSupportStatus,
+    GeneratedClaim,
+    verify_claim_evidence,
+)
 
 
 JsonObject = dict[str, Any]
@@ -73,6 +78,7 @@ GENERATION_FAILURE_CODES = frozenset(
         "OLLAMA_ANSWER_SCHEMA_INVALID",
         "OLLAMA_ANSWER_CITATION_INVALID",
         "GENERATION_RESULT_IDENTITY_MISMATCH",
+        "GENERATION_RESULT_CLAIMS_MISSING",
         "GENERATED_ANSWER_CITATION_INVALID",
         "UNCLASSIFIED_GENERATION_FAILURE",
     }
@@ -116,6 +122,7 @@ class GenerationModelIdentity:
 class GenerationResult:
     answer: str
     identity: GenerationModelIdentity
+    claims: tuple[GeneratedClaim, ...] = ()
     prompt_eval_count: int | None = None
     eval_count: int | None = None
 
@@ -316,10 +323,12 @@ class OllamaGenerationProvider:
                 "OLLAMA_ANSWER_JSON_INVALID",
                 "Ollama answer is not valid JSON",
             ) from exc
-        answer = _render_claims(generated, evidence_count=len(evidence))
+        claims = _parse_claims(generated, evidence_count=len(evidence))
+        answer = _render_claims(claims)
         return GenerationResult(
             answer=answer,
             identity=identity,
+            claims=claims,
             prompt_eval_count=_optional_non_negative_int(response.get("prompt_eval_count")),
             eval_count=_optional_non_negative_int(response.get("eval_count")),
         )
@@ -329,7 +338,9 @@ def _optional_non_negative_int(value: Any) -> int | None:
     return value if isinstance(value, int) and value >= 0 else None
 
 
-def _render_claims(payload: Any, *, evidence_count: int) -> str:
+def _parse_claims(
+    payload: Any, *, evidence_count: int
+) -> tuple[GeneratedClaim, ...]:
     if not isinstance(payload, dict) or set(payload) != {"claims"}:
         raise GenerationServiceError(
             "OLLAMA_ANSWER_SCHEMA_INVALID",
@@ -341,7 +352,7 @@ def _render_claims(payload: Any, *, evidence_count: int) -> str:
             "OLLAMA_ANSWER_SCHEMA_INVALID",
             "Ollama claims array length is invalid",
         )
-    rendered: list[str] = []
+    parsed: list[GeneratedClaim] = []
     for claim in claims:
         if not isinstance(claim, dict) or set(claim) != {"text", "citation_ids"}:
             raise GenerationServiceError(
@@ -369,8 +380,15 @@ def _render_claims(payload: Any, *, evidence_count: int) -> str:
                 "OLLAMA_ANSWER_CITATION_INVALID",
                 "Ollama claim cites Evidence outside this request",
             )
-        markers = "".join(f"[{position}]" for position in positions)
-        rendered.append(f"{text.strip()} {markers}")
+        parsed.append(GeneratedClaim(text=text.strip(), citation_ids=positions))
+    return tuple(parsed)
+
+
+def _render_claims(claims: Sequence[GeneratedClaim]) -> str:
+    rendered = [
+        f"{claim.text} {''.join(f'[{position}]' for position in claim.citation_ids)}"
+        for claim in claims
+    ]
     answer = "\n".join(rendered)
     if len(answer) > 8000:
         raise GenerationServiceError(
@@ -432,7 +450,25 @@ def apply_real_generation(
                 "GENERATION_RESULT_IDENTITY_MISMATCH",
                 "generation result identity drift detected",
             )
-        used_positions = _validated_citation_positions(result.answer, len(evidence))
+        if not result.claims:
+            raise GenerationServiceError(
+                "GENERATION_RESULT_CLAIMS_MISSING",
+                "generation result has no structured claims",
+            )
+        claim_report = verify_claim_evidence(result.claims, evidence)
+        retained_claims = claim_report.retained_claims
+        if not retained_claims:
+            return _degraded_answer(
+                answer,
+                warning=(
+                    f"{identity.execution_boundary}_"
+                    "CLAIM_EVIDENCE_FAILED_CLOSED_EVIDENCE_ONLY"
+                ),
+            )
+        rendered_answer = _render_claims(retained_claims)
+        used_positions = _validated_citation_positions(
+            rendered_answer, len(evidence)
+        )
     except Exception:
         return _degraded_answer(
             answer,
@@ -446,9 +482,23 @@ def apply_real_generation(
             warning=f"{identity.execution_boundary}_CITATION_MAPPING_FAILED_CLOSED",
         )
     answer["status"] = "COMPLETED"
-    answer["answer"] = result.answer
+    answer["answer"] = rendered_answer
     answer["citations"] = [citations[position - 1] for position in used_positions]
-    answer["warnings"] = [
-        f"{identity.execution_boundary}_CITATION_IDS_VALIDATED"
-    ]
+    warning_suffix = "CITATION_IDS_VALIDATED_CLAIM_EVIDENCE_VALIDATED"
+    if claim_report.is_partial_answer:
+        warning_suffix = (
+            "CITATION_IDS_VALIDATED_"
+            "CLAIM_EVIDENCE_PARTIAL_ANSWER_UNSUPPORTED_DROPPED"
+        )
+    elif any(
+        record.status is ClaimSupportStatus.CONFLICTING_EVIDENCE
+        for record in claim_report.records
+    ):
+        warning_suffix = "CITATION_IDS_VALIDATED_CLAIM_EVIDENCE_CONFLICT_DISCLOSED"
+    elif all(
+        record.status is ClaimSupportStatus.INSUFFICIENT_EVIDENCE
+        for record in claim_report.records
+    ):
+        warning_suffix = "CITATION_IDS_VALIDATED_CLAIM_EVIDENCE_SAFE_LIMITATION"
+    answer["warnings"] = [f"{identity.execution_boundary}_{warning_suffix}"]
     return answer

@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from backend.api.app import create_app
+from backend.rag.claim_evidence import GeneratedClaim
 from backend.rag.generation import GenerationModelIdentity, GenerationResult
 from backend.retrieval.online import (
     OnlineScopeForbiddenError,
@@ -81,6 +82,12 @@ class FakeRealGenerationProvider:
         return GenerationResult(
             answer="The READY evidence supports this answer [1].",
             identity=self.identity,
+            claims=(
+                GeneratedClaim(
+                    text="The READY evidence supports this answer.",
+                    citation_ids=(1,),
+                ),
+            ),
         )
 
 
@@ -249,9 +256,9 @@ class OnlineReadyRagAnswersApiTests(unittest.TestCase):
         self.assertEqual(response.json()["status"], "COMPLETED")
         self.assertEqual(
             response.json()["answer"],
-            "The READY evidence supports this answer [1].",
+            "The READY evidence supports this answer. [1]",
         )
-        self.assertIn("CITATION_IDS_VALIDATED", response.json()["warnings"][0])
+        self.assertIn("CLAIM_EVIDENCE_VALIDATED", response.json()["warnings"][0])
         self.assertEqual(generator.calls[0][1][0]["chunk_id"], "chunk_persisted_001")
 
 

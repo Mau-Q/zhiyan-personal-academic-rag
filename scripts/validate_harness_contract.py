@@ -26,6 +26,7 @@ REQUIRED_FILES = (
     "docs/PHASE_3_ENTRY_FREEZE.md",
     "docs/PHASE_3_COMPARISON_DEV_GATE.md",
     "docs/PHASE_3_COMPARISON_ROUTE_COVERAGE_GATE.md",
+    "docs/PHASE_4_CLAIM_EVIDENCE_CORE_GATE.md",
     "machine/project_state.json",
     "machine/feature_list.json",
     "machine/phase_zero_scope_resource_slo.json",
@@ -33,6 +34,7 @@ REQUIRED_FILES = (
     "machine/phase3_comparison_dev_gate.json",
     "machine/phase3_comparison_report_intake.json",
     "machine/phase3_comparison_route_coverage_gate.json",
+    "machine/phase4_claim_evidence_core_gate.json",
     "machine/phase_result.schema.json",
     "machine/phase_result.template.json",
     "scripts/validate_harness_contract.py",
@@ -218,6 +220,21 @@ def check_feature_list() -> None:
         )
     ):
         raise ValueError("phase 3 route coverage feature gate status drifted")
+    phase4_feature = next(
+        (
+            feature
+            for feature in features
+            if feature.get("id") == "phase4_claim_evidence_core"
+        ),
+        None,
+    )
+    if (
+        not isinstance(phase4_feature, dict)
+        or phase4_feature.get("status") != "PARTIAL"
+        or phase4_feature.get("gate_status")
+        != "LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED"
+    ):
+        raise ValueError("phase 4 Claim-Evidence feature gate status drifted")
 
 
 def validate_phase_result(payload: Any, *, require_concrete: bool) -> None:
@@ -288,6 +305,81 @@ def check_current_phase() -> None:
     missing = [heading for heading in CURRENT_PHASE_HEADINGS if heading not in text.splitlines()]
     if missing:
         raise ValueError(f"CURRENT_PHASE missing headings: {', '.join(missing)}")
+
+
+def check_phase4_claim_evidence_core_gate() -> None:
+    payload = _read_json("machine/phase4_claim_evidence_core_gate.json")
+    if payload.get("schema_version") != "phase4_claim_evidence_core_gate_v1":
+        raise ValueError("phase 4 Claim-Evidence schema_version is invalid")
+    if payload.get("decision_id") != "PD-060":
+        raise ValueError("phase 4 Claim-Evidence decision must be PD-060")
+    if payload.get("status") != (
+        "LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED"
+    ):
+        raise ValueError("phase 4 Claim-Evidence local core status drifted")
+
+    scope = payload.get("scope")
+    if (
+        not isinstance(scope, dict)
+        or scope.get("competition_rag_core") != "IN_SCOPE"
+        or scope.get("knowledge_base_integration") != "OUT_OF_SCOPE_OTHER_OWNER"
+        or scope.get("frontend") != "OUT_OF_SCOPE"
+        or scope.get("demo_entrypoint") != "OUT_OF_SCOPE"
+        or scope.get("remote_execution") != "NOT_RUN"
+        or scope.get("test") != "NOT_READ_NOT_RUN"
+        or scope.get("acceptance") != "NOT_READ_NOT_RUN"
+    ):
+        raise ValueError("phase 4 Claim-Evidence scope boundary drifted")
+
+    boundary = payload.get("phase_boundary")
+    if (
+        not isinstance(boundary, dict)
+        or boundary.get("current_source_phase")
+        != {"id": "phase-3", "status": "IN_PROGRESS"}
+        or boundary.get("phase4_progress") != "PARTIAL_LOCAL_CORE_READY"
+        or boundary.get("phase4_complete") is not False
+        or boundary.get("online_hard_judgment_enabled") is not False
+    ):
+        raise ValueError("phase 4 Claim-Evidence phase boundary drifted")
+
+    reuse = payload.get("reuse")
+    if (
+        not isinstance(reuse, dict)
+        or reuse.get("existing_structured_claims") != "DIRECT_REUSE"
+        or reuse.get("existing_authorized_evidence_and_citations") != "DIRECT_REUSE"
+        or reuse.get("reading_agent_reliability_patterns")
+        != "NARROW_ADAPT_NO_RUNTIME_DEPENDENCY"
+        or reuse.get("existing_relevance_cross_encoder_as_entailment")
+        != "REJECTED_WRONG_MODEL_TASK"
+        or reuse.get("ragas_or_haystack_runtime")
+        != "DEFERRED_OFFLINE_EVALUATION_ONLY"
+        or reuse.get("new_dependencies") != []
+    ):
+        raise ValueError("phase 4 Claim-Evidence reuse decision drifted")
+
+    implementation = payload.get("implementation")
+    if (
+        not isinstance(implementation, dict)
+        or implementation.get("partial_answer_policy")
+        != "DROP_UNSUPPORTED_CLAIMS_KEEP_SUPPORTED_OR_SAFE_LIMITATION"
+        or implementation.get("all_unsupported_policy")
+        != "DEGRADED_EVIDENCE_ONLY"
+        or implementation.get("public_rag_answer_schema_changed") is not False
+        or implementation.get("prompt_identity_changed") is not False
+    ):
+        raise ValueError("phase 4 Claim-Evidence implementation boundary drifted")
+
+    validation = payload.get("local_validation")
+    if (
+        not isinstance(validation, dict)
+        or validation.get("focused_tests", {}).get("status") != "PASS"
+        or validation.get("focused_tests", {}).get("count") != 21
+        or validation.get("full_repository_tests") != "PASS"
+        or validation.get("repository_harness") != "PASS"
+        or validation.get("powershell_static") != "PASS"
+        or validation.get("diff_check") != "PASS"
+    ):
+        raise ValueError("phase 4 Claim-Evidence local validation drifted")
 
 
 def check_phase_zero_scope_resource_slo() -> None:
@@ -1522,6 +1614,7 @@ def main() -> int:
             "phase3_comparison_route_coverage_gate",
             check_phase3_comparison_route_coverage_gate,
         ),
+        ("phase4_claim_evidence_core_gate", check_phase4_claim_evidence_core_gate),
         ("harness_links", check_harness_links),
         ("content_safety", check_harness_content_safety),
         ("tracked_artifact_boundary", check_tracked_artifact_boundary),
