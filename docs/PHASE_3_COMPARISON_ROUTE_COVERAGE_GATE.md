@@ -2,8 +2,8 @@
 
 ## 结论
 
-本 Gate 将阶段 3 的第二个单一变量冻结、完成默认关闭的本地实现，并准备好
-一次完整的用户运行远程配对 dev Gate：
+本 Gate 已冻结并完成阶段 3 第二个单一变量的默认关闭实现，也已完成一次
+用户运行的远程配对 dev Gate：
 
 ```text
 BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1
@@ -14,9 +14,20 @@ PostgreSQL 已解析出恰好两个授权 READY 文档路由且最终输出仍�
 从完整既有 RRF 顺序中保留两条路由各自排名最高的一个候选，再按原 RRF
 顺序补足第三个候选。候选、分数、身份或选择结果无法证明时回退原 RRF Top-3。
 
-本地证据只证明合同、配置、默认关闭、回退和 Gate 可执行，不证明四个冻结
-dev 样本已有质量增益。新 Windows Run ID 已冻结为
-`phase3_comparison_route_coverage_dev_20260724_01`，但尚未运行。
+Windows Run ID `phase3_comparison_route_coverage_dev_20260724_01` 的结果为
+可信质量失败，裁决为 `KEEP_COMPARISON_ROUTE_COVERAGE_DISABLED`：
+
+- 四个目标 Treatment 均为 `APPLIED`，其中 3 个改变了 Top-3；
+- Control/Treatment 双侧 Top-3 命中均为 `0/4`；
+- 两分支 Recall@3 均为 `0.145833`、nDCG@3 均为 `0.220967`，增益均为 0；
+- 固定 15 题为 `14/15`；
+- 清理 9/9、READY 失败关闭和删除后 403 均通过，无需恢复。
+
+报告 SHA-256 为
+`C2758BE68E614D5E075595B34C2386FA200B7DE13358DF8DB5193CCAD69A6A19`，
+裁决 SHA-256 为
+`7492DC7574A2176351DDEEBCDED80230D66216FA2C923BBB4713182945CE4797`。
+不得调参或复用该 Run ID，`test/Acceptance` 继续封存。
 
 ## 为什么选择这个变量
 
@@ -101,7 +112,7 @@ ACL、READY、统一身份或清理合同。
 - 默认不注入选择器时，现有在线路径回归保持通过；
 - 观察只记录枚举、计数、是否改变和耗时，不记录问题或候选正文。
 
-## 后续远程 Gate
+## 远程 Gate 与结果
 
 本 Gate 没有复制原 1300 行 runner，而是以冻结实验规格参数化既有组件：
 
@@ -117,14 +128,18 @@ ACL、READY、统一身份或清理合同。
 PostgreSQL 事实、ACL、版本身份、ES/Milvus 清理和删除后 403；MLflow 还会
 引入新的跟踪服务/数据存储。因此本 Gate 不新增依赖或服务。
 
-Treatment 只允许开启本变量；查询拆分继续关闭。质量阈值沿用严格双侧
-Top-3、Recall@3、nDCG@3、固定 15 题和非目标不退化；选择器 P95 上限
-`5 ms`，增量检索 P95 上限 `50 ms`。失败继续保持关闭，不能调参或复用 Run ID。
+Treatment 只开启本变量，查询拆分保持关闭。质量阈值沿用严格双侧 Top-3、
+Recall@3、nDCG@3、固定 15 题和非目标不退化；选择器 P95 上限 `5 ms`，
+增量检索 P95 上限 `50 ms`。实际选择器 P95 为 `0.049995 ms`，增量检索
+P95 为 `-26.963305 ms`，非目标没有退化，但这些通过项不能覆盖目标质量与
+固定 Canary 的硬失败。
 
 运行报告使用
 `phase3_comparison_route_coverage_paired_dev_report_v1`，必须证明四个目标
 Treatment 均为 `APPLIED`；裁决使用
 `phase3_comparison_route_coverage_dev_adjudication_v1`。入口和完整命令见
-`deploy/remote/phase3-comparison-validation/README.md`。只有本地提交已推送且
-Windows 精确拉取到该提交后才运行；运行前后都不读取 `test/Acceptance`，
-也不判定 300 ms SLO。
+`deploy/remote/phase3-comparison-validation/README.md`。报告与裁决写入后，
+PowerShell 脱敏汇总曾因完整报告不含可选 `primary_error_code` 而在严格模式
+报错；这发生在证据落盘和清理完成之后，不影响质量裁决。本地修复复用同一
+脚本并增加缺失安全的 JSON 属性读取，不要求重跑质量。该 Gate 前后均未读取
+`test/Acceptance`，也未判定 300 ms SLO。

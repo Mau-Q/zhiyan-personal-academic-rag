@@ -524,11 +524,11 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "REMOTE_PAIRED_DEV_GATE_READY_NOT_RUN_DEFAULT_OFF",
+            "REMOTE_DEV_QUALITY_FAILED_CLEAN_VARIABLE_DISABLED",
         )
         self.assertEqual(
             payload["decision_ids"],
-            ["PD-053", "PD-054", "PD-055"],
+            ["PD-053", "PD-054", "PD-055", "PD-056"],
         )
         self.assertEqual(
             payload["reuse_review"]["decision"],
@@ -548,7 +548,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         self.assertFalse(payload["preserved_online_path"]["candidate_expansion"])
         self.assertEqual(
             payload["future_paired_dev_gate"]["status"],
-            "PREPARED_NOT_RUN",
+            "COMPLETE_FAIL_CLEAN",
         )
         self.assertEqual(
             payload["future_paired_dev_gate"]["run_id"],
@@ -558,10 +558,27 @@ class RepositoryHarnessTests(unittest.TestCase):
         self.assertTrue(
             payload["remote_boundary"]["windows_run_id_assigned"]
         )
-        self.assertTrue(
+        self.assertFalse(
             payload["remote_boundary"]["windows_command_authorized"]
         )
         self.assertFalse(payload["remote_boundary"]["remote_host_operated"])
+        result = payload["remote_paired_dev_result"]
+        self.assertEqual(result["status"], "FAIL_CLEAN")
+        self.assertEqual(
+            result["decision"],
+            "KEEP_COMPARISON_ROUTE_COVERAGE_DISABLED",
+        )
+        self.assertEqual(result["variable_observation"]["applied"], 4)
+        self.assertEqual(
+            result["variable_observation"]["selection_changed"],
+            3,
+        )
+        self.assertEqual(result["cleanup"]["jobs_succeeded"], 9)
+        self.assertFalse(result["recovery_required"])
+        self.assertFalse(result["rerun_authorized"])
+        self.assertFalse(
+            payload["powershell_summary_defect"]["quality_rerun_required"]
+        )
 
     def test_validator_rejects_template_as_concrete_phase_result(self):
         template = json.loads(

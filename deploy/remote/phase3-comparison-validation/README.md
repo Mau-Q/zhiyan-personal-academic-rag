@@ -1,17 +1,35 @@
 # 阶段 3 路由覆盖配对 dev Gate
 
 > 目标平台：用户维护的 Windows 主机，Windows PowerShell 5.1。
-> 本入口只允许在准备提交已从 Mac 推送、Windows 已精确拉取该提交后运行。
+> 本页保留已完成 Gate 的版本化证据与历史命令；旧 Run ID 已关闭。
 
 本 Gate 只判定默认关闭的
 `BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1`。首个查询拆分变量的 `_01`～
-`_07` 已历史关闭，不得复跑或复用旧 Run ID。
+`_07` 已历史关闭；本页的路由覆盖 Run ID 也已完成并关闭，均不得复跑或复用。
 
 新 Run ID：
 
 ```text
 phase3_comparison_route_coverage_dev_20260724_01
 ```
+
+## 已完成结果
+
+该 Run ID 已在提交 `28b8987641ebd2754c2676f144dfa3abf4cdc041` 上完成：
+
+- 报告 `FAIL / QUALITY_OR_COST_THRESHOLD_NOT_MET`；
+- 裁决 `KEEP_COMPARISON_ROUTE_COVERAGE_DISABLED`；
+- 报告 SHA-256
+  `C2758BE68E614D5E075595B34C2386FA200B7DE13358DF8DB5193CCAD69A6A19`；
+- 裁决 SHA-256
+  `7492DC7574A2176351DDEEBCDED80230D66216FA2C923BBB4713182945CE4797`；
+- 选择器 4/4 `APPLIED`、3/4 改变 Top-3，但双侧命中、Recall@3 和 nDCG@3
+  均无增益；
+- 清理 9/9、READY 失败关闭、删除后 403，故无需恢复。
+
+报告和裁决落盘后，旧提交的脱敏汇总访问了完整报告中不存在的可选
+`primary_error_code`，在严格模式抛出 `PropertyNotFoundStrict`。这不影响上述
+证据；当前脚本仅修复可选汇总字段读取。禁止用本页旧命令重跑质量。
 
 ## 判定边界
 
@@ -63,10 +81,9 @@ git rev-parse origin/main
 
 只有推送成功且最后两个 SHA 完全一致，才进入 Windows。
 
-## 仅在 Mac 推送成功后运行：Windows PowerShell 5.1
+## 历史命令（禁止重跑）
 
-完整复制到 Windows PowerShell 5.1。PostgreSQL 密码由版本化脚本以
-`Read-Host -AsSecureString` 交互读取，不打印或保存。
+以下命令仅保留为已执行 Gate 的版本化审计记录，不再授权执行。
 
 ```powershell
 Set-Location 'C:\Users\Administrator\zhiyan-personal-academic-rag'

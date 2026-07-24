@@ -29,6 +29,28 @@ $routeCoverageSwitchExisted = (
 )
 $originalRouteCoverageSwitch = $env:PHASE3_COMPARISON_ROUTE_COVERAGE_ENABLED
 
+function Get-OptionalJsonProperty {
+    param(
+        [AllowNull()]
+        [object]$InputObject,
+        [Parameter(Mandatory = $true)]
+        [string[]]$PropertyPath
+    )
+
+    $currentValue = $InputObject
+    foreach ($propertyName in $PropertyPath) {
+        if ($null -eq $currentValue) {
+            return $null
+        }
+        $property = $currentValue.PSObject.Properties[$propertyName]
+        if ($null -eq $property) {
+            return $null
+        }
+        $currentValue = $property.Value
+    }
+    return $currentValue
+}
+
 if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
     $RepositoryRoot = Join-Path -Path $PSScriptRoot -ChildPath '..\..\..'
 }
@@ -242,46 +264,47 @@ try {
     $adjudication = (
         Get-Content -LiteralPath $adjudicationPath -Raw | ConvertFrom-Json
     )
+    $variableMetricName = 'decomposition_p95_ms'
     if ($VariableId -eq 'BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1') {
-        $variableP95Ms = $report.cost.selection_p95_ms
+        $variableMetricName = 'selection_p95_ms'
     }
-    else {
-        $variableP95Ms = $report.cost.decomposition_p95_ms
-    }
+    $variableP95Ms = Get-OptionalJsonProperty `
+        -InputObject $report `
+        -PropertyPath @('cost', $variableMetricName)
     $summary = [ordered]@{
         schema_version = 'phase3_comparison_paired_dev_summary_v1'
         head_commit = $headCommit
         variable_id = $VariableId
-        status = $report.status
-        stable_error_code = $report.error_code
-        primary_stage = $report.primary_stage
-        primary_error_code = $report.primary_error_code
-        input_manifest_sha256 = $report.input_manifest_sha256
-        config_sha256 = $report.config_sha256
-        target_ids_sha256 = $report.target_ids_sha256
-        control_strict_two_sided_passed = $report.control.strict_two_sided_passed
-        treatment_strict_two_sided_passed = $report.treatment.strict_two_sided_passed
-        strict_two_sided_absolute_gain = $report.gains.strict_two_sided_absolute_gain
-        macro_recall_at_3_absolute_gain = $report.gains.macro_recall_at_3_absolute_gain
-        macro_ndcg_at_3_absolute_gain = $report.gains.macro_ndcg_at_3_absolute_gain
-        non_target_recall_at_3_drop = $report.critical_non_regression.recall_at_3_drop
-        non_target_ndcg_at_10_drop = $report.critical_non_regression.ndcg_at_10_drop
-        fixed_15_canary_passed = $report.fixed_15_canary.passed
-        control_retrieval_p95_ms = $report.cost.control_retrieval_p95_ms
-        treatment_retrieval_p95_ms = $report.cost.treatment_retrieval_p95_ms
-        incremental_retrieval_p95_ms = $report.cost.incremental_retrieval_p95_ms
+        status = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('status')
+        stable_error_code = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('error_code')
+        primary_stage = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('primary_stage')
+        primary_error_code = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('primary_error_code')
+        input_manifest_sha256 = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('input_manifest_sha256')
+        config_sha256 = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('config_sha256')
+        target_ids_sha256 = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('target_ids_sha256')
+        control_strict_two_sided_passed = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('control', 'strict_two_sided_passed')
+        treatment_strict_two_sided_passed = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('treatment', 'strict_two_sided_passed')
+        strict_two_sided_absolute_gain = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('gains', 'strict_two_sided_absolute_gain')
+        macro_recall_at_3_absolute_gain = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('gains', 'macro_recall_at_3_absolute_gain')
+        macro_ndcg_at_3_absolute_gain = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('gains', 'macro_ndcg_at_3_absolute_gain')
+        non_target_recall_at_3_drop = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('critical_non_regression', 'recall_at_3_drop')
+        non_target_ndcg_at_10_drop = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('critical_non_regression', 'ndcg_at_10_drop')
+        fixed_15_canary_passed = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('fixed_15_canary', 'passed')
+        control_retrieval_p95_ms = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('cost', 'control_retrieval_p95_ms')
+        treatment_retrieval_p95_ms = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('cost', 'treatment_retrieval_p95_ms')
+        incremental_retrieval_p95_ms = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('cost', 'incremental_retrieval_p95_ms')
         variable_p95_ms = $variableP95Ms
-        cleanup_status = $report.cleanup.status
-        cleanup_jobs_succeeded = $report.cleanup.jobs_succeeded
-        deleted_answer_api_status = $report.cleanup.deleted_answer_api_status
-        performance_boundary = $report.performance_boundary
-        test_status = $report.split_isolation.test
-        acceptance_status = $report.split_isolation.acceptance
+        cleanup_status = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('cleanup', 'status')
+        cleanup_jobs_succeeded = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('cleanup', 'jobs_succeeded')
+        deleted_answer_api_status = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('cleanup', 'deleted_answer_api_status')
+        performance_boundary = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('performance_boundary')
+        test_status = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('split_isolation', 'test')
+        acceptance_status = Get-OptionalJsonProperty -InputObject $report -PropertyPath @('split_isolation', 'acceptance')
         report_sha256 = $reportSha256
-        adjudication_status = $adjudication.status
-        adjudication_decision = $adjudication.decision
-        adjudicated_test_gate = $adjudication.test_gate
-        adjudicated_acceptance = $adjudication.acceptance
+        adjudication_status = Get-OptionalJsonProperty -InputObject $adjudication -PropertyPath @('status')
+        adjudication_decision = Get-OptionalJsonProperty -InputObject $adjudication -PropertyPath @('decision')
+        adjudicated_test_gate = Get-OptionalJsonProperty -InputObject $adjudication -PropertyPath @('test_gate')
+        adjudicated_acceptance = Get-OptionalJsonProperty -InputObject $adjudication -PropertyPath @('acceptance')
         adjudication_sha256 = (
             Get-FileHash -LiteralPath $adjudicationPath -Algorithm SHA256
         ).Hash

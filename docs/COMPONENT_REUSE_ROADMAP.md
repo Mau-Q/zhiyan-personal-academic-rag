@@ -52,8 +52,13 @@ READY 生命周期、Control 停止规则、独立裁决、9 路清理和 PowerS
 或 ES/Milvus 清理。本 Gate 已有冻结私有包、SHA 身份和独立裁决，采用二者只会
 增加第二套评测状态，因此当前不引入。
 
-该决定不证明 dev 质量增益；新 Run ID
-`phase3_comparison_route_coverage_dev_20260724_01` 尚未运行。
+该复用方案已用 Run ID
+`phase3_comparison_route_coverage_dev_20260724_01` 完成可信在线 dev 比较。
+选择器在 4/4 目标上实际生效、3/4 改变 Top-3，但没有带来 Recall@3、
+nDCG@3 或双侧命中增益，因此变量保持关闭。这个结果同时说明继续引入通用
+评测框架或细分同一选择器不会解决“候选中缺乏目标证据”的质量问题；后续须
+重新选择高价值主 Gate，并再次按本仓库、既有项目、维护中上游组件的顺序做
+复用检查。
 
 ### 1. Elasticsearch 批量传输
 

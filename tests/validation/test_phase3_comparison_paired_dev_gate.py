@@ -189,9 +189,21 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
         self.assertIn("$report.cleanup.jobs_succeeded -ne 9", script)
         self.assertIn("$report.cleanup.deleted_answer_api_status -ne 403", script)
         self.assertIn("Remove-Item -LiteralPath $inputRoot -Recurse -Force", script)
+        self.assertIn("function Get-OptionalJsonProperty", script)
         summary = script[script.index("$summary = [ordered]@{") :]
-        self.assertIn("primary_stage = $report.primary_stage", summary)
-        self.assertIn("primary_error_code = $report.primary_error_code", summary)
+        self.assertIn(
+            "primary_error_code = Get-OptionalJsonProperty "
+            "-InputObject $report -PropertyPath @('primary_error_code')",
+            summary,
+        )
+        self.assertIn(
+            "control_strict_two_sided_passed = Get-OptionalJsonProperty",
+            summary,
+        )
+        self.assertNotIn(
+            "primary_error_code = $report.primary_error_code",
+            summary,
+        )
         self.assertNotIn("question", summary.casefold())
         self.assertNotIn("evidence", summary.casefold())
 

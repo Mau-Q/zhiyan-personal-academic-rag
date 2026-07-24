@@ -212,7 +212,7 @@ def check_feature_list() -> None:
         not isinstance(route_coverage_feature, dict)
         or route_coverage_feature.get("status") != "PARTIAL"
         or route_coverage_feature.get("gate_status")
-        != "REMOTE_PAIRED_DEV_GATE_READY_NOT_RUN_DEFAULT_OFF_TEST_SEALED"
+        != "REMOTE_DEV_QUALITY_FAILED_CLEAN_VARIABLE_DISABLED_NO_RERUN_TEST_SEALED"
     ):
         raise ValueError("phase 3 route coverage feature gate status drifted")
 
@@ -1246,10 +1246,15 @@ def check_phase3_comparison_route_coverage_gate() -> None:
         "phase3_comparison_route_coverage_gate_v1"
     ):
         raise ValueError("phase 3 route coverage schema_version is invalid")
-    if payload.get("decision_ids") != ["PD-053", "PD-054", "PD-055"]:
+    if payload.get("decision_ids") != [
+        "PD-053",
+        "PD-054",
+        "PD-055",
+        "PD-056",
+    ]:
         raise ValueError("phase 3 route coverage decision ids drifted")
     if payload.get("status") != (
-        "REMOTE_PAIRED_DEV_GATE_READY_NOT_RUN_DEFAULT_OFF"
+        "REMOTE_DEV_QUALITY_FAILED_CLEAN_VARIABLE_DISABLED"
     ):
         raise ValueError("phase 3 route coverage status is invalid")
     if payload.get("source_phase") != {"id": "phase-3", "status": "IN_PROGRESS"}:
@@ -1322,9 +1327,9 @@ def check_phase3_comparison_route_coverage_gate() -> None:
         not isinstance(local_gate, dict)
         or local_gate.get("status") != "PASS"
         or local_gate.get("quality_conclusion")
-        != "NOT_CLAIMED_WITHOUT_PAIRED_ONLINE_DEV"
+        != "REMOTE_DEV_FAILED_NO_TARGET_QUALITY_GAIN"
         or not isinstance(future, dict)
-        or future.get("status") != "PREPARED_NOT_RUN"
+        or future.get("status") != "COMPLETE_FAIL_CLEAN"
         or future.get("run_id")
         != "phase3_comparison_route_coverage_dev_20260724_01"
         or future.get("report_schema_version")
@@ -1348,6 +1353,8 @@ def check_phase3_comparison_route_coverage_gate() -> None:
     split = payload.get("split_isolation")
     performance = payload.get("independent_performance_gate")
     remote = payload.get("remote_boundary")
+    result = payload.get("remote_paired_dev_result")
+    summary_defect = payload.get("powershell_summary_defect")
     if (
         not isinstance(split, dict)
         or split.get("test") != "NOT_READ_NOT_RUN"
@@ -1360,11 +1367,64 @@ def check_phase3_comparison_route_coverage_gate() -> None:
         is not True
         or not isinstance(remote, dict)
         or remote.get("windows_run_id_assigned") is not True
-        or remote.get("windows_command_authorized") is not True
+        or remote.get("windows_quality_run_completed_by_user") is not True
+        or remote.get("windows_run_id_reusable") is not False
+        or remote.get("windows_command_authorized") is not False
         or remote.get("remote_host_operated") is not False
         or remote.get("test_or_acceptance_read") is not False
+        or not isinstance(result, dict)
+        or result.get("status") != "FAIL_CLEAN"
+        or result.get("run_id")
+        != "phase3_comparison_route_coverage_dev_20260724_01"
+        or result.get("head_commit")
+        != "28b8987641ebd2754c2676f144dfa3abf4cdc041"
+        or result.get("report_sha256")
+        != "c2758be68e614d5e075595b34c2386fa200b7de13358df8db5193ccad69a6a19"
+        or result.get("adjudication_sha256")
+        != "7492dc7574a2176351ddeebcded80230d66216fa2c923bbb4713182945ce4797"
+        or result.get("error_code") != "QUALITY_OR_COST_THRESHOLD_NOT_MET"
+        or result.get("decision")
+        != "KEEP_COMPARISON_ROUTE_COVERAGE_DISABLED"
+        or result.get("recovery_required") is not False
+        or result.get("rerun_authorized") is not False
+        or result.get("default_enabled") is not False
+        or result.get("test") != "NOT_READ_NOT_RUN"
+        or result.get("acceptance") != "NOT_READ_NOT_RUN"
+        or result.get("performance_gate")
+        != "PENDING_SEPARATE_300MS_GATE"
+        or not isinstance(summary_defect, dict)
+        or summary_defect.get("quality_report_affected") is not False
+        or summary_defect.get("adjudication_affected") is not False
+        or summary_defect.get("cleanup_proof_affected") is not False
+        or summary_defect.get("quality_rerun_required") is not False
     ):
-        raise ValueError("phase 3 route coverage isolation boundary drifted")
+        raise ValueError("phase 3 route coverage result boundary drifted")
+    target = result.get("target_quality", {})
+    observation = result.get("variable_observation", {})
+    cleanup = result.get("cleanup", {})
+    if (
+        target.get("sample_count") != 4
+        or target.get("control_strict_two_sided_passed") != 0
+        or target.get("treatment_strict_two_sided_passed") != 0
+        or target.get("strict_two_sided_absolute_gain") != 0.0
+        or target.get("macro_recall_at_3_absolute_gain") != 0.0
+        or target.get("macro_ndcg_at_3_absolute_gain") != 0.0
+        or observation
+        != {
+            "count": 4,
+            "applied": 4,
+            "fallback": 0,
+            "disabled": 0,
+            "selection_changed": 3,
+        }
+        or cleanup.get("status") != "PASS"
+        or cleanup.get("jobs_succeeded") != 9
+        or cleanup.get("jobs_observed") != 9
+        or cleanup.get("jobs_expected") != 9
+        or cleanup.get("ready_reconciliation_failed_closed") is not True
+        or cleanup.get("deleted_answer_api_status") != 403
+    ):
+        raise ValueError("phase 3 route coverage quality or cleanup result drifted")
 
 
 def check_harness_links() -> None:

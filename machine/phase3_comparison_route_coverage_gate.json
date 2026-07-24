@@ -3,9 +3,10 @@
   "decision_ids": [
     "PD-053",
     "PD-054",
-    "PD-055"
+    "PD-055",
+    "PD-056"
   ],
-  "status": "REMOTE_PAIRED_DEV_GATE_READY_NOT_RUN_DEFAULT_OFF",
+  "status": "REMOTE_DEV_QUALITY_FAILED_CLEAN_VARIABLE_DISABLED",
   "source_phase": {
     "id": "phase-3",
     "status": "IN_PROGRESS"
@@ -120,10 +121,10 @@
     "default_path_equivalence": "COVERED_BY_ONLINE_RETRIEVAL_REGRESSION",
     "route_coverage_unit_tests": "PASS",
     "online_selector_integration_tests": "PASS",
-    "quality_conclusion": "NOT_CLAIMED_WITHOUT_PAIRED_ONLINE_DEV"
+    "quality_conclusion": "REMOTE_DEV_FAILED_NO_TARGET_QUALITY_GAIN"
   },
   "future_paired_dev_gate": {
-    "status": "PREPARED_NOT_RUN",
+    "status": "COMPLETE_FAIL_CLEAN",
     "run_id": "phase3_comparison_route_coverage_dev_20260724_01",
     "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
     "adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -153,6 +154,83 @@
     "pass_decision": "DEV_CANDIDATE_DEFAULT_OFF_AWAITING_SEPARATE_FREEZE",
     "fail_decision": "KEEP_COMPARISON_ROUTE_COVERAGE_DISABLED"
   },
+  "remote_paired_dev_result": {
+    "status": "FAIL_CLEAN",
+    "run_id": "phase3_comparison_route_coverage_dev_20260724_01",
+    "head_commit": "28b8987641ebd2754c2676f144dfa3abf4cdc041",
+    "report_sha256": "c2758be68e614d5e075595b34c2386fa200b7de13358df8db5193ccad69a6a19",
+    "adjudication_sha256": "7492dc7574a2176351ddeebcded80230d66216fa2c923bbb4713182945ce4797",
+    "error_code": "QUALITY_OR_COST_THRESHOLD_NOT_MET",
+    "decision": "KEEP_COMPARISON_ROUTE_COVERAGE_DISABLED",
+    "identity": {
+      "ready_document_count": 3,
+      "runtime_chunk_count": 316,
+      "owner_acl_version_identity_violations": 0
+    },
+    "target_quality": {
+      "sample_count": 4,
+      "control_strict_two_sided_passed": 0,
+      "treatment_strict_two_sided_passed": 0,
+      "control_macro_recall_at_3": 0.145833,
+      "treatment_macro_recall_at_3": 0.145833,
+      "control_macro_ndcg_at_3": 0.220967,
+      "treatment_macro_ndcg_at_3": 0.220967,
+      "strict_two_sided_absolute_gain": 0.0,
+      "macro_recall_at_3_absolute_gain": 0.0,
+      "macro_ndcg_at_3_absolute_gain": 0.0
+    },
+    "variable_observation": {
+      "count": 4,
+      "applied": 4,
+      "fallback": 0,
+      "disabled": 0,
+      "selection_changed": 3
+    },
+    "critical_non_regression": {
+      "case_count": 80,
+      "control_recall_at_3": 0.616667,
+      "treatment_recall_at_3": 0.616667,
+      "recall_at_3_drop": 0.0,
+      "control_ndcg_at_10": 0.64606,
+      "treatment_ndcg_at_10": 0.64606,
+      "ndcg_at_10_drop": 0.0
+    },
+    "fixed_15_canary": {
+      "passed": 14,
+      "total": 15,
+      "control_treatment_boundary_identical": false
+    },
+    "cost": {
+      "control_retrieval_p95_ms": 719.84364,
+      "treatment_retrieval_p95_ms": 692.880335,
+      "incremental_retrieval_p95_ms": -26.963305,
+      "selection_p95_ms": 0.049995
+    },
+    "cleanup": {
+      "status": "PASS",
+      "scheduled_versions": 3,
+      "jobs_succeeded": 9,
+      "jobs_observed": 9,
+      "jobs_expected": 9,
+      "ready_reconciliation_failed_closed": true,
+      "deleted_answer_api_status": 403
+    },
+    "recovery_required": false,
+    "rerun_authorized": false,
+    "default_enabled": false,
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN",
+    "performance_gate": "PENDING_SEPARATE_300MS_GATE"
+  },
+  "powershell_summary_defect": {
+    "status": "LOCAL_FIX_STATIC_VALIDATION_REQUIRED_NO_QUALITY_RERUN",
+    "cause": "OPTIONAL_PRIMARY_ERROR_CODE_ABSENT_ON_COMPLETE_REPORT_ACCESSED_UNDER_STRICT_MODE",
+    "quality_report_affected": false,
+    "adjudication_affected": false,
+    "cleanup_proof_affected": false,
+    "quality_rerun_required": false,
+    "fix": "USE_OPTIONAL_JSON_PROPERTY_PATH_READER_FOR_SANITIZED_SUMMARY_FIELDS"
+  },
   "split_isolation": {
     "dev": "FROZEN_FOUR_CASES_ONLY",
     "test": "NOT_READ_NOT_RUN",
@@ -169,7 +247,9 @@
   },
   "remote_boundary": {
     "windows_run_id_assigned": true,
-    "windows_command_authorized": true,
+    "windows_quality_run_completed_by_user": true,
+    "windows_run_id_reusable": false,
+    "windows_command_authorized": false,
     "remote_host_operated": false,
     "test_or_acceptance_read": false
   }

@@ -595,7 +595,7 @@
       "id": "phase3_bilateral_comparison_route_coverage_top3",
       "status": "PARTIAL",
       "owner": "SHARED",
-      "gate_status": "REMOTE_PAIRED_DEV_GATE_READY_NOT_RUN_DEFAULT_OFF_TEST_SEALED",
+      "gate_status": "REMOTE_DEV_QUALITY_FAILED_CLEAN_VARIABLE_DISABLED_NO_RERUN_TEST_SEALED",
       "evidence": [
         "backend/retrieval/comparison_route_coverage.py",
         "backend/retrieval/online.py",
