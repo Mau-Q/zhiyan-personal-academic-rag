@@ -127,7 +127,7 @@ def check_project_state() -> None:
         "line_count": 725,
         "traceability_doc": "docs/REQUIREMENTS_TRACEABILITY.md",
         "source_phase": {"id": "phase-4", "status": "IN_PROGRESS"},
-        "completed_source_phases": ["phase-0", "phase-1", "phase-2", "phase-3"],
+        "completed_source_phases": ["phase-0", "phase-1", "phase-2"],
     }:
         raise ValueError("project_state source_authority is invalid")
     if not isinstance(harness, dict) or harness.get("status") != "READY":

@@ -702,6 +702,22 @@
         "docs/REQUIREMENTS_TRACEABILITY.md",
         "docs/CURRENT_PHASE.md"
       ]
+    },
+    {
+      "id": "rag_core_final_freeze",
+      "status": "READY",
+      "owner": "A",
+      "gate_status": "EXISTING_EVIDENCE_CONFIRMED_PHASE3_CLOSED_NOT_COMPLETE_PHASE4_AUDIT_CORE_COMPLETE",
+      "evidence": [
+        "docs/LOCAL_PDF_INGESTION.md",
+        "docs/PHASE_2_CLOSEOUT.md",
+        "docs/PHASE_2_ACADEMIC_QA_ACCEPTANCE.md",
+        "docs/PHASE_4_MULTI_EVIDENCE_SET_GATE.md",
+        "docs/REQUIREMENTS_TRACEABILITY.md",
+        "docs/PRODUCT_DECISIONS.md",
+        "docs/CURRENT_PHASE.md",
+        "machine/project_state.json"
+      ]
     }
   ]
 }

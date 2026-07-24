@@ -140,7 +140,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             authority["completed_source_phases"],
-            ["phase-0", "phase-1", "phase-2", "phase-3"],
+            ["phase-0", "phase-1", "phase-2"],
         )
         traceability = ROOT / authority["traceability_doc"]
         self.assertTrue(traceability.is_file())

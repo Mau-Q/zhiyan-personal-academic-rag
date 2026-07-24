@@ -55,8 +55,8 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | 阶段 0：范围与 Baseline | `COMPLETE` | 175 题人工校验、ES/Milvus 同集单路 Baseline、三种 Chunk 受控 Baseline、单用户范围/资源/SLO 及数据身份/生命周期目标合同均已冻结 | 冻结目标不等于运行时达标 |
 | 阶段 1：数据与索引最小闭环 | `COMPLETE` | 远程 v2 已通过 PDF/Chunk 持久化、owner/版本 READY 对账、ES/Milvus 在线 Evidence、同 Run ID 恢复、删除后 403 和三路清理；报告 SHA-256 `6B2AB3BAAD55AE8FA506C0D1FD7A310D9EF3A3833A93E33DD1A2D8A0938A9D8C` | 正式 MinIO、OCR 和目标规模性能不属于阶段 1 退出条件 |
 | 阶段 2：基础 RAG MVP | `COMPLETE` | 非流式 API、Evidence、拒答、远程 RRF Canary、llama3.2/Qwen READY 真实生成闭环、模型选型和 3 文档 9 题 v2 均通过；固定 BGE Reranker 的增益、目标硬件成本和在线边界已验证，最终决定为原 RRF 默认、Reranker 可选且不默认启用 | Windows 分段 Gate 的 combined `P95=504.71613 ms` 未通过 300 ms；这是显式后移的性能债，不写成 SLO 或生产验收完成 |
-| 阶段 3：针对失败类型增强 | `COMPLETE` | 首个查询拆分变量和第二个路由覆盖变量均已完成可信在线 dev 比较且不晋级；第二变量虽在 4/4 目标上生效、3/4 改变选择，但 Control/Treatment 仍同为双侧 `0/4`，Recall@3 与 nDCG@3 增益均为 0。该结论只覆盖冻结 4 条 `dev`，不否定整个方法类别 | 两个 V1 继续关闭且不调参重跑；不要求为形式新增第三变量。未来若明确重开，先运行比较失败定位 Gate；`test/acceptance` 继续封存，300 ms 性能债独立 |
-| 阶段 4：Claim–Evidence 可靠性 | `PARTIAL` | 已复用结构化 Claim 与授权 Evidence 建立正式的确定性单/多 EvidenceSet 审计能力，覆盖 owner、活动版本、Chunk 身份、数字/单位/比较/限定、部分支持、冲突及最多一个同版本邻块；默认 `AUDIT_ONLY` 且不自动删除 Claim | 该正式审计能力不等于通用语义蕴含或人工真值；pair-level 人工金标、新 NLI/LLM Judge、Precision/负例拒绝率/人工一致率和在线硬裁决全部后置，当前 NLI 候选保持拒绝 |
+| 阶段 3：针对失败类型增强 | `PARTIAL` | 当前工作流已关闭：首个查询拆分变量和第二个路由覆盖变量均完成可信在线 dev 比较且不晋级；第二变量虽在 4/4 目标上生效、3/4 改变选择，但 Control/Treatment 仍同为双侧 `0/4`，Recall@3 与 nDCG@3 增益均为 0。该结论只覆盖冻结 4 条 `dev`，不否定整个方法类别 | 未达到最高方案“目标失败集有稳定净增益”的退出条件，因此不记为 `COMPLETE`。两个 V1 继续关闭且不调参重跑，不要求为形式新增第三变量；未来若明确重开，先运行比较失败定位 Gate |
+| 阶段 4：Claim–Evidence 可靠性 | `PARTIAL` | 确定性审计核心已完成：已复用结构化 Claim 与授权 Evidence 建立正式单/多 EvidenceSet 审计能力，覆盖 owner、活动版本、Chunk 身份、数字/单位/比较/限定、部分支持、冲突及最多一个同版本邻块；默认 `AUDIT_ONLY` 且不自动删除 Claim | 阶段整体未完成；该审计核心不等于通用语义蕴含或人工真值。pair-level 人工金标、新 NLI/LLM Judge、Precision/负例拒绝率/人工一致率和在线硬裁决全部后置，当前 NLI 候选保持拒绝 |
 | 阶段 5：复杂科研问答与复用 | `NOT_STARTED` | 暂未完成比较、多跳、时效问答与 Agent Evidence API | 进入前需满足 MVP、权限委托、审计与运维条件 |
 
 ## 6. 当前工作门禁
@@ -210,9 +210,15 @@ owner、活动 document/version/chunk 身份、数值、单位、比较对象、
 默认 RRF/Reranker、NLI 拒绝决定与 300 ms 性能债均不变；未读取
 `test/Acceptance`。
 
-阶段 3 / 阶段 4 统一收口后，阶段 3 以两个 V1 均不晋级且无需为形式新增第三变量
-完成；比较失败定位只保留为未来可选增强。确定性 Multi-Evidence EvidenceSet
-晋级为当前正式审计能力，但最高方案阶段 4 仍为 `PARTIAL`：pair-level 人工金标、
-新 NLI/LLM Judge 与在线硬裁决均未完成且全部后置。当前责任边界只确认基础 RAG
-MVP 与确定性多证据审计核心完成；知识库接入、前端、演示、Agent API、阶段 5
-复杂问答和 300 ms 性能债不在本 Gate。
+阶段 3 / 阶段 4 统一收口后，阶段 3 当前工作流关闭但不记为完成：两个 V1 均未
+晋级，未满足最高方案的稳定净增益退出条件，也无需为形式新增第三变量；比较失败
+定位只保留为未来可选增强。确定性 Multi-Evidence EvidenceSet 晋级为当前正式
+审计能力，但最高方案阶段 4 仍为 `PARTIAL`：pair-level 人工金标、新 NLI/LLM
+Judge 与在线硬裁决均未完成且全部后置。
+
+RAG 核心最终冻结复核确认既有版本化证据链连续：阶段 1远程 v2 覆盖 PDF 对象与
+不可变 Chunk 快照、PostgreSQL READY/owner、ES/Milvus 版本路由、Answer API、
+删除后 403 与三路清理；阶段 2覆盖默认 RRF、固定 Reranker 的可选/回退决定、
+真实 Qwen 生成、Citation 稳定映射、`NO_EVIDENCE`、ACL、版本和定位；阶段 4
+覆盖确定性 Multi-Evidence EvidenceSet。该冻结不重跑历史远程 Gate，也不把
+知识库接入、前端、演示、Agent API、阶段 5复杂问答或 300 ms 性能债写成完成。

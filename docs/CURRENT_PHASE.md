@@ -2,9 +2,9 @@
 
 ## Status
 
-`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_COMPLETE_NO_VARIABLE_PROMOTED_FIRST_TWO_V1_DISABLED / SOURCE_PHASE_4_IN_PROGRESS_DETERMINISTIC_MULTI_EVIDENCE_AUDIT_READY_ONLINE_HARD_JUDGMENT_DEFERRED / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
+`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_PARTIAL_WORKSTREAM_CLOSED_NO_PROMOTION_EXIT_CRITERIA_NOT_MET / SOURCE_PHASE_4_IN_PROGRESS_DETERMINISTIC_MULTI_EVIDENCE_AUDIT_CORE_COMPLETE_ONLINE_HARD_JUDGMENT_DEFERRED / RAG_CORE_FINAL_FROZEN / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
-Phase ID：`phase3-phase4-unified-closeout`
+Phase ID：`rag-core-final-freeze`
 
 ## Completed
 
@@ -216,7 +216,8 @@ Phase ID：`phase3-phase4-unified-closeout`
 - Phase 4 Multi-Evidence Evidence Set 主 Gate 已完成：直接复用结构化 Claim、`citation_ids`、授权 Evidence/Citation 与 `claim_evidence.py`，一个 Claim 可形成一个或多个 Evidence 的确定性集合；集合级校验 owner、活动 document/version/chunk 身份、数值、单位、比较对象、限定条件和冲突，输出 `SUPPORTED_BY_EVIDENCE_SET / PARTIALLY_SUPPORTED / CONFLICTING_EVIDENCE / INSUFFICIENT_EVIDENCE`。
 - 原绑定不足时，只允许从同一请求内加入同文档、同活动版本、双向邻接的最多一个 Chunk；加入必须提升确定性支持或冲突结论，并明确保持检索相关性分数不读、不改。默认继续 `AUDIT_ONLY`，不自动删除 Claim；公开 Answer/Evidence/Citation/Prompt、默认 RRF/Reranker 和 300 ms 性能债不变。
 - 阶段 3 的 `COMPARISON_FAILURE_LOCALIZATION` 已作为未来可选增强完成文档冻结，但当前不激活。查询拆分 V1 和 Route Coverage V1 的失败结论只覆盖冻结 4 条 `dev`，不能扩大为整个方法类别无效；未来若重开阶段 3，必须先定位正确 Evidence 在 ES Top-50、Milvus Top-50、RRF Top-50、最终 Top-3、Chunk/邻块/Evidence Set、标签与指标中的丢失层，再选择增强方向。
-- 阶段 3 / 阶段 4 统一收口完成：阶段 3 以两个 V1 均不晋级、无需为形式新增第三变量的边界完成；确定性 Multi-Evidence Evidence Set 晋级为当前正式审计能力。该能力默认 `AUDIT_ONLY`、不自动删除 Claim，不等于语义 Judge 或在线硬裁决，也不把最高方案阶段 4 整体写成完成。
+- 阶段 3 / 阶段 4 统一收口完成：阶段 3 当前工作流已关闭，两个 V1 均不晋级且无需为形式新增第三变量；由于没有达到最高方案要求的稳定净增益，阶段 3 不记为 `COMPLETE`。确定性 Multi-Evidence Evidence Set 是当前正式审计能力，默认 `AUDIT_ONLY`、不自动删除 Claim，不等于语义 Judge 或在线硬裁决，也不把最高方案阶段 4 整体写成完成。
+- RAG 核心最终冻结完成：现有版本化证据已覆盖 PDF/Chunk 持久入库、PostgreSQL READY/owner、ES/Milvus、默认 RRF、真实 Qwen 生成、Citation 稳定映射、`NO_EVIDENCE`、ACL、删除后 403、三路清理和确定性 Multi-Evidence EvidenceSet；没有重跑历史远程 Gate 或实现新算法。
 
 ## 输入
 
@@ -264,14 +265,14 @@ Phase ID：`phase3-phase4-unified-closeout`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2、阶段 3 已完成，当前进入阶段 4 `IN_PROGRESS`。阶段 3 的完成含义是两个 V1 只在冻结 4 条 `dev` 上未晋级并继续关闭，不否定整个方法类别，也不要求为了形式再选第三个变量；比较失败定位保留为未来可选增强。当前仓库节点为 `phase3-phase4-unified-closeout`。确定性 Multi-Evidence Evidence Set 是当前正式审计能力，覆盖单/多 Evidence、身份、部分支持、冲突和最多一个同版本邻块，默认保持 `AUDIT_ONLY` 且不自动删除 Claim。固定多语言 NLI 候选继续拒绝；pair-level 人工金标、新 NLI/LLM Judge 与在线硬裁决后置，因此不把最高方案阶段 4 整体写成完成。基础 RAG MVP 与确定性多证据审计核心完成；知识库接入、前端、演示、Agent API、阶段 5 复杂问答和 300 ms 性能债均不在本 Gate。当前评测边界为 `PHASE3_COMPLETE_NO_VARIABLE_PROMOTED / PHASE3_COMPARISON_FAILURE_LOCALIZATION_FUTURE_OPTION_NOT_ACTIVE / PHASE4_DETERMINISTIC_MULTI_EVIDENCE_AUDIT_READY_NLI_REJECTED_HARD_JUDGMENT_DEFERRED / TEST_ACCEPTANCE_NOT_READ_NOT_RUN`。默认 RRF、Reranker 关闭、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 为 `PARTIAL / WORKSTREAM_CLOSED_WITHOUT_PROMOTION`，因为两个 V1 只在冻结 4 条 `dev` 上未晋级，尚未满足最高方案“目标失败集有稳定净增益”的退出条件。该结果不否定整个方法类别，也不要求为了形式再选第三个变量；比较失败定位保留为未来可选增强。阶段 4 为 `IN_PROGRESS`，其中确定性 Multi-Evidence Evidence Set 审计核心已完成，覆盖单/多 Evidence、身份、部分支持、冲突和最多一个同版本邻块，默认保持 `AUDIT_ONLY` 且不自动删除 Claim。固定多语言 NLI 候选继续拒绝；pair-level 人工金标、新 NLI/LLM Judge 与在线硬裁决后置，因此不把最高方案阶段 4 整体写成完成。当前仓库节点为 `rag-core-final-freeze`：基础 RAG MVP 与确定性多证据审计核心已冻结；知识库接入、前端、演示、Agent API、阶段 5 复杂问答和 300 ms 性能债均不在本 Gate。当前评测边界为 `PHASE3_WORKSTREAM_CLOSED_NO_PROMOTION_EXIT_NOT_MET / PHASE3_COMPARISON_FAILURE_LOCALIZATION_FUTURE_OPTION_NOT_ACTIVE / PHASE4_DETERMINISTIC_MULTI_EVIDENCE_AUDIT_CORE_COMPLETE_NLI_REJECTED_HARD_JUDGMENT_DEFERRED / TEST_ACCEPTANCE_NOT_READ_NOT_RUN`。默认 RRF、Reranker 可选且不默认启用、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
 
 ## Next gate
 
-1. **当前责任边界已收口：** 基础 RAG MVP 与确定性 Multi-Evidence 审计核心完成，不要求继续选择阶段 3 第三个变量；
-2. **未来按需重开：** 比较增强只有在明确重开阶段 3 时才先运行 `docs/PHASE_3_FUTURE_COMPARISON_FAILURE_LOCALIZATION.md`；语义 Judge 只有先具备严格 pair-level 人工正负金标时才重新评估；
-3. **默认保持：** 两个 V1、当前 NLI 候选和在线硬裁决继续关闭；EvidenceSet 保持 `AUDIT_ONLY` 且不自动删除 Claim；
-4. **责任分离：** 知识库接入、前端、演示、Agent API、阶段 5 复杂问答、`test/Acceptance` 和 300 ms 性能债均由未来独立 Gate 或其他责任方处理。
+1. **RAG 核心已最终冻结：** 不重复实现或重跑已通过的 PDF/Chunk、READY、检索、生成、引用、拒答、ACL、删除清理和 EvidenceSet Gate；
+2. **阶段 3保持关闭而非完成：** 两个 V1 继续关闭，不为形式增加第三变量；只有明确重开时才先运行 `docs/PHASE_3_FUTURE_COMPARISON_FAILURE_LOCALIZATION.md`；
+3. **阶段 4语义能力后置：** 只有先具备严格 pair-level 人工正负金标时才重新评估 NLI/LLM Judge；在线硬裁决继续关闭；
+4. **默认与责任分离：** 默认 RRF、可选非默认 Reranker、EvidenceSet `AUDIT_ONLY`、NLI 拒绝和 300 ms 性能债保持不变；知识库接入、前端、演示、Agent API、阶段 5 复杂问答及 `test/Acceptance` 由未来独立 Gate 或其他责任方处理。
 
 ## Prohibited shortcuts
 
