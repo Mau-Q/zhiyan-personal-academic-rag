@@ -4,7 +4,7 @@
 
 `SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_FIRST_TWO_VARIABLES_DEV_QUALITY_FAILED_DISABLED_TEST_SEALED / SOURCE_PHASE_4_PARTIAL_CLAIM_EVIDENCE_LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
-Phase ID：`phase4-multilingual-nli-quality-fail-diagnostic-export-local-ready`
+Phase ID：`phase4-multilingual-nli-data-diagnosis-complete`
 
 ## Completed
 
@@ -211,6 +211,8 @@ Phase ID：`phase4-multilingual-nli-quality-fail-diagnostic-export-local-ready`
 - 已固定多语言 NLI 候选轮子 `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` 的 revision、snapshot、Evidence-premise/Claim-hypothesis 模板、标签顺序和正例保留门槛；Mac 仅以 Fake Scorer 完成合同测试，真实模型未在 Mac 运行。
 - Windows PowerShell 5.1 RTX 4090 Gate 已形成可信质量失败：21 条候选 supported 仅保留 `9/21=0.428571`，225 个终审谱系正例仅保留 `124/225=0.551111`，均低于 `0.85`；组件 P95 为 `64.03166 ms`，质量失败不能由延迟通过覆盖。报告 SHA-256 为 `6f266edc0fa57b933260f3996585a53ac2dac065c13f472f7c8d1c5f94c7cf1e`，默认 `AUDIT_ONLY` 与在线硬裁决关闭不变。
 - 首次 Windows NLI 尝试确认私有 ZIP 哈希正确，但在模型加载前因 tracked JSON 的 CRLF 检出被原始字节哈希误拒绝为 `NLI_CONFIG_HASH_DRIFT`。本地已复用 Phase 3 的 LF 规范化身份：tracked JSON/CSV 接受等价 CRLF，BOM、孤立 CR 和内容变化仍拒绝；私有 ZIP/JSONL 继续严格原始字节哈希。本次没有模型或质量结果。
+- 私有诊断复跑在提交 `71c9f042c09b9d60e7922450a03714c41808eecc` 上完成，247/247 哈希 pair key、标签、概率和长度合同通过，预测 SHA-256 为 `c86747974470ecb4e6834de997a2ed649a3f8573f740ad7b5989ebcf56228b3a`。候选 supported 同语言保留 `6/7`，中文 Claim 对非中文 Evidence 仅 `3/14`；终审谱系同语言 `65/89`，跨语言 `59/136`。单/双 Chunk 接近且截断仅 7 个 group，诊断为模型跨语言与学术排版/领域失效为主，严格 NLI 标签语义未建立为次要问题。
+- Codex 私有语义诊断完整复核 12 条候选漏判，其中 11 条 Evidence 直接表达 Claim、1 条标签口径可能偏宽；另一个 12 条高置信分层样本中 10 条直接蕴含、2 条上下文依赖或偏宽。该结果明确标为 AI 辅助诊断而非人工 NLI 金标，不得用于自动改写数据或估计总体标签错误率。
 
 ## 输入
 
@@ -258,14 +260,14 @@ Phase ID：`phase4-multilingual-nli-quality-fail-diagnostic-export-local-ready`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 仍为 `IN_PROGRESS`，阶段 4 为 `PARTIAL_LOCAL_CORE_READY`。两个阶段 3 变量均因无目标质量增益保持关闭；固定多语言 NLI 已在 RTX 4090 形成可信质量失败并拒绝作为硬裁决候选，当前仓库节点为 `phase4-multilingual-nli-quality-fail-diagnostic-export-local-ready`。为区分数据口径与模型能力，哈希键级私有预测导出已本地就绪、远程诊断复跑待执行；人工负例裁决和在线硬裁决均未完成。当前评测边界为 `PHASE3_FIRST_TWO_VARIABLES_FAILED_DISABLED / PHASE4_NLI_QUALITY_FAIL_DIAGNOSTIC_PENDING_AUDIT_ONLY / TEST_ACCEPTANCE_NOT_READ_NOT_RUN`。默认 RRF、Reranker 关闭、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 仍为 `IN_PROGRESS`，阶段 4 为 `PARTIAL_LOCAL_CORE_READY`。两个阶段 3 变量均因无目标质量增益保持关闭；固定多语言 NLI 已在 RTX 4090 形成可信质量失败并完成数据/模型诊断，当前仓库节点为 `phase4-multilingual-nli-data-diagnosis-complete`。结论是模型跨语言与学术领域失效为主、标签语义错配为次；当前模型被拒绝且不再复跑或调门槛，人工 NLI 正负裁决和在线硬裁决均未完成。当前评测边界为 `PHASE3_FIRST_TWO_VARIABLES_FAILED_DISABLED / PHASE4_NLI_REJECTED_DATA_DIAGNOSIS_COMPLETE_AUDIT_ONLY / TEST_ACCEPTANCE_NOT_READ_NOT_RUN`。默认 RRF、Reranker 关闭、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
 
 ## Next gate
 
-1. **下一个仍只保留一个大 Gate：** 在同一模型、输入、阈值和缓存上执行一次诊断复跑，导出 247 个 pair 的哈希键、标签、概率、长度和来源标记；不得覆盖首次质量报告；
-2. **诊断目标：** 在 Mac 本地关联既有私有文本，区分标签过宽、多 Evidence 需求、跨语言模型误判、长上下文/截断和真实不支持；诊断结果仍不是人工 NLI 金标；
-3. **不扩张当前责任：** 诊断文件不含正文或原始 Question/Claim/Chunk ID，不连接知识库或 RAG 服务，不包含前端、演示、`test/Acceptance`、Agent API 或在线策略变更；
-4. **在线硬裁决后置：** NLI 候选已因正例保留失败拒绝，诊断只回答“数据还是模型”，不得反向解锁候选或调低门槛；300 ms 性能债继续独立。
+1. **NLI 分支停止：** 当前模型不再复跑、调阈值或用预测回写数据；若未来比较其他语义模型，先形成严格 pair-level 正负 NLI 人工裁决集；
+2. **比赛增强回到可交付价值：** 下一大 Gate 应从已打通的 RAG 核心中选择不依赖新人工金标的增强，不继续在同一 dev 上刷语义 Judge；
+3. **不扩张当前责任：** 后续仍不连接知识库、不做前端/演示、不读取 `test/Acceptance`，不改变在线硬裁决或 Agent API；
+4. **债务分离：** 默认 `AUDIT_ONLY`、全部检索开关和 300 ms 独立性能债保持不变。
 
 ## Prohibited shortcuts
 

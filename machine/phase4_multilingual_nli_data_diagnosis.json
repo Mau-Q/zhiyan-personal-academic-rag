@@ -1,0 +1,112 @@
+{
+  "schema_version": "phase4_multilingual_nli_data_diagnosis_v1",
+  "decision_id": "PD-065",
+  "status": "MODEL_CROSS_LINGUAL_DOMAIN_FAILURE_PRIMARY_LABEL_SEMANTICS_SECONDARY",
+  "evidence_identity": {
+    "quality_report_sha256": "6f266edc0fa57b933260f3996585a53ac2dac065c13f472f7c8d1c5f94c7cf1e",
+    "diagnostic_predictions_sha256": "c86747974470ecb4e6834de997a2ed649a3f8573f740ad7b5989ebcf56228b3a",
+    "diagnostic_head_commit": "71c9f042c09b9d60e7922450a03714c41808eecc",
+    "prediction_rows": 247,
+    "pair_key_coverage": "247_OF_247_EXACT",
+    "contains_private_text": false,
+    "contains_raw_question_claim_or_chunk_ids": false,
+    "probability_contract": "PASS"
+  },
+  "stratified_results": {
+    "candidate_supported": {
+      "same_language": {
+        "entailment": 6,
+        "neutral": 0,
+        "contradiction": 1,
+        "total": 7,
+        "retention": 0.857143
+      },
+      "zh_claim_non_zh_evidence": {
+        "entailment": 3,
+        "neutral": 6,
+        "contradiction": 5,
+        "total": 14,
+        "retention": 0.214286
+      }
+    },
+    "human_finalized_positive_claim_groups": {
+      "same_language": {
+        "retained": 65,
+        "missed": 24,
+        "total": 89,
+        "retention": 0.730337
+      },
+      "zh_claim_non_zh_evidence": {
+        "retained": 59,
+        "missed": 77,
+        "total": 136,
+        "retention": 0.433824
+      },
+      "single_chunk": {
+        "retained": 112,
+        "total": 204,
+        "retention": 0.54902
+      },
+      "two_chunk": {
+        "retained": 12,
+        "total": 21,
+        "retention": 0.571429
+      },
+      "truncated": {
+        "retained": 3,
+        "total": 7,
+        "retention": 0.428571
+      },
+      "not_truncated": {
+        "retained": 121,
+        "total": 218,
+        "retention": 0.555046
+      }
+    }
+  },
+  "private_semantic_audit": {
+    "reviewer": "codex-assisted-diagnostic",
+    "truth_status": "AI_ASSISTED_DIAGNOSTIC_NOT_HUMAN_NLI_GOLD",
+    "candidate_supported_misses_reviewed": 12,
+    "directly_entailed_model_misses": 11,
+    "label_scope_broad_or_ambiguous": 1,
+    "additional_high_confidence_misses_reviewed": 12,
+    "additional_directly_entailed_model_misses": 10,
+    "additional_context_dependent_or_broad": 2,
+    "additional_sample_selection": "TOP_CONFIDENCE_STRATIFIED_NOT_STATISTICALLY_REPRESENTATIVE",
+    "private_text_persisted_in_tracked_artifacts": false
+  },
+  "diagnosis": {
+    "input_file_or_identity_corruption": false,
+    "cross_lingual_failure_is_primary": true,
+    "scientific_layout_and_domain_failure_is_material": true,
+    "multi_chunk_requirement_is_primary": false,
+    "truncation_is_primary": false,
+    "strict_pair_level_nli_gold_is_established": false,
+    "label_semantics_mismatch_is_secondary": true,
+    "approved_interpretation": "MODEL_NOT_FIT_FOR_THIS_CROSS_LINGUAL_ACADEMIC_ENTAILMENT_TASK_DATA_REQUIRES_STRICT_NLI_ADJUDICATION_BEFORE_FUTURE_MODEL_COMPARISON"
+  },
+  "decision": {
+    "current_nli_candidate": "REJECT_FOR_HARD_JUDGMENT",
+    "default_generation_mode": "AUDIT_ONLY",
+    "online_hard_judgment_enabled": false,
+    "rewrite_dataset_from_model_predictions": false,
+    "lower_positive_retention_threshold": false,
+    "rerun_same_model": false
+  },
+  "scope": {
+    "knowledge_base_integration": "OUT_OF_SCOPE_OTHER_OWNER",
+    "frontend": "OUT_OF_SCOPE",
+    "demo": "OUT_OF_SCOPE",
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN"
+  },
+  "local_validation": {
+    "diagnostic_prediction_contract_and_join": "PASS_247_OF_247",
+    "focused_nli_and_remote_contract_tests": "PASS_15",
+    "full_repository_tests": "PASS",
+    "repository_harness": "PASS",
+    "powershell_static": "PASS",
+    "diff_check": "PASS"
+  }
+}

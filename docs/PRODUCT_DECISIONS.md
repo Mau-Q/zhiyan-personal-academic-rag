@@ -66,5 +66,6 @@
 | PD-062 | ACCEPTED | 固定 `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` revision 与 snapshot，以 Evidence 为 premise、Claim 为 hypothesis，复用既有 `sentence-transformers` 和 CUDA 环境建立离线正例保留候选；Mac 只跑 Fake Scorer，真实模型只由用户在 Windows PowerShell 5.1 RTX 4090 Gate 运行 | 当前没有人工裁决负例，远程只诊断 21 条 AI 辅助 supported 与 225 个终审谱系正例的保留率，不计算 Precision、负例拒绝率或人机一致率。即使双保留率达到 0.85，也只进入后续人工裁决，不改变默认 `AUDIT_ONLY` 或在线硬裁决；知识库、前端、演示和 `test/Acceptance` 排除 |
 | PD-063 | ACCEPTED | 首次 Windows NLI 尝试在模型加载前因 tracked JSON 的等价 CRLF 检出被原始字节哈希误拒绝；配置与 tracked 候选 CSV 改用 LF 规范化文本身份，LF 与等价 CRLF 接受，BOM、孤立 CR 和内容漂移拒绝 | 私有 ZIP 与内层 JSONL 继续使用原始字节 SHA-256；本次没有加载模型或形成质量结果，不改变模型、输入、阈值、默认 `AUDIT_ONLY`、holdout 或在线硬裁决，只允许修复提交后重试同一 Gate |
 | PD-064 | ACCEPTED | RTX 4090 报告以 SHA-256 `6f266edc...c7cf1e` 接收：候选 supported 保留 `9/21`、终审谱系正例保留 `124/225`，均未达到 `0.85`，决定拒绝该 NLI 硬裁决候选；组件 P95 `64.03166 ms` 不能覆盖质量失败 | 为回答数据口径与模型能力归因，只允许同一冻结模型/输入的独立诊断复跑，导出哈希 pair key、标签、概率、长度和来源，不含正文/原始 ID且不覆盖首次报告。不得换模型、调阈值、解封 holdout 或改变默认 `AUDIT_ONLY` |
+| PD-065 | ACCEPTED | 247/247 私有预测与冻结输入关联后，候选 supported 同语言保留 `6/7`、中英跨语言仅 `3/14`；终审谱系同语言 `65/89`、跨语言 `59/136`，单/双 Chunk 接近且截断样本很少。完整复核 12 条候选漏判有 11 条直接蕴含，诊断为模型跨语言及学术排版/领域失效为主、标签语义错配为次 | 该语义复核是 Codex 辅助诊断，不是人工 NLI 金标，不估计总体标签错误率。当前模型停止复跑和调阈值，不用模型输出改写数据；默认 `AUDIT_ONLY`、holdout、知识库/前端/演示边界不变。未来比较其他模型前必须先形成严格 pair-level 正负人工裁决集 |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。

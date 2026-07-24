@@ -657,7 +657,7 @@
       "id": "phase4_multilingual_nli_candidate",
       "status": "PARTIAL",
       "owner": "A",
-      "gate_status": "REMOTE_QUALITY_FAIL_DIAGNOSTIC_EXPORT_LOCAL_READY_ONLINE_ENFORCEMENT_DISABLED",
+      "gate_status": "REMOTE_QUALITY_FAIL_DATA_DIAGNOSIS_COMPLETE_MODEL_PRIMARY_ONLINE_ENFORCEMENT_DISABLED",
       "evidence": [
         "backend/evaluation/claim_evidence_nli.py",
         "evaluation/claim_evidence/phase4-multilingual-nli-rtx4090-v1.json",
@@ -667,7 +667,9 @@
         "deploy/remote/phase4-nli-validation/README.md",
         "tests/validation/test_phase4_multilingual_nli_remote_script.py",
         "machine/phase4_multilingual_nli_candidate_gate.json",
+        "machine/phase4_multilingual_nli_data_diagnosis.json",
         "docs/PHASE_4_MULTILINGUAL_NLI_CANDIDATE_GATE.md",
+        "docs/PHASE_4_MULTILINGUAL_NLI_DATA_DIAGNOSIS.md",
         "docs/PRODUCT_DECISIONS.md",
         "docs/REQUIREMENTS_TRACEABILITY.md",
         "docs/CURRENT_PHASE.md"

@@ -29,6 +29,7 @@ REQUIRED_FILES = (
     "docs/PHASE_4_CLAIM_EVIDENCE_CORE_GATE.md",
     "docs/PHASE_4_CLAIM_EVIDENCE_CANDIDATE_INTAKE.md",
     "docs/PHASE_4_MULTILINGUAL_NLI_CANDIDATE_GATE.md",
+    "docs/PHASE_4_MULTILINGUAL_NLI_DATA_DIAGNOSIS.md",
     "machine/project_state.json",
     "machine/feature_list.json",
     "machine/phase_zero_scope_resource_slo.json",
@@ -39,6 +40,7 @@ REQUIRED_FILES = (
     "machine/phase4_claim_evidence_core_gate.json",
     "machine/phase4_claim_evidence_candidate_intake.json",
     "machine/phase4_multilingual_nli_candidate_gate.json",
+    "machine/phase4_multilingual_nli_data_diagnosis.json",
     "machine/phase_result.schema.json",
     "machine/phase_result.template.json",
     "scripts/validate_harness_contract.py",
@@ -270,7 +272,7 @@ def check_feature_list() -> None:
         or nli_feature.get("status") != "PARTIAL"
         or nli_feature.get("gate_status")
         != (
-            "REMOTE_QUALITY_FAIL_DIAGNOSTIC_EXPORT_LOCAL_READY_"
+            "REMOTE_QUALITY_FAIL_DATA_DIAGNOSIS_COMPLETE_MODEL_PRIMARY_"
             "ONLINE_ENFORCEMENT_DISABLED"
         )
     ):
@@ -508,7 +510,7 @@ def check_phase4_multilingual_nli_candidate_gate() -> None:
         != "phase4_multilingual_nli_candidate_gate_v1"
         or payload.get("decision_id") != "PD-062"
         or payload.get("status")
-        != "REMOTE_QUALITY_FAIL_DIAGNOSTIC_EXPORT_LOCAL_READY"
+        != "REMOTE_QUALITY_FAIL_DATA_DIAGNOSIS_COMPLETE"
     ):
         raise ValueError("phase 4 multilingual NLI identity drifted")
     model = payload.get("model")
@@ -582,11 +584,66 @@ def check_phase4_multilingual_nli_candidate_gate() -> None:
     if (
         not isinstance(scope, dict)
         or scope.get("remote_execution")
-        != "QUALITY_GATE_COMPLETE_DIAGNOSTIC_REPLAY_PENDING"
+        != "QUALITY_AND_PRIVATE_DIAGNOSTIC_REPLAY_COMPLETE"
         or scope.get("test") != "NOT_READ_NOT_RUN"
         or scope.get("acceptance") != "NOT_READ_NOT_RUN"
     ):
         raise ValueError("phase 4 multilingual NLI scope drifted")
+
+
+def check_phase4_multilingual_nli_data_diagnosis() -> None:
+    payload = _read_json("machine/phase4_multilingual_nli_data_diagnosis.json")
+    if (
+        payload.get("schema_version")
+        != "phase4_multilingual_nli_data_diagnosis_v1"
+        or payload.get("decision_id") != "PD-065"
+        or payload.get("status")
+        != "MODEL_CROSS_LINGUAL_DOMAIN_FAILURE_PRIMARY_LABEL_SEMANTICS_SECONDARY"
+    ):
+        raise ValueError("phase 4 multilingual NLI diagnosis identity drifted")
+    evidence = payload.get("evidence_identity")
+    if (
+        not isinstance(evidence, dict)
+        or evidence.get("quality_report_sha256")
+        != "6f266edc0fa57b933260f3996585a53ac2dac065c13f472f7c8d1c5f94c7cf1e"
+        or evidence.get("diagnostic_predictions_sha256")
+        != "c86747974470ecb4e6834de997a2ed649a3f8573f740ad7b5989ebcf56228b3a"
+        or evidence.get("prediction_rows") != 247
+        or evidence.get("pair_key_coverage") != "247_OF_247_EXACT"
+        or evidence.get("contains_private_text") is not False
+        or evidence.get("contains_raw_question_claim_or_chunk_ids") is not False
+    ):
+        raise ValueError("phase 4 multilingual NLI diagnosis evidence drifted")
+    results = payload.get("stratified_results", {})
+    candidate = results.get("candidate_supported", {})
+    human = results.get("human_finalized_positive_claim_groups", {})
+    if (
+        candidate.get("same_language", {}).get("retention") != 0.857143
+        or candidate.get("zh_claim_non_zh_evidence", {}).get("retention")
+        != 0.214286
+        or human.get("same_language", {}).get("retention") != 0.730337
+        or human.get("zh_claim_non_zh_evidence", {}).get("retention")
+        != 0.433824
+        or human.get("single_chunk", {}).get("retained") != 112
+        or human.get("two_chunk", {}).get("retained") != 12
+    ):
+        raise ValueError("phase 4 multilingual NLI diagnosis strata drifted")
+    audit = payload.get("private_semantic_audit", {})
+    diagnosis = payload.get("diagnosis", {})
+    decision = payload.get("decision", {})
+    if (
+        audit.get("truth_status")
+        != "AI_ASSISTED_DIAGNOSTIC_NOT_HUMAN_NLI_GOLD"
+        or audit.get("candidate_supported_misses_reviewed") != 12
+        or audit.get("directly_entailed_model_misses") != 11
+        or diagnosis.get("input_file_or_identity_corruption") is not False
+        or diagnosis.get("cross_lingual_failure_is_primary") is not True
+        or diagnosis.get("strict_pair_level_nli_gold_is_established") is not False
+        or decision.get("current_nli_candidate") != "REJECT_FOR_HARD_JUDGMENT"
+        or decision.get("online_hard_judgment_enabled") is not False
+        or decision.get("rewrite_dataset_from_model_predictions") is not False
+    ):
+        raise ValueError("phase 4 multilingual NLI diagnosis boundary drifted")
 
 
 def check_phase_zero_scope_resource_slo() -> None:
@@ -1829,6 +1886,10 @@ def main() -> int:
         (
             "phase4_multilingual_nli_candidate_gate",
             check_phase4_multilingual_nli_candidate_gate,
+        ),
+        (
+            "phase4_multilingual_nli_data_diagnosis",
+            check_phase4_multilingual_nli_data_diagnosis,
         ),
         ("harness_links", check_harness_links),
         ("content_safety", check_harness_content_safety),
