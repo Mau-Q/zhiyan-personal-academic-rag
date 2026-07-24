@@ -16,6 +16,9 @@ from scripts.run_phase3_comparison_paired_dev_gate import (
     CONFIG_SHA256,
     CONFIRMATION,
     EXPECTED_CLEANUP_JOBS,
+    ROUTE_COVERAGE_CONFIG_SHA256,
+    ROUTE_COVERAGE_CONFIRMATION,
+    ROUTE_COVERAGE_VARIABLE_ID,
     GateError,
     _cleanup_failure_summary,
     _lf_canonical_sha256,
@@ -135,6 +138,15 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
             invalid.write_bytes(source + b"\r")
             with self.assertRaisesRegex(GateError, "CONFIG_LINE_ENDING_INVALID"):
                 _lf_canonical_sha256(invalid)
+        self.assertEqual(
+            _lf_canonical_sha256(
+                ROOT
+                / "evaluation"
+                / "phase3"
+                / "bilateral-comparison-route-coverage-top3-v1.json"
+            ),
+            ROUTE_COVERAGE_CONFIG_SHA256,
+        )
 
     def test_parser_requires_explicit_isolated_gate_arguments(self):
         args = build_parser().parse_args(
@@ -156,6 +168,7 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
         self.assertEqual(args.latency_repetitions, 30)
         self.assertIn("canary", args.es_index_prefix)
         self.assertIn("canary", args.milvus_collection_prefix)
+        self.assertNotEqual(CONFIRMATION, ROUTE_COVERAGE_CONFIRMATION)
 
     def test_windows_entry_pins_repo_input_and_cleanup_before_reporting_success(self):
         script = POWERSHELL_PATH.read_text(encoding="utf-8")
@@ -163,6 +176,9 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
         self.assertLess(script.index("git fetch origin main"), script.index("Expand-Archive"))
         self.assertLess(script.index("Get-FileHash"), script.index("Expand-Archive"))
         self.assertIn("RUN_ISOLATED_PHASE3_COMPARISON_DEV_GATE", script)
+        self.assertIn("RUN_ISOLATED_PHASE3_ROUTE_COVERAGE_DEV_GATE", script)
+        self.assertIn(ROUTE_COVERAGE_VARIABLE_ID, script)
+        self.assertIn("'--variable-id'", script)
         self.assertIn("'--expected-head-commit'", script)
         self.assertIn(
             "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
@@ -455,6 +471,14 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
             summary["absolute_300ms_adjudication"],
             "NOT_RUN_SEPARATE_PERFORMANCE_GATE",
         )
+        selection = _latency_summary(
+            [_latency(float(value)) for value in range(30)],
+            [_latency(float(value + 10)) for value in range(30)],
+            [0.2] * 30,
+            variable_cost_name="selection",
+        )
+        self.assertEqual(selection["selection_p95_ms"], 0.2)
+        self.assertNotIn("decomposition_p95_ms", selection)
 
 
 if __name__ == "__main__":

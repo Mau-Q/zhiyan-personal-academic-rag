@@ -14,6 +14,7 @@ import sys
 import time
 import urllib.parse
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,11 @@ from backend.retrieval.comparison_decomposition import (
     BilateralComparisonQueryDecomposer,
     load_bilateral_comparison_config,
     remap_document_identities,
+)
+from backend.retrieval.comparison_route_coverage import (
+    VARIABLE_ID as ROUTE_COVERAGE_VARIABLE_ID,
+    BilateralComparisonRouteCoverageSelector,
+    load_bilateral_route_coverage_config,
 )
 from backend.retrieval.elasticsearch import (
     ElasticsearchIndexNotReadyError,
@@ -76,12 +82,23 @@ from scripts.build_phase3_comparison_dev_package import (
 )
 
 
+DECOMPOSITION_VARIABLE_ID = "BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1"
 CONFIRMATION = "RUN_ISOLATED_PHASE3_COMPARISON_DEV_GATE"
+ROUTE_COVERAGE_CONFIRMATION = "RUN_ISOLATED_PHASE3_ROUTE_COVERAGE_DEV_GATE"
 REPORT_SCHEMA_VERSION = "phase3_comparison_paired_dev_report_v1"
+ROUTE_COVERAGE_REPORT_SCHEMA_VERSION = (
+    "phase3_comparison_route_coverage_paired_dev_report_v1"
+)
 CONFIG_PATH = Path(
     "evaluation/phase3/bilateral-comparison-query-decomposition-v1.json"
 )
 CONFIG_SHA256 = "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2b"
+ROUTE_COVERAGE_CONFIG_PATH = Path(
+    "evaluation/phase3/bilateral-comparison-route-coverage-top3-v1.json"
+)
+ROUTE_COVERAGE_CONFIG_SHA256 = (
+    "bdf7b0616812362966189e5ebaf374d705f4537a6e3e06a99efc6b480209a9d0"
+)
 EXPECTED_CLEANUP_JOBS = 9
 _RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,47}$")
 _HEX64 = re.compile(r"^[a-f0-9]{64}$")
@@ -93,6 +110,42 @@ _CLEANUP_STAGE_ERROR_CODES = {
     "RUN_WORKER": "CLEANUP_WORKER_EXECUTION_FAILED",
     "VERIFY_DELETED_API": "CLEANUP_DELETED_API_PROOF_FAILED",
     "VERIFY_READY_CLOSED": "CLEANUP_READY_CLOSED_PROOF_FAILED",
+}
+
+
+@dataclass(frozen=True)
+class ExperimentSpec:
+    variable_id: str
+    config_path: Path
+    config_sha256: str
+    report_schema_version: str
+    confirmation: str
+    variable_cost_name: str
+    non_target_recall_drop_max: float
+    fail_decision: str
+
+
+EXPERIMENTS = {
+    DECOMPOSITION_VARIABLE_ID: ExperimentSpec(
+        variable_id=DECOMPOSITION_VARIABLE_ID,
+        config_path=CONFIG_PATH,
+        config_sha256=CONFIG_SHA256,
+        report_schema_version=REPORT_SCHEMA_VERSION,
+        confirmation=CONFIRMATION,
+        variable_cost_name="decomposition",
+        non_target_recall_drop_max=0.01,
+        fail_decision="KEEP_COMPARISON_DECOMPOSITION_DISABLED",
+    ),
+    ROUTE_COVERAGE_VARIABLE_ID: ExperimentSpec(
+        variable_id=ROUTE_COVERAGE_VARIABLE_ID,
+        config_path=ROUTE_COVERAGE_CONFIG_PATH,
+        config_sha256=ROUTE_COVERAGE_CONFIG_SHA256,
+        report_schema_version=ROUTE_COVERAGE_REPORT_SCHEMA_VERSION,
+        confirmation=ROUTE_COVERAGE_CONFIRMATION,
+        variable_cost_name="selection",
+        non_target_recall_drop_max=0.0,
+        fail_decision="KEEP_COMPARISON_ROUTE_COVERAGE_DISABLED",
+    ),
 }
 
 
@@ -110,6 +163,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--input-root", type=Path, required=True)
     parser.add_argument("--expected-manifest-sha256", required=True)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument(
+        "--variable-id",
+        choices=tuple(EXPERIMENTS),
+        default=DECOMPOSITION_VARIABLE_ID,
+    )
     parser.add_argument("--expected-head-commit", required=True)
     parser.add_argument("--confirm", required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -625,20 +683,40 @@ def evaluate_dev_no_evidence(
 def _latency_summary(
     control: Sequence[OnlineRetrievalLatencyBreakdown],
     treatment: Sequence[OnlineRetrievalLatencyBreakdown],
-    decomposition_latencies: Sequence[float],
+    variable_latencies: Sequence[float],
+    *,
+    variable_cost_name: str = "decomposition",
 ) -> dict[str, Any]:
+    if len(variable_latencies) != len(treatment):
+        raise GateError("VARIABLE_COST_OBSERVATION_INCOMPLETE")
     control_p95 = _percentile([item.total_latency_ms for item in control], 0.95)
     treatment_p95 = _percentile([item.total_latency_ms for item in treatment], 0.95)
-    decomposition_p95 = _percentile(decomposition_latencies, 0.95)
-    return {
+    variable_p95 = _percentile(variable_latencies, 0.95)
+    summary = {
         "sample_count_per_arm": len(control),
         "control_retrieval_p95_ms": round(control_p95, 6),
         "treatment_retrieval_p95_ms": round(treatment_p95, 6),
         "incremental_retrieval_p95_ms": round(treatment_p95 - control_p95, 6),
         "incremental_retrieval_p95_limit_ms": 50.0,
-        "decomposition_p95_ms": round(decomposition_p95, 6),
-        "decomposition_p95_limit_ms": 5.0,
         "absolute_300ms_adjudication": "NOT_RUN_SEPARATE_PERFORMANCE_GATE",
+    }
+    summary[f"{variable_cost_name}_p95_ms"] = round(variable_p95, 6)
+    summary[f"{variable_cost_name}_p95_limit_ms"] = 5.0
+    return summary
+
+
+def _observation_summary(observations: Sequence[Any]) -> dict[str, Any]:
+    status_counts = {
+        status: sum(observation.status == status for observation in observations)
+        for status in ("APPLIED", "FALLBACK", "DISABLED")
+    }
+    return {
+        "count": len(observations),
+        "status_counts": status_counts,
+        "selection_changed_count": sum(
+            bool(getattr(observation, "selection_changed", False))
+            for observation in observations
+        ),
     }
 
 
@@ -724,18 +802,18 @@ def _require_exact_cleanup_scope(
 
 
 def run_gate(args: argparse.Namespace) -> dict[str, Any]:
+    spec = EXPERIMENTS[args.variable_id]
     inputs = load_input_package(
         args.input_root,
         expected_manifest_sha256=args.expected_manifest_sha256,
     )
-    if _lf_canonical_sha256(CONFIG_PATH) != CONFIG_SHA256:
+    if _lf_canonical_sha256(spec.config_path) != spec.config_sha256:
         raise GateError("COMPARISON_CONFIG_IDENTITY_MISMATCH")
     source_document_ids = tuple(
-        identity["document_id"]
-        for identity in json.loads(CONFIG_PATH.read_text(encoding="utf-8"))[
-            "document_identities"
-        ]
+        Path(path).stem for path in ASSETS if path.startswith("papers/")
     )
+    if len(source_document_ids) != 3 or len(set(source_document_ids)) != 3:
+        raise GateError("FROZEN_DOCUMENT_IDENTITY_INVALID")
     dev_by_id = {row["question_id"]: row for row in inputs["dev_rows"]}
     targets = [dev_by_id[question_id] for question_id in TARGET_IDS]
     if any(
@@ -854,7 +932,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
         )
         control_latency: list[OnlineRetrievalLatencyBreakdown] = []
         treatment_latency: list[OnlineRetrievalLatencyBreakdown] = []
-        decomposition_observations = []
+        variable_observations: list[Any] = []
         control = OnlineVersionRrfRetriever(
             resolver=resolver,
             elasticsearch_transport=es_transport,
@@ -896,14 +974,15 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
         if control_target["strict_two_sided_passed"] != 0:
             primary_stage = "CONTROL_STOP_RULE"
             report = {
-                "schema_version": REPORT_SCHEMA_VERSION,
+                "schema_version": spec.report_schema_version,
                 "status": "FAIL",
                 "error_code": "CONTROL_BASELINE_MISMATCH",
                 "execution_boundary": (
                     "ISOLATED_DEV_ONLY_POSTGRES_READY_ES_MILVUS_RRF_CONTROL_ONLY"
                 ),
                 "input_manifest_sha256": inputs["manifest_sha256"],
-                "config_sha256": CONFIG_SHA256,
+                "variable_id": spec.variable_id,
+                "config_sha256": spec.config_sha256,
                 "target_ids_sha256": TARGET_IDS_SHA256,
                 "control": control_target,
                 "treatment": None,
@@ -921,15 +1000,27 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
         # Treatment is not constructed until the frozen Control failure is
         # reproduced on the exact READY scope.
         primary_stage = "BUILD_TREATMENT"
-        config = remap_document_identities(
-            load_bilateral_comparison_config(CONFIG_PATH),
-            document_id_map,
-        )
-        planner = BilateralComparisonQueryDecomposer(
-            config=config,
-            enabled=True,
-            observer=decomposition_observations.append,
-        )
+        treatment_kwargs: dict[str, Any] = {}
+        if spec.variable_id == DECOMPOSITION_VARIABLE_ID:
+            config = remap_document_identities(
+                load_bilateral_comparison_config(spec.config_path),
+                document_id_map,
+            )
+            treatment_kwargs["route_query_planner"] = (
+                BilateralComparisonQueryDecomposer(
+                    config=config,
+                    enabled=True,
+                    observer=variable_observations.append,
+                )
+            )
+        else:
+            treatment_kwargs["final_candidate_selector"] = (
+                BilateralComparisonRouteCoverageSelector(
+                    config=load_bilateral_route_coverage_config(spec.config_path),
+                    enabled=True,
+                    observer=variable_observations.append,
+                )
+            )
         treatment = OnlineVersionRrfRetriever(
             resolver=resolver,
             elasticsearch_transport=es_transport,
@@ -938,8 +1029,8 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
             chunk_snapshots=repository,
             candidate_k=20,
             rrf_k=60,
-            route_query_planner=planner,
             latency_observer=treatment_latency.append,
+            **treatment_kwargs,
         )
         treatment_client = TestClient(
             create_app(
@@ -959,6 +1050,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
             )
             for row in targets
         }
+        target_variable_observations = _observation_summary(variable_observations)
         treatment_target = _target_metrics(
             targets,
             treatment_results,
@@ -1020,7 +1112,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
             "control_recall_at_3": round(control_recall3, 6),
             "treatment_recall_at_3": round(treatment_recall3, 6),
             "recall_at_3_drop": round(control_recall3 - treatment_recall3, 6),
-            "recall_at_3_max_drop": 0.01,
+            "recall_at_3_max_drop": spec.non_target_recall_drop_max,
             "control_ndcg_at_10": round(control_ndcg10, 6),
             "treatment_ndcg_at_10": round(treatment_ndcg10, 6),
             "ndcg_at_10_drop": round(control_ndcg10 - treatment_ndcg10, 6),
@@ -1050,7 +1142,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
         target_cycle = [targets[index % len(targets)] for index in range(args.latency_repetitions)]
         control_latency.clear()
         treatment_latency.clear()
-        decomposition_observations.clear()
+        variable_observations.clear()
         for row in target_cycle:
             _search(
                 control,
@@ -1070,9 +1162,13 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
             control_latency,
             treatment_latency,
             [
-                observation.decomposition_latency_ms
-                for observation in decomposition_observations
+                getattr(
+                    observation,
+                    f"{spec.variable_cost_name}_latency_ms",
+                )
+                for observation in variable_observations
             ],
+            variable_cost_name=spec.variable_cost_name,
         )
         gains = {
             "strict_two_sided_absolute_gain": round(
@@ -1100,22 +1196,28 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
             and gains["strict_two_sided_absolute_gain"] >= 0.5
             and gains["macro_recall_at_3_absolute_gain"] >= 0.2
             and gains["macro_ndcg_at_3_absolute_gain"] >= 0.1
-            and non_regression["recall_at_3_drop"] <= 0.01
+            and non_regression["recall_at_3_drop"]
+            <= spec.non_target_recall_drop_max
             and non_regression["ndcg_at_10_drop"] <= 0.01
             and dev_no_evidence["no_worse_than_control"]
             and canary["passed"] == 15
             and latency["incremental_retrieval_p95_ms"] <= 50
-            and latency["decomposition_p95_ms"] <= 5
+            and latency[f"{spec.variable_cost_name}_p95_ms"] <= 5
+            and (
+                spec.variable_id != ROUTE_COVERAGE_VARIABLE_ID
+                or target_variable_observations["status_counts"]["APPLIED"] == 4
+            )
         )
         report = {
-            "schema_version": REPORT_SCHEMA_VERSION,
+            "schema_version": spec.report_schema_version,
             "status": "PASS" if quality_pass else "FAIL",
             "error_code": None if quality_pass else "QUALITY_OR_COST_THRESHOLD_NOT_MET",
             "execution_boundary": (
                 "ISOLATED_DEV_ONLY_POSTGRES_READY_ES_MILVUS_RRF_CONTROL_TREATMENT"
             ),
             "input_manifest_sha256": inputs["manifest_sha256"],
-            "config_sha256": CONFIG_SHA256,
+            "variable_id": spec.variable_id,
+            "config_sha256": spec.config_sha256,
             "target_ids_sha256": TARGET_IDS_SHA256,
             "identity": {
                 "ready_document_count": 3,
@@ -1124,6 +1226,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
             },
             "control": control_target,
             "treatment": treatment_target,
+            "target_variable_observations": target_variable_observations,
             "gains": gains,
             "critical_non_regression": non_regression,
             "dev_no_evidence": dev_no_evidence,
@@ -1242,7 +1345,7 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
 
     if report is None:
         report = {
-            "schema_version": REPORT_SCHEMA_VERSION,
+            "schema_version": spec.report_schema_version,
             "status": "FAIL",
             "error_code": _sanitized_code(
                 primary_error or GateError("PHASE3_GATE_FAILED")
@@ -1251,7 +1354,8 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
                 "ISOLATED_DEV_ONLY_POSTGRES_READY_ES_MILVUS_RRF_CONTROL_TREATMENT"
             ),
             "input_manifest_sha256": inputs["manifest_sha256"],
-            "config_sha256": CONFIG_SHA256,
+            "variable_id": spec.variable_id,
+            "config_sha256": spec.config_sha256,
             "target_ids_sha256": TARGET_IDS_SHA256,
             "split_isolation": {
                 "dev": "USED_FROZEN_INPUT_ONLY",
@@ -1276,8 +1380,9 @@ def run_gate(args: argparse.Namespace) -> dict[str, Any]:
 
 def main() -> int:
     args = build_parser().parse_args()
+    spec = EXPERIMENTS[args.variable_id]
     if (
-        args.confirm != CONFIRMATION
+        args.confirm != spec.confirmation
         or not _RUN_ID.fullmatch(args.run_id)
         or not _GIT_COMMIT.fullmatch(args.expected_head_commit)
         or args.latency_repetitions < 30
@@ -1299,11 +1404,13 @@ def main() -> int:
         _write_report(args.output, report)
     except Exception as exc:
         report = {
-            "schema_version": REPORT_SCHEMA_VERSION,
+            "schema_version": spec.report_schema_version,
             "status": "FAIL",
             "error_code": _sanitized_code(exc),
             "run_id": args.run_id,
             "head_commit": args.expected_head_commit,
+            "variable_id": spec.variable_id,
+            "config_sha256": spec.config_sha256,
             "cleanup": {"status": "NOT_STARTED"},
             "split_isolation": {
                 "dev": "VALIDATION_REFUSED",

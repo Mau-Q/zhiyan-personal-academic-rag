@@ -5,6 +5,12 @@ param(
     [string]$ExpectedPackageSha256,
     [string]$ExpectedManifestSha256,
     [string]$RunId,
+    [Parameter(Mandatory = $true)]
+    [ValidateSet(
+        'BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1',
+        'BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1'
+    )]
+    [string]$VariableId,
     [string]$DatabaseHost = '127.0.0.1',
     [ValidateRange(1, 65535)]
     [int]$DatabasePort = 5432,
@@ -18,6 +24,10 @@ $databaseUrlCreatedByScript = $false
 $inputRootCreatedByScript = $false
 $phase3SwitchExisted = Test-Path -LiteralPath 'Env:PHASE3_COMPARISON_DECOMPOSITION_ENABLED'
 $originalPhase3Switch = $env:PHASE3_COMPARISON_DECOMPOSITION_ENABLED
+$routeCoverageSwitchExisted = (
+    Test-Path -LiteralPath 'Env:PHASE3_COMPARISON_ROUTE_COVERAGE_ENABLED'
+)
+$originalRouteCoverageSwitch = $env:PHASE3_COMPARISON_ROUTE_COVERAGE_ENABLED
 
 if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
     $RepositoryRoot = Join-Path -Path $PSScriptRoot -ChildPath '..\..\..'
@@ -165,9 +175,16 @@ try {
         }
     }
 
-    # The repository-wide default remains disabled. The runner constructs the
-    # Treatment planner only inside this isolated Control/Treatment process.
+    # Repository-wide defaults remain disabled. The runner injects exactly the
+    # caller-pinned Treatment variable inside this isolated process.
     $env:PHASE3_COMPARISON_DECOMPOSITION_ENABLED = 'false'
+    $env:PHASE3_COMPARISON_ROUTE_COVERAGE_ENABLED = 'false'
+    if ($VariableId -eq 'BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1') {
+        $confirmation = 'RUN_ISOLATED_PHASE3_ROUTE_COVERAGE_DEV_GATE'
+    }
+    else {
+        $confirmation = 'RUN_ISOLATED_PHASE3_COMPARISON_DEV_GATE'
+    }
     $outputPath = "runtime\phase3-comparison-paired-dev-$RunId-report.json"
     $arguments = @(
         'scripts/run_phase3_comparison_paired_dev_gate.py',
@@ -177,10 +194,12 @@ try {
         $ExpectedManifestSha256.ToLowerInvariant(),
         '--run-id',
         $RunId,
+        '--variable-id',
+        $VariableId,
         '--expected-head-commit',
         $headCommit,
         '--confirm',
-        'RUN_ISOLATED_PHASE3_COMPARISON_DEV_GATE',
+        $confirmation,
         '--output',
         $outputPath,
         '--latency-repetitions',
@@ -210,6 +229,8 @@ try {
         $RunId,
         '--expected-input-manifest-sha256',
         $ExpectedManifestSha256.ToLowerInvariant(),
+        '--variable-id',
+        $VariableId,
         '--output',
         $adjudicationPath
     )
@@ -221,9 +242,16 @@ try {
     $adjudication = (
         Get-Content -LiteralPath $adjudicationPath -Raw | ConvertFrom-Json
     )
+    if ($VariableId -eq 'BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1') {
+        $variableP95Ms = $report.cost.selection_p95_ms
+    }
+    else {
+        $variableP95Ms = $report.cost.decomposition_p95_ms
+    }
     $summary = [ordered]@{
         schema_version = 'phase3_comparison_paired_dev_summary_v1'
         head_commit = $headCommit
+        variable_id = $VariableId
         status = $report.status
         stable_error_code = $report.error_code
         primary_stage = $report.primary_stage
@@ -242,7 +270,7 @@ try {
         control_retrieval_p95_ms = $report.cost.control_retrieval_p95_ms
         treatment_retrieval_p95_ms = $report.cost.treatment_retrieval_p95_ms
         incremental_retrieval_p95_ms = $report.cost.incremental_retrieval_p95_ms
-        decomposition_p95_ms = $report.cost.decomposition_p95_ms
+        variable_p95_ms = $variableP95Ms
         cleanup_status = $report.cleanup.status
         cleanup_jobs_succeeded = $report.cleanup.jobs_succeeded
         deleted_answer_api_status = $report.cleanup.deleted_answer_api_status
@@ -290,6 +318,17 @@ finally {
             -LiteralPath 'Env:PHASE3_COMPARISON_DECOMPOSITION_ENABLED' `
             -ErrorAction SilentlyContinue
     }
+    if ($routeCoverageSwitchExisted) {
+        $env:PHASE3_COMPARISON_ROUTE_COVERAGE_ENABLED = (
+            $originalRouteCoverageSwitch
+        )
+    }
+    else {
+        Remove-Item `
+            -LiteralPath 'Env:PHASE3_COMPARISON_ROUTE_COVERAGE_ENABLED' `
+            -ErrorAction SilentlyContinue
+    }
     Remove-Variable originalPhase3Switch -ErrorAction SilentlyContinue
+    Remove-Variable originalRouteCoverageSwitch -ErrorAction SilentlyContinue
     Pop-Location
 }

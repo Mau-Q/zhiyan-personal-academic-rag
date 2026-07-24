@@ -2,9 +2,10 @@
   "schema_version": "phase3_comparison_route_coverage_gate_v1",
   "decision_ids": [
     "PD-053",
-    "PD-054"
+    "PD-054",
+    "PD-055"
   ],
-  "status": "LOCAL_IMPLEMENTATION_READY_DEFAULT_OFF_REMOTE_DEV_NOT_RUN",
+  "status": "REMOTE_PAIRED_DEV_GATE_READY_NOT_RUN_DEFAULT_OFF",
   "source_phase": {
     "id": "phase-3",
     "status": "IN_PROGRESS"
@@ -57,6 +58,30 @@
     ],
     "decision": "REUSE_EXISTING_NARROW_RETRIEVAL_CONTRACTS_WITHOUT_NEW_DEPENDENCY"
   },
+  "paired_gate_reuse_review": {
+    "repository_components_reused": [
+      "scripts/build_phase3_comparison_dev_package.py",
+      "scripts/run_phase3_comparison_paired_dev_gate.py",
+      "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
+      "scripts/audit_phase3_comparison_cleanup_state.py",
+      "scripts/recover_phase3_comparison_cleanup.py",
+      "deploy/remote/phase3-comparison-validation/run_phase3_comparison_paired_dev_gate.ps1"
+    ],
+    "prior_project_result": "NO_STRONGER_OWNER_SCOPED_READY_LIFECYCLE_AND_CLEANUP_PROOF_HARNESS_FOUND",
+    "upstream_components_reviewed": [
+      {
+        "component": "Ragas experiments",
+        "decision": "NOT_ADOPTED",
+        "reason": "Provides experiment and metric orchestration but not the repository's PostgreSQL READY, owner ACL, persistent identity, cleanup, and deleted-403 proof."
+      },
+      {
+        "component": "MLflow GenAI evaluation datasets",
+        "decision": "NOT_ADOPTED",
+        "reason": "Adds a tracking server and evaluation dataset store while the frozen private dev package and independent adjudication already satisfy this one-variable Gate."
+      }
+    ],
+    "decision": "PARAMETERIZE_EXISTING_PAIRED_GATE_WITH_EXPERIMENT_SPEC_NO_NEW_DEPENDENCY"
+  },
   "single_enhancement_variable": {
     "id": "BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1",
     "default_enabled": false,
@@ -98,8 +123,15 @@
     "quality_conclusion": "NOT_CLAIMED_WITHOUT_PAIRED_ONLINE_DEV"
   },
   "future_paired_dev_gate": {
-    "status": "NOT_PREPARED_NOT_RUN",
-    "run_id": null,
+    "status": "PREPARED_NOT_RUN",
+    "run_id": "phase3_comparison_route_coverage_dev_20260724_01",
+    "runner": "scripts/run_phase3_comparison_paired_dev_gate.py",
+    "adjudicator": "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
+    "windows_entry": "deploy/remote/phase3-comparison-validation/run_phase3_comparison_paired_dev_gate.ps1",
+    "report_schema_version": "phase3_comparison_route_coverage_paired_dev_report_v1",
+    "adjudication_schema_version": "phase3_comparison_route_coverage_dev_adjudication_v1",
+    "input_package_sha256": "89ea5829efd7c299e3ff51fdc5048e2d78d172bcde1d320322813b95c1dfdadb",
+    "input_manifest_sha256": "05c36a393a51a8aa705e17d1ac3895df074b9273f8af6bfad06c9904c458c63f",
     "sample_count": 4,
     "target_ids_sha256": "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8",
     "control": "ORIGINAL_QUERY_EXISTING_RRF_TOP3",
@@ -136,8 +168,8 @@
     "data_schema_index_model_cleanup_required": false
   },
   "remote_boundary": {
-    "windows_run_id_assigned": false,
-    "windows_command_authorized": false,
+    "windows_run_id_assigned": true,
+    "windows_command_authorized": true,
     "remote_host_operated": false,
     "test_or_acceptance_read": false
   }

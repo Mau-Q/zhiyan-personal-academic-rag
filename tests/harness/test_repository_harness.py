@@ -524,9 +524,12 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["status"],
-            "LOCAL_IMPLEMENTATION_READY_DEFAULT_OFF_REMOTE_DEV_NOT_RUN",
+            "REMOTE_PAIRED_DEV_GATE_READY_NOT_RUN_DEFAULT_OFF",
         )
-        self.assertEqual(payload["decision_ids"], ["PD-053", "PD-054"])
+        self.assertEqual(
+            payload["decision_ids"],
+            ["PD-053", "PD-054", "PD-055"],
+        )
         self.assertEqual(
             payload["reuse_review"]["decision"],
             "REUSE_EXISTING_NARROW_RETRIEVAL_CONTRACTS_WITHOUT_NEW_DEPENDENCY",
@@ -545,16 +548,20 @@ class RepositoryHarnessTests(unittest.TestCase):
         self.assertFalse(payload["preserved_online_path"]["candidate_expansion"])
         self.assertEqual(
             payload["future_paired_dev_gate"]["status"],
-            "NOT_PREPARED_NOT_RUN",
+            "PREPARED_NOT_RUN",
         )
-        self.assertIsNone(payload["future_paired_dev_gate"]["run_id"])
+        self.assertEqual(
+            payload["future_paired_dev_gate"]["run_id"],
+            "phase3_comparison_route_coverage_dev_20260724_01",
+        )
         self.assertEqual(payload["split_isolation"]["test"], "NOT_READ_NOT_RUN")
-        self.assertFalse(
+        self.assertTrue(
             payload["remote_boundary"]["windows_run_id_assigned"]
         )
-        self.assertFalse(
+        self.assertTrue(
             payload["remote_boundary"]["windows_command_authorized"]
         )
+        self.assertFalse(payload["remote_boundary"]["remote_host_operated"])
 
     def test_validator_rejects_template_as_concrete_phase_result(self):
         template = json.loads(

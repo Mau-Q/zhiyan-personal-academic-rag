@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from scripts.adjudicate_phase3_comparison_paired_dev_report import (
+    ROUTE_COVERAGE_VARIABLE_ID,
     ReportRejected,
     adjudicate_report,
 )
@@ -125,8 +126,37 @@ def _pass_report() -> dict:
     }
 
 
+def _route_coverage_pass_report() -> dict:
+    report = _pass_report()
+    report["schema_version"] = (
+        "phase3_comparison_route_coverage_paired_dev_report_v1"
+    )
+    report["variable_id"] = ROUTE_COVERAGE_VARIABLE_ID
+    report["config_sha256"] = (
+        "bdf7b0616812362966189e5ebaf374d705f4537a6e3e06a99efc6b480209a9d0"
+    )
+    report["critical_non_regression"]["recall_at_3_max_drop"] = 0.0
+    report["cost"]["selection_p95_ms"] = report["cost"].pop(
+        "decomposition_p95_ms"
+    )
+    report["cost"]["selection_p95_limit_ms"] = report["cost"].pop(
+        "decomposition_p95_limit_ms"
+    )
+    report["target_variable_observations"] = {
+        "count": 4,
+        "status_counts": {"APPLIED": 4, "FALLBACK": 0, "DISABLED": 0},
+        "selection_changed_count": 4,
+    }
+    return report
+
+
 class Phase3ComparisonReportAdjudicationTests(unittest.TestCase):
-    def _adjudicate(self, report: dict) -> dict:
+    def _adjudicate(
+        self,
+        report: dict,
+        *,
+        variable_id: str | None = None,
+    ) -> dict:
         with tempfile.TemporaryDirectory(dir="runtime") as temporary:
             path = Path(temporary) / "report.json"
             path.write_text(
@@ -134,12 +164,16 @@ class Phase3ComparisonReportAdjudicationTests(unittest.TestCase):
                 encoding="utf-8",
             )
             digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            kwargs = {}
+            if variable_id is not None:
+                kwargs["variable_id"] = variable_id
             return adjudicate_report(
                 path.relative_to(Path.cwd()),
                 expected_report_sha256=digest,
                 expected_head_commit=HEAD,
                 expected_run_id=RUN_ID,
                 expected_input_manifest_sha256=INPUT_MANIFEST_SHA256,
+                **kwargs,
             )
 
     def test_strict_pass_produces_only_a_default_off_dev_candidate(self):
@@ -213,6 +247,43 @@ class Phase3ComparisonReportAdjudicationTests(unittest.TestCase):
             "REPORT_INPUT_MANIFEST_IDENTITY_MISMATCH",
         ):
             self._adjudicate(report)
+
+    def test_route_coverage_pass_uses_its_own_identity_cost_and_decision(self):
+        result = self._adjudicate(
+            _route_coverage_pass_report(),
+            variable_id=ROUTE_COVERAGE_VARIABLE_ID,
+        )
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["variable_id"], ROUTE_COVERAGE_VARIABLE_ID)
+        self.assertEqual(result["metrics"]["selection_p95_ms"], 1.0)
+
+        failed = _route_coverage_pass_report()
+        failed["status"] = "FAIL"
+        failed["error_code"] = "QUALITY_OR_COST_THRESHOLD_NOT_MET"
+        decision = self._adjudicate(
+            failed,
+            variable_id=ROUTE_COVERAGE_VARIABLE_ID,
+        )
+        self.assertEqual(
+            decision["decision"],
+            "KEEP_COMPARISON_ROUTE_COVERAGE_DISABLED",
+        )
+
+    def test_route_coverage_pass_requires_four_applied_target_selections(self):
+        report = _route_coverage_pass_report()
+        report["target_variable_observations"]["status_counts"] = {
+            "APPLIED": 3,
+            "FALLBACK": 1,
+            "DISABLED": 0,
+        }
+        with self.assertRaisesRegex(
+            ReportRejected,
+            "PASS_REPORT_VARIABLE_OBSERVATIONS_INVALID",
+        ):
+            self._adjudicate(
+                report,
+                variable_id=ROUTE_COVERAGE_VARIABLE_ID,
+            )
 
 
 if __name__ == "__main__":

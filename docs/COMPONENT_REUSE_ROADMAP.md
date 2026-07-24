@@ -40,7 +40,20 @@ document route 的 Top-3 最小覆盖合同。
 当前决定不新增依赖，复用 `OnlineVersionRrfRetriever`、`RankedChunk` 和完整
 原 RRF 顺序，通过默认关闭的
 `BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1` 窄选择器完成本地候选。
-该决定不证明 dev 质量增益；远程配对 Gate 继续独立。
+远程配对 Gate 继续直接复用原查询拆分实验的私有输入包、隔离 owner 三文档
+READY 生命周期、Control 停止规则、独立裁决、9 路清理和 PowerShell 入口，
+只增加变量规格与最终选择器注入，不复制第二套 runner。
+
+[Ragas Experiments](https://docs.ragas.io/en/stable/concepts/experimentation/)
+提供单变量实验与指标组织，但不提供本仓库 PostgreSQL READY/owner ACL、
+持久化 Chunk 身份和清理证明；
+[MLflow GenAI Evaluation Datasets](https://mlflow.org/docs/latest/genai/datasets/)
+提供版本化评测数据与运行跟踪，但要求额外跟踪/SQL 后端，也不证明删除后 403
+或 ES/Milvus 清理。本 Gate 已有冻结私有包、SHA 身份和独立裁决，采用二者只会
+增加第二套评测状态，因此当前不引入。
+
+该决定不证明 dev 质量增益；新 Run ID
+`phase3_comparison_route_coverage_dev_20260724_01` 尚未运行。
 
 ### 1. Elasticsearch 批量传输
 

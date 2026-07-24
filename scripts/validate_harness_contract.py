@@ -212,7 +212,7 @@ def check_feature_list() -> None:
         not isinstance(route_coverage_feature, dict)
         or route_coverage_feature.get("status") != "PARTIAL"
         or route_coverage_feature.get("gate_status")
-        != "LOCAL_IMPLEMENTATION_READY_DEFAULT_OFF_REMOTE_DEV_NOT_RUN_TEST_SEALED"
+        != "REMOTE_PAIRED_DEV_GATE_READY_NOT_RUN_DEFAULT_OFF_TEST_SEALED"
     ):
         raise ValueError("phase 3 route coverage feature gate status drifted")
 
@@ -1246,10 +1246,10 @@ def check_phase3_comparison_route_coverage_gate() -> None:
         "phase3_comparison_route_coverage_gate_v1"
     ):
         raise ValueError("phase 3 route coverage schema_version is invalid")
-    if payload.get("decision_ids") != ["PD-053", "PD-054"]:
+    if payload.get("decision_ids") != ["PD-053", "PD-054", "PD-055"]:
         raise ValueError("phase 3 route coverage decision ids drifted")
     if payload.get("status") != (
-        "LOCAL_IMPLEMENTATION_READY_DEFAULT_OFF_REMOTE_DEV_NOT_RUN"
+        "REMOTE_PAIRED_DEV_GATE_READY_NOT_RUN_DEFAULT_OFF"
     ):
         raise ValueError("phase 3 route coverage status is invalid")
     if payload.get("source_phase") != {"id": "phase-3", "status": "IN_PROGRESS"}:
@@ -1317,17 +1317,32 @@ def check_phase3_comparison_route_coverage_gate() -> None:
 
     local_gate = payload.get("local_gate")
     future = payload.get("future_paired_dev_gate")
+    paired_reuse = payload.get("paired_gate_reuse_review")
     if (
         not isinstance(local_gate, dict)
         or local_gate.get("status") != "PASS"
         or local_gate.get("quality_conclusion")
         != "NOT_CLAIMED_WITHOUT_PAIRED_ONLINE_DEV"
         or not isinstance(future, dict)
-        or future.get("status") != "NOT_PREPARED_NOT_RUN"
-        or future.get("run_id") is not None
+        or future.get("status") != "PREPARED_NOT_RUN"
+        or future.get("run_id")
+        != "phase3_comparison_route_coverage_dev_20260724_01"
+        or future.get("report_schema_version")
+        != "phase3_comparison_route_coverage_paired_dev_report_v1"
+        or future.get("adjudication_schema_version")
+        != "phase3_comparison_route_coverage_dev_adjudication_v1"
+        or future.get("input_package_sha256")
+        != "89ea5829efd7c299e3ff51fdc5048e2d78d172bcde1d320322813b95c1dfdadb"
+        or future.get("input_manifest_sha256")
+        != "05c36a393a51a8aa705e17d1ac3895df074b9273f8af6bfad06c9904c458c63f"
         or future.get("sample_count") != 4
         or future.get("target_ids_sha256")
         != "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8"
+        or not isinstance(paired_reuse, dict)
+        or paired_reuse.get("decision")
+        != "PARAMETERIZE_EXISTING_PAIRED_GATE_WITH_EXPERIMENT_SPEC_NO_NEW_DEPENDENCY"
+        or len(paired_reuse.get("repository_components_reused", [])) != 6
+        or len(paired_reuse.get("upstream_components_reviewed", [])) != 2
     ):
         raise ValueError("phase 3 route coverage local or future gate drifted")
     split = payload.get("split_isolation")
@@ -1344,7 +1359,10 @@ def check_phase3_comparison_route_coverage_gate() -> None:
         )
         is not True
         or not isinstance(remote, dict)
-        or any(remote.values())
+        or remote.get("windows_run_id_assigned") is not True
+        or remote.get("windows_command_authorized") is not True
+        or remote.get("remote_host_operated") is not False
+        or remote.get("test_or_acceptance_read") is not False
     ):
         raise ValueError("phase 3 route coverage isolation boundary drifted")
 

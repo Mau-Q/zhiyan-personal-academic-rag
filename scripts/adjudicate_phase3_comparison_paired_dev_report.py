@@ -19,9 +19,35 @@ if not sys.path or Path(sys.path[0]).resolve() != REPOSITORY_ROOT:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
 
+DECOMPOSITION_VARIABLE_ID = "BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1"
+ROUTE_COVERAGE_VARIABLE_ID = "BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1"
 REPORT_SCHEMA_VERSION = "phase3_comparison_paired_dev_report_v1"
 ADJUDICATION_SCHEMA_VERSION = "phase3_comparison_dev_adjudication_v1"
 CONFIG_SHA256 = "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2b"
+VARIABLE_SPECS = {
+    DECOMPOSITION_VARIABLE_ID: {
+        "report_schema_version": REPORT_SCHEMA_VERSION,
+        "adjudication_schema_version": ADJUDICATION_SCHEMA_VERSION,
+        "config_sha256": CONFIG_SHA256,
+        "cost_name": "decomposition",
+        "non_target_recall_drop_max": 0.01,
+        "fail_decision": "KEEP_COMPARISON_DECOMPOSITION_DISABLED",
+    },
+    ROUTE_COVERAGE_VARIABLE_ID: {
+        "report_schema_version": (
+            "phase3_comparison_route_coverage_paired_dev_report_v1"
+        ),
+        "adjudication_schema_version": (
+            "phase3_comparison_route_coverage_dev_adjudication_v1"
+        ),
+        "config_sha256": (
+            "bdf7b0616812362966189e5ebaf374d705f4537a6e3e06a99efc6b480209a9d0"
+        ),
+        "cost_name": "selection",
+        "non_target_recall_drop_max": 0.0,
+        "fail_decision": "KEEP_COMPARISON_ROUTE_COVERAGE_DISABLED",
+    },
+}
 TARGET_IDS_SHA256 = (
     "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8"
 )
@@ -42,6 +68,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--expected-head-commit", required=True)
     parser.add_argument("--expected-run-id", required=True)
     parser.add_argument("--expected-input-manifest-sha256", required=True)
+    parser.add_argument(
+        "--variable-id",
+        choices=tuple(VARIABLE_SPECS),
+        default=DECOMPOSITION_VARIABLE_ID,
+    )
     parser.add_argument("--output", type=Path, required=True)
     return parser
 
@@ -82,17 +113,24 @@ def _close(left: float, right: float) -> bool:
 def _validate_identity(
     report: Mapping[str, Any],
     *,
+    variable_id: str,
+    spec: Mapping[str, Any],
     expected_head_commit: str,
     expected_run_id: str,
     expected_input_manifest_sha256: str,
 ) -> None:
-    if report.get("schema_version") != REPORT_SCHEMA_VERSION:
+    if report.get("schema_version") != spec["report_schema_version"]:
         raise ReportRejected("REPORT_SCHEMA_INVALID")
+    if (
+        variable_id == ROUTE_COVERAGE_VARIABLE_ID
+        and report.get("variable_id") != variable_id
+    ):
+        raise ReportRejected("REPORT_VARIABLE_IDENTITY_MISMATCH")
     if report.get("head_commit") != expected_head_commit:
         raise ReportRejected("REPORT_HEAD_COMMIT_MISMATCH")
     if report.get("run_id") != expected_run_id:
         raise ReportRejected("REPORT_RUN_ID_MISMATCH")
-    if report.get("config_sha256") != CONFIG_SHA256:
+    if report.get("config_sha256") != spec["config_sha256"]:
         raise ReportRejected("REPORT_CONFIG_IDENTITY_MISMATCH")
     if report.get("target_ids_sha256") != TARGET_IDS_SHA256:
         raise ReportRejected("REPORT_TARGET_IDENTITY_MISMATCH")
@@ -125,7 +163,12 @@ def _validate_cleanup(report: Mapping[str, Any]) -> None:
         raise ReportRejected("REPORT_CLEANUP_PROOF_INVALID")
 
 
-def _validate_pass_metrics(report: Mapping[str, Any]) -> dict[str, Any]:
+def _validate_pass_metrics(
+    report: Mapping[str, Any],
+    *,
+    variable_id: str,
+    spec: Mapping[str, Any],
+) -> dict[str, Any]:
     if report.get("error_code") is not None:
         raise ReportRejected("PASS_REPORT_ERROR_CODE_INVALID")
     if report.get("execution_boundary") != (
@@ -231,7 +274,8 @@ def _validate_pass_metrics(report: Mapping[str, Any]) -> dict[str, Any]:
     )
     if (
         non_regression.get("case_count") != 80
-        or non_regression.get("recall_at_3_max_drop") != 0.01
+        or non_regression.get("recall_at_3_max_drop")
+        != spec["non_target_recall_drop_max"]
         or non_regression.get("ndcg_at_10_max_drop") != 0.01
         or non_regression.get("top10_boundary")
         != "EVALUATION_DIAGNOSTIC_ONLY_PRODUCT_FINAL_TOP3_UNCHANGED"
@@ -246,7 +290,7 @@ def _validate_pass_metrics(report: Mapping[str, Any]) -> dict[str, Any]:
                 treatment_ndcg_nr,
             )
         )
-        or recall_drop > 0.01
+        or recall_drop > spec["non_target_recall_drop_max"]
         or ndcg_drop > 0.01
     ):
         raise ReportRejected("PASS_REPORT_NON_REGRESSION_INVALID")
@@ -311,8 +355,9 @@ def _validate_pass_metrics(report: Mapping[str, Any]) -> dict[str, Any]:
         cost.get("incremental_retrieval_p95_ms"),
         "PASS_REPORT_COST_INVALID",
     )
-    decomposition_p95 = _number(
-        cost.get("decomposition_p95_ms"),
+    variable_cost_name = str(spec["cost_name"])
+    variable_p95 = _number(
+        cost.get(f"{variable_cost_name}_p95_ms"),
         "PASS_REPORT_COST_INVALID",
     )
     sample_count = cost.get("sample_count_per_arm")
@@ -320,17 +365,31 @@ def _validate_pass_metrics(report: Mapping[str, Any]) -> dict[str, Any]:
         not isinstance(sample_count, int)
         or not 30 <= sample_count <= 100
         or cost.get("incremental_retrieval_p95_limit_ms") != 50.0
-        or cost.get("decomposition_p95_limit_ms") != 5.0
+        or cost.get(f"{variable_cost_name}_p95_limit_ms") != 5.0
         or cost.get("absolute_300ms_adjudication")
         != "NOT_RUN_SEPARATE_PERFORMANCE_GATE"
         or control_p95 < 0
         or treatment_p95 < 0
         or not _close(incremental_p95, treatment_p95 - control_p95)
         or incremental_p95 > 50.0
-        or decomposition_p95 < 0
-        or decomposition_p95 > 5.0
+        or variable_p95 < 0
+        or variable_p95 > 5.0
     ):
         raise ReportRejected("PASS_REPORT_COST_INVALID")
+    if variable_id == ROUTE_COVERAGE_VARIABLE_ID:
+        observations = _mapping(
+            report.get("target_variable_observations"),
+            "PASS_REPORT_VARIABLE_OBSERVATIONS_MISSING",
+        )
+        if (
+            observations.get("count") != 4
+            or observations.get("status_counts")
+            != {"APPLIED": 4, "FALLBACK": 0, "DISABLED": 0}
+            or not isinstance(observations.get("selection_changed_count"), int)
+            or isinstance(observations.get("selection_changed_count"), bool)
+            or not 0 <= observations["selection_changed_count"] <= 4
+        ):
+            raise ReportRejected("PASS_REPORT_VARIABLE_OBSERVATIONS_INVALID")
 
     tokens = _mapping(report.get("tokens"), "PASS_REPORT_TOKEN_COST_MISSING")
     operations = _mapping(
@@ -359,7 +418,7 @@ def _validate_pass_metrics(report: Mapping[str, Any]) -> dict[str, Any]:
         "non_target_ndcg_at_10_drop": ndcg_drop,
         "fixed_15_canary_passed": 15,
         "incremental_retrieval_p95_ms": incremental_p95,
-        "decomposition_p95_ms": decomposition_p95,
+        f"{variable_cost_name}_p95_ms": variable_p95,
     }
 
 
@@ -370,7 +429,9 @@ def adjudicate_report(
     expected_head_commit: str,
     expected_run_id: str,
     expected_input_manifest_sha256: str,
+    variable_id: str = DECOMPOSITION_VARIABLE_ID,
 ) -> dict[str, Any]:
+    spec = VARIABLE_SPECS[variable_id]
     _runtime_path(report_path, must_exist=True)
     if not _HEX64.fullmatch(expected_report_sha256):
         raise ReportRejected("EXPECTED_REPORT_SHA256_INVALID")
@@ -387,6 +448,8 @@ def adjudicate_report(
         raise ReportRejected("REPORT_ROOT_INVALID")
     _validate_identity(
         report,
+        variable_id=variable_id,
+        spec=spec,
         expected_head_commit=expected_head_commit,
         expected_run_id=expected_run_id,
         expected_input_manifest_sha256=expected_input_manifest_sha256,
@@ -397,9 +460,13 @@ def adjudicate_report(
     status = report.get("status")
     error_code = report.get("error_code")
     if status == "PASS":
-        metrics = _validate_pass_metrics(report)
+        metrics = _validate_pass_metrics(
+            report,
+            variable_id=variable_id,
+            spec=spec,
+        )
         return {
-            "schema_version": ADJUDICATION_SCHEMA_VERSION,
+            "schema_version": spec["adjudication_schema_version"],
             "status": "PASS",
             "decision": "DEV_CANDIDATE_PASS_AWAITING_FREEZE_COMMIT",
             "remote_gate_status": "PASS",
@@ -408,7 +475,8 @@ def adjudicate_report(
             "head_commit": expected_head_commit,
             "run_id": expected_run_id,
             "input_manifest_sha256": report["input_manifest_sha256"],
-            "config_sha256": CONFIG_SHA256,
+            "variable_id": variable_id,
+            "config_sha256": spec["config_sha256"],
             "target_ids_sha256": TARGET_IDS_SHA256,
             "metrics": metrics,
             "default_enabled": False,
@@ -421,16 +489,17 @@ def adjudicate_report(
     ):
         raise ReportRejected("FAIL_REPORT_STATUS_INVALID")
     return {
-        "schema_version": ADJUDICATION_SCHEMA_VERSION,
+        "schema_version": spec["adjudication_schema_version"],
         "status": "FAIL",
-        "decision": "KEEP_COMPARISON_DECOMPOSITION_DISABLED",
+        "decision": spec["fail_decision"],
         "remote_gate_status": "FAIL",
         "remote_error_code": error_code,
         "report_sha256": expected_report_sha256,
         "head_commit": expected_head_commit,
         "run_id": expected_run_id,
         "input_manifest_sha256": report["input_manifest_sha256"],
-        "config_sha256": CONFIG_SHA256,
+        "variable_id": variable_id,
+        "config_sha256": spec["config_sha256"],
         "target_ids_sha256": TARGET_IDS_SHA256,
         "metrics": None,
         "default_enabled": False,
@@ -451,6 +520,7 @@ def _write(path: Path, payload: Mapping[str, Any]) -> None:
 
 def main() -> int:
     args = build_parser().parse_args()
+    spec = VARIABLE_SPECS[args.variable_id]
     try:
         _runtime_path(args.output)
         adjudication = adjudicate_report(
@@ -459,16 +529,18 @@ def main() -> int:
             expected_head_commit=args.expected_head_commit,
             expected_run_id=args.expected_run_id,
             expected_input_manifest_sha256=args.expected_input_manifest_sha256,
+            variable_id=args.variable_id,
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         error_code = str(exc)
         if not _ERROR_CODE.fullmatch(error_code):
             error_code = "REPORT_ADJUDICATION_REJECTED"
         adjudication = {
-            "schema_version": ADJUDICATION_SCHEMA_VERSION,
+            "schema_version": spec["adjudication_schema_version"],
             "status": "REJECTED",
-            "decision": "KEEP_COMPARISON_DECOMPOSITION_DISABLED",
+            "decision": spec["fail_decision"],
             "error_code": error_code,
+            "variable_id": args.variable_id,
             "default_enabled": False,
             "test_gate": "SEALED_REPORT_NOT_TRUSTWORTHY",
             "acceptance": "SEALED_REQUIRES_EXPLICIT_AUTHORIZATION",

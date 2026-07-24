@@ -1,86 +1,121 @@
-# 阶段 3 双侧比较配对 dev Gate
+# 阶段 3 路由覆盖配对 dev Gate
 
-> 本目录当前只保留首个查询拆分变量 `_01`～`_07` 的历史入口。第二变量
-> `BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1` 仅完成默认关闭本地实现，
-> 尚未准备远程 runner、分配 Run ID 或授权 Windows 命令；不得使用本目录
-> 旧入口复跑 `_07`。
+> 目标平台：用户维护的 Windows 主机，Windows PowerShell 5.1。
+> 本入口只允许在准备提交已从 Mac 推送、Windows 已精确拉取该提交后运行。
 
-目标平台是用户维护的 Windows 主机上的 Windows PowerShell 5.1。本目录只提供
-用户运行入口；本地实现 Gate 不连接远程主机、不启动或重启服务。
+本 Gate 只判定默认关闭的
+`BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1`。首个查询拆分变量的 `_01`～
+`_07` 已历史关闭，不得复跑或复用旧 Run ID。
+
+新 Run ID：
+
+```text
+phase3_comparison_route_coverage_dev_20260724_01
+```
 
 ## 判定边界
 
-该入口只判定冻结的
-`BILATERAL_COMPARISON_QUERY_DECOMPOSITION_V1`：
+- 使用原 dev-only ZIP：105 条 `dev`、316 个冻结 Chunk、固定 15 题和三篇
+  PDF；`test/Acceptance` 不在包内、不读取；
+- 创建隔离 owner 的三个临时 READY 版本，验证 PostgreSQL owner/READY、
+  文档版本、持久化 Chunk 与 ES/Milvus 路由身份；
+- Control 使用原问题、候选 20、RRF `k=60`、Top-3；
+- Control 若不能复现冻结四题的双侧 Top-3 `0/4`，停止 Treatment；
+- Treatment 只注入路由覆盖选择器；查询拆分、Reranker 和两个默认开关均关闭；
+- 四个目标 Treatment 都必须实际 `APPLIED`，再判定双侧命中、Recall@3、
+  nDCG@3、非目标不退化、dev no-evidence 与固定 15 题；
+- 选择器 P95 必须不高于 `5 ms`，增量检索 P95 不高于 `50 ms`；
+- 报告落盘前必须完成三个版本失活、ES/Milvus/runtime snapshot 共 9 个清理
+  任务、READY 失败关闭和删除后 Answer API 403；
+- 独立裁决器重新验证报告 SHA-256、HEAD、Run ID、变量/配置/输入/目标身份、
+  指标算术、清理和 holdout 隔离。
 
-- 先用相同的三篇 PDF 建立隔离 owner 下的三个临时 READY 版本；
-- 验证 PostgreSQL owner/READY、文档版本、316 个持久化 Chunk 与
-  `section_parent_child_v1` 冻结身份一致；
-- 保持每路候选 20、RRF `k=60`、质量判定 Top-3、Reranker 关闭；
-- 先运行原问题 Control。若四个目标问题不再是 `0/4` 双侧命中，立即停止
-  Treatment 并以 `CONTROL_BASELINE_MISMATCH` 关闭；
-- 再运行唯一变量 Treatment，判定目标增益、非目标 answerable dev 不退化、
-  dev no-evidence、固定 15 题、拆分 P95 和增量检索 P95；
-- 报告写入前将三个版本置为 INACTIVE，完成 ES、Milvus、运行时快照共 9 个
-  清理任务，并证明删除后 Answer API 返回 403。
-- 完整报告写入实际 Git HEAD 和 Run ID；随后由独立裁决器用报告 SHA-256
-  重新验证身份、指标算术、清理和 holdout 隔离。
-- 冻结配置身份按 LF 规范化字节计算；Windows `core.autocrlf=true` 产生的纯
-  CRLF 检出可回放为同一 SHA，内容变化、BOM 或孤立 CR 仍失败关闭。
+本 Gate 不判定 300 ms SLO。阶段 2 的 `504.71613 ms` 性能债保持独立。
 
-非目标 `nDCG@10` 使用同一候选 20 内的评测诊断 Top-10，不改变产品/API
-Top-3。输入包只含 `dev`、冻结 Chunk、固定 Canary 和三篇 PDF；不含或读取
-`test`、`acceptance`。入口不调用生成模型，不启用 Cross-Encoder。
-
-该 Gate 只看相对增量成本。阶段 2 留下的绝对 300 ms 性能债仍是独立 Gate；
-无论本次结果如何，都不能解释为 300 ms SLO、生产性能、默认启用或阶段 3
-完成。
-
-## 1. Mac：生成并核对私有输入包
-
-在包含私有 `runtime/` 资产的本地仓库运行：
+## 冻结输入身份
 
 ```text
-make phase3-comparison-dev-package PHASE3_PAPER_2601="/private/dev/2601.03260.pdf" PHASE3_PAPER_2602="/private/dev/2602.11409.pdf" PHASE3_PAPER_2603="/private/dev/2603.04915.pdf"
-shasum -a 256 runtime/handoffs/phase3-comparison-paired-dev-input-v1.zip
-unzip -p runtime/handoffs/phase3-comparison-paired-dev-input-v1.zip manifest.json | shasum -a 256
+ZIP:
+89EA5829EFD7C299E3FF51FDC5048E2D78D172BCDE1D320322813B95C1DFDADB
+
+Manifest:
+05C36A393A51A8AA705E17D1AC3895DF074B9273F8AF6BFAD06C9904C458C63F
+
+Route coverage config:
+BDF7B0616812362966189E5EBAF374D705F4537A6E3E06A99EFC6B480209A9D0
+
+Target IDs:
+3F6E132954A721DEA34BED26D75D4C2DF84F589F2AAB0C0323005B0CDFEBCCB8
 ```
 
-记录命令输出的 ZIP SHA-256 和 manifest SHA-256。ZIP 位于忽略的 `runtime/`，
-不得提交；三个 PDF 路径必须由用户在准备真实 dev 运行时显式提供，构建器不会
-读取任何 Acceptance 套件或查找隐含路径。使用既有安全文件传输方式将 ZIP
-交给 Windows 用户。
+## Mac：推送前核对
 
-## 2. Windows：`_07` 已完成，不得复跑
+在仓库根目录运行：
 
-`phase3_comparison_dev_20260723_07` 已在提交
-`ff370b512f88b7d847fa17f080946aab4050048c` 上完成完整 Control/Treatment，
-稳定结果为 `QUALITY_OR_COST_THRESHOLD_NOT_MET`：
+```text
+git status -sb
+git log -1 --oneline
+git push origin main
+git status -sb
+git rev-parse HEAD
+git rev-parse origin/main
+```
 
-- Control/Treatment 对四个目标均为双侧 Top-3 命中 `0/4`；
-- Recall@3 无增益，`nDCG@3` 下降 `0.017739`；
-- 固定 15 题为 `14/15`，Control/Treatment 边界不完全一致；
-- 增量检索 P95 `24.101115 ms`、拆分 P95 `0.12922 ms`，成本门禁通过；
-- 清理 9/9、READY 失败关闭和删除后 403 通过，无需恢复。
+只有推送成功且最后两个 SHA 完全一致，才进入 Windows。
 
-报告 SHA-256：
-`3810CE9228F7CE9C65B5BE0E031F1F5CA6A471FA665BF5D8C12A6E7CAC6E01390`。
-裁决 SHA-256：
-`99530D236B8CA50B53DE18557C9D43C7BCC63695A3C98FC9DBA889B33CDAA036`。
-裁决为 `KEEP_COMPARISON_DECOMPOSITION_DISABLED`。
+## 仅在 Mac 推送成功后运行：Windows PowerShell 5.1
 
-当前没有获准执行的新 Windows Run ID 或 PowerShell 命令。不得复用 `_07`，
-不得调参重跑，不得进入 `test/acceptance`。下一节点必须先在 Mac 上基于冻结
-dev 证据选择并冻结一个新的单一变量，形成独立本地提交和新的版本化运行入口。
+完整复制到 Windows PowerShell 5.1。PostgreSQL 密码由版本化脚本以
+`Read-Host -AsSecureString` 交互读取，不打印或保存。
 
-## 3. 停止规则
+```powershell
+Set-Location 'C:\Users\Administrator\zhiyan-personal-academic-rag'
 
-- Git 有 tracked 改动、HEAD 不等于 `origin/main`、输入身份漂移：不运行。
-- Canary 数据库存在其他 `PENDING/RETRY/RUNNING` 清理任务：在任何新入库前
-  失败关闭；本 Gate 不领取其他 owner 的清理任务。
-- Control 不复现 `0/4`：不运行 Treatment。
-- READY/ACL/版本/Chunk 身份无法证明：403 或失败关闭。
-- 任一质量、不退化、固定 15 题或增量预算未达标：结果为 FAIL，不调参重跑。
-- 清理或删除后 403 证明不完整：最终结果强制为 FAIL。
-- 不得用 `test` 或 `acceptance` 调参，不得修改候选数、RRF、Embedding、
-  Chunk、Reranker、缓存或默认开关制造通过。
+git status -sb
+git fetch origin main
+git pull --ff-only origin main
+if ($LASTEXITCODE -ne 0) {
+    throw 'Windows checkout could not fast-forward to origin/main.'
+}
+
+$headCommit = (& git rev-parse HEAD).Trim()
+$originCommit = (& git rev-parse origin/main).Trim()
+if ($headCommit -ne $originCommit) {
+    throw 'Windows HEAD must equal origin/main.'
+}
+
+$PackagePath = (
+    'C:\Users\Administrator\zhiyan-personal-academic-rag\' +
+    'runtime\handoffs\phase3-comparison-paired-dev-input-v1.zip'
+)
+$ExpectedPackageSha256 = (
+    '89EA5829EFD7C299E3FF51FDC5048E2D78D172BCDE1D320322813B95C1DFDADB'
+)
+$ExpectedManifestSha256 = (
+    '05C36A393A51A8AA705E17D1AC3895DF074B9273F8AF6BFAD06C9904C458C63F'
+)
+
+& '.\deploy\remote\phase3-comparison-validation\run_phase3_comparison_paired_dev_gate.ps1' `
+    -RepositoryRoot 'C:\Users\Administrator\zhiyan-personal-academic-rag' `
+    -InputPackagePath $PackagePath `
+    -ExpectedPackageSha256 $ExpectedPackageSha256 `
+    -ExpectedManifestSha256 $ExpectedManifestSha256 `
+    -RunId 'phase3_comparison_route_coverage_dev_20260724_01' `
+    -VariableId 'BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1'
+```
+
+脚本输出的是脱敏摘要；完整报告和裁决保留在被忽略的 `runtime/`。不要发送
+密码、连接字符串、问题正文、Evidence 正文或 PDF。
+
+## 红色终止后的下一步
+
+1. 不调候选、RRF、阈值、选择器或固定题目；
+2. 不复用 `phase3_comparison_route_coverage_dev_20260724_01`；
+3. 先根据摘要区分输入/配置拒绝、Control 停止、在线组件失败、可信质量失败
+   或清理失败；
+4. 只有 `cleanup.status=PASS`、9/9、READY 失败关闭和删除后 403 同时成立，
+   才认定无需恢复；
+5. 清理不可信时，先运行版本固定的只读审计，再决定是否需要精确恢复；
+6. 干净基础设施失败不解释为质量失败；可信质量 FAIL 才保持变量关闭并形成
+   质量结论；
+7. `test/Acceptance` 与 300 ms 性能 Gate 始终不在本次流程中。

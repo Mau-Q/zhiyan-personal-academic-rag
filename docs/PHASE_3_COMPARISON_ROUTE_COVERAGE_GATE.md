@@ -2,7 +2,8 @@
 
 ## 结论
 
-本 Gate 将阶段 3 的第二个单一变量冻结并完成默认关闭的本地实现：
+本 Gate 将阶段 3 的第二个单一变量冻结、完成默认关闭的本地实现，并准备好
+一次完整的用户运行远程配对 dev Gate：
 
 ```text
 BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1
@@ -13,8 +14,9 @@ PostgreSQL 已解析出恰好两个授权 READY 文档路由且最终输出仍�
 从完整既有 RRF 顺序中保留两条路由各自排名最高的一个候选，再按原 RRF
 顺序补足第三个候选。候选、分数、身份或选择结果无法证明时回退原 RRF Top-3。
 
-该本地 Gate 只证明合同、配置、默认关闭、回退和实现可测试，不证明四个冻结
-dev 样本已有质量增益，也不授权新的 Windows Run ID。
+本地证据只证明合同、配置、默认关闭、回退和 Gate 可执行，不证明四个冻结
+dev 样本已有质量增益。新 Windows Run ID 已冻结为
+`phase3_comparison_route_coverage_dev_20260724_01`，但尚未运行。
 
 ## 为什么选择这个变量
 
@@ -101,11 +103,28 @@ ACL、READY、统一身份或清理合同。
 
 ## 后续远程 Gate
 
-本提交不分配 Windows Run ID，不生成用户运行命令。下一 Gate 才能在本提交已
-推送且 Windows 拉取到准确提交后，复用原隔离 owner 生命周期和冻结的 4 个
-dev 样本，建立新的 Control/Treatment runner、独立裁决和完整 Windows
-PowerShell 5.1 清单。
+本 Gate 没有复制原 1300 行 runner，而是以冻结实验规格参数化既有组件：
 
-未来 Treatment 只允许开启本变量；查询拆分继续关闭。质量阈值沿用严格双侧
+- 私有输入包构建器和既有 ZIP/Manifest 身份；
+- 隔离 owner 的三文档 READY 生命周期；
+- Control `0/4` 停止规则、冻结 4 个 dev 与固定 15 题；
+- 报告 SHA、HEAD、Run ID、配置和目标身份的独立裁决；
+- 9 个清理任务、READY 失败关闭与删除后 403；
+- 同一个 Windows PowerShell 5.1 用户入口。
+
+用户既有项目中没有更强的 owner-scoped READY/清理证明 runner。Ragas 的实验
+抽象与 MLflow 的评测数据/跟踪能力可管理通用实验，但不能证明本仓库的
+PostgreSQL 事实、ACL、版本身份、ES/Milvus 清理和删除后 403；MLflow 还会
+引入新的跟踪服务/数据存储。因此本 Gate 不新增依赖或服务。
+
+Treatment 只允许开启本变量；查询拆分继续关闭。质量阈值沿用严格双侧
 Top-3、Recall@3、nDCG@3、固定 15 题和非目标不退化；选择器 P95 上限
 `5 ms`，增量检索 P95 上限 `50 ms`。失败继续保持关闭，不能调参或复用 Run ID。
+
+运行报告使用
+`phase3_comparison_route_coverage_paired_dev_report_v1`，必须证明四个目标
+Treatment 均为 `APPLIED`；裁决使用
+`phase3_comparison_route_coverage_dev_adjudication_v1`。入口和完整命令见
+`deploy/remote/phase3-comparison-validation/README.md`。只有本地提交已推送且
+Windows 精确拉取到该提交后才运行；运行前后都不读取 `test/Acceptance`，
+也不判定 300 ms SLO。

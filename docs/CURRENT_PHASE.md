@@ -2,9 +2,9 @@
 
 ## Status
 
-`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_SECOND_VARIABLE_LOCAL_READY_DEFAULT_OFF / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
+`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_IN_PROGRESS_SECOND_VARIABLE_REMOTE_PAIRED_DEV_GATE_READY_NOT_RUN_DEFAULT_OFF / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
-Phase ID：`source-phase3-comparison-route-coverage-local-ready`
+Phase ID：`source-phase3-comparison-route-coverage-remote-gate-ready`
 
 ## Completed
 
@@ -196,14 +196,15 @@ Phase ID：`source-phase3-comparison-route-coverage-local-ready`
 - 第七次 Windows Run ID `phase3_comparison_dev_20260723_07` 在提交 `ff370b512f88b7d847fa17f080946aab4050048c` 上完成完整 Control/Treatment，报告以 `QUALITY_OR_COST_THRESHOLD_NOT_MET` 可信失败：四个冻结目标的 Control/Treatment 双侧 Top-3 命中均为 `0/4`，Recall@3 无增益，`nDCG@3` 下降 `0.017739`；固定 15 题为 `14/15` 且两分支边界不完全一致。报告 SHA-256 为 `3810CE9228F7CE9C65B5BE0E031F1F5CA6A471FA665BF5D8C12A6E7CAC6E01390`，裁决 SHA-256 为 `99530D236B8CA50B53DE18557C9D43C7BCC63695A3C98FC9DBA889B33CDAA036`，决定保持比较拆分关闭。
 - `_07` 同时证明身份违规为 0、非目标 answerable 与 dev no-evidence 不退化、增量检索 P95 `24.101115 ms <= 50 ms`、拆分 P95 `0.12922 ms <= 5 ms`；这些通过项不能覆盖目标质量与固定 Canary 失败。清理 9/9、READY 失败关闭和删除后 403 通过，无需恢复；`test/Acceptance` 未读取，300 ms 性能 Gate 未运行。
 - 完成阶段 3 第二个主要变量的复用评估、合同与默认关闭本地实现。现有项目和维护中的 Elasticsearch RRF、Milvus Grouping Search、Haystack DocumentJoiner、LangChain MMR 均不能直接满足融合后两条授权文档路由的 Top-3 覆盖合同；决定不新增依赖，复用现有 READY 路由、`RankedChunk` 和完整 RRF 顺序。
-- `BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1` 只在比较标记、恰好两个授权 READY 路由和 Top-3 下生效：两路各保留最高 RRF 候选，再按原顺序补足；分数、候选 20、RRF `k=60`、请求数和默认链路不变，任何不满足或异常回退原 RRF Top-3。该本地 Gate 未运行在线 dev、未分配 Windows Run ID，不能写成质量增益。
+- `BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1` 只在比较标记、恰好两个授权 READY 路由和 Top-3 下生效：两路各保留最高 RRF 候选，再按原顺序补足；分数、候选 20、RRF `k=60`、请求数和默认链路不变，任何不满足或异常回退原 RRF Top-3。该本地实现本身未运行在线 dev，不能写成质量增益。
+- 第二变量的完整远程配对 dev Gate 已准备：直接参数化复用既有私有输入包、隔离 owner 三文档 READY 生命周期、Control `0/4` 停止规则、独立裁决、9 路清理和 Windows PowerShell 5.1 入口；没有复制第二套 runner，也没有引入 Ragas、MLflow 或新服务。新 Run ID 为 `phase3_comparison_route_coverage_dev_20260724_01`，当前仍为未运行、默认关闭、无质量结论。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：阶段 3 首个比较拆分变量已在可信在线 dev Gate 失败并保持关闭；第二个路由覆盖变量已完成默认关闭本地实现，但尚未准备或运行新的在线配对 dev Gate，也未进入 `test`；正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层继续后置；固定 Reranker 在当前 300 ms SLO 下不默认启用；
+- 未完成能力：阶段 3 首个比较拆分变量已在可信在线 dev Gate 失败并保持关闭；第二个路由覆盖变量已完成默认关闭本地实现和远程配对 Gate 准备，但尚未由用户在 Windows 运行，也未进入 `test`；正式 MinIO 适配、OCR、目标规模性能验收、无证据校准和安全策略层继续后置；固定 Reranker 在当前 300 ms SLO 下不默认启用；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -230,7 +231,7 @@ Phase ID：`source-phase3-comparison-route-coverage-local-ready`
 - 不得将本地协调协议写成远程 PostgreSQL、真实 ES/Milvus 写入、持久化物理清理或在线权限切换已完成，不得将 Fake LLM 写成最高方案阶段 2 已完成。
 - `make real-generation-canary` 必须使用固定模型摘要和 Prompt/解码配置，覆盖稳定回放、引用编号、`NO_EVIDENCE` 不调用模型与 403；公开 Fixture 结果不得写成远程 READY 实跑。
 - `machine/phase3_entry_freeze.json` 必须保持入口时点的 4 个唯一 `dev` ID、单变量、`test/acceptance` 封存和独立性能债；`machine/phase3_comparison_dev_gate.json` 必须如实记录 `_07` 的在线 dev 失败、干净清理与关闭决定，不得出现 `test/acceptance` 结果。
-- `machine/phase3_comparison_route_coverage_gate.json` 必须保持第二变量默认关闭、无新依赖/请求、原候选与 RRF 分数、`test/Acceptance` 封存、没有 Windows Run ID和独立 300 ms Gate。
+- `machine/phase3_comparison_route_coverage_gate.json` 必须保持第二变量默认关闭、无新依赖/请求、原候选与 RRF 分数、`test/Acceptance` 封存、唯一未运行的新 Windows Run ID 和独立 300 ms Gate。
 
 ## Git
 
@@ -242,14 +243,14 @@ Phase ID：`source-phase3-comparison-route-coverage-local-ready`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 为 `IN_PROGRESS`。首个查询拆分变量已可信失败并保持关闭；第二个 `BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1` 已完成复用评估、合同和默认关闭本地实现，只复用现有 READY 路由与 RRF 候选，不新增依赖或请求。当前评测边界为 `PHASE3_COMPARISON_SECOND_VARIABLE_LOCAL_READY_DEFAULT_OFF_REMOTE_DEV_NOT_PREPARED_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL`。默认 RRF、Reranker 关闭、查询拆分关闭和 300 ms 独立性能债均不变。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 为 `IN_PROGRESS`。首个查询拆分变量已可信失败并保持关闭；第二个 `BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1` 已完成复用评估、合同、默认关闭本地实现和远程配对 Gate 准备，只复用现有 READY/RRF、生命周期、裁决与清理入口，不新增依赖或请求。当前评测边界为 `PHASE3_COMPARISON_SECOND_VARIABLE_REMOTE_GATE_READY_NOT_RUN_DEFAULT_OFF_TEST_ACCEPTANCE_SEALED`，其余仍为 `MVP_INITIAL_175_HUMAN_VALIDATED / ES_85_OF_175 / MILVUS_109_OF_175 / THREE_CHUNK_STRATEGIES_BM25_15_OF_15_VECTOR_12_OF_15_NO_WINNER / RRF_175_DEFERRED / ENGINEERING_ITEMS_500_FOUR_BACKENDS_COMPLETE / REMOTE_RRF_CANARY_14_OF_15_NO_GAIN / FIXED_BGE_RERANKER_TEST100_TARGET_COMPONENT_GATE_PASS_REMOTE_PROFILE_COMBINED_P95_504_71613_RRF_DEFAULT_RERANKER_OPTIONAL`。默认 RRF、Reranker 关闭、查询拆分关闭和 300 ms 独立性能债均不变。
 
 ## Next gate
 
-1. **准备一个完整远程质量 Gate：** 在本地提交已推送后，为第二变量复用原隔离 owner 生命周期、4 个冻结 dev、Control/Treatment、独立裁决、清理 9/9 与删除后 403；该准备工作作为一个主要 Gate，不再拆成多个诊断微 Gate；
-2. **只改变最终选择：** Control 使用原问题与原 RRF Top-3，Treatment 只开启路由覆盖选择器；查询拆分、Reranker、候选、RRF、阈值和 holdout 均不变；
-3. **新提交和新 Run ID：** 只有远程 runner、配置身份、指标、清理和回滚形成下一独立本地提交后，才分配新的 Windows Run ID 并给出 Windows PowerShell 5.1 清单；
-4. **继续封存 test 与性能：** `test/Acceptance` 和 300 ms 性能仍是后续独立 Gate。
+1. **用户运行完整远程质量 Gate：** 仅在本提交从 Mac 推送成功且 Windows 精确拉取后，按版本化清单运行 `phase3_comparison_route_coverage_dev_20260724_01`；
+2. **先判清理，再判质量：** 红色终止后先区分输入拒绝、Control 停止、在线组件、可信质量或清理失败；只有 9/9、READY 失败关闭和删除后 403 完整时才判无需恢复；
+3. **不调参、不复用 Run ID：** Control 使用原问题与原 RRF Top-3，Treatment 只开启路由覆盖选择器；任何失败不得修改查询拆分、Reranker、候选、RRF、阈值或固定题目后复用旧 ID；
+4. **继续封存 test 与性能：** 只有可信 dev PASS 才能另建冻结提交讨论一次性 `test`；Acceptance 和 300 ms 性能始终是后续独立 Gate。
 
 ## Prohibited shortcuts
 
