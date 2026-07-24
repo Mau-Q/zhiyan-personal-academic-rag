@@ -528,7 +528,7 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
         self.assertEqual(
             payload["decision_ids"],
-            ["PD-053", "PD-054", "PD-055", "PD-056"],
+            ["PD-053", "PD-054", "PD-055", "PD-056", "PD-057"],
         )
         self.assertEqual(
             payload["reuse_review"]["decision"],
@@ -578,6 +578,9 @@ class RepositoryHarnessTests(unittest.TestCase):
         self.assertFalse(result["rerun_authorized"])
         self.assertFalse(
             payload["powershell_summary_defect"]["quality_rerun_required"]
+        )
+        self.assertFalse(
+            payload["windows_closeout_verification"]["quality_gate_rerun"]
         )
 
     def test_validator_rejects_template_as_concrete_phase_result(self):

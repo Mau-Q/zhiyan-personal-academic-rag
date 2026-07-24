@@ -31,6 +31,35 @@ phase3_comparison_route_coverage_dev_20260724_01
 `primary_error_code`，在严格模式抛出 `PropertyNotFoundStrict`。这不影响上述
 证据；当前脚本仅修复可选汇总字段读取。禁止用本页旧命令重跑质量。
 
+首次 Windows 收口复核也没有通过：Python 29 项批次为 `1 failure / 3 errors`；
+静态检查在参数默认绑定阶段取得空 `$PSScriptRoot`；手工相对路径解析没有取得
+AST，后续 helper 检查级联失败；最后无条件打印的 `PASS` 无效。这些都是验证
+清单缺陷，没有运行质量 Gate、服务或私有输入。
+
+后续不再粘贴长验证逻辑。修复提交从 Mac 推送且 Windows 精确快进后，只运行
+版本化的
+`verify_phase3_comparison_closeout.ps1`。它使用显式根目录和绝对解析路径，
+任一失败立即终止；不会执行旧质量入口或通用 Python 测试批次。
+
+```powershell
+Set-Location 'C:\Users\Administrator\zhiyan-personal-academic-rag'
+
+git status -sb
+git fetch origin main
+git pull --ff-only origin main
+if ($LASTEXITCODE -ne 0) {
+    throw 'Windows checkout could not fast-forward to origin/main.'
+}
+
+$ExpectedHeadCommit = (& git rev-parse origin/main).Trim()
+& '.\deploy\remote\phase3-comparison-validation\verify_phase3_comparison_closeout.ps1' `
+    -RepositoryRoot 'C:\Users\Administrator\zhiyan-personal-academic-rag' `
+    -ExpectedHeadCommit $ExpectedHeadCommit
+if ($LASTEXITCODE -ne 0) {
+    throw 'Phase 3 closeout verification failed.'
+}
+```
+
 ## 判定边界
 
 - 使用原 dev-only ZIP：105 条 `dev`、316 个冻结 Chunk、固定 15 题和三篇

@@ -1,10 +1,18 @@
 [CmdletBinding()]
 param(
-    [string]$RepositoryRoot = (Split-Path -Parent $PSScriptRoot),
-    [string]$SettingsPath = (Join-Path (Split-Path -Parent $PSScriptRoot) 'config/PSScriptAnalyzerSettings.psd1')
+    [string]$RepositoryRoot,
+    [string]$SettingsPath
 )
 
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
+    $RepositoryRoot = Split-Path -Parent $PSScriptRoot
+}
+if ([string]::IsNullOrWhiteSpace($SettingsPath)) {
+    $SettingsPath = Join-Path `
+        -Path $RepositoryRoot `
+        -ChildPath 'config/PSScriptAnalyzerSettings.psd1'
+}
 $RepositoryRoot = (Resolve-Path -LiteralPath $RepositoryRoot).Path
 $SettingsPath = (Resolve-Path -LiteralPath $SettingsPath).Path
 

@@ -200,6 +200,7 @@ Phase ID：`source-phase3-comparison-route-coverage-quality-failed-clean`
 - 第二变量的完整远程配对 dev Gate 直接参数化复用了既有私有输入包、隔离 owner 三文档 READY 生命周期、Control `0/4` 停止规则、独立裁决、9 路清理和 Windows PowerShell 5.1 入口；没有复制第二套 runner，也没有引入 Ragas、MLflow 或新服务。
 - 用户已在提交 `28b8987641ebd2754c2676f144dfa3abf4cdc041` 运行 `phase3_comparison_route_coverage_dev_20260724_01`。选择器 4/4 `APPLIED`、3/4 改变 Top-3，但 Control/Treatment 双侧命中仍同为 `0/4`，宏观 Recall@3 同为 `0.145833`、nDCG@3 同为 `0.220967`，增益均为 0；固定 15 题为 `14/15`。报告 SHA-256 为 `C2758BE68E614D5E075595B34C2386FA200B7DE13358DF8DB5193CCAD69A6A19`，裁决 SHA-256 为 `7492DC7574A2176351DDEEBCDED80230D66216FA2C923BBB4713182945CE4797`，决定保持路由覆盖关闭。
 - `_01` 同时证明身份违规为 0、关键非目标 Recall@3/nDCG@10 均不退化、选择器 P95 `0.049995 ms`、清理 9/9、READY 失败关闭和删除后 403；因此这是可信质量失败，无需恢复且不得重跑。报告和裁决落盘后，Windows PowerShell 汇总层因完整报告省略可选 `primary_error_code` 而在严格模式报错；该外层错误不影响既有报告、裁决或清理证明，本地仅将脱敏汇总字段改为缺失安全读取，不要求质量重跑。
+- 用户首次复核该汇总修复时，验证清单自身失败：29 个 Python 测试为 `1 failure / 3 errors`，`check_powershell.ps1` 在 Windows PowerShell 5.1 参数默认绑定阶段取得空 `$PSScriptRoot`，手工 `ParseFile` 又使用相对路径而没有取得 AST，后续 helper/行为检查级联失败；末尾无条件打印的 `PASS` 无效。本地现将路径初始化移出参数默认值，并提供失败即停的版本化 Windows PowerShell 5.1 收口验证脚本，只验证提交、静态合同、绝对路径解析和可选字段行为，不运行质量 Gate、服务、私有输入或通用 Python 测试批次。
 
 ## 输入
 

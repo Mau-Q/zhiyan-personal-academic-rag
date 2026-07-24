@@ -1251,6 +1251,7 @@ def check_phase3_comparison_route_coverage_gate() -> None:
         "PD-054",
         "PD-055",
         "PD-056",
+        "PD-057",
     ]:
         raise ValueError("phase 3 route coverage decision ids drifted")
     if payload.get("status") != (
@@ -1355,6 +1356,7 @@ def check_phase3_comparison_route_coverage_gate() -> None:
     remote = payload.get("remote_boundary")
     result = payload.get("remote_paired_dev_result")
     summary_defect = payload.get("powershell_summary_defect")
+    closeout = payload.get("windows_closeout_verification")
     if (
         not isinstance(split, dict)
         or split.get("test") != "NOT_READ_NOT_RUN"
@@ -1397,6 +1399,19 @@ def check_phase3_comparison_route_coverage_gate() -> None:
         or summary_defect.get("adjudication_affected") is not False
         or summary_defect.get("cleanup_proof_affected") is not False
         or summary_defect.get("quality_rerun_required") is not False
+        or not isinstance(closeout, dict)
+        or closeout.get("first_attempt_status")
+        != "FAIL_CHECKLIST_DEFECT_NO_QUALITY_EXECUTION"
+        or closeout.get("entry")
+        != (
+            "deploy/remote/phase3-comparison-validation/"
+            "verify_phase3_comparison_closeout.ps1"
+        )
+        or closeout.get("remote_service_contacted") is not False
+        or closeout.get("private_input_read") is not False
+        or closeout.get("quality_gate_rerun") is not False
+        or closeout.get("status")
+        != "LOCAL_VALIDATED_AWAITING_USER_WINDOWS_RECHECK_AFTER_PUSH"
     ):
         raise ValueError("phase 3 route coverage result boundary drifted")
     target = result.get("target_quality", {})

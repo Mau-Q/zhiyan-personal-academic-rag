@@ -605,6 +605,7 @@
         "scripts/run_phase3_comparison_paired_dev_gate.py",
         "scripts/adjudicate_phase3_comparison_paired_dev_report.py",
         "deploy/remote/phase3-comparison-validation/run_phase3_comparison_paired_dev_gate.ps1",
+        "deploy/remote/phase3-comparison-validation/verify_phase3_comparison_closeout.ps1",
         "deploy/remote/phase3-comparison-validation/README.md",
         "tests/validation/test_phase3_comparison_paired_dev_gate.py",
         "tests/validation/test_phase3_comparison_report_adjudication.py",

@@ -143,3 +143,9 @@ PowerShell 脱敏汇总曾因完整报告不含可选 `primary_error_code` 而�
 报错；这发生在证据落盘和清理完成之后，不影响质量裁决。本地修复复用同一
 脚本并增加缺失安全的 JSON 属性读取，不要求重跑质量。该 Gate 前后均未读取
 `test/Acceptance`，也未判定 300 ms SLO。
+
+首次 Windows 收口复核又暴露了验证清单自身的跨平台路径和假阳性问题，没有
+形成有效 PASS，也没有运行质量或服务。后续只使用版本化
+`verify_phase3_comparison_closeout.ps1`：显式传入仓库与设置路径、用绝对路径
+解析入口、严格模式检查可选字段，任一错误立即终止。通用 Python 仓库测试批次
+不再充当 Windows 平台证明。

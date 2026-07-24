@@ -4,7 +4,8 @@
     "PD-053",
     "PD-054",
     "PD-055",
-    "PD-056"
+    "PD-056",
+    "PD-057"
   ],
   "status": "REMOTE_DEV_QUALITY_FAILED_CLEAN_VARIABLE_DISABLED",
   "source_phase": {
@@ -223,13 +224,25 @@
     "performance_gate": "PENDING_SEPARATE_300MS_GATE"
   },
   "powershell_summary_defect": {
-    "status": "LOCAL_FIX_STATIC_VALIDATION_REQUIRED_NO_QUALITY_RERUN",
+    "status": "LOCAL_FIX_READY_WINDOWS_CLOSEOUT_RECHECK_REQUIRED_NO_QUALITY_RERUN",
     "cause": "OPTIONAL_PRIMARY_ERROR_CODE_ABSENT_ON_COMPLETE_REPORT_ACCESSED_UNDER_STRICT_MODE",
     "quality_report_affected": false,
     "adjudication_affected": false,
     "cleanup_proof_affected": false,
     "quality_rerun_required": false,
     "fix": "USE_OPTIONAL_JSON_PROPERTY_PATH_READER_FOR_SANITIZED_SUMMARY_FIELDS"
+  },
+  "windows_closeout_verification": {
+    "first_attempt_status": "FAIL_CHECKLIST_DEFECT_NO_QUALITY_EXECUTION",
+    "python_test_batch": "NOT_USED_AS_WINDOWS_PLATFORM_PROOF",
+    "static_check_failure": "PSSCRIPTROOT_EMPTY_DURING_PARAMETER_DEFAULT_BINDING",
+    "parser_failure": "RELATIVE_PARSEFILE_PATH_NOT_RESOLVED_AGAINST_POWERSHELL_LOCATION",
+    "fix": "VERSIONED_WINDOWS_POWERSHELL_5_1_CLOSEOUT_VERIFIER_WITH_EXPLICIT_ROOTS_AND_ABSOLUTE_PARSE_PATH",
+    "entry": "deploy/remote/phase3-comparison-validation/verify_phase3_comparison_closeout.ps1",
+    "remote_service_contacted": false,
+    "private_input_read": false,
+    "quality_gate_rerun": false,
+    "status": "LOCAL_VALIDATED_AWAITING_USER_WINDOWS_RECHECK_AFTER_PUSH"
   },
   "split_isolation": {
     "dev": "FROZEN_FOUR_CASES_ONLY",

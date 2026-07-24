@@ -65,6 +65,14 @@ RECOVERY_POWERSHELL_PATH = (
     / "phase3-comparison-validation"
     / "recover_phase3_comparison_cleanup.ps1"
 )
+CLOSEOUT_POWERSHELL_PATH = (
+    ROOT
+    / "deploy"
+    / "remote"
+    / "phase3-comparison-validation"
+    / "verify_phase3_comparison_closeout.ps1"
+)
+STATIC_CHECK_POWERSHELL_PATH = ROOT / "scripts" / "check_powershell.ps1"
 
 
 def _latency(value: float) -> OnlineRetrievalLatencyBreakdown:
@@ -333,6 +341,33 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
         self.assertNotIn("Stop-Service", script)
         self.assertNotIn("run_phase3_comparison_paired_dev_gate.py", script)
         self.assertIn("$audit.decision -ne 'CLEAN'", script)
+
+    def test_windows_closeout_verifier_is_absolute_safe_and_read_only(self):
+        script = CLOSEOUT_POWERSHELL_PATH.read_text(encoding="utf-8")
+        self.assertIn("Target: Windows PowerShell 5.1", script)
+        self.assertIn("[string]$ExpectedHeadCommit", script)
+        self.assertIn("$headCommit -ne $ExpectedHeadCommit", script)
+        self.assertIn("$originCommit -ne $ExpectedHeadCommit", script)
+        self.assertIn("$runnerPath = Join-Path", script)
+        self.assertIn("Parser]::ParseFile(", script)
+        self.assertIn("$runnerPath,", script)
+        self.assertIn("-RepositoryRoot $RepositoryRoot", script)
+        self.assertIn("-SettingsPath $settingsPath", script)
+        self.assertIn("Set-StrictMode -Version 2.0", script)
+        self.assertIn("Get-OptionalJsonProperty", script)
+        self.assertNotIn("& $runnerPath", script)
+        self.assertNotIn(".venv\\Scripts\\python.exe", script)
+        self.assertNotIn("Restart-Service", script)
+        self.assertNotIn("Start-Service", script)
+        self.assertNotIn("Stop-Service", script)
+
+        static_check = STATIC_CHECK_POWERSHELL_PATH.read_text(encoding="utf-8")
+        parameter_block = static_check[: static_check.index("$ErrorActionPreference")]
+        self.assertNotIn("$PSScriptRoot", parameter_block)
+        self.assertIn(
+            "$RepositoryRoot = Split-Path -Parent $PSScriptRoot",
+            static_check,
+        )
 
     def test_package_output_must_be_a_runtime_zip(self):
         _validate_output(Path("runtime/phase3/input.zip"))
