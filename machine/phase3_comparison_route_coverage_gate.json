@@ -6,7 +6,8 @@
     "PD-055",
     "PD-056",
     "PD-057",
-    "PD-058"
+    "PD-058",
+    "PD-059"
   ],
   "status": "REMOTE_DEV_QUALITY_FAILED_CLEAN_VARIABLE_DISABLED",
   "source_phase": {
@@ -225,7 +226,7 @@
     "performance_gate": "PENDING_SEPARATE_300MS_GATE"
   },
   "powershell_summary_defect": {
-    "status": "LOCAL_FIX_READY_WINDOWS_CLOSEOUT_RECHECK_REQUIRED_NO_QUALITY_RERUN",
+    "status": "WINDOWS_PS51_CLOSEOUT_VERIFIED_PASS_NO_QUALITY_RERUN",
     "cause": "OPTIONAL_PRIMARY_ERROR_CODE_ABSENT_ON_COMPLETE_REPORT_ACCESSED_UNDER_STRICT_MODE",
     "quality_report_affected": false,
     "adjudication_affected": false,
@@ -240,6 +241,11 @@
     "parser_failure": "RELATIVE_PARSEFILE_PATH_NOT_RESOLVED_AGAINST_POWERSHELL_LOCATION",
     "second_attempt_status": "FAIL_MISSING_PSSCRIPTANALYZER_NO_QUALITY_EXECUTION",
     "second_attempt_failure": "WINDOWS_POWERSHELL_5_1_MODULE_PATH_HAS_NO_PSSCRIPTANALYZER_1_25_0",
+    "third_attempt_status": "PASS",
+    "third_attempt_head_commit": "7764f3e0416706b98c5ea8d131a5525bc7f96f2e",
+    "third_attempt_builtin_parser": "PASS",
+    "third_attempt_strict_mode_behavior": "PASS",
+    "third_attempt_evidence_source": "USER_REPORTED_VERSIONED_SCRIPT_SUCCESS",
     "fix": "VERSIONED_WINDOWS_POWERSHELL_5_1_CLOSEOUT_VERIFIER_WITH_ABSOLUTE_BUILTIN_PARSE_PATH_AND_STRICT_MODE_BEHAVIOR_NO_EXTERNAL_MODULE",
     "entry": "deploy/remote/phase3-comparison-validation/verify_phase3_comparison_closeout.ps1",
     "mac_psscriptanalyzer_gate": "PASS_REQUIRED_BEFORE_LOCAL_COMMIT",
@@ -247,7 +253,8 @@
     "remote_service_contacted": false,
     "private_input_read": false,
     "quality_gate_rerun": false,
-    "status": "LOCAL_VALIDATED_AWAITING_USER_WINDOWS_RECHECK_AFTER_PUSH"
+    "recheck_required": false,
+    "status": "PASS_COMPLETE"
   },
   "split_isolation": {
     "dev": "FROZEN_FOUR_CASES_ONLY",

@@ -535,6 +535,7 @@ class RepositoryHarnessTests(unittest.TestCase):
                 "PD-056",
                 "PD-057",
                 "PD-058",
+                "PD-059",
             ],
         )
         self.assertEqual(
@@ -593,6 +594,17 @@ class RepositoryHarnessTests(unittest.TestCase):
             payload["windows_closeout_verification"][
                 "windows_external_module_required"
             ]
+        )
+        self.assertEqual(
+            payload["windows_closeout_verification"]["third_attempt_status"],
+            "PASS",
+        )
+        self.assertEqual(
+            payload["windows_closeout_verification"]["status"],
+            "PASS_COMPLETE",
+        )
+        self.assertFalse(
+            payload["windows_closeout_verification"]["recheck_required"]
         )
 
     def test_validator_rejects_template_as_concrete_phase_result(self):

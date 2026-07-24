@@ -212,7 +212,10 @@ def check_feature_list() -> None:
         not isinstance(route_coverage_feature, dict)
         or route_coverage_feature.get("status") != "PARTIAL"
         or route_coverage_feature.get("gate_status")
-        != "REMOTE_DEV_QUALITY_FAILED_CLEAN_VARIABLE_DISABLED_NO_RERUN_TEST_SEALED"
+        != (
+            "REMOTE_DEV_QUALITY_FAILED_CLEAN_VARIABLE_DISABLED_"
+            "WINDOWS_CLOSEOUT_PASS_NO_RERUN_TEST_SEALED"
+        )
     ):
         raise ValueError("phase 3 route coverage feature gate status drifted")
 
@@ -1253,6 +1256,7 @@ def check_phase3_comparison_route_coverage_gate() -> None:
         "PD-056",
         "PD-057",
         "PD-058",
+        "PD-059",
     ]:
         raise ValueError("phase 3 route coverage decision ids drifted")
     if payload.get("status") != (
@@ -1405,6 +1409,11 @@ def check_phase3_comparison_route_coverage_gate() -> None:
         != "FAIL_CHECKLIST_DEFECT_NO_QUALITY_EXECUTION"
         or closeout.get("second_attempt_status")
         != "FAIL_MISSING_PSSCRIPTANALYZER_NO_QUALITY_EXECUTION"
+        or closeout.get("third_attempt_status") != "PASS"
+        or closeout.get("third_attempt_head_commit")
+        != "7764f3e0416706b98c5ea8d131a5525bc7f96f2e"
+        or closeout.get("third_attempt_builtin_parser") != "PASS"
+        or closeout.get("third_attempt_strict_mode_behavior") != "PASS"
         or closeout.get("entry")
         != (
             "deploy/remote/phase3-comparison-validation/"
@@ -1414,8 +1423,8 @@ def check_phase3_comparison_route_coverage_gate() -> None:
         or closeout.get("private_input_read") is not False
         or closeout.get("quality_gate_rerun") is not False
         or closeout.get("windows_external_module_required") is not False
-        or closeout.get("status")
-        != "LOCAL_VALIDATED_AWAITING_USER_WINDOWS_RECHECK_AFTER_PUSH"
+        or closeout.get("recheck_required") is not False
+        or closeout.get("status") != "PASS_COMPLETE"
     ):
         raise ValueError("phase 3 route coverage result boundary drifted")
     target = result.get("target_quality", {})

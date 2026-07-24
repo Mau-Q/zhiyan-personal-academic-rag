@@ -46,6 +46,12 @@ AST，后续 helper 检查级联失败；最后无条件打印的 `PASS` 无效�
 PSScriptAnalyzer 只属于 Mac 提交前静态 Gate；当前 Windows 入口只依赖系统
 内置 Parser 和严格模式行为检查。
 
+用户已确认提交
+`7764f3e0416706b98c5ea8d131a5525bc7f96f2e` 的版本化 Windows PowerShell 5.1
+收口验证成功，内置 Parser 和严格模式行为均通过，且没有运行质量 Gate、
+服务或私有输入。该验证已 `PASS_COMPLETE`，下列命令保留为审计记录，不要求
+再次执行。
+
 ```powershell
 Set-Location 'C:\Users\Administrator\zhiyan-personal-academic-rag'
 

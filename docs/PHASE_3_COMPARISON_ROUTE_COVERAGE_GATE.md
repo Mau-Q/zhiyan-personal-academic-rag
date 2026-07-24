@@ -154,3 +154,9 @@ PowerShell 脱敏汇总曾因完整报告不含可选 `primary_error_code` 而�
 模块路径没有 `PSScriptAnalyzer 1.25.0`。该外部模块只保留在 Mac 提交前静态
 Gate；Windows 不安装新模块，版本化入口改用系统内置 Parser 和严格模式行为
 检查。该调整不接触旧质量 Run ID、服务、私有输入或清理状态。
+
+用户随后确认提交
+`7764f3e0416706b98c5ea8d131a5525bc7f96f2e` 的 Windows PowerShell 5.1
+版本化收口验证成功，内置 Parser 与严格模式 helper 行为均通过。该 PASS 只
+关闭汇总修复的跨平台验证，不改变 `KEEP_COMPARISON_ROUTE_COVERAGE_DISABLED`
+或任何质量、清理、holdout、性能结论。

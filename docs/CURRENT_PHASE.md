@@ -202,6 +202,7 @@ Phase ID：`source-phase3-comparison-route-coverage-quality-failed-clean`
 - `_01` 同时证明身份违规为 0、关键非目标 Recall@3/nDCG@10 均不退化、选择器 P95 `0.049995 ms`、清理 9/9、READY 失败关闭和删除后 403；因此这是可信质量失败，无需恢复且不得重跑。报告和裁决落盘后，Windows PowerShell 汇总层因完整报告省略可选 `primary_error_code` 而在严格模式报错；该外层错误不影响既有报告、裁决或清理证明，本地仅将脱敏汇总字段改为缺失安全读取，不要求质量重跑。
 - 用户首次复核该汇总修复时，验证清单自身失败：29 个 Python 测试为 `1 failure / 3 errors`，`check_powershell.ps1` 在 Windows PowerShell 5.1 参数默认绑定阶段取得空 `$PSScriptRoot`，手工 `ParseFile` 又使用相对路径而没有取得 AST，后续 helper/行为检查级联失败；末尾无条件打印的 `PASS` 无效。本地现将路径初始化移出参数默认值，并提供失败即停的版本化 Windows PowerShell 5.1 收口验证脚本，只验证提交、静态合同、绝对路径解析和可选字段行为，不运行质量 Gate、服务、私有输入或通用 Python 测试批次。
 - 第二次 Windows 收口复核已精确快进到 `79861c6`，版本化脚本正确失败关闭，唯一错误为 Windows PowerShell 5.1 找不到 `PSScriptAnalyzer 1.25.0`；仍未运行质量、服务或私有输入。PSScriptAnalyzer 保持为 Mac 提交前静态 Gate，Windows 入口不安装外部模块，只运行系统内置 Parser 的绝对路径语法解析和严格模式 helper 行为检查。
+- 用户已确认提交 `7764f3e0416706b98c5ea8d131a5525bc7f96f2e` 的版本化 Windows PowerShell 5.1 收口验证成功：系统内置 Parser 和严格模式 helper 行为均通过，且未运行质量、服务或私有输入。汇总修复的跨平台验证至此 `PASS_COMPLETE`，无需再次复核；路由覆盖质量失败、默认关闭、无需恢复、holdout 封存和独立性能债均不变。
 
 ## 输入
 
