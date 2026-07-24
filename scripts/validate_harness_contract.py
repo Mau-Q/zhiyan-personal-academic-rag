@@ -534,6 +534,19 @@ def check_phase4_multilingual_nli_candidate_gate() -> None:
         != "NOT_MEASURABLE_NO_HUMAN_ADJUDICATED_NEGATIVES"
     ):
         raise ValueError("phase 4 multilingual NLI decision boundary drifted")
+    identity = payload.get("cross_platform_identity")
+    if (
+        not isinstance(identity, dict)
+        or identity.get("repair_decision_id") != "PD-063"
+        or identity.get("first_windows_attempt")
+        != "PRE_MODEL_CONFIG_RAW_BYTE_HASH_REJECTED_CRLF_CHECKOUT_NO_QUALITY_RESULT"
+        or identity.get("config_and_tracked_review_identity")
+        != "LF_CANONICAL_TEXT_BYTES_CRLF_EQUIVALENT"
+        or identity.get("bom_or_lone_cr_or_content_drift") != "REJECTED"
+        or identity.get("private_package_and_inner_input_identity")
+        != "EXACT_RAW_BYTES"
+    ):
+        raise ValueError("phase 4 multilingual NLI cross-platform identity drifted")
     scope = payload.get("scope")
     if (
         not isinstance(scope, dict)

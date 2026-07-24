@@ -11,7 +11,10 @@ from backend.evaluation.claim_evidence_nli import (
     evaluate_nli_candidate,
     load_nli_candidate_config,
 )
-from scripts.run_phase4_multilingual_nli_gate import build_workload
+from scripts.run_phase4_multilingual_nli_gate import (
+    _lf_canonical_sha256,
+    build_workload,
+)
 
 
 CONFIG = (
@@ -59,6 +62,27 @@ class Phase4MultilingualNliCandidateTests(unittest.TestCase):
         )
         self.assertEqual(self.config.scope["test"], "NOT_READ_NOT_RUN")
         self.assertEqual(self.config.scope["acceptance"], "NOT_READ_NOT_RUN")
+
+    def test_tracked_text_identity_accepts_only_lf_or_equivalent_crlf(self) -> None:
+        source = CONFIG.read_bytes()
+        expected = "08722f95bde2af91c4138fd1e7e863b55f39f843dde0290a84578b309d470c3e"
+        self.assertEqual(_lf_canonical_sha256(CONFIG), expected)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            crlf = root / "config-crlf.json"
+            crlf.write_bytes(source.replace(b"\n", b"\r\n"))
+            self.assertEqual(_lf_canonical_sha256(crlf), expected)
+
+            bom = root / "config-bom.json"
+            bom.write_bytes(b"\xef\xbb\xbf" + source)
+            self.assertNotEqual(_lf_canonical_sha256(bom), expected)
+
+            invalid = root / "config-lone-cr.json"
+            invalid.write_bytes(source + b"\r")
+            with self.assertRaisesRegex(
+                NliCandidateError, "NLI_TEXT_LINE_ENDING_INVALID"
+            ):
+                _lf_canonical_sha256(invalid)
 
     def test_positive_only_diagnostic_can_qualify_for_remote_adjudication(self) -> None:
         report = evaluate_nli_candidate(

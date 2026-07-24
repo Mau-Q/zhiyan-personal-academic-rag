@@ -6,6 +6,8 @@ RAG 服务，不读取 `test/Acceptance`，不改变在线 Claim–Evidence 策�
 前提：公开仓库 `main` 已拉到待验证提交且 tracked worktree 干净；私有输入 ZIP
 仍由用户在主机上保管。脚本会核验 ZIP、内层 JSONL、候选 CSV、配置、CUDA
 PyTorch、RTX 4090、模型 revision 和完整 snapshot 哈希。
+tracked 配置与候选 CSV 使用 LF 规范化文本身份，接受 Git 的等价 CRLF 检出；
+BOM、孤立 CR 和内容变化仍失败关闭。私有 ZIP/JSONL 保持原始字节哈希。
 
 先把私有 ZIP 放到仓库忽略目录
 `runtime\handoffs\member-b-phase2-4-dev-review-input-v1\`，保留原文件名。然后在

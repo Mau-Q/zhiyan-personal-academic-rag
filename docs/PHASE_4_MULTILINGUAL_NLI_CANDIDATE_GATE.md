@@ -42,5 +42,12 @@ PowerShell 行为合同。远程入口及完整用户命令见
 哈希、GPU、PyTorch/CUDA、模型 revision 和 snapshot，最终只输出脱敏 JSON。
 组件延迟只表示 16 pair NLI scoring，不是在线 RAG 或 300 ms 检索性能结论。
 
+首次 Windows 尝试在模型加载前以 `NLI_CONFIG_HASH_DRIFT` 停止。私有 ZIP
+SHA-256 正确；根因是 `core.autocrlf` 将 tracked JSON/CSV 检出为等价 CRLF，
+而入口误用了原始字节哈希。PD-063 将 tracked 配置和候选 CSV 身份改为 LF
+规范化文本哈希：纯 LF 与等价 CRLF 接受，BOM、孤立 CR 或内容漂移继续拒绝。
+私有 ZIP 和内层 JSONL 仍使用原始字节 SHA-256。该修复没有运行模型或产生质量
+结果，下一次仍运行同一冻结 Gate。
+
 知识库接入、前端、演示、远程服务操作、`test/Acceptance` 和在线策略变更均不在
 本 Gate。

@@ -19,6 +19,13 @@
     "candidate_truth_status": "AI_ASSISTED_CANDIDATE_NOT_HUMAN_ADJUDICATED",
     "adjudicated_negatives_available": false
   },
+  "cross_platform_identity": {
+    "repair_decision_id": "PD-063",
+    "first_windows_attempt": "PRE_MODEL_CONFIG_RAW_BYTE_HASH_REJECTED_CRLF_CHECKOUT_NO_QUALITY_RESULT",
+    "config_and_tracked_review_identity": "LF_CANONICAL_TEXT_BYTES_CRLF_EQUIVALENT",
+    "bom_or_lone_cr_or_content_drift": "REJECTED",
+    "private_package_and_inner_input_identity": "EXACT_RAW_BYTES"
+  },
   "decision_contract": {
     "candidate_supported_retention_min": 0.85,
     "human_finalized_positive_retention_min": 0.85,
@@ -47,7 +54,7 @@
   "local_validation": {
     "focused_fake_scorer_and_contract_tests": {
       "status": "PASS",
-      "count": 11
+      "count": 13
     },
     "real_model_on_mac": "NOT_RUN_BY_CONTRACT",
     "windows_powershell_static": "PASS",

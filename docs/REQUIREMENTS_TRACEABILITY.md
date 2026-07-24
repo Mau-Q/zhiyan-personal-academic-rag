@@ -178,3 +178,9 @@ Claim 为 hypothesis 做离线正例保留诊断。Mac 仅运行 Fake Scorer；�
 用户在 Windows PowerShell 5.1 RTX 4090 入口运行。当前没有人工裁决负例，因此
 Precision、负例拒绝率和人机一致率不可测；候选通过也不改变 `AUDIT_ONLY` 或
 在线硬裁决。知识库接入、前端、演示和 `test/Acceptance` 继续排除。
+
+首次 Windows NLI 尝试在模型加载前因 tracked 配置的等价 CRLF 检出被原始字节
+SHA-256 拒绝，没有形成质量结果。跨平台身份现与 Phase 3 已验证规则一致：
+tracked JSON/CSV 以 LF 规范化文本字节计算身份，纯 LF 与等价 CRLF 接受，BOM、
+孤立 CR 和内容漂移拒绝；私有 ZIP/JSONL 仍使用原始字节 SHA-256。修复不改变
+模型、输入、门槛、默认 `AUDIT_ONLY` 或 holdout。

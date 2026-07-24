@@ -36,6 +36,14 @@ class Phase4MultilingualNliRemoteScriptTests(unittest.TestCase):
             self.text.index("Expand-Archive"),
         )
 
+    def test_tracked_text_hash_accepts_equivalent_windows_checkout(self) -> None:
+        self.assertIn("function Get-LfCanonicalTextSha256", self.text)
+        self.assertGreaterEqual(
+            self.text.count("Get-LfCanonicalTextSha256 -LiteralPath"),
+            2,
+        )
+        self.assertIn("NLI_TEXT_LINE_ENDING_INVALID", self.text)
+
     def test_cuda_model_and_runner_are_frozen(self) -> None:
         for token in (
             "2.13.0+cu126",

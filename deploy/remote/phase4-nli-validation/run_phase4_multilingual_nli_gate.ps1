@@ -52,6 +52,36 @@ function Get-Sha256 {
     return (Get-FileHash -LiteralPath $LiteralPath -Algorithm SHA256).Hash
 }
 
+function Get-LfCanonicalTextSha256 {
+    param([Parameter(Mandatory = $true)][string]$LiteralPath)
+    [byte[]]$payload = [System.IO.File]::ReadAllBytes($LiteralPath)
+    $canonical = New-Object 'System.Collections.Generic.List[byte]'
+    for ($index = 0; $index -lt $payload.Length; $index += 1) {
+        if ($payload[$index] -ne 13) {
+            $canonical.Add($payload[$index])
+            continue
+        }
+        if (
+            $index + 1 -ge $payload.Length -or
+            $payload[$index + 1] -ne 10
+        ) {
+            throw 'NLI_TEXT_LINE_ENDING_INVALID'
+        }
+        $canonical.Add(10)
+        $index += 1
+    }
+    $hasher = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $digest = $hasher.ComputeHash($canonical.ToArray())
+    }
+    finally {
+        $hasher.Dispose()
+    }
+    return (
+        [System.BitConverter]::ToString($digest).Replace('-', '')
+    )
+}
+
 function Assert-FileHash {
     param(
         [Parameter(Mandatory = $true)][string]$LiteralPath,
@@ -82,14 +112,18 @@ try {
         throw 'NLI_HEAD_MUST_EQUAL_ORIGIN_MAIN'
     }
 
-    Assert-FileHash `
-        -LiteralPath $configPath `
-        -ExpectedSha256 $expectedConfigSha256 `
-        -FailureCode 'NLI_CONFIG_HASH_DRIFT'
-    Assert-FileHash `
-        -LiteralPath $reviewPath `
-        -ExpectedSha256 $expectedReviewSha256 `
-        -FailureCode 'NLI_CANDIDATE_REVIEW_HASH_DRIFT'
+    if (
+        (Get-LfCanonicalTextSha256 -LiteralPath $configPath) -ne
+        $expectedConfigSha256
+    ) {
+        throw 'NLI_CONFIG_HASH_DRIFT'
+    }
+    if (
+        (Get-LfCanonicalTextSha256 -LiteralPath $reviewPath) -ne
+        $expectedReviewSha256
+    ) {
+        throw 'NLI_CANDIDATE_REVIEW_HASH_DRIFT'
+    }
 
     $inputSource = 'EXISTING_EXACT_PRIVATE_INPUT'
     if (Test-Path -LiteralPath $privateInputPath -PathType Leaf) {

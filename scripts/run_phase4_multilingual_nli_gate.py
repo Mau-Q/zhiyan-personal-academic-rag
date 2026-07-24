@@ -50,6 +50,13 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _lf_canonical_sha256(path: Path) -> str:
+    payload = path.read_bytes()
+    if b"\r" in payload.replace(b"\r\n", b""):
+        raise NliCandidateError("NLI_TEXT_LINE_ENDING_INVALID")
+    return hashlib.sha256(payload.replace(b"\r\n", b"\n")).hexdigest()
+
+
 def _percentile(values: Sequence[float], percentile: float) -> float:
     if not values:
         raise NliCandidateError("NLI_BENCHMARK_VALUES_EMPTY")
@@ -93,7 +100,11 @@ def _load_private_rows(
 def _load_candidate_reviews(
     path: Path, config: NliCandidateConfig
 ) -> list[dict[str, str]]:
-    if not path.is_file() or _sha256(path) != config.inputs["candidate_review_sha256"]:
+    if (
+        not path.is_file()
+        or _lf_canonical_sha256(path)
+        != config.inputs["candidate_review_sha256"]
+    ):
         raise NliCandidateError("NLI_CANDIDATE_REVIEW_HASH_DRIFT")
     with path.open(encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -321,7 +332,7 @@ class SentenceTransformersNliScorer(NliScorer):
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
     config = load_nli_candidate_config(args.config)
-    if _sha256(args.config) != args.config_sha256:
+    if _lf_canonical_sha256(args.config) != args.config_sha256:
         raise NliCandidateError("NLI_CONFIG_HASH_DRIFT")
     candidate_path = ROOT / config.inputs["candidate_review_path"]
     private_rows = _load_private_rows(args.private_input, config)
@@ -366,7 +377,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     }
     report["input_sha256"] = {
         "config": args.config_sha256,
-        "candidate_review": _sha256(candidate_path),
+        "candidate_review": _lf_canonical_sha256(candidate_path),
         "private_input": _sha256(args.private_input),
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)

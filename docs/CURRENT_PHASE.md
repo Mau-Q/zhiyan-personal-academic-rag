@@ -210,6 +210,7 @@ Phase ID：`phase4-multilingual-nli-local-ready-remote-pending`
 - 现有确定性轮子在 21 条候选 `SUPPORTED` 上只保留 6 条，在人工终审谱系 225 个正例上只保留 110 条；这只证明高误杀风险，不产生 Precision、负例拒绝率或人工一致率。默认生成因此改为 `AUDIT_ONLY`，显式 enforcement 仅供测试和未来候选，在线硬裁决继续关闭。
 - 已固定多语言 NLI 候选轮子 `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` 的 revision、snapshot、Evidence-premise/Claim-hypothesis 模板、标签顺序和正例保留门槛；Mac 仅以 Fake Scorer 完成合同测试，真实模型未在 Mac 运行。
 - Windows PowerShell 5.1 RTX 4090 用户执行入口已静态通过，绑定公开 `main`、私有 `dev` 输入、候选 CSV、CUDA 12.6/PyTorch、模型 snapshot 和脱敏报告。当前状态仍为 `LOCAL_IMPLEMENTATION_READY_REMOTE_RTX4090_NOT_RUN`，不产生 NLI 质量结论。
+- 首次 Windows NLI 尝试确认私有 ZIP 哈希正确，但在模型加载前因 tracked JSON 的 CRLF 检出被原始字节哈希误拒绝为 `NLI_CONFIG_HASH_DRIFT`。本地已复用 Phase 3 的 LF 规范化身份：tracked JSON/CSV 接受等价 CRLF，BOM、孤立 CR 和内容变化仍拒绝；私有 ZIP/JSONL 继续严格原始字节哈希。本次没有模型或质量结果。
 
 ## 输入
 
