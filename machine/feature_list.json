@@ -690,9 +690,9 @@
     },
     {
       "id": "phase4_multi_evidence_set",
-      "status": "PARTIAL",
+      "status": "READY",
       "owner": "A",
-      "gate_status": "LOCAL_MULTI_EVIDENCE_SET_READY_AUDIT_ONLY_ONLINE_HARD_JUDGMENT_DISABLED",
+      "gate_status": "FORMAL_DETERMINISTIC_MULTI_EVIDENCE_AUDIT_READY_DEFAULT_AUDIT_ONLY_ONLINE_HARD_JUDGMENT_DEFERRED",
       "evidence": [
         "backend/rag/claim_evidence.py",
         "tests/rag/test_claim_evidence.py",

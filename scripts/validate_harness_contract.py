@@ -126,8 +126,8 @@ def check_project_state() -> None:
         "sha256": "43fd5d4af4d38884c2449b9ff39fcee537cf27af5a7a700747a932be5f74dc78",
         "line_count": 725,
         "traceability_doc": "docs/REQUIREMENTS_TRACEABILITY.md",
-        "source_phase": {"id": "phase-3", "status": "IN_PROGRESS"},
-        "completed_source_phases": ["phase-0", "phase-1", "phase-2"],
+        "source_phase": {"id": "phase-4", "status": "IN_PROGRESS"},
+        "completed_source_phases": ["phase-0", "phase-1", "phase-2", "phase-3"],
     }:
         raise ValueError("project_state source_authority is invalid")
     if not isinstance(harness, dict) or harness.get("status") != "READY":
@@ -289,11 +289,11 @@ def check_feature_list() -> None:
     )
     if (
         not isinstance(multi_evidence_feature, dict)
-        or multi_evidence_feature.get("status") != "PARTIAL"
+        or multi_evidence_feature.get("status") != "READY"
         or multi_evidence_feature.get("gate_status")
         != (
-            "LOCAL_MULTI_EVIDENCE_SET_READY_AUDIT_ONLY_"
-            "ONLINE_HARD_JUDGMENT_DISABLED"
+            "FORMAL_DETERMINISTIC_MULTI_EVIDENCE_AUDIT_READY_"
+            "DEFAULT_AUDIT_ONLY_ONLINE_HARD_JUDGMENT_DEFERRED"
         )
     ):
         raise ValueError("phase 4 multi-Evidence Set feature status drifted")
