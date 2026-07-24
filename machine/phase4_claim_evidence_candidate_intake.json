@@ -1,0 +1,85 @@
+{
+  "schema_version": "phase4_claim_evidence_candidate_intake_v1",
+  "decision_id": "PD-061",
+  "status": "CANDIDATE_INTAKE_PASS_HARD_ENFORCEMENT_DISABLED",
+  "provenance": {
+    "pull_request": "https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/15",
+    "pull_request_head": "e5926da7142dae852b7dc6ebf518320e36fda24e",
+    "reviewer": "member-b-ai-assisted",
+    "review_truth_status": "AI_ASSISTED_CANDIDATE_NOT_HUMAN_ADJUDICATED",
+    "files_match_pull_request_blobs": true,
+    "failure_taxonomy_sha256": "ce2555eee14f817c2ca610c6921934c210e2d117316dacfc521a6205302c68ef",
+    "claim_evidence_sha256": "0e17dba081cdef7ebbaa0cd101ee3b629f62ed65517cb295c1d9918f839afd8c"
+  },
+  "scope": {
+    "competition_rag_core": "IN_SCOPE",
+    "knowledge_base_integration": "OUT_OF_SCOPE_OTHER_OWNER",
+    "frontend": "OUT_OF_SCOPE",
+    "demo": "OUT_OF_SCOPE",
+    "remote_execution": "NOT_RUN",
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN"
+  },
+  "intake": {
+    "status": "PASS",
+    "failure_taxonomy_questions": 105,
+    "failure_taxonomy_none": 45,
+    "failure_taxonomy_with_candidate_failure": 60,
+    "claim_evidence_questions": 30,
+    "supported": 21,
+    "partially_supported": 1,
+    "not_applicable": 8,
+    "not_applicable_no_evidence": 4,
+    "not_applicable_forbidden": 4,
+    "input_missing": 0,
+    "private_identity_cross_check": "PASS",
+    "test_or_acceptance_ids_present": false
+  },
+  "diagnostics": {
+    "candidate_supported_retained": 6,
+    "candidate_supported_total": 21,
+    "candidate_supported_retention": 0.285714,
+    "human_finalized_positive_retained": 110,
+    "human_finalized_positive_total": 225,
+    "human_finalized_positive_retention": 0.488889,
+    "precision": "NOT_MEASURABLE_NO_ADJUDICATED_NEGATIVES",
+    "human_agreement": "NOT_MEASURABLE_AI_ASSISTED_CANDIDATE",
+    "candidate_labels_promoted_to_truth": false
+  },
+  "decision": {
+    "default_generation_mode": "AUDIT_ONLY",
+    "online_hard_judgment_enabled": false,
+    "explicit_enforcement": "TEST_AND_FUTURE_CANDIDATE_ONLY",
+    "reason": "HIGH_FALSE_REJECTION_RISK_AND_NO_HUMAN_ADJUDICATION",
+    "existing_relevance_cross_encoder_as_entailment": "REJECTED_WRONG_MODEL_TASK",
+    "new_dependencies": []
+  },
+  "report": {
+    "tracked": false,
+    "path": "runtime/phases/phase4-claim-evidence-candidate-intake-v1/report.json",
+    "sha256": "951192248e0b22b6914bba475c980209eb79ab38155f3df241a39aa5776e5cfb",
+    "contains_private_text": false
+  },
+  "local_validation": {
+    "focused_tests": {
+      "status": "PASS",
+      "count": 6,
+      "command": ".venv/bin/python -m unittest tests.evaluation.test_phase4_claim_evidence_candidate_intake"
+    },
+    "candidate_intake_runner": "PASS",
+    "full_repository_tests": "PASS",
+    "repository_harness": "PASS",
+    "powershell_static": "PASS",
+    "diff_check": "PASS"
+  },
+  "next_gate": {
+    "id": "PHASE4_ADJUDICATED_SEMANTIC_SUPPORT_BENCHMARK",
+    "single_gate": true,
+    "requires_human_adjudicated_positive_and_negative_relations": true,
+    "reuse_first_candidates": [
+      "PINNED_MULTILINGUAL_NLI_CROSS_ENCODER_OFFLINE",
+      "PINNED_EXISTING_LOCAL_LLM_JUDGE_OFFLINE"
+    ],
+    "online_enforcement": "FORBIDDEN_UNTIL_ADJUDICATED_THRESHOLDS_PASS"
+  }
+}

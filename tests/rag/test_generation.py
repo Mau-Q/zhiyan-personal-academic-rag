@@ -137,7 +137,7 @@ class RealGenerationTests(unittest.TestCase):
         self.assertEqual(len(answer["citations"]), 1)
         self.assertEqual(answer["citations"][0]["evidence_id"], "evidence_001")
         self.assertIn("REAL_GENERATION_TEST_REAL-MODEL-V1", answer["warnings"][0])
-        self.assertIn("CLAIM_EVIDENCE_VALIDATED", answer["warnings"][0])
+        self.assertIn("CLAIM_EVIDENCE_AUDIT_PASS_NOT_ENFORCED", answer["warnings"][0])
         self.assertEqual(provider.calls[0][1][0]["version_id"], "version_fixture_001")
 
     def test_invalid_model_citation_fails_closed_to_evidence_cards(self):
@@ -161,7 +161,11 @@ class RealGenerationTests(unittest.TestCase):
             ),
         )
         answer = apply_real_generation(
-            "What does the paper report?", SCOPE, base_answer(), provider
+            "What does the paper report?",
+            SCOPE,
+            base_answer(),
+            provider,
+            enforce_claim_evidence=True,
         )
 
         self.assertEqual(answer["status"], "COMPLETED")
@@ -175,12 +179,30 @@ class RealGenerationTests(unittest.TestCase):
             ),
         )
         answer = apply_real_generation(
-            "What does the paper report?", SCOPE, base_answer(), provider
+            "What does the paper report?",
+            SCOPE,
+            base_answer(),
+            provider,
+            enforce_claim_evidence=True,
         )
 
         self.assertEqual(answer["status"], "DEGRADED")
         self.assertNotIn("999", answer["answer"])
         self.assertIn("CLAIM_EVIDENCE_FAILED_CLOSED", answer["warnings"][0])
+
+    def test_default_audit_mode_does_not_enforce_uncalibrated_rejection(self):
+        provider = StubGenerationProvider(
+            claims=(
+                GeneratedClaim(text="The result is 999.", citation_ids=(1,)),
+            ),
+        )
+        answer = apply_real_generation(
+            "What does the paper report?", SCOPE, base_answer(), provider
+        )
+
+        self.assertEqual(answer["status"], "COMPLETED")
+        self.assertEqual(answer["answer"], "The result is 999. [1]")
+        self.assertIn("AUDIT_FAILED_NOT_ENFORCED", answer["warnings"][0])
 
     def test_no_evidence_does_not_call_generation_model(self):
         provider = StubGenerationProvider()

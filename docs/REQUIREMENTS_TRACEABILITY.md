@@ -40,7 +40,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `PARTIAL` | 远程 Milvus 2.6.18 + BGE-M3；316 Chunk Canary 12/15；175 题 109/175；版本 Collection、READY 持久化 Answer API 和删除清理均远程通过 | 目标规模性能基线未完成；不以远程 500 题或调参作为当前门禁 |
 | SR-06 | 基础规范化和最小路由；改写、多查询和多跳按失败后置 | `PARTIAL` | API 问题输入合同与默认检索链路；`machine/phase3_entry_freeze.json` 冻结 4 个双文档比较失衡 `dev` 样本；`_07` 证明查询拆分无增益，路由覆盖 `_01` 证明选择改变仍无 Recall@3/nDCG@3 或双侧命中增益，两个变量均保持关闭 | 两个 dev 变量均未通过，不能进入 `test`；不得调参重跑或扩大为通用改写、多查询、多跳，下一主 Gate 需重新选择能直接改善目标 Evidence 的高价值假设 |
 | SR-07 | ES/Milvus 并行、RRF、去重、多样性、Cross-Encoder 重排 | `PARTIAL` | 本地 SQLite BM25 + BGE-M3 RRF 15/15；远程 RRF Canary 14/15；固定 BGE Reranker 将 `nDCG@10` 从 `0.647269` 提升到 `0.747810`、`Precision@5 +0.02`，RTX 4090 pair-scoring `P95=188.22683 ms`；最终 Windows 分段 Gate 30/30 应用且安全/清理通过，base `P95=376.394385 ms`、combined `P95=504.71613 ms`，主要成本为 Query Embedding `P95=189.838925 ms` 与 READY 路由解析 `P95=145.48693 ms` | 默认明确保持原 RRF，固定 Reranker 仅为可选组件；300 ms 性能债、去重/多样性和扩展消融进入阶段 3 独立 Gate，不放宽 SLO |
-| SR-08 | 证据上下文、真实 LLM、强制引用、校验与拒答 | `PARTIAL` | Evidence/Citation、`NO_EVIDENCE`；llama3.2 与 Qwen 已通过远程真实生成闭环和 3 文档 9 题；`backend/rag/claim_evidence.py` 复用结构化 Claim，已接入数字锚点、高风险关系、核心重合、同单位数值冲突披露、安全限制语、部分回答和全量失败关闭 | 当前只证明确定性锚点与绑定，不冒充通用语义蕴含；独立 dev 人工一致率、误判率和引用完整率校准仍未完成，在线 NLI/LLM 硬裁决保持关闭 |
+| SR-08 | 证据上下文、真实 LLM、强制引用、校验与拒答 | `PARTIAL` | Evidence/Citation、`NO_EVIDENCE`；llama3.2 与 Qwen 已通过远程真实生成闭环和 3 文档 9 题；`backend/rag/claim_evidence.py` 已接入确定性锚点；成员 B 的 105 条失败归因和 30 题 AI 辅助候选二审已通过格式、身份和私有输入对账，21 条候选支持关系中当前规则只保留 6 条，因此默认改为 audit-only | 候选二审没有经过人工裁决，不计算 Precision 或人工一致率；需先形成人工裁决正负关系，再比较固定多语言 NLI 或既有本地 LLM 离线 Judge，在线硬裁决保持关闭 |
 | SR-09 | 问答 API、SSE、内部 Evidence 合同和鉴权原文定位 | `PARTIAL` | 非流式 Answer API、SSE 文件合同、PDF 页码 | SSE 运行、独立 Evidence 消费和鉴权预览未实现；对外 Agent Evidence API 保持后置 |
 | SR-10 | Trace、反馈、指标、告警和运营闭环 | `PARTIAL` | Trace 合同与评测报告结构 | 持久化、反馈 API、看板、告警和难例回流未实现 |
 | SR-11 | 固定 175 题 MVP 初始集、约 500 条稳定迭代集、800～1500 条正式验收集 | `PARTIAL` | 175 题已按 `105/35/35` 拆分完成人工校验，166 条原样通过、9 条修订、4 条专家签署；ES 85/175、Milvus 109/175；500 题四路工程结果保留；阶段 3 入口仅使用 4 个 `dev` ID，`test/acceptance` 保持封存 | 无证据校准和安全策略层缺口需分流；阶段 3 的 `test` 只能在实现和 dev 决策冻结后一次性使用，Acceptance 需另行授权；800～1500 条正式独立盲测尚未进入 |
@@ -56,7 +56,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | 阶段 1：数据与索引最小闭环 | `COMPLETE` | 远程 v2 已通过 PDF/Chunk 持久化、owner/版本 READY 对账、ES/Milvus 在线 Evidence、同 Run ID 恢复、删除后 403 和三路清理；报告 SHA-256 `6B2AB3BAAD55AE8FA506C0D1FD7A310D9EF3A3833A93E33DD1A2D8A0938A9D8C` | 正式 MinIO、OCR 和目标规模性能不属于阶段 1 退出条件 |
 | 阶段 2：基础 RAG MVP | `COMPLETE` | 非流式 API、Evidence、拒答、远程 RRF Canary、llama3.2/Qwen READY 真实生成闭环、模型选型和 3 文档 9 题 v2 均通过；固定 BGE Reranker 的增益、目标硬件成本和在线边界已验证，最终决定为原 RRF 默认、Reranker 可选且不默认启用 | Windows 分段 Gate 的 combined `P95=504.71613 ms` 未通过 300 ms；这是显式后移的性能债，不写成 SLO 或生产验收完成 |
 | 阶段 3：针对失败类型增强 | `IN_PROGRESS` | 首个查询拆分变量和第二个路由覆盖变量均已完成可信在线 dev 比较并保持关闭；第二变量虽在 4/4 目标上生效、3/4 改变选择，但 Control/Treatment 仍同为双侧 `0/4`，Recall@3 与 nDCG@3 增益均为 0 | `_01` 清理 9/9、READY 失败关闭和删除后 403 均通过，无需恢复且不得复用；`test/acceptance` 继续封存，300 ms 性能 Gate 独立。下一节点须先重新选择一个高价值主 Gate，不继续细分或调参重跑失败变量 |
-| 阶段 4：Claim–Evidence 可靠性 | `PARTIAL` | 已复用结构化 Claim 与授权 Evidence，建立零新增依赖的确定性锚点、数值冲突披露、无依据 Claim 删除、部分回答和 Evidence-only 失败关闭 | 尚未在独立 dev 人工标签上完成引用完整率、无依据主张率、误杀率与人工一致率校准；不启用在线 NLI/LLM 硬裁决 |
+| 阶段 4：Claim–Evidence 可靠性 | `PARTIAL` | 已复用结构化 Claim 与授权 Evidence建立确定性核心；成员 B 的 105/30 AI 辅助候选资产已接收并对账，候选支持保留率 `6/21` 与人工终审正例保留率 `110/225` 证明现有词法规则高误杀，默认改为 audit-only | 候选不是人工裁决真值，Precision、负例拒绝率和人工一致率仍不可测；人工裁决和离线语义候选比较未完成，不启用在线 NLI/LLM 硬裁决 |
 | 阶段 5：复杂科研问答与复用 | `NOT_STARTED` | 暂未完成比较、多跳、时效问答与 Agent Evidence API | 进入前需满足 MVP、权限委托、审计与运维条件 |
 
 ## 6. 当前工作门禁

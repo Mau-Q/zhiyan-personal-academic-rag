@@ -7,9 +7,10 @@ Claim 都经过绑定 Evidence 的确定性核验”。它是本地核心能力�
 知识库接入、演示入口、远程部署或 `test/Acceptance` 验收。
 
 Gate 状态为
-`LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED`。这表示核心代码与公开
-Fixture/单元测试已就绪；不表示通用语义蕴含已经解决，也不表示最高方案
-阶段 4 已完成。
+`LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED`。后续候选二审接收与
+正例诊断证明现有规则存在高误杀风险，因此默认运行模式已收敛为
+`AUDIT_ONLY`；显式 enforcement 仅供测试和未来独立候选。核心代码就绪
+不表示通用语义蕴含已经解决，也不表示最高方案阶段 4 已完成。
 
 ## 复用决策
 
@@ -38,8 +39,9 @@ Fixture/单元测试已就绪；不表示通用语义蕴含已经解决，也不
   同时给出至少两个冲突值；
 - 纯“证据不足/未提供/无法确定”限制语可以安全保留，但状态不冒充
   `SUPPORTED`；
-- 多 Claim 回答只删除不通过的 Claim；仍有可信 Claim 时形成显式部分回答，
-  全部不通过时降级为 Evidence 卡片。
+- 显式 enforcement 模式下，多 Claim 回答只删除不通过的 Claim；仍有可信
+  Claim 时形成部分回答，全部不通过时降级为 Evidence 卡片。由于候选二审
+  正例保留率仅为 `0.285714`，该模式不作为默认在线行为。
 
 这些规则只证明确定性锚点、关系标记和引用绑定，不证明完整语义蕴含。
 文本冲突、同义改写和隐含关系若无法被规则证明，当前失败关闭；不调用模型
@@ -52,10 +54,10 @@ Fixture/单元测试已就绪；不表示通用语义蕴含已经解决，也不
   INSUFFICIENT_EVIDENCE / UNSUPPORTED`；
 - `ClaimEvidenceReport` 提供保留 Claim、引用完整率、无依据主张率和部分回答
   判定；
-- `apply_real_generation` 只渲染保留 Claim，并把 Citation 收缩到实际使用的
-  Evidence；
-- 全部 Claim 不通过或结构化 Claim 缺失时，保持原 Evidence 并
-  `DEGRADED`，不输出模型自由文本。
+- `apply_real_generation` 默认渲染全部结构化 Claim、继续验证 Citation，并
+  记录 `AUDIT_PASS/AUDIT_FAILED_NOT_ENFORCED`；
+- 仅显式 enforcement 模式渲染通过的 Claim、收缩 Citation，并在全部
+  Claim 不通过时保持原 Evidence、返回 `DEGRADED`。
 
 ## 验证与未完成项
 
@@ -63,6 +65,7 @@ Fixture/单元测试已就绪；不表示通用语义蕴含已经解决，也不
 部分回答、全量失败关闭、真实生成适配器和在线 READY API。`test/Acceptance`
 未读取、未运行。
 
-后续只保留一个大的校准 Gate：在独立 `dev` Claim–Evidence 人工标签上测
-引用完整率、无依据主张率、误杀率与人工一致率，再决定规则是否能进入在线
-硬裁决。知识库接入、前端和演示均由其他责任边界处理。
+后续接收结果见 `docs/PHASE_4_CLAIM_EVIDENCE_CANDIDATE_INTAKE.md`。候选
+二审只用于发现误杀风险，没有冒充人工一致率或 Precision；规则保持
+audit-only。若继续，只保留一个需要人工裁决真值的多语言语义支持候选 Gate；
+知识库接入、前端和演示均由其他责任边界处理。

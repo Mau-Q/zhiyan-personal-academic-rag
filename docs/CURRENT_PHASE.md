@@ -206,13 +206,15 @@ Phase ID：`phase4-claim-evidence-core-local-ready`
 - 比赛增强的下一个主 Gate 已完成轮子评估：直接复用本仓库 `claims[].text + citation_ids` 与授权 Evidence/Citation，窄适配用户既有 reading-agent 的确定性可靠性模式；现有相关性 Cross-Encoder 不作为蕴含器，Ragas/Haystack 只保留为后续离线评测候选，因此没有新增依赖、框架或服务。
 - 本地 Claim–Evidence 核心现可校验请求内引用、数字锚点、高风险关系、核心重合和同单位数值冲突披露；支持安全限制语、删除无依据 Claim 后的显式部分回答，以及全部失败时保留 Evidence 卡片的 `DEGRADED`。公开 Answer Schema 与冻结 Prompt 身份均未改变。
 - 该能力只达到 `LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED`：不包含知识库接入、前端、演示或远程运行，未读取 `test/Acceptance`，也不把确定性词面检查写成通用语义蕴含。最高方案阶段 3 仍为 `IN_PROGRESS`，阶段 4 仅记为 `PARTIAL`。
+- `phase4-claim-evidence-candidate-intake-complete` 已原样接收成员 B PR #15 的三份候选资产并通过冻结私有 `dev` 对账：失败归因 `105/105`，Claim–Evidence `30/30`，关系为 `SUPPORTED=21 / PARTIALLY_SUPPORTED=1 / NOT_APPLICABLE=8`，`INPUT_MISSING=0`。评审者明确为 `member-b-ai-assisted`，候选未经过人工裁决，不晋升为最终真值。
+- 现有确定性轮子在 21 条候选 `SUPPORTED` 上只保留 6 条，在人工终审谱系 225 个正例上只保留 110 条；这只证明高误杀风险，不产生 Precision、负例拒绝率或人工一致率。默认生成因此改为 `AUDIT_ONLY`，显式 enforcement 仅供测试和未来候选，在线硬裁决继续关闭。
 
 ## 输入
 
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 未完成能力：阶段 3 首个比较拆分变量和第二个路由覆盖变量均已在可信在线 dev Gate 失败并保持关闭；阶段 4 Claim–Evidence 尚缺独立 dev 人工校准，在线硬裁决关闭；正式 MinIO 适配、OCR、目标规模性能验收、知识库接入、前端和演示均不在当前责任边界；固定 Reranker 在当前 300 ms SLO 下不默认启用；
+- 未完成能力：阶段 3 首个比较拆分变量和第二个路由覆盖变量均已在可信在线 dev Gate 失败并保持关闭；阶段 4 已接收 AI 辅助候选二审但尚缺人工裁决的正负 Claim–Chunk 真值，在线硬裁决关闭；正式 MinIO 适配、OCR、目标规模性能验收、知识库接入、前端和演示均不在当前责任边界；固定 Reranker 在当前 300 ms SLO 下不默认启用；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -252,13 +254,13 @@ Phase ID：`phase4-claim-evidence-core-local-ready`
 
 ## Current boundary
 
-最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 仍为 `IN_PROGRESS`，阶段 4 为 `PARTIAL_LOCAL_CORE_READY`。两个阶段 3 变量均因无目标质量增益保持关闭；当前比赛增强主 Gate 已建立 Claim–Evidence 确定性本地核心，但人工校准与在线硬裁决未开始。当前评测边界为 `PHASE3_FIRST_TWO_VARIABLES_FAILED_DISABLED / PHASE4_CLAIM_EVIDENCE_LOCAL_CORE_ONLY / TEST_ACCEPTANCE_NOT_READ_NOT_RUN`。默认 RRF、Reranker 关闭、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
+最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 仍为 `IN_PROGRESS`，阶段 4 为 `PARTIAL_LOCAL_CORE_READY`。两个阶段 3 变量均因无目标质量增益保持关闭；当前比赛增强主 Gate 已完成 Claim–Evidence 本地核心与候选二审接收，当前仓库节点为 `phase4-claim-evidence-candidate-intake-complete`，但人工裁决和在线硬裁决均未完成。当前评测边界为 `PHASE3_FIRST_TWO_VARIABLES_FAILED_DISABLED / PHASE4_CANDIDATE_INTAKE_COMPLETE_AUDIT_ONLY / TEST_ACCEPTANCE_NOT_READ_NOT_RUN`。默认 RRF、Reranker 关闭、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
 
 ## Next gate
 
-1. **下一个仍只保留一个大 Gate：** 使用独立 `dev` Claim–Evidence 人工标签校准引用完整率、无依据主张率、误杀率和人工一致率；
-2. **不扩张当前责任：** 该校准不包含知识库接入、前端、演示、远程部署、`test/Acceptance` 或 Agent API；
-3. **在线硬裁决后置：** 确定性检查稳定且人工指标达标前，不引入 NLI/LLM Judge 在线阻断，也不把相关性 Reranker 分数当支持度；
+1. **下一个仍只保留一个大 Gate：** 先对候选分歧和负例形成人工裁决真值，再在同一离线 Gate 比较固定多语言 NLI Cross-Encoder 与既有本地 LLM Judge；
+2. **不扩张当前责任：** 该 Gate 不包含知识库接入、前端、演示、远程部署、`test/Acceptance` 或 Agent API；
+3. **在线硬裁决后置：** 人工裁决后的正例保留、负例拒绝、Precision 和一致率达标前，不引入 NLI/LLM Judge 在线阻断，也不把相关性 Reranker 分数当支持度；
 4. **其他债务继续分开：** 阶段 3 检索变量不再细分或调参，300 ms 性能债仍为独立 Gate。
 
 ## Prohibited shortcuts
@@ -266,4 +268,4 @@ Phase ID：`phase4-claim-evidence-core-local-ready`
 - 不把父级知识库整理目录整体初始化为 Git 仓库；
 - 不上传现有知识库数据、PDF、数据库、模型、运行时和本地配置；
 - 不用即时通讯压缩包代替 GitHub 中的版本化源码交付；
-- 不在安全和权属审查前将仓库切换为公有。
+- 仓库已由用户切换为公有；后续仍不得提交私有问题、Claim/Evidence 正文、PDF、运行时、凭据或本机路径。

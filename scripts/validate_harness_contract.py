@@ -27,6 +27,7 @@ REQUIRED_FILES = (
     "docs/PHASE_3_COMPARISON_DEV_GATE.md",
     "docs/PHASE_3_COMPARISON_ROUTE_COVERAGE_GATE.md",
     "docs/PHASE_4_CLAIM_EVIDENCE_CORE_GATE.md",
+    "docs/PHASE_4_CLAIM_EVIDENCE_CANDIDATE_INTAKE.md",
     "machine/project_state.json",
     "machine/feature_list.json",
     "machine/phase_zero_scope_resource_slo.json",
@@ -35,6 +36,7 @@ REQUIRED_FILES = (
     "machine/phase3_comparison_report_intake.json",
     "machine/phase3_comparison_route_coverage_gate.json",
     "machine/phase4_claim_evidence_core_gate.json",
+    "machine/phase4_claim_evidence_candidate_intake.json",
     "machine/phase_result.schema.json",
     "machine/phase_result.template.json",
     "scripts/validate_harness_contract.py",
@@ -232,9 +234,27 @@ def check_feature_list() -> None:
         not isinstance(phase4_feature, dict)
         or phase4_feature.get("status") != "PARTIAL"
         or phase4_feature.get("gate_status")
-        != "LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED"
+        != "LOCAL_CORE_READY_DEFAULT_AUDIT_ONLY_ONLINE_HARD_JUDGMENT_DEFERRED"
     ):
         raise ValueError("phase 4 Claim-Evidence feature gate status drifted")
+    phase4_candidate_feature = next(
+        (
+            feature
+            for feature in features
+            if feature.get("id") == "phase4_claim_evidence_candidate_intake"
+        ),
+        None,
+    )
+    if (
+        not isinstance(phase4_candidate_feature, dict)
+        or phase4_candidate_feature.get("status") != "PARTIAL"
+        or phase4_candidate_feature.get("gate_status")
+        != (
+            "CANDIDATE_INTAKE_PASS_HARD_ENFORCEMENT_DISABLED_"
+            "HUMAN_ADJUDICATION_PENDING"
+        )
+    ):
+        raise ValueError("phase 4 candidate intake feature status drifted")
 
 
 def validate_phase_result(payload: Any, *, require_concrete: bool) -> None:
@@ -361,9 +381,11 @@ def check_phase4_claim_evidence_core_gate() -> None:
     if (
         not isinstance(implementation, dict)
         or implementation.get("partial_answer_policy")
-        != "DROP_UNSUPPORTED_CLAIMS_KEEP_SUPPORTED_OR_SAFE_LIMITATION"
+        != "EXPLICIT_ENFORCEMENT_ONLY_DROP_UNSUPPORTED_CLAIMS"
         or implementation.get("all_unsupported_policy")
-        != "DEGRADED_EVIDENCE_ONLY"
+        != "EXPLICIT_ENFORCEMENT_ONLY_DEGRADED_EVIDENCE_ONLY"
+        or implementation.get("default_mode")
+        != "AUDIT_ONLY_AFTER_CANDIDATE_FALSE_REJECTION_DIAGNOSTIC"
         or implementation.get("public_rag_answer_schema_changed") is not False
         or implementation.get("prompt_identity_changed") is not False
     ):
@@ -373,13 +395,90 @@ def check_phase4_claim_evidence_core_gate() -> None:
     if (
         not isinstance(validation, dict)
         or validation.get("focused_tests", {}).get("status") != "PASS"
-        or validation.get("focused_tests", {}).get("count") != 21
+        or validation.get("focused_tests", {}).get("count") != 22
         or validation.get("full_repository_tests") != "PASS"
         or validation.get("repository_harness") != "PASS"
         or validation.get("powershell_static") != "PASS"
         or validation.get("diff_check") != "PASS"
     ):
         raise ValueError("phase 4 Claim-Evidence local validation drifted")
+
+
+def check_phase4_claim_evidence_candidate_intake() -> None:
+    payload = _read_json("machine/phase4_claim_evidence_candidate_intake.json")
+    if (
+        payload.get("schema_version")
+        != "phase4_claim_evidence_candidate_intake_v1"
+        or payload.get("decision_id") != "PD-061"
+        or payload.get("status")
+        != "CANDIDATE_INTAKE_PASS_HARD_ENFORCEMENT_DISABLED"
+    ):
+        raise ValueError("phase 4 candidate intake identity drifted")
+    provenance = payload.get("provenance")
+    expected_hashes = {
+        "evaluation/reviews/member_b/dev-failure-taxonomy-v1.csv": (
+            "failure_taxonomy_sha256"
+        ),
+        "evaluation/reviews/member_b/dev-claim-evidence-second-review-v1.csv": (
+            "claim_evidence_sha256"
+        ),
+    }
+    if (
+        not isinstance(provenance, dict)
+        or provenance.get("review_truth_status")
+        != "AI_ASSISTED_CANDIDATE_NOT_HUMAN_ADJUDICATED"
+        or provenance.get("files_match_pull_request_blobs") is not True
+    ):
+        raise ValueError("phase 4 candidate provenance drifted")
+    for path, key in expected_hashes.items():
+        digest = hashlib.sha256((ROOT / path).read_bytes()).hexdigest()
+        if digest != provenance.get(key):
+            raise ValueError(f"phase 4 candidate asset hash drifted: {path}")
+    intake = payload.get("intake")
+    diagnostics = payload.get("diagnostics")
+    decision = payload.get("decision")
+    if (
+        not isinstance(intake, dict)
+        or intake.get("status") != "PASS"
+        or intake.get("failure_taxonomy_questions") != 105
+        or intake.get("claim_evidence_questions") != 30
+        or intake.get("supported") != 21
+        or intake.get("partially_supported") != 1
+        or intake.get("not_applicable") != 8
+        or intake.get("input_missing") != 0
+        or intake.get("test_or_acceptance_ids_present") is not False
+    ):
+        raise ValueError("phase 4 candidate intake counts drifted")
+    if (
+        not isinstance(diagnostics, dict)
+        or diagnostics.get("candidate_supported_retained") != 6
+        or diagnostics.get("candidate_supported_total") != 21
+        or diagnostics.get("candidate_labels_promoted_to_truth") is not False
+        or diagnostics.get("precision")
+        != "NOT_MEASURABLE_NO_ADJUDICATED_NEGATIVES"
+        or diagnostics.get("human_agreement")
+        != "NOT_MEASURABLE_AI_ASSISTED_CANDIDATE"
+    ):
+        raise ValueError("phase 4 candidate diagnostics drifted")
+    if (
+        not isinstance(decision, dict)
+        or decision.get("default_generation_mode") != "AUDIT_ONLY"
+        or decision.get("online_hard_judgment_enabled") is not False
+        or decision.get("new_dependencies") != []
+    ):
+        raise ValueError("phase 4 candidate decision drifted")
+    validation = payload.get("local_validation")
+    if (
+        not isinstance(validation, dict)
+        or validation.get("focused_tests", {}).get("status") != "PASS"
+        or validation.get("focused_tests", {}).get("count") != 6
+        or validation.get("candidate_intake_runner") != "PASS"
+        or validation.get("full_repository_tests") != "PASS"
+        or validation.get("repository_harness") != "PASS"
+        or validation.get("powershell_static") != "PASS"
+        or validation.get("diff_check") != "PASS"
+    ):
+        raise ValueError("phase 4 candidate validation drifted")
 
 
 def check_phase_zero_scope_resource_slo() -> None:
@@ -1615,6 +1714,10 @@ def main() -> int:
             check_phase3_comparison_route_coverage_gate,
         ),
         ("phase4_claim_evidence_core_gate", check_phase4_claim_evidence_core_gate),
+        (
+            "phase4_claim_evidence_candidate_intake",
+            check_phase4_claim_evidence_candidate_intake,
+        ),
         ("harness_links", check_harness_links),
         ("content_safety", check_harness_content_safety),
         ("tracked_artifact_boundary", check_tracked_artifact_boundary),

@@ -1,0 +1,31 @@
+{
+  "schema_version": "phase4_claim_evidence_candidate_intake_policy_v1",
+  "run_id": "phase4-claim-evidence-candidate-intake-v1",
+  "candidate_source": {
+    "pull_request": "https://github.com/Mau-Q/zhiyan-personal-academic-rag/pull/15",
+    "reviewer": "member-b-ai-assisted",
+    "status": "AI_ASSISTED_CANDIDATE_NOT_HUMAN_ADJUDICATED",
+    "failure_taxonomy_path": "evaluation/reviews/member_b/dev-failure-taxonomy-v1.csv",
+    "failure_taxonomy_sha256": "ce2555eee14f817c2ca610c6921934c210e2d117316dacfc521a6205302c68ef",
+    "claim_evidence_path": "evaluation/reviews/member_b/dev-claim-evidence-second-review-v1.csv",
+    "claim_evidence_sha256": "0e17dba081cdef7ebbaa0cd101ee3b629f62ed65517cb295c1d9918f839afd8c",
+    "expected_taxonomy_questions": 105,
+    "expected_claim_evidence_questions": 30
+  },
+  "private_input": {
+    "path": "runtime/handoffs/member-b-phase2-4-dev-review-input-v1/dev-claim-evidence-review-input-v1.jsonl",
+    "sha256": "13b7ddfb0185ba03f251664366d5ab28a0cae64adda9ef9a57da563be0ae2c6e",
+    "schema_version": "member_b_claim_evidence_review_input_v1",
+    "question_count": 105,
+    "split": "dev",
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN"
+  },
+  "decision_policy": {
+    "minimum_candidate_supported_retention_for_future_adjudication": 0.85,
+    "candidate_pass_does_not_enable_online_enforcement": true,
+    "unadjudicated_candidate_cannot_measure_precision_or_human_agreement": true,
+    "safe_default": "AUDIT_ONLY"
+  },
+  "report_path": "runtime/phases/phase4-claim-evidence-candidate-intake-v1/report.json"
+}

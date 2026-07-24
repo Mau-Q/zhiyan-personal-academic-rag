@@ -620,7 +620,7 @@
       "id": "phase4_claim_evidence_core",
       "status": "PARTIAL",
       "owner": "A",
-      "gate_status": "LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED",
+      "gate_status": "LOCAL_CORE_READY_DEFAULT_AUDIT_ONLY_ONLINE_HARD_JUDGMENT_DEFERRED",
       "evidence": [
         "backend/rag/claim_evidence.py",
         "backend/rag/generation.py",
@@ -629,6 +629,25 @@
         "tests/api/test_online_ready_rag_answers_api.py",
         "machine/phase4_claim_evidence_core_gate.json",
         "docs/PHASE_4_CLAIM_EVIDENCE_CORE_GATE.md",
+        "docs/PRODUCT_DECISIONS.md",
+        "docs/REQUIREMENTS_TRACEABILITY.md",
+        "docs/CURRENT_PHASE.md"
+      ]
+    },
+    {
+      "id": "phase4_claim_evidence_candidate_intake",
+      "status": "PARTIAL",
+      "owner": "SHARED",
+      "gate_status": "CANDIDATE_INTAKE_PASS_HARD_ENFORCEMENT_DISABLED_HUMAN_ADJUDICATION_PENDING",
+      "evidence": [
+        "evaluation/reviews/member_b/README.md",
+        "evaluation/reviews/member_b/dev-failure-taxonomy-v1.csv",
+        "evaluation/reviews/member_b/dev-claim-evidence-second-review-v1.csv",
+        "evaluation/claim_evidence/phase4-candidate-review-intake-v1.json",
+        "scripts/run_phase4_claim_evidence_candidate_intake.py",
+        "tests/evaluation/test_phase4_claim_evidence_candidate_intake.py",
+        "machine/phase4_claim_evidence_candidate_intake.json",
+        "docs/PHASE_4_CLAIM_EVIDENCE_CANDIDATE_INTAKE.md",
         "docs/PRODUCT_DECISIONS.md",
         "docs/REQUIREMENTS_TRACEABILITY.md",
         "docs/CURRENT_PHASE.md"

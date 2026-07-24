@@ -258,7 +258,10 @@ class OnlineReadyRagAnswersApiTests(unittest.TestCase):
             response.json()["answer"],
             "The READY evidence supports this answer. [1]",
         )
-        self.assertIn("CLAIM_EVIDENCE_VALIDATED", response.json()["warnings"][0])
+        self.assertIn(
+            "CLAIM_EVIDENCE_AUDIT_PASS_NOT_ENFORCED",
+            response.json()["warnings"][0],
+        )
         self.assertEqual(generator.calls[0][1][0]["chunk_id"], "chunk_persisted_001")
 
 

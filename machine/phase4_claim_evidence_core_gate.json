@@ -19,7 +19,7 @@
     "phase4_progress": "PARTIAL_LOCAL_CORE_READY",
     "phase4_complete": false,
     "online_hard_judgment_enabled": false,
-    "human_agreement_and_false_positive_gate": "PENDING_SEPARATE_DEV_CALIBRATION"
+    "human_agreement_and_false_positive_gate": "PENDING_HUMAN_ADJUDICATION_CANDIDATE_INTAKE_COMPLETE"
   },
   "reuse": {
     "existing_structured_claims": "DIRECT_REUSE",
@@ -47,15 +47,16 @@
       "SAME_UNIT_NUMERIC_CONFLICT_DISCLOSURE",
       "SAFE_LIMITATION_CLASSIFICATION"
     ],
-    "partial_answer_policy": "DROP_UNSUPPORTED_CLAIMS_KEEP_SUPPORTED_OR_SAFE_LIMITATION",
-    "all_unsupported_policy": "DEGRADED_EVIDENCE_ONLY",
+    "default_mode": "AUDIT_ONLY_AFTER_CANDIDATE_FALSE_REJECTION_DIAGNOSTIC",
+    "partial_answer_policy": "EXPLICIT_ENFORCEMENT_ONLY_DROP_UNSUPPORTED_CLAIMS",
+    "all_unsupported_policy": "EXPLICIT_ENFORCEMENT_ONLY_DEGRADED_EVIDENCE_ONLY",
     "public_rag_answer_schema_changed": false,
     "prompt_identity_changed": false
   },
   "local_validation": {
     "focused_tests": {
       "status": "PASS",
-      "count": 21,
+      "count": 22,
       "command": ".venv/bin/python -m unittest tests.rag.test_claim_evidence tests.rag.test_generation tests.api.test_online_ready_rag_answers_api"
     },
     "full_repository_tests": "PASS",
@@ -64,11 +65,11 @@
     "diff_check": "PASS"
   },
   "next_gate": {
-    "id": "PHASE4_DEV_HUMAN_CALIBRATION",
+    "id": "PHASE4_ADJUDICATED_SEMANTIC_SUPPORT_BENCHMARK",
     "single_gate": true,
     "required_metrics": [
-      "CITATION_COMPLETENESS",
-      "UNSUPPORTED_CLAIM_RATE",
+      "ADJUDICATED_POSITIVE_RETENTION",
+      "ADJUDICATED_NEGATIVE_REJECTION",
       "FALSE_REJECTION_RATE",
       "HUMAN_AGREEMENT"
     ],

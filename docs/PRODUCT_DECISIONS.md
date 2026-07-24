@@ -62,5 +62,6 @@
 | PD-058 | ACCEPTED | 第二次 Windows 收口复核已精确拉取 `79861c6` 并由版本化脚本正确失败关闭，唯一错误是 Windows PowerShell 5.1 模块路径没有 `PSScriptAnalyzer 1.25.0`；没有质量、服务或私有输入执行 | PSScriptAnalyzer 继续作为 Mac 提交前静态 Gate，不要求在用户 Windows 主机安装或复制外部模块。Windows 收口入口只使用系统内置 Parser 对绝对路径脚本做语法解析，并执行严格模式下的可选字段行为检查；任一错误终止且不打印 PASS。该调整不改变质量变量、清理结论、默认 RRF、holdout 或独立性能 Gate |
 | PD-059 | ACCEPTED | 用户确认版本化 Windows PowerShell 5.1 收口验证在提交 `7764f3e0416706b98c5ea8d131a5525bc7f96f2e` 上成功：系统内置 Parser 与严格模式可选字段行为检查均通过 | 本次 PASS 只关闭汇总修复的跨平台验证，不补造或重跑质量证据，不接触服务或私有输入。路由覆盖继续关闭、无需恢复、旧 Run ID 不可复用、`test/Acceptance` 继续封存、300 ms 性能 Gate 保持独立；下一主 Gate 仍为双文档 Evidence 可达性 |
 | PD-060 | ACCEPTED | 比赛增强的下一个主 Gate 复用现有结构化 Claim 与授权 Evidence，窄适配用户既有 reading-agent 的确定性可靠性模式，建立零新增依赖的 Claim–Evidence 核验、数值冲突披露和部分回答失败关闭 | 不把现有相关性 Cross-Encoder、Ragas、Haystack 或模型自评冒充确定性蕴含；知识库接入、前端、演示、远程运行和 `test/Acceptance` 均不在本 Gate。当前只达到本地核心就绪，最高方案阶段 4 仍需独立 dev 人工一致率和误判率校准后才能决定在线硬裁决 |
+| PD-061 | ACCEPTED | 原样接收成员 B PR #15 的 105 条失败归因和 30 题 Claim–Evidence AI 辅助候选二审，并与冻结 `dev` 输入完成 ID、枚举、类别、Claim/Chunk 和哈希对账；候选 21 条 `SUPPORTED` 中现有规则只保留 6 条，人工终审谱系 225 个正例中只保留 110 条，决定默认 `AUDIT_ONLY` | 候选标注没有经过人工裁决，不冒充最终真值，不计算 Precision、负例拒绝率或人工一致率。失败归因中的 60 条非 `NONE` 表示系统候选失败，不表示数据错误。显式 enforcement 仅供测试和未来候选；下一大 Gate 必须先形成人工裁决正负关系，再比较固定多语言 NLI Cross-Encoder 或既有本地 LLM 离线 Judge。知识库、前端、演示和 `test/Acceptance` 均排除 |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。

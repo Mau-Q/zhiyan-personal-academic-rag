@@ -427,6 +427,8 @@ def apply_real_generation(
     scope: Mapping[str, Any],
     base_answer: Mapping[str, Any],
     provider: GenerationProvider,
+    *,
+    enforce_claim_evidence: bool = False,
 ) -> JsonObject:
     """Replace Fake assembly only after retrieval has produced valid Evidence."""
 
@@ -456,8 +458,12 @@ def apply_real_generation(
                 "generation result has no structured claims",
             )
         claim_report = verify_claim_evidence(result.claims, evidence)
-        retained_claims = claim_report.retained_claims
-        if not retained_claims:
+        retained_claims = (
+            claim_report.retained_claims
+            if enforce_claim_evidence
+            else result.claims
+        )
+        if enforce_claim_evidence and not retained_claims:
             return _degraded_answer(
                 answer,
                 warning=(
@@ -484,8 +490,17 @@ def apply_real_generation(
     answer["status"] = "COMPLETED"
     answer["answer"] = rendered_answer
     answer["citations"] = [citations[position - 1] for position in used_positions]
-    warning_suffix = "CITATION_IDS_VALIDATED_CLAIM_EVIDENCE_VALIDATED"
-    if claim_report.is_partial_answer:
+    audit_failed = any(
+        record.status is ClaimSupportStatus.UNSUPPORTED
+        for record in claim_report.records
+    )
+    if not enforce_claim_evidence:
+        warning_suffix = (
+            "CITATION_IDS_VALIDATED_"
+            f"CLAIM_EVIDENCE_AUDIT_{'FAILED' if audit_failed else 'PASS'}_"
+            "NOT_ENFORCED"
+        )
+    elif claim_report.is_partial_answer:
         warning_suffix = (
             "CITATION_IDS_VALIDATED_"
             "CLAIM_EVIDENCE_PARTIAL_ANSWER_UNSUPPORTED_DROPPED"
@@ -500,5 +515,7 @@ def apply_real_generation(
         for record in claim_report.records
     ):
         warning_suffix = "CITATION_IDS_VALIDATED_CLAIM_EVIDENCE_SAFE_LIMITATION"
+    else:
+        warning_suffix = "CITATION_IDS_VALIDATED_CLAIM_EVIDENCE_VALIDATED"
     answer["warnings"] = [f"{identity.execution_boundary}_{warning_suffix}"]
     return answer
