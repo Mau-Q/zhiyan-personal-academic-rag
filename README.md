@@ -95,6 +95,7 @@ git diff --check
 
 ## 文档导航
 
+- 新使用者操作手册：[`docs/OPERATIONS_GUIDE.md`](docs/OPERATIONS_GUIDE.md)
 - 当前阶段与下一门禁：[`docs/CURRENT_PHASE.md`](docs/CURRENT_PHASE.md)
 - 最高方案需求追踪：[`docs/REQUIREMENTS_TRACEABILITY.md`](docs/REQUIREMENTS_TRACEABILITY.md)
 - 长期产品决策：[`docs/PRODUCT_DECISIONS.md`](docs/PRODUCT_DECISIONS.md)

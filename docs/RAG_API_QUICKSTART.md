@@ -1,5 +1,8 @@
 # 非流式 RAG Answer API
 
+第一次接触本仓库时，建议先按
+[使用与操作手册](OPERATIONS_GUIDE.md) 完成环境安装、三种响应场景和交付检查。
+
 ## 边界
 
 当前 API 是成员 A 的本地实现，默认保持 Fixture 词项重叠模式，也支持显式注入 SQLite FTS5/BM25：

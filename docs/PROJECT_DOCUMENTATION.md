@@ -680,7 +680,9 @@ make powershell-check
 git diff --check
 ```
 
-API 启动和最小请求见 [RAG API 快速开始](RAG_API_QUICKSTART.md)。
+首次安装、API 演示、结果判断和交付检查见
+[使用与操作手册](OPERATIONS_GUIDE.md)；后端注入方式和最小请求见
+[RAG API 快速开始](RAG_API_QUICKSTART.md)。
 
 ## 16. 关键目录与文档导航
 
@@ -705,6 +707,7 @@ API 启动和最小请求见 [RAG API 快速开始](RAG_API_QUICKSTART.md)。
 
 - [仓库协作与完成规则](../AGENTS.md)
 - [项目首页](../README.md)
+- [使用与操作手册](OPERATIONS_GUIDE.md)
 - [当前阶段](CURRENT_PHASE.md)
 - [最高方案需求追踪](REQUIREMENTS_TRACEABILITY.md)
 - [长期产品决策](PRODUCT_DECISIONS.md)
