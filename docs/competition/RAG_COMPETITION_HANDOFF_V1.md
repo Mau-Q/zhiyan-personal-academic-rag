@@ -62,6 +62,21 @@ Qwen 或三场景执行，不是 RAG 质量结果；迁移 `UNCHANGED` 也不表
 实现，防止生产者与消费者身份语义分叉。Run ID 仍保留为
 `competition_v1_20260809_01`。
 
+第三次用户运行在 `9d514da08c484359dd46726662e38344ea2b735e`
+上通过 finalizer、私有输入、迁移和 artifact 复核，首次进入真实
+Stage-1 生成。Answer API 已返回 `COMPLETED` 和非空 Evidence，但旧
+Stage-1 门禁仅接受以 `_CITATION_IDS_VALIDATED` 结尾的旧 warning，
+因而把当前合法的
+`_CITATION_IDS_VALIDATED_CLAIM_EVIDENCE_AUDIT_<PASS|FAILED>_NOT_ENFORCED`
+误报为 `REAL_GENERATION_INITIAL_CITATION_GATE_FAILED`。这是 harness 协议假阴性，
+不是 Citation 身份或 RAG 质量失败。
+
+修复只允许生成层已定义的 citation-validated warning 精确后缀，任意包含、
+拼接或未知后缀继续失败关闭。该次在 replay、inactivation 和 cleanup 之前
+停止，因此 cleanup 仍为 `UNKNOWN_REQUIRES_SAME_RUN_RESUME_OR_OPERATOR_AUDIT`；
+修复候选必须以同一私有输入和同一 Run ID 恢复现有 READY 生命周期，不创建
+`_02`。
+
 ## Windows PowerShell 5.1 runbook
 
 目标环境为用户操作的 Windows PowerShell 5.1。先使 Windows `main` 精确包含待验证

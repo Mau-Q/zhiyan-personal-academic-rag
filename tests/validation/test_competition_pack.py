@@ -19,7 +19,10 @@ from backend.validation.competition import (
 )
 from scripts import prepare_competition_input
 from scripts.run_competition_real_core import _validate_finalized_artifact_hashes
-from scripts.run_stage1_remote_canary import _ObservedGenerationProvider
+from scripts.run_stage1_remote_canary import (
+    _ObservedGenerationProvider,
+    _require_answer_api_gate,
+)
 from scripts.validate_competition_pack import (
     EXPECTED_SCENARIO_IDS,
     validate_static,
@@ -141,6 +144,22 @@ class StaticCompetitionPackTests(unittest.TestCase):
                     tracked_manifest,
                     repository_root=repository_root,
                 )
+
+    def test_competition_accepts_current_audit_only_citation_proof(self):
+        _require_answer_api_gate(
+            status_code=200,
+            payload={
+                "status": "COMPLETED",
+                "evidence": [{"evidence_id": "evidence_001"}],
+                "warnings": [
+                    "REAL_GENERATION_OLLAMA_QWEN3_14B_"
+                    "ACADEMIC_EVIDENCE_ANSWER_V1_"
+                    "CITATION_IDS_VALIDATED_"
+                    "CLAIM_EVIDENCE_AUDIT_PASS_NOT_ENFORCED"
+                ],
+            },
+            generation_enabled=True,
+        )
 
     def test_redaction_removes_connections_secrets_hosts_and_paths(self):
         value = (

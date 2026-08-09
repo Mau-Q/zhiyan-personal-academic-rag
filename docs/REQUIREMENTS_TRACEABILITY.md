@@ -248,3 +248,13 @@ Competition Pack V1 首次 Windows 用户 Gate 在提交 `c46e82e3a006a61f2b9ca9
 因而对同一 CRLF 工作树误报漂移。该次未开始 Stage-1 真实检索、Qwen
 或三场景执行，不是质量证据。finalizer 与 runner 现共用同一 LF 规范
 UTF-8 哈希实现，内容漂移仍失败关闭；Run ID 保留 `_01`，baseline 仍未冻结。
+
+第三次 Windows `_01` 在 `9d514da08c484359dd46726662e38344ea2b735e`
+上已进入真实 Stage-1。Answer API 在已返回 `COMPLETED` 和非空 Evidence 后，
+被旧 Stage-1 后缀门禁误报 `REAL_GENERATION_INITIAL_CITATION_GATE_FAILED`：
+生成层当前的合法 warning 在 `CITATION_IDS_VALIDATED` 后还包含
+Claim–Evidence `AUDIT_ONLY` 状态，而旧门禁只接受 marker 位于字符串末尾。
+修复只 allowlist 生成层已定义的 citation-validated 精确后缀，任意包含、
+未知后缀、空 Evidence 或非 `COMPLETED` 仍失败关闭。该次在 replay、
+inactivation 与 cleanup 前停止，因此 cleanup 未证明；新 exact HEAD 仍用同一
+私有输入和 Run ID `_01` 恢复 READY 生命周期，baseline 仍未冻结。

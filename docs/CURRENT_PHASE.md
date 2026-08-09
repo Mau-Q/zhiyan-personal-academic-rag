@@ -224,6 +224,7 @@ Phase ID：`rag-core-final-freeze`
 - RAG 核心最终冻结完成：现有版本化证据已覆盖 PDF/Chunk 持久入库、PostgreSQL READY/owner、ES/Milvus、默认 RRF、真实 Qwen 生成、Citation 稳定映射、`NO_EVIDENCE`、ACL、删除后 403、三路清理和确定性 Multi-Evidence EvidenceSet；没有重跑历史远程 Gate 或实现新算法。
 - `RAG_COMPETITION_EVIDENCE_AND_HANDOFF_PACK_V1` 已完成 Codex-side 实现：单一 machine manifest、exact-HEAD runtime finalizer、恰好三个 Golden Scenario dossier、复用 Stage-1 真实 Core 的隔离入口、脱敏结果合同、确定性 cleanup/403 证明、双评审 worksheet/agreement 协议和 Windows PowerShell 5.1 runbook 均已版本化。本地结构与 Fake/Fixture 测试不冒充真实比赛结果；状态保持 `READY_FOR_USER_REAL_REPRODUCTION_GATE`，尚未冻结 Competition Baseline。
 - 第二次 Windows `_01` 在 `df9d35f...dbff` 上证明 finalizer 与私有输入 manifest 均已跨平台通过，迁移为 `UNCHANGED`；随后真实 runner 的二次 artifact 复核仍使用原始字节，对 CRLF 工作树误报漂移。共享 LF 规范 UTF-8 哈希现覆盖 finalizer 与 runner；该次未开始真实检索、Qwen 或三场景执行。
+- 第三次 Windows `_01` 在 `9d514da...b735e` 上首次进入真实 Stage-1；Answer API 已返回 `COMPLETED` 和非空 Evidence，但旧 Stage-1 门禁把当前合法的扩展 citation-validated warning 误判为 `REAL_GENERATION_INITIAL_CITATION_GATE_FAILED`。定位为 harness 协议假阴性，非 Citation 身份或 RAG 质量失败。该次在 replay/inactivation/cleanup 前停止，cleanup 仍为 `UNKNOWN`；修复候选只精确接受已定义的 citation-validated 后缀，未知后缀仍失败关闭。
 
 ## 输入
 
@@ -278,7 +279,7 @@ Phase ID：`rag-core-final-freeze`
 
 fixed reranker Top-20 与 Top-50 screening 均为 `SCREENING_WEAKENED / 0/3`；扩大 exposure 没有恢复 bilateral Top-3，因此只将现有 fixed reranker family 对冻结 3 条排序失败记为 `WEAKENED`。Phase 3 retrieval/ranking optimization 为 `STOP`，`NEXT_EXPERIMENT=NONE`。cross-document / coverage-aware ranking 与 deep candidate retrieval 保持 `HOLD`，分别只按 `PD-071` 的“候选集已有 Evidence 但 Top-k 系统性单侧坍缩并造成实质 QA 失败”以及“当前候选边界反复缺失实质相关 Evidence 并成为 QA 失败源”条件重开；两者均还须服务当前 Primary Objective。
 
-Competition Pack V1 的两次 Windows 用户运行均保留 Run ID `competition_v1_20260809_01`。首次在 `c46e82e...e0a8` 上因等价 CRLF 被 finalizer 原始字节哈希误拒绝，未执行迁移或服务操作。第二次在 `df9d35f...dbff` 上已通过 finalizer 和私有输入验证，迁移为 `UNCHANGED`，但 runner 二次复核仍对 CRLF 工作树使用原始字节哈希而停止；未开始真实检索、Qwen 或三场景执行，不是 RAG 质量结果。finalizer 与 runner 现共用单一 LF 规范 UTF-8 哈希实现，私有输入原始字节身份不变。当前仍只能声明 `READY_FOR_USER_REAL_REPRODUCTION_GATE`，不能提前声明 `RAG_COMPETITION_BASELINE_V1_FROZEN`。
+Competition Pack V1 的三次 Windows 用户运行均保留 Run ID `competition_v1_20260809_01`。前两次分别暴露 finalizer 与 runner 的 CRLF 身份分叉，均已修复为共享 LF 规范 UTF-8 哈希。第三次在 `9d514da...b735e` 上已进入真实 Stage-1，但旧门禁用结尾匹配拒绝了生成层当前合法的扩展 citation-validated warning；这是 harness 假阴性，不是 RAG 质量结果。当前可能保留同 Run READY 版本，cleanup 未证明；新候选必须以同一私有输入和 Run ID 恢复并完成 inactivation/cleanup。当前仍只能声明 `READY_FOR_USER_REAL_REPRODUCTION_GATE`，不能提前声明 `RAG_COMPETITION_BASELINE_V1_FROZEN`。
 
 ## Next gate
 

@@ -614,6 +614,40 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
             generation_enabled=True,
         )
 
+    def test_generation_gate_accepts_current_audit_only_citation_proof(self):
+        for audit_status in ("PASS", "FAILED"):
+            with self.subTest(audit_status=audit_status):
+                _require_answer_api_gate(
+                    status_code=200,
+                    payload={
+                        "status": "COMPLETED",
+                        "evidence": [{"evidence_id": "evidence_001"}],
+                        "warnings": [
+                            "REAL_GENERATION_OLLAMA_QWEN3_14B_"
+                            "ACADEMIC_EVIDENCE_ANSWER_V1_"
+                            "CITATION_IDS_VALIDATED_CLAIM_EVIDENCE_AUDIT_"
+                            f"{audit_status}_NOT_ENFORCED"
+                        ],
+                    },
+                    generation_enabled=True,
+                )
+
+    def test_generation_gate_rejects_unrecognized_citation_marker_suffix(self):
+        with self.assertRaisesRegex(
+            RuntimeError, "^REAL_GENERATION_INITIAL_CITATION_GATE_FAILED$"
+        ):
+            _require_answer_api_gate(
+                status_code=200,
+                payload={
+                    "status": "COMPLETED",
+                    "evidence": [{"evidence_id": "evidence_001"}],
+                    "warnings": [
+                        "BOUNDARY_CITATION_IDS_VALIDATED_UNRECOGNIZED"
+                    ],
+                },
+                generation_enabled=True,
+            )
+
     def test_generation_replay_records_non_byte_stable_valid_answers(self):
         self.assertFalse(
             _generation_replay_byte_stable(

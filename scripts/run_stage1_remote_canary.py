@@ -120,6 +120,16 @@ _SANITIZED_RUNTIME_CODES = frozenset(
     for code in GENERATION_FAILURE_CODES
 )
 
+_VALIDATED_CITATION_WARNING_SUFFIXES = (
+    "_CITATION_IDS_VALIDATED",
+    "_CITATION_IDS_VALIDATED_CLAIM_EVIDENCE_AUDIT_PASS_NOT_ENFORCED",
+    "_CITATION_IDS_VALIDATED_CLAIM_EVIDENCE_AUDIT_FAILED_NOT_ENFORCED",
+    "_CITATION_IDS_VALIDATED_CLAIM_EVIDENCE_PARTIAL_ANSWER_UNSUPPORTED_DROPPED",
+    "_CITATION_IDS_VALIDATED_CLAIM_EVIDENCE_CONFLICT_DISCLOSED",
+    "_CITATION_IDS_VALIDATED_CLAIM_EVIDENCE_SAFE_LIMITATION",
+    "_CITATION_IDS_VALIDATED_CLAIM_EVIDENCE_VALIDATED",
+)
+
 
 class NoCachedQueryVisibility:
     """PG READY is queried directly; there is no separate query cache to clear."""
@@ -619,6 +629,13 @@ def _warnings_contain(payload: dict[str, object], suffix: str) -> bool:
     )
 
 
+def _warnings_prove_validated_citations(payload: dict[str, object]) -> bool:
+    return any(
+        _warnings_contain(payload, suffix)
+        for suffix in _VALIDATED_CITATION_WARNING_SUFFIXES
+    )
+
+
 def _require_answer_api_gate(
     *,
     status_code: int,
@@ -659,9 +676,7 @@ def _require_answer_api_gate(
     evidence = payload.get("evidence")
     if not isinstance(evidence, list) or not evidence:
         raise RuntimeError(f"{prefix}_EVIDENCE_MISSING")
-    if generation_enabled and not _warnings_contain(
-        payload, "_CITATION_IDS_VALIDATED"
-    ):
+    if generation_enabled and not _warnings_prove_validated_citations(payload):
         generation_phase = "REPLAY" if replay else "INITIAL"
         raise RuntimeError(
             f"REAL_GENERATION_{generation_phase}_CITATION_GATE_FAILED"
