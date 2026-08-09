@@ -35,7 +35,7 @@ Fixture/Fake 只用于本包结构测试，不能成为三个场景的真实结�
 问题正文继续从私有 Phase-2 suite 读取；tracked dossier 只保存 Case ID、问题哈希、
 允许答案点、不得声称项和页码，不公开私有题集正文。
 
-## First Windows attempt and cross-platform repair
+## Windows attempts and cross-platform repair
 
 首次用户运行在提交 `c46e82e3a006a61f2b9ca9e99e6bc3a0bdd7e0a8`、Run ID
 `competition_v1_20260809_01` 上于静态 pack 验证阶段停止。Windows Git
@@ -51,6 +51,16 @@ CRLF 接受；UTF-8 BOM、孤立 CR、无效 UTF-8 和内容漂移继续失败�
 Phase-2 包、PDF、suite 和运行结果仍使用其既有原始字节身份，不因本修复放宽。
 修复后的用户 Gate 保留原 Run ID `competition_v1_20260809_01`，不自动创建 `_02`；
 新的 exact HEAD 由新候选发布 handoff 冻结。
+
+第二次用户运行在修复提交 `df9d35f52b2cf3aeb6f2488eb2e7d5585d9ddbff`
+上已通过 exact-HEAD finalizer 和私有输入 manifest 验证，PostgreSQL
+fact-source migration 报告 `UNCHANGED`；但真实 runner 再次复核 finalized
+artifact 时仍对 Windows CRLF 工作树使用原始字节 SHA，误报
+`finalized competition artifact drifted`。该次未开始 Stage-1 真实检索、
+Qwen 或三场景执行，不是 RAG 质量结果；迁移 `UNCHANGED` 也不表示新
+业务数据写入。修复后 finalizer 与真实 runner 共用同一个 LF 规范文本哈希
+实现，防止生产者与消费者身份语义分叉。Run ID 仍保留为
+`competition_v1_20260809_01`。
 
 ## Windows PowerShell 5.1 runbook
 

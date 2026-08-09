@@ -223,6 +223,7 @@ Phase ID：`rag-core-final-freeze`
 - 阶段 3 / 阶段 4 统一收口完成：阶段 3 当前工作流已关闭，两个 V1 均不晋级且无需为形式新增第三变量；由于没有达到最高方案要求的稳定净增益，阶段 3 不记为 `COMPLETE`。确定性 Multi-Evidence Evidence Set 是当前正式审计能力，默认 `AUDIT_ONLY`、不自动删除 Claim，不等于语义 Judge 或在线硬裁决，也不把最高方案阶段 4 整体写成完成。
 - RAG 核心最终冻结完成：现有版本化证据已覆盖 PDF/Chunk 持久入库、PostgreSQL READY/owner、ES/Milvus、默认 RRF、真实 Qwen 生成、Citation 稳定映射、`NO_EVIDENCE`、ACL、删除后 403、三路清理和确定性 Multi-Evidence EvidenceSet；没有重跑历史远程 Gate 或实现新算法。
 - `RAG_COMPETITION_EVIDENCE_AND_HANDOFF_PACK_V1` 已完成 Codex-side 实现：单一 machine manifest、exact-HEAD runtime finalizer、恰好三个 Golden Scenario dossier、复用 Stage-1 真实 Core 的隔离入口、脱敏结果合同、确定性 cleanup/403 证明、双评审 worksheet/agreement 协议和 Windows PowerShell 5.1 runbook 均已版本化。本地结构与 Fake/Fixture 测试不冒充真实比赛结果；状态保持 `READY_FOR_USER_REAL_REPRODUCTION_GATE`，尚未冻结 Competition Baseline。
+- 第二次 Windows `_01` 在 `df9d35f...dbff` 上证明 finalizer 与私有输入 manifest 均已跨平台通过，迁移为 `UNCHANGED`；随后真实 runner 的二次 artifact 复核仍使用原始字节，对 CRLF 工作树误报漂移。共享 LF 规范 UTF-8 哈希现覆盖 finalizer 与 runner；该次未开始真实检索、Qwen 或三场景执行。
 
 ## 输入
 
@@ -277,7 +278,7 @@ Phase ID：`rag-core-final-freeze`
 
 fixed reranker Top-20 与 Top-50 screening 均为 `SCREENING_WEAKENED / 0/3`；扩大 exposure 没有恢复 bilateral Top-3，因此只将现有 fixed reranker family 对冻结 3 条排序失败记为 `WEAKENED`。Phase 3 retrieval/ranking optimization 为 `STOP`，`NEXT_EXPERIMENT=NONE`。cross-document / coverage-aware ranking 与 deep candidate retrieval 保持 `HOLD`，分别只按 `PD-071` 的“候选集已有 Evidence 但 Top-k 系统性单侧坍缩并造成实质 QA 失败”以及“当前候选边界反复缺失实质相关 Evidence 并成为 QA 失败源”条件重开；两者均还须服务当前 Primary Objective。
 
-Competition Pack V1 首次 Windows 用户运行在提交 `c46e82e3a006a61f2b9ca9e99e6bc3a0bdd7e0a8`、Run ID `competition_v1_20260809_01` 上于静态 pack 验证阶段停止：`core.autocrlf=true` 将 tracked EvidenceSet JSON 从 LF 检出为等价 CRLF，原始字节 SHA 因而误报 `historical EvidenceSet gate reference drifted`。该次没有执行迁移、PostgreSQL/ES/Milvus 写入、真实检索或 Qwen，不是 RAG 质量结果。Competition tracked pack 文本身份现复用已验证的 LF 规范化规则，接受纯 LF/等价 CRLF，继续拒绝 BOM、孤立 CR、无效 UTF-8 和内容漂移；私有输入原始字节身份不变。当前仍只能声明 `READY_FOR_USER_REAL_REPRODUCTION_GATE`，保留原 Run ID `_01`，也不能提前声明 `RAG_COMPETITION_BASELINE_V1_FROZEN`。
+Competition Pack V1 的两次 Windows 用户运行均保留 Run ID `competition_v1_20260809_01`。首次在 `c46e82e...e0a8` 上因等价 CRLF 被 finalizer 原始字节哈希误拒绝，未执行迁移或服务操作。第二次在 `df9d35f...dbff` 上已通过 finalizer 和私有输入验证，迁移为 `UNCHANGED`，但 runner 二次复核仍对 CRLF 工作树使用原始字节哈希而停止；未开始真实检索、Qwen 或三场景执行，不是 RAG 质量结果。finalizer 与 runner 现共用单一 LF 规范 UTF-8 哈希实现，私有输入原始字节身份不变。当前仍只能声明 `READY_FOR_USER_REAL_REPRODUCTION_GATE`，不能提前声明 `RAG_COMPETITION_BASELINE_V1_FROZEN`。
 
 ## Next gate
 
@@ -285,7 +286,7 @@ Competition Pack V1 首次 Windows 用户运行在提交 `c46e82e3a006a61f2b9ca9
 2. **阶段 3 retrieval/ranking optimization 已停止：** fixed reranker Top-20/Top-50 均 `WEAKENED`，Phase 3 保持 `PARTIAL / NO_PROMOTION`，`NEXT_EXPERIMENT=NONE`；coverage-aware ranking 与 deep candidate retrieval 仅在 `PD-071` 重开条件被代表性负载满足后进入新的独立 Gate；
 3. **阶段 4语义能力后置：** 只有先具备严格 pair-level 人工正负金标时才重新评估 NLI/LLM Judge；在线硬裁决继续关闭；
 4. **默认与责任分离：** 默认 RRF、可选非默认 Reranker、EvidenceSet `AUDIT_ONLY`、NLI 拒绝和 300 ms 性能债保持不变；知识库接入、前端、演示、Agent API、阶段 5 复杂问答及 `test/Acceptance` 由未来独立 Gate 或其他责任方处理。
-5. **Competition Pack 用户 Gate：** 跨平台身份修复候选发布后，用户以新的 exact HEAD、原 Run ID `competition_v1_20260809_01` 和同一私有输入运行 `deploy/remote/competition-v1/run_competition_pack_v1.ps1`；必须取得三个场景全部 PASS、三路 cleanup/403 PASS 和合规脱敏结果，之后另开 closeout 才能讨论 baseline freeze。本任务不自动开始下一比赛工作。
+5. **Competition Pack 用户 Gate：** 生产者—消费者共享跨平台身份修复候选发布后，用户以新的 exact HEAD、原 Run ID `competition_v1_20260809_01` 和同一私有输入运行 `deploy/remote/competition-v1/run_competition_pack_v1.ps1`；必须取得三个场景全部 PASS、三路 cleanup/403 PASS 和合规脱敏结果，之后另开 closeout 才能讨论 baseline freeze。本任务不自动开始下一比赛工作。
 
 ## Prohibited shortcuts
 

@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import subprocess
@@ -16,6 +15,12 @@ from jsonschema import Draft202012Validator
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from backend.validation.competition import lf_canonical_text_sha256  # noqa: E402
+
+
 MANIFEST = ROOT / "machine/competition/rag-competition-pack-v1.json"
 PACK_SCHEMA = ROOT / "contracts/schemas/competition-pack-v1.schema.json"
 SCENARIO_SCHEMA = ROOT / "contracts/schemas/competition-scenario-v1.schema.json"
@@ -30,19 +35,6 @@ _COMMIT = re.compile(r"^[a-f0-9]{40}$")
 
 def _read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
-
-
-def _lf_canonical_text_sha256(path: Path) -> str:
-    payload = path.read_bytes()
-    if payload.startswith(b"\xef\xbb\xbf"):
-        raise ValueError("competition tracked text must not contain a UTF-8 BOM")
-    if b"\r" in payload.replace(b"\r\n", b""):
-        raise ValueError("competition tracked text contains an invalid lone carriage return")
-    try:
-        payload.decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise ValueError("competition tracked text must be valid UTF-8") from exc
-    return hashlib.sha256(payload.replace(b"\r\n", b"\n")).hexdigest()
 
 
 def _git(*args: str) -> str:
@@ -88,7 +80,7 @@ def validate_static() -> dict[str, Any]:
     if tuple(observed_ids) != EXPECTED_SCENARIO_IDS:
         raise ValueError("competition scenario manifest order or identity drifted")
     artifact_hashes = {
-        relative: _lf_canonical_text_sha256(_repository_path(relative))
+        relative: lf_canonical_text_sha256(_repository_path(relative))
         for relative in manifest["tracked_pack_artifacts"]
     }
     if manifest["retrieval"] != {
@@ -128,7 +120,7 @@ def validate_static() -> dict[str, Any]:
     historical = {value["id"]: value for value in manifest["historical_real_gates"]}
     phase4 = historical["phase4-multi-evidence-set"]
     if (
-        _lf_canonical_text_sha256(_repository_path(phase4["reference"]))
+        lf_canonical_text_sha256(_repository_path(phase4["reference"]))
         != phase4["reference_sha256"]
     ):
         raise ValueError("historical EvidenceSet gate reference drifted")

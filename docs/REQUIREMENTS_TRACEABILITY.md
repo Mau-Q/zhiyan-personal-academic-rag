@@ -241,3 +241,10 @@ Competition Pack V1 首次 Windows 用户 Gate 在提交 `c46e82e3a006a61f2b9ca9
 接受纯 LF/等价 CRLF，拒绝 BOM、孤立 CR、无效 UTF-8 和内容漂移；私有输入仍保持
 原始字节身份。修复不改变三个场景、RRF、Prompt、模型、EvidenceSet `AUDIT_ONLY`
 或 baseline 未冻结边界，并保留原 Run ID `_01` 进入新的 exact-HEAD 用户 Gate。
+
+第二次 Windows `_01` 在 `df9d35f52b2cf3aeb6f2488eb2e7d5585d9ddbff`
+上已通过 exact-HEAD finalizer 和私有输入 manifest 验证，迁移报告
+`UNCHANGED`；但真实 runner 仍以原始字节重算 finalized tracked artifact，
+因而对同一 CRLF 工作树误报漂移。该次未开始 Stage-1 真实检索、Qwen
+或三场景执行，不是质量证据。finalizer 与 runner 现共用同一 LF 规范
+UTF-8 哈希实现，内容漂移仍失败关闭；Run ID 保留 `_01`，baseline 仍未冻结。

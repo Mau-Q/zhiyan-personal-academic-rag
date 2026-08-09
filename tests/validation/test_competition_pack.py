@@ -14,13 +14,14 @@ from backend.rag.generation import GenerationModelIdentity, GenerationResult
 from backend.validation.competition import (
     CompetitionCapture,
     build_redacted_result,
+    lf_canonical_text_sha256,
     redact_text,
 )
 from scripts import prepare_competition_input
+from scripts.run_competition_real_core import _validate_finalized_artifact_hashes
 from scripts.run_stage1_remote_canary import _ObservedGenerationProvider
 from scripts.validate_competition_pack import (
     EXPECTED_SCENARIO_IDS,
-    _lf_canonical_text_sha256,
     validate_static,
 )
 
@@ -61,13 +62,13 @@ class StaticCompetitionPackTests(unittest.TestCase):
             expected_hashes = {}
             for index, relative in enumerate(tracked_paths):
                 source = ROOT / relative
-                expected = _lf_canonical_text_sha256(source)
+                expected = lf_canonical_text_sha256(source)
                 crlf = temp_root / f"artifact-{index}"
                 crlf.write_bytes(source.read_bytes().replace(b"\n", b"\r\n"))
                 crlf_paths[relative] = crlf
                 expected_hashes[relative] = expected
                 self.assertEqual(
-                    _lf_canonical_text_sha256(crlf),
+                    lf_canonical_text_sha256(crlf),
                     expected,
                     msg=relative,
                 )
@@ -100,13 +101,46 @@ class StaticCompetitionPackTests(unittest.TestCase):
             lone_cr.write_bytes(b'{"status":"READY"}\r')
             drift.write_bytes(b'{"status":"CHANGED"}\n')
 
-            expected = _lf_canonical_text_sha256(lf)
-            self.assertEqual(_lf_canonical_text_sha256(crlf), expected)
-            self.assertNotEqual(_lf_canonical_text_sha256(drift), expected)
+            expected = lf_canonical_text_sha256(lf)
+            self.assertEqual(lf_canonical_text_sha256(crlf), expected)
+            self.assertNotEqual(lf_canonical_text_sha256(drift), expected)
             with self.assertRaisesRegex(ValueError, "UTF-8 BOM"):
-                _lf_canonical_text_sha256(bom)
+                lf_canonical_text_sha256(bom)
             with self.assertRaisesRegex(ValueError, "lone carriage return"):
-                _lf_canonical_text_sha256(lone_cr)
+                lf_canonical_text_sha256(lone_cr)
+
+    def test_real_core_revalidates_finalized_artifacts_with_crlf_equivalence(self):
+        relative = "machine/competition/rag-competition-pack-v1.json"
+        source = ROOT / relative
+        runtime = ROOT / "runtime"
+        runtime.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=runtime) as temporary:
+            repository_root = Path(temporary)
+            target = repository_root / relative
+            target.parent.mkdir(parents=True)
+            target.write_bytes(source.read_bytes().replace(b"\n", b"\r\n"))
+            finalized = {
+                "resolved_tracked_artifact_sha256": {
+                    relative: lf_canonical_text_sha256(source)
+                }
+            }
+            tracked_manifest = {"tracked_pack_artifacts": [relative]}
+
+            _validate_finalized_artifact_hashes(
+                finalized,
+                tracked_manifest,
+                repository_root=repository_root,
+            )
+            target.write_bytes(target.read_bytes().replace(b'"v1"', b'"changed"', 1))
+            with self.assertRaisesRegex(
+                ValueError,
+                "finalized competition artifact drifted",
+            ):
+                _validate_finalized_artifact_hashes(
+                    finalized,
+                    tracked_manifest,
+                    repository_root=repository_root,
+                )
 
     def test_redaction_removes_connections_secrets_hosts_and_paths(self):
         value = (

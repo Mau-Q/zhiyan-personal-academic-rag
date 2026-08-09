@@ -43,6 +43,19 @@ def sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def lf_canonical_text_sha256(path: Path) -> str:
+    payload = path.read_bytes()
+    if payload.startswith(b"\xef\xbb\xbf"):
+        raise ValueError("competition tracked text must not contain a UTF-8 BOM")
+    if b"\r" in payload.replace(b"\r\n", b""):
+        raise ValueError("competition tracked text contains an invalid lone carriage return")
+    try:
+        payload.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("competition tracked text must be valid UTF-8") from exc
+    return hashlib.sha256(payload.replace(b"\r\n", b"\n")).hexdigest()
+
+
 def read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 

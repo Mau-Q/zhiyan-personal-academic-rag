@@ -23,6 +23,7 @@ from backend.validation.competition import (  # noqa: E402
     CompetitionCapture,
     SCENARIO_IDS,
     build_redacted_result,
+    lf_canonical_text_sha256,
     read_json,
     write_json,
 )
@@ -106,6 +107,31 @@ def _failed_result(
     }
 
 
+def _validate_finalized_artifact_hashes(
+    finalized: Mapping[str, object],
+    tracked_manifest: Mapping[str, object],
+    *,
+    repository_root: Path = ROOT,
+) -> None:
+    artifact_hashes = finalized.get("resolved_tracked_artifact_sha256")
+    expected_artifacts = tracked_manifest.get("tracked_pack_artifacts")
+    if (
+        not isinstance(artifact_hashes, dict)
+        or not isinstance(expected_artifacts, list)
+        or set(artifact_hashes) != set(expected_artifacts)
+    ):
+        raise ValueError("finalized competition artifact hash set is invalid")
+    resolved_root = repository_root.resolve()
+    for relative in expected_artifacts:
+        path = (resolved_root / str(relative)).resolve()
+        if (
+            not path.is_relative_to(resolved_root)
+            or not path.is_file()
+            or lf_canonical_text_sha256(path) != artifact_hashes.get(relative)
+        ):
+            raise ValueError(f"finalized competition artifact drifted: {relative}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--finalized-manifest", type=Path, required=True)
@@ -141,23 +167,7 @@ def main() -> int:
         for key, expected_value in tracked_manifest.items():
             if key != "source_commit" and finalized.get(key) != expected_value:
                 raise ValueError(f"finalized competition manifest drifted at {key}")
-        artifact_hashes = finalized.get("resolved_tracked_artifact_sha256")
-        expected_artifacts = tracked_manifest.get("tracked_pack_artifacts")
-        if (
-            not isinstance(artifact_hashes, dict)
-            or not isinstance(expected_artifacts, list)
-            or set(artifact_hashes) != set(expected_artifacts)
-        ):
-            raise ValueError("finalized competition artifact hash set is invalid")
-        for relative in expected_artifacts:
-            path = (ROOT / str(relative)).resolve()
-            if (
-                not path.is_relative_to(ROOT.resolve())
-                or not path.is_file()
-                or hashlib.sha256(path.read_bytes()).hexdigest()
-                != artifact_hashes.get(relative)
-            ):
-                raise ValueError(f"finalized competition artifact drifted: {relative}")
+        _validate_finalized_artifact_hashes(finalized, tracked_manifest)
         if input_manifest.get("pack_id") != finalized.get("pack_id"):
             raise ValueError("competition input pack identity mismatch")
         expected_bindings = {
