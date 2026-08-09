@@ -1,0 +1,225 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc" id="figure-06-multi-evidence">
+<title id="title">多证据 Claim–Evidence 审计</title>
+<desc id="desc">脱敏结构展示 Answer 到 Claim、Citation、Evidence 和确定性 EvidenceSet 审计的绑定关系。</desc>
+<defs>
+  <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+    <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#102A43" flood-opacity="0.08"/>
+  </filter>
+</defs>
+<rect id="canvas" width="1600" height="900" fill="#F4F7FB"/>
+<text id="figure-number" x="60" y="42" font-family="Hiragino Sans" font-size="14" font-weight="600" fill="#2F6BFF" text-anchor="start" letter-spacing="1.8">
+<tspan x="60" dy="0">FIGURE 06</tspan>
+</text>
+<text id="figure-title" x="60" y="78" font-family="Hiragino Sans" font-size="30" font-weight="650" fill="#102A43" text-anchor="start">
+<tspan x="60" dy="0">多证据 Claim–Evidence 审计</tspan>
+</text>
+<text id="figure-subtitle" x="60" y="103" font-family="Hiragino Sans" font-size="15" font-weight="400" fill="#5D6B7E" text-anchor="start">
+<tspan x="60" dy="0">回答可拆、引用可回溯、审计可记录；不自动语义裁决</tspan>
+</text>
+<rect id="baseline-badge-bg" x="1250" y="35" width="290" height="38" rx="19" fill="#173B57" stroke="#173B57" stroke-width="1.5"/>
+<text id="baseline-badge" x="1395" y="60" font-family="Hiragino Sans" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.7">
+<tspan x="1395" dy="0">RAG COMPETITION · FROZEN</tspan>
+</text>
+<rect id="redacted-example-bg" x="60" y="122" width="460" height="34" rx="17" fill="#EAF0FF" stroke="#EAF0FF" stroke-width="0"/>
+<text id="redacted-example" x="290.0" y="144" font-family="Hiragino Sans" font-size="13" font-weight="650" fill="#2F6BFF" text-anchor="middle">
+<tspan x="290.0" dy="0">冻结 Competition 场景的脱敏结构示意 · 非逐字回答 · 非原文引文</tspan>
+</text>
+<rect id="windows-proof-bg" x="1100" y="122" width="440" height="34" rx="17" fill="#E8F7F0" stroke="#E8F7F0" stroke-width="0"/>
+<text id="windows-proof" x="1320.0" y="144" font-family="Hiragino Sans" font-size="13" font-weight="650" fill="#168B5B" text-anchor="middle">
+<tspan x="1320.0" dy="0">Windows Gate 已观测 · 1 Claim → 2 Citations → 2 Chunks</tspan>
+</text>
+<g id="group-answer-claims" aria-label="Answer 与结构化 Claims">
+<rect id="group-answer-claims-panel" x="60" y="170" width="480" height="465" rx="22" fill="#F8FAFD" stroke="#D8E1EC" stroke-width="1.2"/>
+<rect id="group-answer-claims-accent" x="60" y="170" width="7" height="465" rx="3" fill="#2F6BFF" stroke="#2F6BFF" stroke-width="0"/>
+<text id="group-answer-claims-label" x="84" y="203" font-family="Hiragino Sans" font-size="16" font-weight="650" fill="#2F6BFF" text-anchor="start">
+<tspan x="84" dy="0">Answer 与结构化 Claims</tspan>
+</text>
+</g>
+<g id="group-citations" aria-label="Citation 绑定">
+<rect id="group-citations-panel" x="560" y="170" width="300" height="465" rx="22" fill="#F8FAFD" stroke="#D8E1EC" stroke-width="1.2"/>
+<rect id="group-citations-accent" x="560" y="170" width="7" height="465" rx="3" fill="#7456D8" stroke="#7456D8" stroke-width="0"/>
+<text id="group-citations-label" x="584" y="203" font-family="Hiragino Sans" font-size="16" font-weight="650" fill="#7456D8" text-anchor="start">
+<tspan x="584" dy="0">Citation 绑定</tspan>
+</text>
+</g>
+<g id="group-evidence-units" aria-label="已授权 Evidence units">
+<rect id="group-evidence-units-panel" x="880" y="170" width="660" height="465" rx="22" fill="#F8FAFD" stroke="#D8E1EC" stroke-width="1.2"/>
+<rect id="group-evidence-units-accent" x="880" y="170" width="7" height="465" rx="3" fill="#158A9B" stroke="#158A9B" stroke-width="0"/>
+<text id="group-evidence-units-label" x="904" y="203" font-family="Hiragino Sans" font-size="16" font-weight="650" fill="#158A9B" text-anchor="start">
+<tspan x="904" dy="0">已授权 Evidence units</tspan>
+</text>
+</g>
+<g id="multi-answer" aria-label="Answer">
+<rect id="multi-answer-bg" x="95" y="220" width="150" height="64" rx="15" fill="#FFFFFF" stroke="#D8E1EC" stroke-width="1.2" filter="url(#shadow)"/>
+<rect id="multi-answer-accent" x="95" y="220" width="6" height="64" rx="3" fill="#2F6BFF" stroke="#2F6BFF" stroke-width="0"/>
+<text id="multi-answer-title" x="170.0" y="251" font-family="Hiragino Sans" font-size="17" font-weight="650" fill="#102A43" text-anchor="middle">
+<tspan x="170.0" dy="0">Answer</tspan>
+</text>
+<text id="multi-answer-detail" x="170.0" y="275" font-family="Hiragino Sans" font-size="13" font-weight="430" fill="#5D6B7E" text-anchor="middle">
+<tspan x="170.0" dy="0">结构化 Claims</tspan>
+</text>
+</g>
+<g id="claim-a" aria-label="Claim A">
+<rect id="claim-a-bg" x="95" y="320" width="330" height="74" rx="15" fill="#FFFFFF" stroke="#D8E1EC" stroke-width="1.2"/>
+<rect id="claim-a-accent" x="95" y="320" width="6" height="74" rx="3" fill="#2F6BFF" stroke="#2F6BFF" stroke-width="0"/>
+<text id="claim-a-title" x="113" y="351" font-family="Hiragino Sans" font-size="17" font-weight="650" fill="#102A43" text-anchor="start">
+<tspan x="113" dy="0">Claim A</tspan>
+</text>
+<text id="claim-a-detail" x="113" y="375" font-family="Hiragino Sans" font-size="13" font-weight="430" fill="#5D6B7E" text-anchor="start">
+<tspan x="113" dy="0">内容感知 token surprisal</tspan>
+</text>
+</g>
+<g id="claim-b" aria-label="Claim B · 多证据">
+<rect id="claim-b-bg" x="95" y="425" width="400" height="96" rx="15" fill="#E8F7F0" stroke="#D8E1EC" stroke-width="1.2" filter="url(#shadow)"/>
+<rect id="claim-b-accent" x="95" y="425" width="6" height="96" rx="3" fill="#168B5B" stroke="#168B5B" stroke-width="0"/>
+<text id="claim-b-title" x="113" y="456" font-family="Hiragino Sans" font-size="20" font-weight="650" fill="#102A43" text-anchor="start">
+<tspan x="113" dy="0">Claim B · 多证据</tspan>
+</text>
+<text id="claim-b-detail" x="113" y="480" font-family="Hiragino Sans" font-size="13" font-weight="430" fill="#5D6B7E" text-anchor="start">
+<tspan x="113" dy="0">内容感知 + 态势感知 + 尾部聚合</tspan>
+</text>
+</g>
+<g id="claim-c" aria-label="Claim C">
+<rect id="claim-c-bg" x="95" y="552" width="330" height="64" rx="15" fill="#FFFFFF" stroke="#D8E1EC" stroke-width="1.2"/>
+<rect id="claim-c-accent" x="95" y="552" width="6" height="64" rx="3" fill="#2F6BFF" stroke="#2F6BFF" stroke-width="0"/>
+<text id="claim-c-title" x="113" y="583" font-family="Hiragino Sans" font-size="17" font-weight="650" fill="#102A43" text-anchor="start">
+<tspan x="113" dy="0">Claim C</tspan>
+</text>
+<text id="claim-c-detail" x="113" y="607" font-family="Hiragino Sans" font-size="13" font-weight="430" fill="#5D6B7E" text-anchor="start">
+<tspan x="113" dy="0">重复 / 连贯性缺口</tspan>
+</text>
+</g>
+<path id="contains-claim-a" d="M 170 284 V 300 H 260 V 320" fill="none" stroke="#5D6B7E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polygon id="contains-claim-a-arrowhead" points="260.0,320.0 255.5,310.0 264.5,310.0" fill="#5D6B7E" opacity="1"/>
+<path id="contains-claim-b" d="M 200 284 V 414 H 295 V 425" fill="none" stroke="#2F6BFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polygon id="contains-claim-b-arrowhead" points="295.0,425.0 290.5,415.0 299.5,415.0" fill="#2F6BFF" opacity="1"/>
+<path id="contains-claim-c" d="M 230 284 V 542 H 260 V 552" fill="none" stroke="#5D6B7E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polygon id="contains-claim-c-arrowhead" points="260.0,552.0 255.5,542.0 264.5,542.0" fill="#5D6B7E" opacity="1"/>
+<g id="citation-1" aria-label="Citation 1">
+<rect id="citation-1-bg" x="610" y="288" width="200" height="76" rx="15" fill="#F0ECFF" stroke="#D8E1EC" stroke-width="1.2" filter="url(#shadow)"/>
+<rect id="citation-1-accent" x="610" y="288" width="6" height="76" rx="3" fill="#7456D8" stroke="#7456D8" stroke-width="0"/>
+<text id="citation-1-title" x="710.0" y="319" font-family="Hiragino Sans" font-size="17" font-weight="650" fill="#102A43" text-anchor="middle">
+<tspan x="710.0" dy="0">Citation 1</tspan>
+</text>
+<text id="citation-1-detail" x="710.0" y="343" font-family="Hiragino Sans" font-size="13" font-weight="430" fill="#5D6B7E" text-anchor="middle">
+<tspan x="710.0" dy="0">请求内 Evidence 位置 1</tspan>
+</text>
+</g>
+<g id="citation-2" aria-label="Citation 2">
+<rect id="citation-2-bg" x="610" y="474" width="200" height="76" rx="15" fill="#F0ECFF" stroke="#D8E1EC" stroke-width="1.2" filter="url(#shadow)"/>
+<rect id="citation-2-accent" x="610" y="474" width="6" height="76" rx="3" fill="#7456D8" stroke="#7456D8" stroke-width="0"/>
+<text id="citation-2-title" x="710.0" y="505" font-family="Hiragino Sans" font-size="17" font-weight="650" fill="#102A43" text-anchor="middle">
+<tspan x="710.0" dy="0">Citation 2</tspan>
+</text>
+<text id="citation-2-detail" x="710.0" y="529" font-family="Hiragino Sans" font-size="13" font-weight="430" fill="#5D6B7E" text-anchor="middle">
+<tspan x="710.0" dy="0">请求内 Evidence 位置 2</tspan>
+</text>
+</g>
+<path id="claim-a-citation-1" d="M 425 357 H 610" fill="none" stroke="#7456D8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+<polygon id="claim-a-citation-1-arrowhead" points="610.0,357.0 600.0,361.5 600.0,352.5" fill="#7456D8" opacity="0.55"/>
+<path id="claim-b-citation-1" d="M 495 453 H 550 V 326 H 610" fill="none" stroke="#7456D8" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polygon id="claim-b-citation-1-arrowhead" points="610.0,326.0 600.0,330.5 600.0,321.5" fill="#7456D8" opacity="1"/>
+<path id="claim-b-citation-2" d="M 495 489 H 550 V 512 H 610" fill="none" stroke="#7456D8" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polygon id="claim-b-citation-2-arrowhead" points="610.0,512.0 600.0,516.5 600.0,507.5" fill="#7456D8" opacity="1"/>
+<path id="claim-c-citation-2" d="M 425 584 H 565 V 530 H 610" fill="none" stroke="#7456D8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+<polygon id="claim-c-citation-2-arrowhead" points="610.0,530.0 600.0,534.5 600.0,525.5" fill="#7456D8" opacity="0.55"/>
+<g id="evidence-1" aria-label="Evidence 1 · Chunk α">
+<rect id="evidence-1-bg" x="930" y="250" width="530" height="110" rx="15" fill="#E6F7F8" stroke="#D8E1EC" stroke-width="1.2" filter="url(#shadow)"/>
+<rect id="evidence-1-accent" x="930" y="250" width="6" height="110" rx="3" fill="#158A9B" stroke="#158A9B" stroke-width="0"/>
+<text id="evidence-1-title" x="948" y="281" font-family="Hiragino Sans" font-size="19" font-weight="650" fill="#102A43" text-anchor="start">
+<tspan x="948" dy="0">Evidence 1 · Chunk α</tspan>
+</text>
+<text id="evidence-1-detail" x="948" y="305" font-family="Hiragino Sans" font-size="13" font-weight="430" fill="#5D6B7E" text-anchor="start">
+<tspan x="948" dy="0">概念摘录：token surprisal / repetition</tspan>
+<tspan x="948" dy="20">已授权 · 请求内 Evidence</tspan>
+</text>
+</g>
+<g id="evidence-2" aria-label="Evidence 2 · Chunk β">
+<rect id="evidence-2-bg" x="930" y="440" width="530" height="110" rx="15" fill="#E6F7F8" stroke="#D8E1EC" stroke-width="1.2" filter="url(#shadow)"/>
+<rect id="evidence-2-accent" x="930" y="440" width="6" height="110" rx="3" fill="#158A9B" stroke="#158A9B" stroke-width="0"/>
+<text id="evidence-2-title" x="948" y="471" font-family="Hiragino Sans" font-size="19" font-weight="650" fill="#102A43" text-anchor="start">
+<tspan x="948" dy="0">Evidence 2 · Chunk β</tspan>
+</text>
+<text id="evidence-2-detail" x="948" y="495" font-family="Hiragino Sans" font-size="13" font-weight="430" fill="#5D6B7E" text-anchor="start">
+<tspan x="948" dy="0">概念摘录：coherence gaps / tail-focused aggregation</tspan>
+<tspan x="948" dy="20">已授权 · 请求内 Evidence</tspan>
+</text>
+</g>
+<g id="evidence-identity" aria-label="document · page · chunk · version">
+<rect id="evidence-identity-bg" x="1000" y="575" width="390" height="46" rx="15" fill="#FFFFFF" stroke="#D8E1EC" stroke-width="1.2"/>
+<rect id="evidence-identity-accent" x="1000" y="575" width="6" height="46" rx="3" fill="#158A9B" stroke="#158A9B" stroke-width="0"/>
+<text id="evidence-identity-title" x="1195.0" y="606" font-family="Hiragino Sans" font-size="14" font-weight="650" fill="#102A43" text-anchor="middle">
+<tspan x="1195.0" dy="0">document · page · chunk · version</tspan>
+</text>
+</g>
+<path id="citation-1-evidence-1" d="M 810 326 L 930 305" fill="none" stroke="#7456D8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polygon id="citation-1-evidence-1-arrowhead" points="930.0,305.0 920.925406821328,311.15644041972314 919.3739838355579,302.2911662153218" fill="#7456D8" opacity="1"/>
+<path id="citation-2-evidence-2" d="M 810 512 L 930 495" fill="none" stroke="#7456D8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polygon id="citation-2-evidence-2-arrowhead" points="930.0,495.0 920.7300591852207,500.8581735456104 919.4676640408849,491.947148997358" fill="#7456D8" opacity="1"/>
+<path id="evidence-1-identity" d="M 1195 360 V 575" fill="none" stroke="#158A9B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7" stroke-dasharray="5 6"/>
+<polygon id="evidence-1-identity-arrowhead" points="1195.0,575.0 1190.5,565.0 1199.5,565.0" fill="#158A9B" opacity="0.7"/>
+<path id="evidence-2-identity" d="M 1285 550 V 565 H 1285 V 575" fill="none" stroke="#158A9B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7" stroke-dasharray="5 6"/>
+<polygon id="evidence-2-identity-arrowhead" points="1285.0,575.0 1280.5,565.0 1289.5,565.0" fill="#158A9B" opacity="0.7"/>
+<g id="group-evidence-audit" aria-label="EvidenceSet deterministic audit">
+<rect id="audit-rail-bg" x="60" y="660" width="1480" height="175" rx="22" fill="#FFFFFF" stroke="#7456D8" stroke-width="1.5" filter="url(#shadow)"/>
+<text id="audit-rail-title" x="90" y="695" font-family="Hiragino Sans" font-size="17" font-weight="650" fill="#7456D8" text-anchor="start">
+<tspan x="90" dy="0">EvidenceSet deterministic audit</tspan>
+</text>
+<g id="audit-identity" aria-label="① 身份检查">
+<rect id="audit-identity-bg" x="90" y="720" width="285" height="80" rx="15" fill="#F0ECFF" stroke="#D8E1EC" stroke-width="1.2"/>
+<rect id="audit-identity-accent" x="90" y="720" width="6" height="80" rx="3" fill="#7456D8" stroke="#7456D8" stroke-width="0"/>
+<text id="audit-identity-title" x="108" y="751" font-family="Hiragino Sans" font-size="17" font-weight="650" fill="#102A43" text-anchor="start">
+<tspan x="108" dy="0">① 身份检查</tspan>
+</text>
+<text id="audit-identity-detail" x="108" y="775" font-family="Hiragino Sans" font-size="13" font-weight="430" fill="#5D6B7E" text-anchor="start">
+<tspan x="108" dy="0">owner · active version · chunk · citation</tspan>
+</text>
+</g>
+<g id="audit-support" aria-label="② 确定性支持检查">
+<rect id="audit-support-bg" x="420" y="720" width="380" height="80" rx="15" fill="#F0ECFF" stroke="#D8E1EC" stroke-width="1.2"/>
+<rect id="audit-support-accent" x="420" y="720" width="6" height="80" rx="3" fill="#7456D8" stroke="#7456D8" stroke-width="0"/>
+<text id="audit-support-title" x="438" y="751" font-family="Hiragino Sans" font-size="17" font-weight="650" fill="#102A43" text-anchor="start">
+<tspan x="438" dy="0">② 确定性支持检查</tspan>
+</text>
+<text id="audit-support-detail" x="438" y="775" font-family="Hiragino Sans" font-size="13" font-weight="430" fill="#5D6B7E" text-anchor="start">
+<tspan x="438" dy="0">数字 / 单位 · 比较 · 限定 · 冲突 · 核心重合</tspan>
+</text>
+</g>
+<g id="audit-state" aria-label="③ 状态记录">
+<rect id="audit-state-bg" x="845" y="720" width="285" height="80" rx="15" fill="#F0ECFF" stroke="#D8E1EC" stroke-width="1.2"/>
+<rect id="audit-state-accent" x="845" y="720" width="6" height="80" rx="3" fill="#7456D8" stroke="#7456D8" stroke-width="0"/>
+<text id="audit-state-title" x="863" y="751" font-family="Hiragino Sans" font-size="17" font-weight="650" fill="#102A43" text-anchor="start">
+<tspan x="863" dy="0">③ 状态记录</tspan>
+</text>
+<text id="audit-state-detail" x="863" y="775" font-family="Hiragino Sans" font-size="13" font-weight="430" fill="#5D6B7E" text-anchor="start">
+<tspan x="863" dy="0">支持 · 部分支持 · 冲突 · 证据不足</tspan>
+</text>
+</g>
+<g id="audit-boundary" aria-label="EvidenceSet = AUDIT_ONLY">
+<rect id="audit-boundary-bg" x="1175" y="704" width="330" height="112" rx="15" fill="#F0ECFF" stroke="#D8E1EC" stroke-width="1.2"/>
+<rect id="audit-boundary-accent" x="1175" y="704" width="6" height="112" rx="3" fill="#7456D8" stroke="#7456D8" stroke-width="0"/>
+<text id="audit-boundary-title" x="1340.0" y="735" font-family="Hiragino Sans" font-size="18" font-weight="650" fill="#102A43" text-anchor="middle">
+<tspan x="1340.0" dy="0">EvidenceSet = AUDIT_ONLY</tspan>
+</text>
+<text id="audit-boundary-detail" x="1340.0" y="759" font-family="Hiragino Sans" font-size="13" font-weight="430" fill="#5D6B7E" text-anchor="middle">
+<tspan x="1340.0" dy="0">审计，不自动裁决</tspan>
+<tspan x="1340.0" dy="20">非人工语义 Gold · 无新 Judge</tspan>
+<tspan x="1340.0" dy="20">不自动删 Claim</tspan>
+</text>
+</g>
+<path id="audit-edge-1-2" d="M 375 760 L 420 760" fill="none" stroke="#7456D8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polygon id="audit-edge-1-2-arrowhead" points="420.0,760.0 410.0,764.5 410.0,755.5" fill="#7456D8" opacity="1"/>
+<path id="audit-edge-2-3" d="M 800 760 L 845 760" fill="none" stroke="#7456D8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polygon id="audit-edge-2-3-arrowhead" points="845.0,760.0 835.0,764.5 835.0,755.5" fill="#7456D8" opacity="1"/>
+<path id="audit-edge-3-4" d="M 1130 760 L 1175 760" fill="none" stroke="#7456D8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polygon id="audit-edge-3-4-arrowhead" points="1175.0,760.0 1165.0,764.5 1165.0,755.5" fill="#7456D8" opacity="1"/>
+</g>
+<path id="binding-to-audit" d="M 295 521 V 645 H 232 V 720" fill="none" stroke="#7456D8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="1" stroke-dasharray="6 6"/>
+<polygon id="binding-to-audit-arrowhead" points="232.0,720.0 227.5,710.0 236.5,710.0" fill="#7456D8" opacity="1"/>
+<path id="identity-to-audit" d="M 1195 621 V 645 H 300 V 720" fill="none" stroke="#7456D8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity="1" stroke-dasharray="6 6"/>
+<polygon id="identity-to-audit-arrowhead" points="300.0,720.0 295.5,710.0 304.5,710.0" fill="#7456D8" opacity="1"/>
+<text id="multi-footer" x="800" y="867" font-family="Hiragino Sans" font-size="13" font-weight="450" fill="#5D6B7E" text-anchor="middle">
+<tspan x="800" dy="0">2 + 2 表示已观测的脱敏绑定结构；Chunk α/β 不是私有 ID，也不是原文摘录</tspan>
+</text>
+<metadata>Spec: 06-multi-evidence.spec.md; Evidence: VISUAL_EVIDENCE_LEDGER.md 06-E01..06-E13</metadata>
+</svg>

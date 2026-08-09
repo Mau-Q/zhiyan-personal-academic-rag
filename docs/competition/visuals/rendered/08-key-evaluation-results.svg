@@ -1,0 +1,204 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc" id="figure-08-key-evaluation-results">
+<title id="title">冻结 baseline 的关键验证与负向决策</title>
+<desc id="desc">四个证据块呈现真实复现、Citation 可靠性、负向排序实验和 clean-checkout 可复现性，并公开性能债。</desc>
+<defs>
+  <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+    <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#102A43" flood-opacity="0.08"/>
+  </filter>
+</defs>
+<rect id="canvas" width="1600" height="900" fill="#F4F7FB"/>
+<text id="figure-number" x="60" y="42" font-family="Hiragino Sans" font-size="14" font-weight="600" fill="#2F6BFF" text-anchor="start" letter-spacing="1.8">
+<tspan x="60" dy="0">FIGURE 08</tspan>
+</text>
+<text id="figure-title" x="60" y="78" font-family="Hiragino Sans" font-size="30" font-weight="650" fill="#102A43" text-anchor="start">
+<tspan x="60" dy="0">关键验证、证伪与已知限制</tspan>
+</text>
+<text id="figure-subtitle" x="60" y="103" font-family="Hiragino Sans" font-size="15" font-weight="400" fill="#5D6B7E" text-anchor="start">
+<tspan x="60" dy="0">真实复现 + 独立回放 + 负向决策 + clean-checkout CI</tspan>
+</text>
+<rect id="baseline-badge-bg" x="1250" y="35" width="290" height="38" rx="19" fill="#173B57" stroke="#173B57" stroke-width="1.5"/>
+<text id="baseline-badge" x="1395" y="60" font-family="Hiragino Sans" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.7">
+<tspan x="1395" dy="0">RAG COMPETITION · FROZEN</tspan>
+</text>
+<rect id="result-card-a" x="60" y="130" width="720" height="245" rx="22" fill="#FFFFFF" stroke="#D8E1EC" stroke-width="1.5" filter="url(#shadow)"/>
+<rect id="result-card-a-accent" x="60" y="130" width="8" height="245" rx="4" fill="#168B5B" stroke="#168B5B" stroke-width="0"/>
+<text id="result-title-a" x="90" y="168" font-family="Hiragino Sans" font-size="17" font-weight="650" fill="#168B5B" text-anchor="start">
+<tspan x="90" dy="0">A · Windows 真实复现</tspan>
+</text>
+<text id="result-a-metric" x="100" y="245" font-family="Hiragino Sans" font-size="58" font-weight="700" fill="#168B5B" text-anchor="start">
+<tspan x="100" dy="0">3 / 3</tspan>
+</text>
+<text id="result-a-pass" x="280" y="242" font-family="Hiragino Sans" font-size="24" font-weight="700" fill="#168B5B" text-anchor="start">
+<tspan x="280" dy="0">PASS</tspan>
+</text>
+<text id="result-a-scope" x="100" y="274" font-family="Hiragino Sans" font-size="13" font-weight="500" fill="#5D6B7E" text-anchor="start">
+<tspan x="100" dy="0">仅限冻结 Competition 三场景</tspan>
+</text>
+<rect id="scenario-evidence-qa-bg" x="395" y="190" width="320" height="34" rx="17" fill="#E8F7F0" stroke="#E8F7F0" stroke-width="0"/>
+<text id="scenario-evidence-qa" x="555.0" y="212" font-family="Hiragino Sans" font-size="13" font-weight="650" fill="#168B5B" text-anchor="middle">
+<tspan x="555.0" dy="0">Evidence QA · PASS</tspan>
+</text>
+<rect id="scenario-multi-evidence-bg" x="395" y="238" width="320" height="34" rx="17" fill="#F0ECFF" stroke="#F0ECFF" stroke-width="0"/>
+<text id="scenario-multi-evidence" x="555.0" y="260" font-family="Hiragino Sans" font-size="13" font-weight="650" fill="#7456D8" text-anchor="middle">
+<tspan x="555.0" dy="0">Multi-Evidence Audit · PASS · AUDIT_ONLY</tspan>
+</text>
+<rect id="scenario-fail-closed-bg" x="395" y="286" width="320" height="34" rx="17" fill="#E8F7F0" stroke="#E8F7F0" stroke-width="0"/>
+<text id="scenario-fail-closed" x="555.0" y="308" font-family="Hiragino Sans" font-size="13" font-weight="650" fill="#168B5B" text-anchor="middle">
+<tspan x="555.0" dy="0">Fail-Closed · PASS</tspan>
+</text>
+<text id="result-a-cleanup" x="395" y="346" font-family="Hiragino Sans" font-size="14" font-weight="550" fill="#102A43" text-anchor="start">
+<tspan x="395" dy="0">cleanup 3/3 · 403 · no stale Evidence</tspan>
+</text>
+<rect id="result-card-b" x="820" y="130" width="720" height="245" rx="22" fill="#FFFFFF" stroke="#D8E1EC" stroke-width="1.5" filter="url(#shadow)"/>
+<rect id="result-card-b-accent" x="820" y="130" width="8" height="245" rx="4" fill="#2F6BFF" stroke="#2F6BFF" stroke-width="0"/>
+<text id="result-title-b" x="850" y="168" font-family="Hiragino Sans" font-size="17" font-weight="650" fill="#2F6BFF" text-anchor="start">
+<tspan x="850" dy="0">B · Citation / Evidence 可靠性</tspan>
+</text>
+<text id="result-b-metric" x="860" y="230" font-family="Hiragino Sans" font-size="54" font-weight="700" fill="#2F6BFF" text-anchor="start">
+<tspan x="860" dy="0">2</tspan>
+</text>
+<text id="result-b-label" x="915" y="220" font-family="Hiragino Sans" font-size="19" font-weight="650" fill="#102A43" text-anchor="start">
+<tspan x="915" dy="0">个真实问题</tspan>
+<tspan x="915" dy="25">COMPLETED</tspan>
+</text>
+<text id="result-b-evidence" x="860" y="275" font-family="Hiragino Sans" font-size="15" font-weight="550" fill="#5D6B7E" text-anchor="start">
+<tspan x="860" dy="0">每题 3 条 Evidence</tspan>
+</text>
+<rect id="citation-id-pass-bg" x="1120" y="190" width="355" height="34" rx="17" fill="#EAF0FF" stroke="#EAF0FF" stroke-width="0"/>
+<text id="citation-id-pass" x="1297.5" y="212" font-family="Hiragino Sans" font-size="13" font-weight="650" fill="#2F6BFF" text-anchor="middle">
+<tspan x="1297.5" dy="0">Citation / Evidence / 页码身份 · PASS</tspan>
+</text>
+<rect id="generation-replay-pass-bg" x="1120" y="238" width="355" height="34" rx="17" fill="#E8F7F0" stroke="#E8F7F0" stroke-width="0"/>
+<text id="generation-replay-pass" x="1297.5" y="260" font-family="Hiragino Sans" font-size="13" font-weight="650" fill="#168B5B" text-anchor="middle">
+<tspan x="1297.5" dy="0">generation replay · PASS</tspan>
+</text>
+<rect id="byte-replay-pass-bg" x="1120" y="286" width="355" height="34" rx="17" fill="#E8F7F0" stroke="#E8F7F0" stroke-width="0"/>
+<text id="byte-replay-pass" x="1297.5" y="308" font-family="Hiragino Sans" font-size="13" font-weight="650" fill="#168B5B" text-anchor="middle">
+<tspan x="1297.5" dy="0">byte-stable replay · PASS</tspan>
+</text>
+<text id="result-b-boundary" x="860" y="346" font-family="Hiragino Sans" font-size="13" font-weight="450" fill="#5D6B7E" text-anchor="start">
+<tspan x="860" dy="0">本次两个真实问题的观测结果，不外推永久保证</tspan>
+</text>
+<rect id="result-card-c" x="60" y="395" width="720" height="245" rx="22" fill="#FFFFFF" stroke="#D8E1EC" stroke-width="1.5" filter="url(#shadow)"/>
+<rect id="result-card-c-accent" x="60" y="395" width="8" height="245" rx="4" fill="#B56808" stroke="#B56808" stroke-width="0"/>
+<text id="result-title-c" x="90" y="433" font-family="Hiragino Sans" font-size="17" font-weight="650" fill="#B56808" text-anchor="start">
+<tspan x="90" dy="0">C · 排序实验：证伪后停止</tspan>
+</text>
+<g id="top20-result" aria-label="Fixed BGE · Top-20">
+<rect id="top20-result-bg" x="90" y="460" width="235" height="105" rx="15" fill="#FFF3DC" stroke="#D8E1EC" stroke-width="1.2"/>
+<rect id="top20-result-accent" x="90" y="460" width="6" height="105" rx="3" fill="#B56808" stroke="#B56808" stroke-width="0"/>
+<text id="top20-result-title" x="207.5" y="491" font-family="Hiragino Sans" font-size="15" font-weight="650" fill="#102A43" text-anchor="middle">
+<tspan x="207.5" dy="0">Fixed BGE · Top-20</tspan>
+</text>
+<text id="top20-result-detail" x="207.5" y="515" font-family="Hiragino Sans" font-size="13" font-weight="430" fill="#5D6B7E" text-anchor="middle">
+<tspan x="207.5" dy="0">0 / 3 bilateral Top-3 recovery</tspan>
+</text>
+</g>
+<g id="top50-result" aria-label="Fixed BGE · Top-50">
+<rect id="top50-result-bg" x="350" y="460" width="235" height="105" rx="15" fill="#FFF3DC" stroke="#D8E1EC" stroke-width="1.2"/>
+<rect id="top50-result-accent" x="350" y="460" width="6" height="105" rx="3" fill="#B56808" stroke="#B56808" stroke-width="0"/>
+<text id="top50-result-title" x="467.5" y="491" font-family="Hiragino Sans" font-size="15" font-weight="650" fill="#102A43" text-anchor="middle">
+<tspan x="467.5" dy="0">Fixed BGE · Top-50</tspan>
+</text>
+<text id="top50-result-detail" x="467.5" y="515" font-family="Hiragino Sans" font-size="13" font-weight="430" fill="#5D6B7E" text-anchor="middle">
+<tspan x="467.5" dy="0">0 / 3 bilateral Top-3 recovery</tspan>
+</text>
+</g>
+<g id="screening-decision" aria-label="SCREENING_">
+<rect id="screening-decision-bg" x="610" y="452" width="140" height="121" rx="15" fill="#FCECEF" stroke="#D8E1EC" stroke-width="1.2"/>
+<rect id="screening-decision-accent" x="610" y="452" width="6" height="121" rx="3" fill="#C83E4D" stroke="#C83E4D" stroke-width="0"/>
+<text id="screening-decision-title" x="680.0" y="483" font-family="Hiragino Sans" font-size="13" font-weight="650" fill="#102A43" text-anchor="middle">
+<tspan x="680.0" dy="0">SCREENING_</tspan>
+</text>
+<text id="screening-decision-detail" x="680.0" y="507" font-family="Hiragino Sans" font-size="13" font-weight="430" fill="#5D6B7E" text-anchor="middle">
+<tspan x="680.0" dy="0">WEAKENED</tspan>
+<tspan x="680.0" dy="20">冻结失败集</tspan>
+</text>
+</g>
+<path id="result-edge-top20-decision" d="M 325 565 V 580 H 600 V 490 H 610" fill="none" stroke="#B56808" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polygon id="result-edge-top20-decision-arrowhead" points="610.0,490.0 600.0,494.5 600.0,485.5" fill="#B56808" opacity="1"/>
+<path id="result-edge-top50-decision" d="M 585 565 V 580 H 600 V 545 H 610" fill="none" stroke="#B56808" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polygon id="result-edge-top50-decision-arrowhead" points="610.0,545.0 600.0,549.5 600.0,540.5" fill="#B56808" opacity="1"/>
+<text id="result-c-decision" x="90" y="607" font-family="Hiragino Sans" font-size="17" font-weight="650" fill="#102A43" text-anchor="start">
+<tspan x="90" dy="0">保留默认 RRF · Phase 3 optimization STOP</tspan>
+</text>
+<rect id="result-card-d" x="820" y="395" width="720" height="245" rx="22" fill="#FFFFFF" stroke="#D8E1EC" stroke-width="1.5" filter="url(#shadow)"/>
+<rect id="result-card-d-accent" x="820" y="395" width="8" height="245" rx="4" fill="#7456D8" stroke="#7456D8" stroke-width="0"/>
+<text id="result-title-d" x="850" y="433" font-family="Hiragino Sans" font-size="17" font-weight="650" fill="#7456D8" text-anchor="start">
+<tspan x="850" dy="0">D · Clean-checkout 可复现性</tspan>
+</text>
+<text id="result-d-ci" x="860" y="505" font-family="Hiragino Sans" font-size="34" font-weight="700" fill="#102A43" text-anchor="start">
+<tspan x="860" dy="0">make test</tspan>
+</text>
+<rect id="result-d-pass-bg" x="860" y="530" width="190" height="34" rx="17" fill="#E8F7F0" stroke="#E8F7F0" stroke-width="0"/>
+<text id="result-d-pass" x="955.0" y="552" font-family="Hiragino Sans" font-size="13" font-weight="650" fill="#168B5B" text-anchor="middle">
+<tspan x="955.0" dy="0">PASS</tspan>
+</text>
+<text id="result-d-errors" x="1120" y="515" font-family="Hiragino Sans" font-size="42" font-weight="700" fill="#7456D8" text-anchor="start">
+<tspan x="1120" dy="0">14 → 0</tspan>
+</text>
+<text id="result-d-errors-label" x="1120" y="547" font-family="Hiragino Sans" font-size="13" font-weight="500" fill="#5D6B7E" text-anchor="start">
+<tspan x="1120" dy="0">clean-checkout runtime/path errors</tspan>
+</text>
+<text id="result-d-env" x="860" y="592" font-family="Hiragino Sans" font-size="14" font-weight="550" fill="#102A43" text-anchor="start">
+<tspan x="860" dy="0">GitHub clean checkout · Ubuntu 24.04 · CPython 3.11.15</tspan>
+</text>
+<text id="result-d-head" x="860" y="616" font-family="Hiragino Sans" font-size="13" font-weight="500" fill="#5D6B7E" text-anchor="start">
+<tspan x="860" dy="0">exact submission head · fd5a517</tspan>
+</text>
+<g id="known-limitation" aria-label="Known limitation">
+<rect id="known-limitation-bg" x="60" y="665" width="1480" height="105" rx="20" fill="#FFF3DC" stroke="#B56808" stroke-width="1.5"/>
+<text id="known-limitation-title" x="90" y="698" font-family="Hiragino Sans" font-size="16" font-weight="700" fill="#B56808" text-anchor="start">
+<tspan x="90" dy="0">E · Known limitation</tspan>
+</text>
+<text id="known-limitation-actual" x="90" y="744" font-family="Hiragino Sans" font-size="27" font-weight="700" fill="#102A43" text-anchor="start">
+<tspan x="90" dy="0">combined P95 ≈ 504.7 ms</tspan>
+</text>
+<text id="known-limitation-compare" x="460" y="741" font-family="Hiragino Sans" font-size="30" font-weight="700" fill="#C83E4D" text-anchor="start">
+<tspan x="460" dy="0">&gt;</tspan>
+</text>
+<text id="known-limitation-target" x="510" y="744" font-family="Hiragino Sans" font-size="22" font-weight="700" fill="#C83E4D" text-anchor="start">
+<tspan x="510" dy="0">目标 300 ms · 未达成 / deferred</tspan>
+</text>
+<text id="known-limitation-phases" x="950" y="711" font-family="Hiragino Sans" font-size="14" font-weight="600" fill="#102A43" text-anchor="start">
+<tspan x="950" dy="0">Phase 3 · PARTIAL / NO_PROMOTION</tspan>
+</text>
+<text id="known-limitation-phase4" x="950" y="738" font-family="Hiragino Sans" font-size="14" font-weight="600" fill="#102A43" text-anchor="start">
+<tspan x="950" dy="0">Phase 4 · PARTIAL / AUDIT_ONLY</tspan>
+</text>
+<text id="known-limitation-production" x="950" y="762" font-family="Hiragino Sans" font-size="13" font-weight="550" fill="#C83E4D" text-anchor="start">
+<tspan x="950" dy="0">800–1500 Acceptance 未完成 · 不声称 production ready</tspan>
+</text>
+</g>
+<g id="evidence-provenance" aria-label="证据谱系">
+<text id="provenance-title" x="60" y="812" font-family="Hiragino Sans" font-size="14" font-weight="700" fill="#5D6B7E" text-anchor="start">
+<tspan x="60" dy="0">证据谱系</tspan>
+</text>
+<rect id="provenance-windows-bg" x="175" y="790" width="270" height="34" rx="17" fill="#E6F7F8" stroke="#E6F7F8" stroke-width="0"/>
+<text id="provenance-windows" x="310.0" y="812" font-family="Hiragino Sans" font-size="13" font-weight="650" fill="#158A9B" text-anchor="middle">
+<tspan x="310.0" dy="0">Windows source · d775dab</tspan>
+</text>
+<rect id="provenance-equivalence-bg" x="500" y="790" width="255" height="34" rx="17" fill="#E8F7F0" stroke="#E8F7F0" stroke-width="0"/>
+<text id="provenance-equivalence" x="627.5" y="812" font-family="Hiragino Sans" font-size="13" font-weight="650" fill="#168B5B" text-anchor="middle">
+<tspan x="627.5" dy="0">runtime equivalence · PASS</tspan>
+</text>
+<rect id="provenance-submission-bg" x="810" y="790" width="270" height="34" rx="17" fill="#EAF0FF" stroke="#EAF0FF" stroke-width="0"/>
+<text id="provenance-submission" x="945.0" y="812" font-family="Hiragino Sans" font-size="13" font-weight="650" fill="#2F6BFF" text-anchor="middle">
+<tspan x="945.0" dy="0">submission head · fd5a517</tspan>
+</text>
+<rect id="provenance-authority-bg" x="1135" y="790" width="270" height="34" rx="17" fill="#F0ECFF" stroke="#F0ECFF" stroke-width="0"/>
+<text id="provenance-authority" x="1270.0" y="812" font-family="Hiragino Sans" font-size="13" font-weight="650" fill="#7456D8" text-anchor="middle">
+<tspan x="1270.0" dy="0">frozen authority · 038df52</tspan>
+</text>
+<path id="provenance-edge-1" d="M 445 807 L 500 807" fill="none" stroke="#5D6B7E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polygon id="provenance-edge-1-arrowhead" points="500.0,807.0 490.0,811.5 490.0,802.5" fill="#5D6B7E" opacity="1"/>
+<path id="provenance-edge-2" d="M 755 807 L 810 807" fill="none" stroke="#5D6B7E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polygon id="provenance-edge-2-arrowhead" points="810.0,807.0 800.0,811.5 800.0,802.5" fill="#5D6B7E" opacity="1"/>
+<path id="provenance-edge-3" d="M 1080 807 L 1135 807" fill="none" stroke="#5D6B7E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<polygon id="provenance-edge-3-arrowhead" points="1135.0,807.0 1125.0,811.5 1125.0,802.5" fill="#5D6B7E" opacity="1"/>
+</g>
+<text id="results-footer" x="800" y="866" font-family="Hiragino Sans" font-size="13" font-weight="500" fill="#5D6B7E" text-anchor="middle">
+<tspan x="800" dy="0">3/3 仅指冻结三场景 · 两个 0/3 仅指现有 fixed reranker family 与冻结失败集</tspan>
+</text>
+<metadata>Spec: 08-key-evaluation-results.spec.md; Evidence: VISUAL_EVIDENCE_LEDGER.md 08-E01..08-E16</metadata>
+</svg>
