@@ -1,5 +1,5 @@
 {
-  "schema_version": "feature_list_v1",
+  "schema_version": "feature_list_v2",
   "features": [
     {
       "id": "requirements_traceability",
@@ -11,6 +11,7 @@
       "id": "source_phase_zero_foundation",
       "status": "COMPLETE",
       "owner": "SHARED",
+      "gate_records": ["machine/phase_zero_scope_resource_slo.json"],
       "evidence": [
         "docs/REQUIREMENTS_TRACEABILITY.md",
         "docs/CURRENT_PHASE.md",
@@ -21,6 +22,7 @@
       "id": "phase_zero_scope_resource_slo",
       "status": "READY",
       "owner": "SHARED",
+      "gate_records": ["machine/phase_zero_scope_resource_slo.json"],
       "evidence": [
         "machine/phase_zero_scope_resource_slo.json",
         "docs/PHASE_0_SCOPE_RESOURCE_SLO.md",
@@ -548,6 +550,7 @@
       "id": "source_phase_three_entry_freeze",
       "status": "READY",
       "owner": "SHARED",
+      "gate_records": ["machine/phase3_entry_freeze.json"],
       "evidence": [
         "machine/phase3_entry_freeze.json",
         "docs/PHASE_3_ENTRY_FREEZE.md",
@@ -560,7 +563,10 @@
       "id": "phase3_bilateral_comparison_query_decomposition",
       "status": "PARTIAL",
       "owner": "SHARED",
-      "gate_status": "SEVENTH_ATTEMPT_TRUSTWORTHY_DEV_QUALITY_FAIL_CLEAN_VARIABLE_DISABLED_TEST_SEALED",
+      "gate_records": [
+        "machine/phase3_comparison_dev_gate.json",
+        "machine/phase3_comparison_report_intake.json"
+      ],
       "evidence": [
         "backend/retrieval/comparison_decomposition.py",
         "backend/retrieval/online.py",
@@ -595,7 +601,7 @@
       "id": "phase3_bilateral_comparison_route_coverage_top3",
       "status": "PARTIAL",
       "owner": "SHARED",
-      "gate_status": "REMOTE_DEV_QUALITY_FAILED_CLEAN_VARIABLE_DISABLED_WINDOWS_CLOSEOUT_PASS_NO_RERUN_TEST_SEALED",
+      "gate_records": ["machine/phase3_comparison_route_coverage_gate.json"],
       "evidence": [
         "backend/retrieval/comparison_route_coverage.py",
         "backend/retrieval/online.py",
@@ -620,7 +626,6 @@
       "id": "phase3_future_comparison_failure_localization",
       "status": "PENDING",
       "owner": "SHARED",
-      "gate_status": "FUTURE_OPTION_DOCUMENTED_NOT_ACTIVE_DOES_NOT_BLOCK_PHASE4",
       "evidence": [
         "docs/PHASE_3_FUTURE_COMPARISON_FAILURE_LOCALIZATION.md",
         "docs/PRODUCT_DECISIONS.md",
@@ -633,7 +638,7 @@
       "id": "phase4_claim_evidence_core",
       "status": "PARTIAL",
       "owner": "A",
-      "gate_status": "LOCAL_CORE_READY_DEFAULT_AUDIT_ONLY_ONLINE_HARD_JUDGMENT_DEFERRED",
+      "gate_records": ["machine/phase4_claim_evidence_core_gate.json"],
       "evidence": [
         "backend/rag/claim_evidence.py",
         "backend/rag/generation.py",
@@ -651,7 +656,7 @@
       "id": "phase4_claim_evidence_candidate_intake",
       "status": "PARTIAL",
       "owner": "SHARED",
-      "gate_status": "CANDIDATE_INTAKE_PASS_HARD_ENFORCEMENT_DISABLED_HUMAN_ADJUDICATION_PENDING",
+      "gate_records": ["machine/phase4_claim_evidence_candidate_intake.json"],
       "evidence": [
         "evaluation/reviews/member_b/README.md",
         "evaluation/reviews/member_b/dev-failure-taxonomy-v1.csv",
@@ -670,7 +675,10 @@
       "id": "phase4_multilingual_nli_candidate",
       "status": "PARTIAL",
       "owner": "A",
-      "gate_status": "REMOTE_QUALITY_FAIL_DATA_DIAGNOSIS_COMPLETE_MODEL_PRIMARY_ONLINE_ENFORCEMENT_DISABLED",
+      "gate_records": [
+        "machine/phase4_multilingual_nli_candidate_gate.json",
+        "machine/phase4_multilingual_nli_data_diagnosis.json"
+      ],
       "evidence": [
         "backend/evaluation/claim_evidence_nli.py",
         "evaluation/claim_evidence/phase4-multilingual-nli-rtx4090-v1.json",
@@ -692,7 +700,7 @@
       "id": "phase4_multi_evidence_set",
       "status": "READY",
       "owner": "A",
-      "gate_status": "FORMAL_DETERMINISTIC_MULTI_EVIDENCE_AUDIT_READY_DEFAULT_AUDIT_ONLY_ONLINE_HARD_JUDGMENT_DEFERRED",
+      "gate_records": ["machine/phase4_multi_evidence_set_gate.json"],
       "evidence": [
         "backend/rag/claim_evidence.py",
         "tests/rag/test_claim_evidence.py",
@@ -707,7 +715,6 @@
       "id": "rag_core_final_freeze",
       "status": "READY",
       "owner": "A",
-      "gate_status": "EXISTING_EVIDENCE_CONFIRMED_PHASE3_CLOSED_NOT_COMPLETE_PHASE4_AUDIT_CORE_COMPLETE",
       "evidence": [
         "docs/LOCAL_PDF_INGESTION.md",
         "docs/PHASE_2_CLOSEOUT.md",

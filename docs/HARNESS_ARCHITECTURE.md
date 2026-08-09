@@ -13,7 +13,7 @@
 | 最高需求映射 | [`REQUIREMENTS_TRACEABILITY.md`](REQUIREMENTS_TRACEABILITY.md) | 记录最高方案身份、阶段口径、需求差距和下一门禁 |
 | 入口 | [`AGENTS.md`](../AGENTS.md) | 阅读顺序、权威映射和硬规则 |
 | 人类合同 | [`PROJECT_GUARDRAILS.md`](PROJECT_GUARDRAILS.md)、[`PRODUCT_DECISIONS.md`](PRODUCT_DECISIONS.md)、[`EXECUTION_CONTRACT.md`](EXECUTION_CONTRACT.md)、[`CURRENT_PHASE.md`](CURRENT_PHASE.md) | 长期约束与当前阶段 |
-| 机器合同 | [`project_state.json`](../machine/project_state.json)、[`feature_list.json`](../machine/feature_list.json)、[`phase_result.schema.json`](../machine/phase_result.schema.json) | 状态、能力和结果结构 |
+| 机器合同 | [`project_state.json`](../machine/project_state.json)、[`feature_list.json`](../machine/feature_list.json)、业务 Gate JSON、[`phase_result.schema.json`](../machine/phase_result.schema.json) | 当前状态、能力、业务结果和结果结构 |
 | 可执行门禁 | [`validate_harness_contract.py`](../scripts/validate_harness_contract.py)、[`tests/harness/`](../tests/harness/) | 一致性、路径、安全和回归校验 |
 
 ## 权威关系
@@ -38,3 +38,9 @@
 ```
 
 `runtime/` 始终被 Git 忽略。阶段结果 Schema 和模板进入仓库，具体运行实例只留在本地或受控交付环境。
+
+## Repository 与业务 Gate 的边界
+
+`machine/feature_list.json` 使用 `feature_list_v2`：feature 只保存合法的当前能力状态，并通过可选 `gate_records` 指向业务 Gate JSON。`gate_records` 必须是 `evidence` 的子集、位于仓库内、存在且被 Git 跟踪。
+
+业务 Gate JSON 自己拥有具体 outcome、尝试记录、指标、Decision 和冻结证据。Repository validator 只验证其通用 envelope：文件名与 `schema_version` 对应、顶层 `status` 使用合法生命周期词汇、Decision/phase pointer 格式有效、引用关系完整；它不再把某次实验的长状态、Run ID、哈希或指标复制进 Python 条件。合法业务状态推进只更新 feature/gate authority，不要求同步修改 validator 代码；未知 feature 状态、未知 Gate 生命周期、缺失/未跟踪引用和 malformed Gate 仍失败关闭。
