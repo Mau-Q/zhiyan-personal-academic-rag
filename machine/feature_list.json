@@ -668,6 +668,24 @@
       ]
     },
     {
+      "id": "phase3_retrieval_ranking_optimization_closeout",
+      "status": "COMPLETE",
+      "owner": "SHARED",
+      "gate_records": [
+        "machine/phase3_fixed_reranker_screening_gate.json",
+        "machine/phase3_fixed_reranker_top50_screening_gate.json"
+      ],
+      "evidence": [
+        "machine/phase3_fixed_reranker_screening_gate.json",
+        "machine/phase3_fixed_reranker_top50_screening_gate.json",
+        "machine/project_state.json",
+        "docs/PHASE_3_FUTURE_COMPARISON_FAILURE_LOCALIZATION.md",
+        "docs/PRODUCT_DECISIONS.md",
+        "docs/REQUIREMENTS_TRACEABILITY.md",
+        "docs/CURRENT_PHASE.md"
+      ]
+    },
+    {
       "id": "phase4_claim_evidence_core",
       "status": "PARTIAL",
       "owner": "A",

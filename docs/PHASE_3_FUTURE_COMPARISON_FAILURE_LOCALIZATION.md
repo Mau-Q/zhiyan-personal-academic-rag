@@ -48,6 +48,47 @@
 当前不调参、不重跑两个失败变量，不复用既有 Run ID，不改变默认 RRF、Reranker、
 NLI `AUDIT_ONLY` 或独立 300 ms 性能债。
 
+## Fixed Reranker Screening 与 Strategy 收口
+
+定位完成后复用冻结 candidate-ladder 证据，对
+`local3.assisted.0033 / .0304 / .0383` 运行了同一固定
+`BAAI/bge-reranker-v2-m3@953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e`
+screening。Top-20 的 bilateral Top-3 recovery 为 `0/3`，决定为
+`SCREENING_WEAKENED`，报告 SHA-256 为
+`f66d76c89308757b29482331304e44fafa9a52de070bb1bbd86535449272a8b1`。
+Top-50 只把 candidate exposure 从 20 扩大到最多 50，仍为 `0/3`，决定同为
+`SCREENING_WEAKENED`；报告 SHA-256 为
+`68533b28ec3cf70ad189daefbf22cdce3f91bd018cf6104aa407bc5fc8dbaf86`，
+screening identity 为
+`2d17391d972f73519631791ff008e76f21f0c308d1b0018bcda3589f4097addf`。
+Top-20 保留为历史 baseline，不被 Top-50 覆盖。
+
+该证据只足以将现有 fixed reranker family 对上述冻结 Phase 3 comparison failures
+记为 `WEAKENED`，不证明所有 reranker、所有 ranking approach 均被否定，也不证明
+document diversity 是解法或 retrieval 根本失效。Strategy 决定为：
+
+```text
+PHASE_3_OVERALL = PARTIAL
+PROMOTION = NO_PROMOTION
+RETRIEVAL_RANKING_OPTIMIZATION = STOP
+FIXED_RERANKER_TOP20 = WEAKENED
+FIXED_RERANKER_TOP50 = WEAKENED
+EXISTING_FIXED_RERANKER_FAMILY = WEAKENED
+NEXT_EXPERIMENT = NONE
+```
+
+未解决分支只进入 `HOLD`，本次不重开：
+
+- **Cross-document / coverage-aware ranking：** 仅当代表性的、非当前 3 条冻结
+  screening case 的 dev 或真实负载反复证明：所需 Evidence 已在候选集内；最终
+  Top-k 系统性坍缩到单一文档或来源侧；该损失造成实质 QA 失败；且修复服务于当前
+  Primary Objective 时重开。
+- **Deep candidate retrieval：** 仅当代表性负载反复证明当前候选边界内缺失实质
+  相关 Evidence，并且这已成为有意义的 QA 失败来源时重开。
+
+两条 `HOLD` 均不是下一实验。`test/Acceptance` 继续封存；不改变默认 RRF、可选
+非默认 Reranker、生产检索/排序行为或独立 300 ms 性能债。
+
 ## 当前 Gate 的定位顺序
 
 按同一冻结请求、隔离授权 owner、活动 document/version/chunk 身份逐层记录正确

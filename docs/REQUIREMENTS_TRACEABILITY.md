@@ -27,7 +27,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 - `方案阶段 0～5`：最高方案第 10 章定义的项目阶段，用于判断最终建设完成度；
 - `仓库 M0/M1`：GitHub 中已使用的内部工程里程碑，只证明某个窄范围实现和门禁通过；
 - `仓库 M0_COMPLETE` 不等于 `方案阶段 0 COMPLETE`；
-- `方案阶段 0/1/2 COMPLETE`：评测 Baseline 与范围、数据与索引最小闭环、基础 RAG MVP 的 Hybrid/Reranker 决策、硬门禁和稳定回放均已完成；当前仍为 `方案阶段 3 IN_PROGRESS`，同时阶段 4 的本地 Claim–Evidence 核心达到 `PARTIAL`。阶段 2 的完成不代表 300 ms 或生产性能验收通过，阶段 4 本地核心也不代表人工校准或在线硬裁决完成。
+- `方案阶段 0/1/2 COMPLETE`：评测 Baseline 与范围、数据与索引最小闭环、基础 RAG MVP 的 Hybrid/Reranker 决策、硬门禁和稳定回放均已完成；阶段 3 为 `PARTIAL / NO_PROMOTION` 且 retrieval/ranking optimization workstream 已 `STOP`，阶段 4 的本地 Claim–Evidence 核心达到 `PARTIAL`。阶段 2 的完成不代表 300 ms 或生产性能验收通过，阶段 4 本地核心也不代表人工校准或在线硬裁决完成。
 
 ## 4. 需求追踪矩阵
 
@@ -38,8 +38,8 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | SR-03 | PDF/OCR、章节页码、三种 Chunk Baseline、版本和幂等入库 | `PARTIAL` | 三种切片策略已完成同源对比；远程 `filesystem_v1` PDF 对象重开、PostgreSQL Chunk 快照、重放恢复和 INACTIVE 后清理闭环已通过 | OCR 与正式 MinIO 应用适配未完成，不把 MVP 文件对象后端冒充最终架构 |
 | SR-04 | Elasticsearch 论文级和 Chunk 级 BM25 | `PARTIAL` | 远程 ES 9.4.3；316 Chunk Canary 14/15；175 题 85/175；版本写入器、READY 持久化 Answer API 和删除清理均远程通过 | 中文分词选型和目标规模性能基线未完成 |
 | SR-05 | Milvus + BGE-M3 语义检索及版本一致性 | `PARTIAL` | 远程 Milvus 2.6.18 + BGE-M3；316 Chunk Canary 12/15；175 题 109/175；版本 Collection、READY 持久化 Answer API 和删除清理均远程通过 | 目标规模性能基线未完成；不以远程 500 题或调参作为当前门禁 |
-| SR-06 | 基础规范化和最小路由；改写、多查询和多跳按失败后置 | `PARTIAL` | API 问题输入合同与默认检索链路；`machine/phase3_entry_freeze.json` 冻结 4 个双文档比较失衡 `dev` 样本；`_07` 证明查询拆分在该 4 条上无增益，路由覆盖 `_01` 证明选择改变仍无 Recall@3/nDCG@3 或双侧命中增益，两个变量均保持关闭；identity-matched candidate-ladder 在固定 Run `phase3_candidate_ladder_20260809_01` 上完成在线定位并通过独立裁决：3/4 为 `RRF_FUSION_OR_RANKING`，1/4 primary 为 `ES_CANDIDATE_RETRIEVAL` 且同时有 Milvus co-primary | 结果只适用于冻结 4 条 `dev`，不能扩大为方法类别无效；不得进入 `test`、调参或重跑。`.0387` 只证明当前 `candidate_k=20` 内 ES/Milvus 均未观察到目标文档，20 之外为 `UNAVAILABLE_PRE_CUTOFF_NOT_OBSERVED`；定位完成不促成 Phase 3 晋级，不选择新变量 |
-| SR-07 | ES/Milvus 并行、RRF、去重、多样性、Cross-Encoder 重排 | `PARTIAL` | 本地 SQLite BM25 + BGE-M3 RRF 15/15；远程 RRF Canary 14/15；固定 BGE Reranker 将 `nDCG@10` 从 `0.647269` 提升到 `0.747810`、`Precision@5 +0.02`，RTX 4090 pair-scoring `P95=188.22683 ms`；最终 Windows 分段 Gate 30/30 应用且安全/清理通过，base `P95=376.394385 ms`、combined `P95=504.71613 ms`，主要成本为 Query Embedding `P95=189.838925 ms` 与 READY 路由解析 `P95=145.48693 ms` | 默认明确保持原 RRF，固定 Reranker 仅为可选组件；300 ms 性能债、去重/多样性和扩展消融进入阶段 3 独立 Gate，不放宽 SLO |
+| SR-06 | 基础规范化和最小路由；改写、多查询和多跳按失败后置 | `PARTIAL` | API 问题输入合同与默认检索链路；`machine/phase3_entry_freeze.json` 冻结 4 个双文档比较失衡 `dev` 样本；`_07` 证明查询拆分在该 4 条上无增益，路由覆盖 `_01` 证明选择改变仍无 Recall@3/nDCG@3 或双侧命中增益，两个变量均保持关闭；identity-matched candidate-ladder 在固定 Run `phase3_candidate_ladder_20260809_01` 上完成在线定位并通过独立裁决：3/4 为 `RRF_FUSION_OR_RANKING`，1/4 primary 为 `ES_CANDIDATE_RETRIEVAL` 且同时有 Milvus co-primary | 结果只适用于冻结 4 条 `dev`，不能扩大为方法类别无效；不得进入 `test`、调参或重跑。`.0387` 只证明当前 `candidate_k=20` 内 ES/Milvus 均未观察到目标文档，20 之外为 `UNAVAILABLE_PRE_CUTOFF_NOT_OBSERVED`。deep candidate retrieval 为 `HOLD`，只在代表性负载反复证明当前候选边界内缺失实质相关 Evidence 且成为有意义的 QA 失败源时重开 |
+| SR-07 | ES/Milvus 并行、RRF、去重、多样性、Cross-Encoder 重排 | `PARTIAL` | 本地 SQLite BM25 + BGE-M3 RRF 15/15；远程 RRF Canary 14/15；固定 BGE Reranker 将 `nDCG@10` 从 `0.647269` 提升到 `0.747810`、`Precision@5 +0.02`，RTX 4090 pair-scoring `P95=188.22683 ms`；最终 Windows 分段 Gate 30/30 应用且安全/清理通过。冻结 Phase 3 排序失败上的 fixed reranker Top-20 与只扩大 exposure 的 Top-50 screening 均为 `SCREENING_WEAKENED / 0/3`，完整证据分别见 `machine/phase3_fixed_reranker_screening_gate.json` 与 `machine/phase3_fixed_reranker_top50_screening_gate.json` | 默认保持原 RRF，固定 Reranker 仅为可选非默认组件；现有 fixed reranker family 只对该冻结失败集记为 `WEAKENED`，不外推到所有 reranker 或 ranking approach。coverage-aware ranking 为 `HOLD`，仅在代表性非当前 3 条负载反复证明候选集已有所需 Evidence、最终 Top-k 系统性坍缩到单一文档/来源侧、造成实质 QA 失败且修复服务当前 Primary Objective 时重开；300 ms 性能债保持独立 |
 | SR-08 | 证据上下文、真实 LLM、强制引用、校验与拒答 | `PARTIAL` | Evidence/Citation、`NO_EVIDENCE`；llama3.2 与 Qwen 已通过远程真实生成闭环和 3 文档 9 题；`backend/rag/claim_evidence.py` 已接入确定性锚点，并完成 owner/活动版本/Chunk 身份约束的单/多 EvidenceSet、部分支持、冲突和有界同版本邻块；默认保持 audit-only | 多 EvidenceSet 是本地确定性审计核心，不是人工语义真值；在线硬裁决、人工一致率、负例拒绝率以及独立 Evidence 消费仍未完成 |
 | SR-09 | 问答 API、SSE、内部 Evidence 合同和鉴权原文定位 | `PARTIAL` | 非流式 Answer API、SSE 文件合同、PDF 页码 | SSE 运行、独立 Evidence 消费和鉴权预览未实现；对外 Agent Evidence API 保持后置 |
 | SR-10 | Trace、反馈、指标、告警和运营闭环 | `PARTIAL` | Trace 合同与评测报告结构 | 持久化、反馈 API、看板、告警和难例回流未实现 |
@@ -55,7 +55,7 @@ Harness 负责约束“怎么开发和证明”，不得缩小、改写或替代
 | 阶段 0：范围与 Baseline | `COMPLETE` | 175 题人工校验、ES/Milvus 同集单路 Baseline、三种 Chunk 受控 Baseline、单用户范围/资源/SLO 及数据身份/生命周期目标合同均已冻结 | 冻结目标不等于运行时达标 |
 | 阶段 1：数据与索引最小闭环 | `COMPLETE` | 远程 v2 已通过 PDF/Chunk 持久化、owner/版本 READY 对账、ES/Milvus 在线 Evidence、同 Run ID 恢复、删除后 403 和三路清理；报告 SHA-256 `6B2AB3BAAD55AE8FA506C0D1FD7A310D9EF3A3833A93E33DD1A2D8A0938A9D8C` | 正式 MinIO、OCR 和目标规模性能不属于阶段 1 退出条件 |
 | 阶段 2：基础 RAG MVP | `COMPLETE` | 非流式 API、Evidence、拒答、远程 RRF Canary、llama3.2/Qwen READY 真实生成闭环、模型选型和 3 文档 9 题 v2 均通过；固定 BGE Reranker 的增益、目标硬件成本和在线边界已验证，最终决定为原 RRF 默认、Reranker 可选且不默认启用 | Windows 分段 Gate 的 combined `P95=504.71613 ms` 未通过 300 ms；这是显式后移的性能债，不写成 SLO 或生产验收完成 |
-| 阶段 3：针对失败类型增强 | `PARTIAL` | 当前工作流已关闭：首个查询拆分变量和第二个路由覆盖变量均完成可信在线 dev 比较且不晋级；第二变量虽在 4/4 目标上生效、3/4 改变选择，但 Control/Treatment 仍同为双侧 `0/4`，Recall@3 与 nDCG@3 增益均为 0。该结论只覆盖冻结 4 条 `dev`，不否定整个方法类别 | 未达到最高方案“目标失败集有稳定净增益”的退出条件，因此不记为 `COMPLETE`。两个 V1 继续关闭且不调参重跑，不要求为形式新增第三变量；未来若明确重开，先运行比较失败定位 Gate |
+| 阶段 3：针对失败类型增强 | `PARTIAL` | 查询拆分与路由覆盖两个 V1 均未晋级；candidate-ladder 完成 failure-layer 定位；同一 fixed BGE reranker 在冻结 3 条排序失败上的 Top-20 与 Top-50 screening 均为 `SCREENING_WEAKENED / 0/3`。retrieval/ranking optimization workstream 正式 `STOP`，promotion 为 `NO_PROMOTION`，next experiment 为 `NONE` | 未达到最高方案“目标失败集有稳定净增益”的退出条件，因此不记为 `COMPLETE`。只将现有 fixed reranker family 对冻结失败集记为 `WEAKENED`，不否定全部 reranker 或 ranking 方法；coverage-aware ranking 与 deep candidate retrieval 仅按明确的代表性负载条件保持 `HOLD` |
 | 阶段 4：Claim–Evidence 可靠性 | `PARTIAL` | 确定性审计核心已完成：已复用结构化 Claim 与授权 Evidence 建立正式单/多 EvidenceSet 审计能力，覆盖 owner、活动版本、Chunk 身份、数字/单位/比较/限定、部分支持、冲突及最多一个同版本邻块；默认 `AUDIT_ONLY` 且不自动删除 Claim | 阶段整体未完成；该审计核心不等于通用语义蕴含或人工真值。pair-level 人工金标、新 NLI/LLM Judge、Precision/负例拒绝率/人工一致率和在线硬裁决全部后置，当前 NLI 候选保持拒绝 |
 | 阶段 5：复杂科研问答与复用 | `NOT_STARTED` | 暂未完成比较、多跳、时效问答与 Agent Evidence API | 进入前需满足 MVP、权限委托、审计与运维条件 |
 
@@ -215,6 +215,13 @@ owner、活动 document/version/chunk 身份、数值、单位、比较对象、
 的 candidate-ladder 定位已在固定在线 Run 中正式完成：3/4 定位为 RRF 融合/排序，1/4 定位为 ES 候选检索 primary 并同时有 Milvus co-primary。该证据只完成 failure-layer 定位，不促成 Phase 3 晋级，不选择下一算法。确定性 Multi-Evidence EvidenceSet 晋级为当前正式
 审计能力，但最高方案阶段 4 仍为 `PARTIAL`：pair-level 人工金标、新 NLI/LLM
 Judge 与在线硬裁决均未完成且全部后置。
+
+后续 fixed reranker screening 复用冻结证据完成收口：Top-20 与 Top-50 均为
+`SCREENING_WEAKENED / 0/3`，扩大 candidate exposure 未恢复 bilateral Top-3。
+因此 Phase 3 仍为 `PARTIAL / NO_PROMOTION`，retrieval/ranking optimization
+workstream 为 `STOP`，next experiment 为 `NONE`。coverage-aware ranking 与 deep
+candidate retrieval 只按 `PD-071` 的代表性负载重开条件保持 `HOLD`；没有解封
+`test/Acceptance`，也没有形成生产 Reranker adoption。
 
 RAG 核心最终冻结复核确认既有版本化证据链连续：阶段 1远程 v2 覆盖 PDF 对象与
 不可变 Chunk 快照、PostgreSQL READY/owner、ES/Milvus 版本路由、Answer API、

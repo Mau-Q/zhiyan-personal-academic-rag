@@ -2,7 +2,7 @@
 
 ## Status
 
-`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_PARTIAL_WORKSTREAM_CLOSED_NO_PROMOTION_EXIT_CRITERIA_NOT_MET / PHASE3_CANDIDATE_LADDER_LOCALIZATION_COMPLETE_NO_NEXT_ALGORITHM_SELECTED / SOURCE_PHASE_4_IN_PROGRESS_DETERMINISTIC_MULTI_EVIDENCE_AUDIT_CORE_COMPLETE_ONLINE_HARD_JUDGMENT_DEFERRED / RAG_CORE_FINAL_FROZEN / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
+`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_PARTIAL_WORKSTREAM_CLOSED_NO_PROMOTION_EXIT_CRITERIA_NOT_MET / PHASE3_CANDIDATE_LADDER_LOCALIZATION_COMPLETE / PHASE3_FIXED_RERANKER_TOP20_TOP50_SCREENING_WEAKENED / PHASE3_RETRIEVAL_RANKING_OPTIMIZATION_STOP_NEXT_EXPERIMENT_NONE / SOURCE_PHASE_4_IN_PROGRESS_DETERMINISTIC_MULTI_EVIDENCE_AUDIT_CORE_COMPLETE_ONLINE_HARD_JUDGMENT_DEFERRED / RAG_CORE_FINAL_FROZEN / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
 Phase ID：`rag-core-final-freeze`
 
@@ -205,7 +205,7 @@ Phase ID：`rag-core-final-freeze`
 - 用户已确认提交 `7764f3e0416706b98c5ea8d131a5525bc7f96f2e` 的版本化 Windows PowerShell 5.1 收口验证成功：系统内置 Parser 和严格模式 helper 行为均通过，且未运行质量、服务或私有输入。汇总修复的跨平台验证至此 `PASS_COMPLETE`，无需再次复核；路由覆盖质量失败、默认关闭、无需恢复、holdout 封存和独立性能债均不变。
 - 比赛增强的下一个主 Gate 已完成轮子评估：直接复用本仓库 `claims[].text + citation_ids` 与授权 Evidence/Citation，窄适配用户既有 reading-agent 的确定性可靠性模式；现有相关性 Cross-Encoder 不作为蕴含器，Ragas/Haystack 只保留为后续离线评测候选，因此没有新增依赖、框架或服务。
 - 本地 Claim–Evidence 核心现可校验请求内引用、数字锚点、高风险关系、核心重合和同单位数值冲突披露；支持安全限制语、删除无依据 Claim 后的显式部分回答，以及全部失败时保留 Evidence 卡片的 `DEGRADED`。公开 Answer Schema 与冻结 Prompt 身份均未改变。
-- 该能力只达到 `LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED`：不包含知识库接入、前端、演示或远程运行，未读取 `test/Acceptance`，也不把确定性词面检查写成通用语义蕴含。最高方案阶段 3 仍为 `IN_PROGRESS`，阶段 4 仅记为 `PARTIAL`。
+- 该能力当时只达到 `LOCAL_CORE_READY_ONLINE_HARD_JUDGMENT_DEFERRED`：不包含知识库接入、前端、演示或远程运行，未读取 `test/Acceptance`，也不把确定性词面检查写成通用语义蕴含；该时点阶段 4 仅记为 `PARTIAL`。
 - `phase4-claim-evidence-candidate-intake-complete` 已原样接收成员 B PR #15 的三份候选资产并通过冻结私有 `dev` 对账：失败归因 `105/105`，Claim–Evidence `30/30`，关系为 `SUPPORTED=21 / PARTIALLY_SUPPORTED=1 / NOT_APPLICABLE=8`，`INPUT_MISSING=0`。评审者明确为 `member-b-ai-assisted`，候选未经过人工裁决，不晋升为最终真值。
 - 现有确定性轮子在 21 条候选 `SUPPORTED` 上只保留 6 条，在人工终审谱系 225 个正例上只保留 110 条；这只证明高误杀风险，不产生 Precision、负例拒绝率或人工一致率。默认生成因此改为 `AUDIT_ONLY`，显式 enforcement 仅供测试和未来候选，在线硬裁决继续关闭。
 - 已固定多语言 NLI 候选轮子 `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` 的 revision、snapshot、Evidence-premise/Claim-hypothesis 模板、标签顺序和正例保留门槛；Mac 仅以 Fake Scorer 完成合同测试，真实模型未在 Mac 运行。
@@ -218,6 +218,8 @@ Phase ID：`rag-core-final-freeze`
 - 阶段 3 的单次 `COMPARISON_FAILURE_LOCALIZATION` 已完成：用户在提交 `4a908f1fa8a4d87cdb351c0bb3e5f5df1aab63fc` 上执行固定 Run ID `phase3_candidate_ladder_20260809_01`，报告与独立裁决均 `PASS`，实验决定为 `LOCALIZATION_COMPLETE`。report SHA-256 为 `f110daba4bc5d26c952b682502f812a156f6e3fde8ecd04b716db73b99e45186`，adjudication SHA-256 为 `4fba0e27d44abfd009e496a0430b5da2eabfdc009a57f0c5b8cb8d7e297fed8f`。
 - 冻结 4 条 `dev` 中，`local3.assisted.0033 / .0304 / .0383` 定位为 `RRF_FUSION_OR_RANKING`；`.0387` primary 为 `ES_CANDIDATE_RETRIEVAL`、co-primary 为 `MILVUS_CANDIDATE_RETRIEVAL`。汇总为 3/4 RRF 融合/排序与 1/4 ES 候选检索 primary。`.0387` 只证明当前 `candidate_k=20` 边界内两个 backend 均未观察到目标文档；20 之外保持 `UNAVAILABLE_PRE_CUTOFF_NOT_OBSERVED`，不证明目标不在索引或 Embedding 失败。
 - 本诊断证明 9/9 cleanup、READY 对账失败关闭和删除后 Answer API 403；未改变检索行为，未新增请求，未读取 `test/Acceptance`，未调用生成模型或 Judge，未运行 300 ms Gate。定位完成不促成 Phase 3 晋级，交接仍为 `NO_NEXT_ALGORITHM_SELECTED`。
+- fixed BGE reranker Top-20 screening 在 `local3.assisted.0033 / .0304 / .0383` 上为 `SCREENING_WEAKENED / 0/3`；Top-50 只把 candidate exposure 从 20 扩大到最多 50，仍为 `SCREENING_WEAKENED / 0/3`。Top-20 报告 SHA-256 为 `f66d76c89308757b29482331304e44fafa9a52de070bb1bbd86535449272a8b1`；Top-50 报告 SHA-256 为 `68533b28ec3cf70ad189daefbf22cdce3f91bd018cf6104aa407bc5fc8dbaf86`，screening identity 为 `2d17391d972f73519631791ff008e76f21f0c308d1b0018bcda3589f4097addf`。
+- Phase 3 retrieval/ranking optimization workstream 正式 `STOP`：只将现有 fixed reranker family 对冻结 comparison failures 记为 `WEAKENED`；Phase 3 保持 `PARTIAL / NO_PROMOTION`，`NEXT_EXPERIMENT=NONE`。coverage-aware ranking 与 deep candidate retrieval 转 `HOLD`，只按 `PD-071` 的代表性负载条件重开；本次不重开、不改变生产行为、不读取 `test/Acceptance`。
 - 阶段 3 / 阶段 4 统一收口完成：阶段 3 当前工作流已关闭，两个 V1 均不晋级且无需为形式新增第三变量；由于没有达到最高方案要求的稳定净增益，阶段 3 不记为 `COMPLETE`。确定性 Multi-Evidence Evidence Set 是当前正式审计能力，默认 `AUDIT_ONLY`、不自动删除 Claim，不等于语义 Judge 或在线硬裁决，也不把最高方案阶段 4 整体写成完成。
 - RAG 核心最终冻结完成：现有版本化证据已覆盖 PDF/Chunk 持久入库、PostgreSQL READY/owner、ES/Milvus、默认 RRF、真实 Qwen 生成、Citation 稳定映射、`NO_EVIDENCE`、ACL、删除后 403、三路清理和确定性 Multi-Evidence EvidenceSet；没有重跑历史远程 Gate 或实现新算法。
 
@@ -226,7 +228,7 @@ Phase ID：`rag-core-final-freeze`
 - 最高依据：《个人学术空间 RAG 问答系统建设与测试方案》，身份与差距见 `docs/REQUIREMENTS_TRACEABILITY.md`；
 - 仓库基线：`main` 上已通过的仓库 Harness 与简化 Git 流程；
 - 已实现能力：本地 PDF 到 Answer API、公开 Fixture、三论文四路检索基线、原方案兼容合同/指标框架和风险驱动测试策略；
-- 当前 bounded experiment：阶段 3 两个 V1 在冻结 4 条 `dev` 上未晋级并保持关闭；candidate-ladder 只读定位已以 `LOCALIZATION_COMPLETE` 正式收口，但只定位 failure layer，Phase 3 仍为 `PARTIAL / NO_PROMOTION`且未选择下一算法。阶段 4 的 pair-level 人工正负金标、新 NLI/LLM Judge 和在线硬裁决全部后置；正式 MinIO 适配、OCR、目标规模性能验收、知识库接入、前端、演示、Agent API、阶段 5 复杂问答和 300 ms 性能债均不在当前 Gate；
+- 当前 Phase 3 experiment 为 `NONE`：两个 V1、candidate-ladder 与 fixed reranker Top-20/Top-50 screening 均已收口，retrieval/ranking optimization 为 `STOP`；Phase 3 仍为 `PARTIAL / NO_PROMOTION`。coverage-aware ranking 与 deep candidate retrieval 为条件式 `HOLD`，本次不重开。阶段 4 的 pair-level 人工正负金标、新 NLI/LLM Judge 和在线硬裁决全部后置；正式 MinIO 适配、OCR、目标规模性能验收、知识库接入、前端、演示、Agent API、阶段 5 复杂问答和 300 ms 性能债均不在当前 Gate；
 - 远程部署拓扑及 ES/Milvus/RRF 固定 Canary 已形成工程证据；结果接口、配置和最小 RRF 已完成，RRF 14/15 未超过 ES 14/15，不继续增加检索复杂度。
 
 ## 验收
@@ -255,6 +257,8 @@ Phase ID：`rag-core-final-freeze`
 - `machine/phase3_entry_freeze.json` 必须保持入口时点的 4 个唯一 `dev` ID、单变量、`test/acceptance` 封存和独立性能债；`machine/phase3_comparison_dev_gate.json` 必须如实记录 `_07` 的在线 dev 失败、干净清理与关闭决定，不得出现 `test/acceptance` 结果。
 - `machine/phase3_comparison_route_coverage_gate.json` 必须保持第二变量可信质量失败、默认关闭、无新依赖/请求、原候选与 RRF 分数、`test/Acceptance` 封存、旧 Run ID 不可复用和独立 300 ms Gate。
 - `machine/phase3_candidate_ladder_localization_gate.json` 必须保持当前候选 20、零新增检索请求、observer 行为等价、固定单次 Run ID、20 之外未知、远程用户执行、9/9 cleanup 与 403、`test/Acceptance` 封存及 `NO_NEXT_ALGORITHM_SELECTED`。
+- `machine/phase3_fixed_reranker_screening_gate.json` 与 `machine/phase3_fixed_reranker_top50_screening_gate.json` 必须分别保持 Top-20/Top-50 `SCREENING_WEAKENED / 0/3`、冻结 model/revision/cohort、完整报告哈希、Top-20 历史 baseline、零正式 adoption 与 `test/Acceptance` 封存边界。
+- Strategy authority 必须保持 Phase 3 `PARTIAL / NO_PROMOTION`、retrieval/ranking optimization `STOP`、现有 fixed reranker family 仅对冻结失败集 `WEAKENED`、两条分支 `HOLD` 及 `NEXT_EXPERIMENT=NONE`；不得强化为方法类别否定或生产 adoption。
 - `machine/phase4_claim_evidence_core_gate.json` 必须保持零新增依赖、公开 Answer Schema/Prompt 不变、确定性检查不冒充语义蕴含、全部无依据 Claim 失败关闭，以及知识库/前端/演示/远程/holdout 排除边界。
 - `machine/phase4_multilingual_nli_candidate_gate.json` 必须保持 Mac Fake Scorer、远程 RTX 4090 用户运行、正例保留诊断、无人工负例不可测 Precision，以及在线硬裁决关闭边界。
 
@@ -270,10 +274,12 @@ Phase ID：`rag-core-final-freeze`
 
 最高方案阶段 0、阶段 1、阶段 2 已完成；阶段 3 为 `PARTIAL / WORKSTREAM_CLOSED_WITHOUT_PROMOTION`，因为两个 V1 只在冻结 4 条 `dev` 上未晋级，尚未满足最高方案“目标失败集有稳定净增益”的退出条件。该结果不否定整个方法类别，也不要求为了形式再选第三个变量。单次 candidate-ladder bounded diagnostic 已正式完成：3/4 定位为 RRF 融合/排序，1/4 定位为 ES 候选检索 primary 且同时有 Milvus co-primary；它只返回 failure layer，不促成 Phase 3 晋级也不选择下一算法。阶段 4 为 `IN_PROGRESS`，其中确定性 Multi-Evidence Evidence Set 审计核心已完成，覆盖单/多 Evidence、身份、部分支持、冲突和最多一个同版本邻块，默认保持 `AUDIT_ONLY` 且不自动删除 Claim。固定多语言 NLI 候选继续拒绝；pair-level 人工金标、新 NLI/LLM Judge 与在线硬裁决后置，因此不把最高方案阶段 4 整体写成完成。当前仓库节点为 `rag-core-final-freeze`：基础 RAG MVP 与确定性多证据审计核心已冻结；知识库接入、前端、演示、Agent API、阶段 5 复杂问答和 300 ms 性能债均不在本 Gate。当前评测边界为 `PHASE3_WORKSTREAM_CLOSED_NO_PROMOTION_EXIT_NOT_MET / PHASE3_CANDIDATE_LADDER_LOCALIZATION_COMPLETE_NO_NEXT_ALGORITHM_SELECTED / PHASE4_DETERMINISTIC_MULTI_EVIDENCE_AUDIT_CORE_COMPLETE_NLI_REJECTED_HARD_JUDGMENT_DEFERRED / TEST_ACCEPTANCE_NOT_READ_NOT_RUN`。默认 RRF、Reranker 可选且不默认启用、查询拆分关闭、路由覆盖关闭和 300 ms 独立性能债均不变。
 
+fixed reranker Top-20 与 Top-50 screening 均为 `SCREENING_WEAKENED / 0/3`；扩大 exposure 没有恢复 bilateral Top-3，因此只将现有 fixed reranker family 对冻结 3 条排序失败记为 `WEAKENED`。Phase 3 retrieval/ranking optimization 为 `STOP`，`NEXT_EXPERIMENT=NONE`。cross-document / coverage-aware ranking 与 deep candidate retrieval 保持 `HOLD`，分别只按 `PD-071` 的“候选集已有 Evidence 但 Top-k 系统性单侧坍缩并造成实质 QA 失败”以及“当前候选边界反复缺失实质相关 Evidence 并成为 QA 失败源”条件重开；两者均还须服务当前 Primary Objective。
+
 ## Next gate
 
 1. **RAG 核心已最终冻结：** 不重复实现或重跑已通过的 PDF/Chunk、READY、检索、生成、引用、拒答、ACL、删除清理和 EvidenceSet Gate；
-2. **阶段 3 定位证据已收口：** 固定 Run ID 已 `LOCALIZATION_COMPLETE`，两个 V1 继续关闭，Phase 3 仍为 `PARTIAL / NO_PROMOTION`；本 Gate 不增加第三变量，不选择下一算法；
+2. **阶段 3 retrieval/ranking optimization 已停止：** fixed reranker Top-20/Top-50 均 `WEAKENED`，Phase 3 保持 `PARTIAL / NO_PROMOTION`，`NEXT_EXPERIMENT=NONE`；coverage-aware ranking 与 deep candidate retrieval 仅在 `PD-071` 重开条件被代表性负载满足后进入新的独立 Gate；
 3. **阶段 4语义能力后置：** 只有先具备严格 pair-level 人工正负金标时才重新评估 NLI/LLM Judge；在线硬裁决继续关闭；
 4. **默认与责任分离：** 默认 RRF、可选非默认 Reranker、EvidenceSet `AUDIT_ONLY`、NLI 拒绝和 300 ms 性能债保持不变；知识库接入、前端、演示、Agent API、阶段 5 复杂问答及 `test/Acceptance` 由未来独立 Gate 或其他责任方处理。
 

@@ -20,6 +20,9 @@ from scripts.run_phase3_fixed_reranker_screening import (
 
 ROOT = Path(__file__).resolve().parents[2]
 GATE_PATH = ROOT / "machine/phase3_fixed_reranker_screening_gate.json"
+TOP50_GATE_PATH = (
+    ROOT / "machine/phase3_fixed_reranker_top50_screening_gate.json"
+)
 
 
 class Phase3FixedRerankerScreeningTests(unittest.TestCase):
@@ -35,6 +38,71 @@ class Phase3FixedRerankerScreeningTests(unittest.TestCase):
             list(COHORT),
         )
         self.assertNotIn("complete_reranked_order", GATE_PATH.read_text(encoding="utf-8"))
+
+    def test_strategy_closeout_preserves_bounded_stop_and_hold_states(self) -> None:
+        top20_gate = json.loads(GATE_PATH.read_text(encoding="utf-8"))
+        top50_gate = json.loads(TOP50_GATE_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(top20_gate["experiment_decision"], "SCREENING_WEAKENED")
+        self.assertEqual(
+            top20_gate["formal_evidence"]["bilateral_recovery"],
+            {"recovered_cases": 0, "case_count": 3},
+        )
+        self.assertEqual(top50_gate["experiment_decision"], "SCREENING_WEAKENED")
+        self.assertEqual(top50_gate["formal_evidence"]["baseline_bilateral_recovery"], "0/3")
+        self.assertEqual(top50_gate["formal_evidence"]["top50_bilateral_recovery"], "0/3")
+
+        project_state = json.loads(
+            (ROOT / "machine/project_state.json").read_text(encoding="utf-8")
+        )
+        closeout = project_state["execution_boundaries"][
+            "phase3_retrieval_ranking_optimization_closeout"
+        ]
+        for token in (
+            "STOP",
+            "PHASE3_PARTIAL",
+            "NO_PROMOTION",
+            "FIXED_RERANKER_FAMILY_WEAKENED",
+            "COVERAGE_AWARE_RANKING_HOLD",
+            "DEEP_CANDIDATE_RETRIEVAL_HOLD",
+            "NEXT_EXPERIMENT_NONE",
+            "TEST_ACCEPTANCE_SEALED",
+            "NO_PRODUCTION_ADOPTION",
+        ):
+            self.assertIn(token, closeout)
+        self.assertNotIn(
+            "FUTURE_LOCALIZATION_OPTIONAL",
+            project_state["execution_boundaries"]["phase3_phase4_unified_closeout"],
+        )
+
+        feature_list = json.loads(
+            (ROOT / "machine/feature_list.json").read_text(encoding="utf-8")
+        )
+        feature = next(
+            value
+            for value in feature_list["features"]
+            if value["id"] == "phase3_retrieval_ranking_optimization_closeout"
+        )
+        self.assertEqual(feature["status"], "COMPLETE")
+
+        decision_doc = (
+            ROOT / "docs/PHASE_3_FUTURE_COMPARISON_FAILURE_LOCALIZATION.md"
+        ).read_text(encoding="utf-8")
+        for statement in (
+            "PHASE_3_OVERALL = PARTIAL",
+            "PROMOTION = NO_PROMOTION",
+            "RETRIEVAL_RANKING_OPTIMIZATION = STOP",
+            "EXISTING_FIXED_RERANKER_FAMILY = WEAKENED",
+            "NEXT_EXPERIMENT = NONE",
+            "Cross-document / coverage-aware ranking",
+            "Deep candidate retrieval",
+        ):
+            self.assertIn(statement, decision_doc)
+
+        product_decisions = (ROOT / "docs/PRODUCT_DECISIONS.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("| PD-071 | ACCEPTED |", product_decisions)
+        self.assertIn("| PD-070 | SUPERSEDED_BY_PD-071 |", product_decisions)
 
     def test_current_frozen_inputs_form_exact_three_case_identity(self) -> None:
         head = subprocess.run(
