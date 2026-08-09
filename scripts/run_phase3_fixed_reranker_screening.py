@@ -47,6 +47,17 @@ DEV_REVIEW_SHA256 = (
 MODEL_SNAPSHOT_SHA256 = (
     "f9dd638f0b27b57667d99b01f83ca4dbb3c82983911a1ef31a4601c7b890eaec"
 )
+TOP20_CONFIG_PATH = ROOT / "evaluation/reranker/fixed-cross-encoder-v1.json"
+TOP50_CONFIG_PATH = (
+    ROOT / "evaluation/reranker/phase3-fixed-cross-encoder-top50-screening-v1.json"
+)
+TOP20_SCREENING_SOURCE_COMMIT = "1366f9428729d77a1d393d45c4cd566f14f33398"
+TOP20_SCREENING_IDENTITY_SHA256 = (
+    "e26dc22a488611fa080d521382e6d35dd7c9f133dbc2c614ef3fd22c1e47956b"
+)
+TOP20_SCREENING_REPORT_SHA256 = (
+    "f66d76c89308757b29482331304e44fafa9a52de070bb1bbd86535449272a8b1"
+)
 COHORT = (
     "local3.assisted.0033",
     "local3.assisted.0304",
@@ -219,7 +230,7 @@ def _validate_case(
     ladder = case.get("ladder")
     rrf_ladder = ladder.get("rrf_ladder") if isinstance(ladder, dict) else None
     final_top3 = ladder.get("final_top3") if isinstance(ladder, dict) else None
-    if not isinstance(rrf_ladder, list) or len(rrf_ladder) < candidate_top_k:
+    if not isinstance(rrf_ladder, list) or not rrf_ladder:
         raise ValueError("frozen RRF ladder is incomplete")
     if not isinstance(final_top3, list) or len(final_top3) != 3:
         raise ValueError("frozen RRF Top-3 is incomplete")
@@ -243,7 +254,8 @@ def _validate_case(
         if candidate.get("target_relevance") != expected_relevance:
             raise ValueError("frozen target relevance drifted")
 
-    effective_ids = set(source_ids[:candidate_top_k])
+    screened_candidate_count = min(candidate_top_k, len(rrf_ladder))
+    effective_ids = set(source_ids[:screened_candidate_count])
     target_ranks = {
         chunk_id: next(
             (
@@ -269,9 +281,9 @@ def _validate_case(
         "target_rrf_ranks": target_ranks,
         "full_rrf_candidate_count": len(rrf_ladder),
         "full_rrf_candidate_set_sha256": _canonical_sha256(identities),
-        "effective_reranker_candidate_count": candidate_top_k,
+        "effective_reranker_candidate_count": screened_candidate_count,
         "effective_reranker_candidate_set_sha256": _canonical_sha256(
-            identities[:candidate_top_k]
+            identities[:screened_candidate_count]
         ),
         "effective_target_documents": effective_target_documents,
         "bilateral_recovery_possible_with_fixed_candidate_top_k": (
@@ -280,7 +292,48 @@ def _validate_case(
     }
 
 
-def build_identity(*, expected_screening_source_commit: str) -> JsonObject:
+def _config_path_for_candidate_top_k(candidate_top_k: int) -> Path:
+    if candidate_top_k == 20:
+        return TOP20_CONFIG_PATH
+    if candidate_top_k == 50:
+        return TOP50_CONFIG_PATH
+    raise ValueError("screening candidate_top_k is not frozen")
+
+
+def _require_top50_single_variable() -> None:
+    top20 = json.loads(TOP20_CONFIG_PATH.read_text(encoding="utf-8"))
+    top50 = json.loads(TOP50_CONFIG_PATH.read_text(encoding="utf-8"))
+    expected = dict(top20)
+    expected["candidate_top_k"] = 50
+    if _canonical_bytes(top50) != _canonical_bytes(expected):
+        raise ValueError("Top-50 config changes more than candidate exposure")
+    if _sha256(TOP50_CONFIG_PATH) == _sha256(TOP20_CONFIG_PATH):
+        raise ValueError("Top-50 screening config identity was not changed")
+
+
+def _require_top20_authority() -> None:
+    gate = json.loads(
+        (ROOT / "machine/phase3_fixed_reranker_screening_gate.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    if (
+        gate.get("experiment_decision") != "SCREENING_WEAKENED"
+        or gate.get("frozen_identity", {}).get("identity_sha256")
+        != TOP20_SCREENING_IDENTITY_SHA256
+        or gate.get("formal_evidence", {}).get("report_sha256")
+        != TOP20_SCREENING_REPORT_SHA256
+        or gate.get("formal_evidence", {}).get("bilateral_recovery")
+        != {"recovered_cases": 0, "case_count": 3}
+    ):
+        raise ValueError("formal Top-20 screening authority drifted")
+
+
+def build_identity(
+    *,
+    expected_screening_source_commit: str,
+    config_path: Path = TOP20_CONFIG_PATH,
+) -> JsonObject:
     if _head_commit() != expected_screening_source_commit:
         raise ValueError("screening source commit identity drifted")
     report_path = ROOT / "runtime/phase3-candidate-ladder-local-intake/report.json"
@@ -292,7 +345,9 @@ def build_identity(*, expected_screening_source_commit: str) -> JsonObject:
         / "runtime/handoffs/member-b-phase2-4-dev-review-input-v1/"
         "dev-claim-evidence-review-input-v1.jsonl"
     )
-    config_path = ROOT / "evaluation/reranker/fixed-cross-encoder-v1.json"
+    config_path = config_path.resolve()
+    if config_path not in {TOP20_CONFIG_PATH.resolve(), TOP50_CONFIG_PATH.resolve()}:
+        raise ValueError("screening config path is not frozen")
     title_catalog_path = ROOT / "fixtures/sample-corpus-v1.json"
     _require_sha(report_path, DIAGNOSTIC_REPORT_SHA256, "candidate-ladder report")
     _require_sha(chunks_path, CHUNK_SNAPSHOT_SHA256, "retained Chunk snapshot")
@@ -329,8 +384,11 @@ def build_identity(*, expected_screening_source_commit: str) -> JsonObject:
         raise ValueError("screening cohort is incomplete")
 
     config = load_config(config_path)
+    if config_path == TOP50_CONFIG_PATH.resolve():
+        _require_top50_single_variable()
+        _require_top20_authority()
     if (
-        config.candidate_top_k != 20
+        config.candidate_top_k not in {20, 50}
         or config.output_top_k != 20
         or dict(config.model) != EXPECTED_MODEL
     ):
@@ -362,6 +420,11 @@ def build_identity(*, expected_screening_source_commit: str) -> JsonObject:
         )
         for case in selected_cases
     ]
+    if config.candidate_top_k == 50 and not all(
+        value["bilateral_recovery_possible_with_fixed_candidate_top_k"]
+        for value in case_identities
+    ):
+        raise ValueError("Top-50 does not expose both target documents in every case")
 
     tokenizer_files = {}
     for name in (
@@ -385,7 +448,8 @@ def build_identity(*, expected_screening_source_commit: str) -> JsonObject:
         "cohort": list(COHORT),
         "excluded_cases": [EXCLUDED_CASE],
         "candidate_selection_contract": (
-            "FULL_FROZEN_RRF_LADDER_VERIFIED_EXISTING_FIXED_RERANKER_CONSUMES_PREFIX_20"
+            "FULL_FROZEN_RRF_LADDER_VERIFIED_EXISTING_FIXED_RERANKER_CONSUMES_"
+            f"FIRST_{config.candidate_top_k}_AVAILABLE_PREFIX"
         ),
         "reranker": {
             "config_sha256": _sha256(config_path),
@@ -413,6 +477,14 @@ def build_identity(*, expected_screening_source_commit: str) -> JsonObject:
             "performance_gate": False,
         },
     }
+    if config.candidate_top_k == 50:
+        frozen["parent_top20_screening"] = {
+            "screening_source_commit": TOP20_SCREENING_SOURCE_COMMIT,
+            "identity_sha256": TOP20_SCREENING_IDENTITY_SHA256,
+            "report_sha256": TOP20_SCREENING_REPORT_SHA256,
+            "bilateral_recovery": "0/3",
+            "candidate_top_k": 20,
+        }
     frozen["identity_sha256"] = _canonical_sha256(frozen)
     return frozen
 
@@ -452,7 +524,15 @@ def _sorted_optional_ranks(values: Sequence[int | None]) -> list[int | None]:
 
 def run_screening(*, frozen_identity: Mapping[str, Any]) -> JsonObject:
     expected_commit = str(frozen_identity.get("screening_source_commit", ""))
-    recomputed = build_identity(expected_screening_source_commit=expected_commit)
+    reranker_identity = frozen_identity.get("reranker")
+    if not isinstance(reranker_identity, Mapping):
+        raise ValueError("frozen reranker identity is unavailable")
+    candidate_top_k = int(reranker_identity.get("candidate_top_k", 0))
+    config_path = _config_path_for_candidate_top_k(candidate_top_k)
+    recomputed = build_identity(
+        expected_screening_source_commit=expected_commit,
+        config_path=config_path,
+    )
     if _canonical_bytes(recomputed) != _canonical_bytes(frozen_identity):
         raise ValueError("frozen screening identity changed before inference")
 
@@ -478,7 +558,7 @@ def run_screening(*, frozen_identity: Mapping[str, Any]) -> JsonObject:
     }
     cases_by_id = {str(case["case_id"]): case for case in report["cases"]}
     titles = load_document_titles(ROOT / "fixtures/sample-corpus-v1.json")
-    config = load_config(ROOT / "evaluation/reranker/fixed-cross-encoder-v1.json")
+    config = load_config(config_path)
     snapshot_path = (
         ROOT
         / "runtime/models/huggingface/models--BAAI--bge-reranker-v2-m3/snapshots"
@@ -496,7 +576,10 @@ def run_screening(*, frozen_identity: Mapping[str, Any]) -> JsonObject:
     case_inputs: list[tuple[str, list[JsonObject], list[tuple[str, str]]]] = []
     for case_id in COHORT:
         case = cases_by_id[case_id]
-        candidates = [dict(value) for value in case["ladder"]["rrf_ladder"][:20]]
+        candidates = [
+            dict(value)
+            for value in case["ladder"]["rrf_ladder"][: config.candidate_top_k]
+        ]
         question = str(rows_by_id[case_id]["question"])
         pairs = [
             (
@@ -534,7 +617,7 @@ def run_screening(*, frozen_identity: Mapping[str, Any]) -> JsonObject:
     for case_id, candidates, _pairs in case_inputs:
         scores = first_scores[case_id]
         repeat_scores = second_scores[case_id]
-        if len(scores) != 20 or len(repeat_scores) != 20:
+        if len(scores) != len(candidates) or len(repeat_scores) != len(candidates):
             raise ValueError("fixed reranker score count drifted")
         first_order = _ordered_indices(scores)
         second_order = _ordered_indices(repeat_scores)
@@ -589,7 +672,7 @@ def run_screening(*, frozen_identity: Mapping[str, Any]) -> JsonObject:
                         reranked_rank_by_id.get(chunk_id) is not None
                         and reranked_rank_by_id[chunk_id] <= 3
                     ),
-                    "eligible_under_fixed_candidate_top_k_20": chunk_id in score_by_id,
+                    "exposed_under_screening_candidate_top_k": chunk_id in score_by_id,
                 }
             )
         ranking = [
@@ -612,6 +695,8 @@ def run_screening(*, frozen_identity: Mapping[str, Any]) -> JsonObject:
         case_results.append(
             {
                 "case_id": case_id,
+                "available_ladder_size": len(original_full),
+                "screened_candidate_count": len(candidates),
                 "original_target_ranks": _sorted_optional_ranks(
                     [value["original_rrf_rank"] for value in target_evidence]
                 ),
@@ -660,8 +745,17 @@ def run_screening(*, frozen_identity: Mapping[str, Any]) -> JsonObject:
             ),
             "screening_decision": decision,
         },
+        "baseline_comparison": {
+            "baseline_candidate_top_k": 20,
+            "baseline_bilateral_recovery": "0/3",
+            "screening_candidate_top_k": config.candidate_top_k,
+            "screening_bilateral_recovery": f"{recovered}/3",
+            "only_changed_screening_variable": "RERANKER_INPUT_EXPOSURE",
+        },
         "boundaries": {
             "new_retrieval_calls": 0,
+            "new_elasticsearch_calls": 0,
+            "new_milvus_calls": 0,
             "new_embedding_calls": 0,
             "candidate_membership_changed": False,
             "excluded_case_included": False,
@@ -679,6 +773,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     freeze = subparsers.add_parser("freeze")
     freeze.add_argument("--expected-screening-source-commit", required=True)
+    freeze.add_argument("--config", type=Path, default=TOP20_CONFIG_PATH)
     freeze.add_argument("--output", type=Path, required=True)
     run = subparsers.add_parser("run")
     run.add_argument("--identity", type=Path, required=True)
@@ -691,7 +786,8 @@ def main() -> int:
     try:
         if args.command == "freeze":
             value = build_identity(
-                expected_screening_source_commit=args.expected_screening_source_commit
+                expected_screening_source_commit=args.expected_screening_source_commit,
+                config_path=args.config,
             )
         else:
             frozen_identity = json.loads(args.identity.read_text(encoding="utf-8"))

@@ -13,6 +13,9 @@ from scripts.run_phase3_fixed_reranker_screening import (
     _screening_decision,
     _sorted_optional_ranks,
     build_identity,
+    TOP20_CONFIG_PATH,
+    TOP50_CONFIG_PATH,
+    TOP20_SCREENING_IDENTITY_SHA256,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -67,6 +70,48 @@ class Phase3FixedRerankerScreeningTests(unittest.TestCase):
                 "local3.assisted.0304": False,
                 "local3.assisted.0383": True,
             },
+        )
+
+    def test_top50_identity_changes_only_exposure_and_binds_top20_parent(self) -> None:
+        head = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        identity = build_identity(
+            expected_screening_source_commit=head,
+            config_path=TOP50_CONFIG_PATH,
+        )
+        self.assertEqual(identity["reranker"]["candidate_top_k"], 50)
+        self.assertEqual(identity["reranker"]["output_top_k"], 20)
+        self.assertNotEqual(
+            identity["reranker"]["config_sha256"],
+            build_identity(
+                expected_screening_source_commit=head,
+                config_path=TOP20_CONFIG_PATH,
+            )["reranker"]["config_sha256"],
+        )
+        self.assertEqual(
+            identity["parent_top20_screening"]["identity_sha256"],
+            TOP20_SCREENING_IDENTITY_SHA256,
+        )
+        self.assertEqual(
+            {
+                value["case_id"]: value["effective_reranker_candidate_count"]
+                for value in identity["cases"]
+            },
+            {
+                "local3.assisted.0033": 50,
+                "local3.assisted.0304": 50,
+                "local3.assisted.0383": 40,
+            },
+        )
+        self.assertTrue(
+            all(
+                value["bilateral_recovery_possible_with_fixed_candidate_top_k"]
+                for value in identity["cases"]
+            )
         )
 
     def test_existing_score_order_uses_original_rank_as_tie_break(self) -> None:
