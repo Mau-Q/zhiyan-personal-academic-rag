@@ -776,6 +776,20 @@
         "docs/CURRENT_PHASE.md",
         "machine/project_state.json"
       ]
+    },
+    {
+      "id": "competition_delivery_pack_v1",
+      "status": "READY",
+      "owner": "A",
+      "evidence": [
+        "docs/competition/RAG_COMPETITION_HANDOFF_V1.md",
+        "docs/competition/COMPETITION_HUMAN_EVALUATION_V1.md",
+        "scripts/validate_competition_pack.py",
+        "scripts/prepare_competition_input.py",
+        "scripts/run_competition_real_core.py",
+        "deploy/remote/competition-v1/run_competition_pack_v1.ps1",
+        "tests/validation/test_competition_pack.py"
+      ]
     }
   ]
 }

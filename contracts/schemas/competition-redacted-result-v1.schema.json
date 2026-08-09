@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/competition-redacted-result-v1.schema.json",
+  "title": "Competition Redacted Result V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "pack_id", "pack_version", "status", "run_identity", "source_identity", "scenarios", "cleanup", "privacy", "hashes"],
+  "properties": {
+    "schema_version": {"const": "competition_redacted_result_v1"},
+    "pack_id": {"const": "RAG_COMPETITION_EVIDENCE_AND_HANDOFF_PACK_V1"},
+    "pack_version": {"const": "v1"},
+    "status": {"enum": ["PASS", "FAIL"]},
+    "run_identity": {"type": "object"},
+    "source_identity": {"type": "object"},
+    "scenarios": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "object"}},
+    "cleanup": {"type": "object"},
+    "privacy": {"type": "object"},
+    "hashes": {"type": "object"}
+  }
+}

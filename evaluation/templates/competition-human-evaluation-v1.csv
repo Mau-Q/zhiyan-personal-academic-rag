@@ -1,0 +1,7 @@
+scenario_id,question_task,reviewer_id,reviewer_role,human_reference_judgment,rag_answer,answer_correctness,citation_correctness,evidence_support_correctness,unsupported_claim_count,should_refuse,actual_refusal,human_correction_amount,manual_verification_time_seconds,rag_assisted_verification_time_seconds,critical_error_types,reviewer_notes,adjudication
+COMP-QA-001,,,REVIEWER_A,,,,,,,,,,,,,,NOT_ADJUDICATED
+COMP-QA-001,,,REVIEWER_B,,,,,,,,,,,,,,NOT_ADJUDICATED
+COMP-EVIDENCESET-001,,,REVIEWER_A,,,,,,,,,,,,,,NOT_ADJUDICATED
+COMP-EVIDENCESET-001,,,REVIEWER_B,,,,,,,,,,,,,,NOT_ADJUDICATED
+COMP-FAIL-CLOSED-001,,,REVIEWER_A,,,,,,,,,,,,,,NOT_ADJUDICATED
+COMP-FAIL-CLOSED-001,,,REVIEWER_B,,,,,,,,,,,,,,NOT_ADJUDICATED

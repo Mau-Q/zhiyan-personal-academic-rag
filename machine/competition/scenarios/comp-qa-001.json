@@ -1,0 +1,42 @@
+{
+  "schema_version": "competition_scenario_v1",
+  "scenario_id": "COMP-QA-001",
+  "scenario_type": "EVIDENCE_GROUNDED_QA",
+  "input_identity": {
+    "historical_package_id": "phase2-academic-qa-acceptance-v2",
+    "historical_package_manifest_sha256": "a8dee26281ee1c953d1024c2686fca28e0d0195855cdde81ed142e791618fd39",
+    "source_case_id": "local3.answerable.tracer.max_risk",
+    "question_sha256": "94bfb8a74abb2897ce3e58c04df2092a34b1de0244053a76a8276c5a11caf757",
+    "pdf_sha256": "3e7e4628ffadc9183e85341b3a88050c3b58a06dec02926c8f2028b55879d6ea"
+  },
+  "question": {
+    "storage": "RUNTIME_PRIVATE_HISTORICAL_SUITE",
+    "tracked_text": false,
+    "binding": "question_sha256_and_source_case_id"
+  },
+  "acceptable_answer_points": [
+    "Define the MAX-composite step-risk operation from the authorized paper evidence.",
+    "Explain that a maximum preserves a sharp localized breakdown instead of averaging it away."
+  ],
+  "must_not_claim": [
+    "Do not add an unstated averaging formula, threshold, benchmark result, or causal guarantee.",
+    "Do not cite a page or Chunk that is absent from the returned authorized Evidence."
+  ],
+  "expected_evidence": {
+    "document_identity": "doc_arxiv_2602_11409",
+    "required_page_ranges": [{"page_start": 4, "page_end": 4}],
+    "minimum_evidence_count": 1,
+    "citation_mapping_required": true
+  },
+  "expected_status": "COMPLETED_WITH_VALID_CITATION_AND_LOCATION",
+  "reproduction": {
+    "entrypoint": "deploy/remote/competition-v1/run_competition_pack_v1.ps1",
+    "execution_order": 1
+  },
+  "actual_redacted_result_location": "runtime/competition/v1/<run-id>/redacted-results.json",
+  "human_judgment_slot": "evaluation/templates/competition-human-evaluation-v1.csv",
+  "known_limitations": [
+    "Historical 9/9 evidence is not this reproduction run.",
+    "Answer correctness remains a human judgment even when deterministic citation and location gates pass."
+  ]
+}

@@ -9,7 +9,7 @@ import os
 import re
 import sys
 import urllib.parse
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -224,6 +224,7 @@ class _ObservedGenerationProvider:
     def __init__(self, delegate: GenerationProvider) -> None:
         self.delegate = delegate
         self.failure_code: str | None = None
+        self.last_result: GenerationResult | None = None
 
     def configured_identity(self) -> GenerationModelIdentity:
         return self.delegate.configured_identity()
@@ -234,8 +235,11 @@ class _ObservedGenerationProvider:
         evidence: Sequence[Mapping[str, Any]],
     ) -> GenerationResult:
         self.failure_code = None
+        self.last_result = None
         try:
-            return self.delegate.generate(question, evidence)
+            result = self.delegate.generate(question, evidence)
+            self.last_result = result
+            return result
         except GenerationServiceError as exc:
             self.failure_code = exc.code
             raise
@@ -746,6 +750,16 @@ def _run_academic_question_case(
     document_version_id: str,
     generation_provider: GenerationProvider | None,
     generation_observer: _ObservedGenerationProvider | None,
+    result_observer: Callable[
+        [
+            AcademicQuestionCase,
+            Mapping[str, object],
+            Mapping[str, object] | None,
+            GenerationResult | None,
+        ],
+        None,
+    ]
+    | None = None,
 ) -> dict[str, object]:
     request = {
         "question": case.question,
@@ -773,8 +787,14 @@ def _run_academic_question_case(
         document_version_id=document_version_id,
         required_page_ranges=case.required_page_ranges,
     )
+    initial_generation_result = (
+        generation_observer.last_result
+        if generation_observer is not None
+        else None
+    )
     stable_replay = False
     byte_stable_replay: bool | None = None
+    replay_payload: dict[str, object] | None = None
     if generation_provider is not None:
         replay_response = client.post("/api/v1/rag/answers", json=request)
         replay_payload = replay_response.json()
@@ -802,6 +822,13 @@ def _run_academic_question_case(
         )
         byte_stable_replay = _generation_replay_byte_stable(payload, replay_payload)
         stable_replay = True
+    if result_observer is not None:
+        result_observer(
+            case,
+            payload,
+            replay_payload,
+            initial_generation_result,
+        )
     return {
         "case_id": case.case_id,
         "question_sha256": sha256(case.question.encode("utf-8")).hexdigest(),
@@ -820,8 +847,21 @@ def _run_academic_question_case(
     }
 
 
-def main() -> int:
-    args = build_parser().parse_args()
+def main(
+    argv: Sequence[str] | None = None,
+    *,
+    result_observer: Callable[
+        [
+            AcademicQuestionCase,
+            Mapping[str, object],
+            Mapping[str, object] | None,
+            GenerationResult | None,
+        ],
+        None,
+    ]
+    | None = None,
+) -> int:
+    args = build_parser().parse_args(argv)
     if args.confirm != CONFIRMATION:
         print(
             json.dumps(
@@ -1110,6 +1150,7 @@ def main() -> int:
                 document_version_id=version.document_version_id,
                 generation_provider=generation_provider,
                 generation_observer=generation_observer,
+                result_observer=result_observer,
             )
             for case in question_cases
         ]

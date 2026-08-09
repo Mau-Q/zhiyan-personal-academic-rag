@@ -8,7 +8,7 @@ ifeq ($(wildcard $(PROJECT_PYTHON)),)
 $(error Project virtualenv is missing at $(PROJECT_PYTHON); create .venv and install the project dependencies first)
 endif
 
-.PHONY: harness-validate powershell-check harness-test contract-test storage-test ingestion-test retrieval-test rag-test api-test evaluation-test validation-test stage1-local-canary real-generation-canary phase2-model-selection phase3-comparison-dev-plan phase3-comparison-dev-package phase3-comparison-gate-test fixed-reranker-test online-reranker-test fixed-reranker-input-package fixed-reranker-gate evaluation-contract-check formal-evaluation-fixture evaluation-smoke sqlite-fts-fixture-smoke vector-fixture-smoke rrf-fixture-smoke test
+.PHONY: harness-validate powershell-check harness-test contract-test storage-test ingestion-test retrieval-test rag-test api-test evaluation-test validation-test competition-pack-test stage1-local-canary real-generation-canary phase2-model-selection phase3-comparison-dev-plan phase3-comparison-dev-package phase3-comparison-gate-test fixed-reranker-test online-reranker-test fixed-reranker-input-package fixed-reranker-gate evaluation-contract-check formal-evaluation-fixture evaluation-smoke sqlite-fts-fixture-smoke vector-fixture-smoke rrf-fixture-smoke test
 
 harness-validate:
 	$(PROJECT_PYTHON) scripts/validate_harness_contract.py
@@ -42,6 +42,9 @@ evaluation-test:
 
 validation-test:
 	$(PROJECT_PYTHON) -m unittest discover -s tests/validation -p 'test_*.py' -v
+
+competition-pack-test:
+	$(PROJECT_PYTHON) -m unittest -v tests.validation.test_competition_pack
 
 stage1-local-canary:
 	$(PROJECT_PYTHON) -m unittest -v \

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/competition-pack-v1.schema.json",
+  "title": "RAG Competition Evidence and Handoff Pack V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "pack_version", "pack_id", "status", "source_commit",
+    "repository_identity", "generation", "embedding", "tested_services",
+    "retrieval", "reranker", "evidence_set", "required_external_services",
+    "historical_real_gates", "known_limitations", "privacy_redaction",
+    "scenario_ids", "scenario_manifests", "human_evaluation_protocol",
+    "runtime_artifacts", "tracked_pack_artifacts"
+  ],
+  "properties": {
+    "schema_version": {"const": "rag_competition_pack_v1"},
+    "pack_version": {"const": "v1"},
+    "pack_id": {"const": "RAG_COMPETITION_EVIDENCE_AND_HANDOFF_PACK_V1"},
+    "status": {"const": "READY_FOR_USER_REAL_REPRODUCTION_GATE"},
+    "source_commit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["binding_mode", "value", "finalizer", "requires_clean_worktree"],
+      "properties": {
+        "binding_mode": {"const": "RESOLVE_EXACT_HEAD_AT_USER_GATE"},
+        "value": {"type": "null"},
+        "finalizer": {"const": "scripts/validate_competition_pack.py"},
+        "requires_clean_worktree": {"const": true}
+      }
+    },
+    "repository_identity": {"type": "object", "minProperties": 1},
+    "generation": {"type": "object", "minProperties": 1},
+    "embedding": {"type": "object", "minProperties": 1},
+    "tested_services": {"type": "object", "minProperties": 4},
+    "retrieval": {"type": "object", "minProperties": 3},
+    "reranker": {"type": "object", "minProperties": 2},
+    "evidence_set": {"type": "object", "minProperties": 2},
+    "required_external_services": {"type": "array", "minItems": 4, "items": {"type": "string"}},
+    "historical_real_gates": {"type": "array", "minItems": 2, "items": {"type": "object"}},
+    "known_limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "privacy_redaction": {"type": "object", "minProperties": 1},
+    "scenario_ids": {
+      "type": "array", "minItems": 3, "maxItems": 3, "uniqueItems": true,
+      "items": {"type": "string"}
+    },
+    "scenario_manifests": {
+      "type": "array", "minItems": 3, "maxItems": 3, "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^machine/competition/scenarios/"}
+    },
+    "human_evaluation_protocol": {"type": "object", "minProperties": 1},
+    "runtime_artifacts": {"type": "object", "minProperties": 1},
+    "tracked_pack_artifacts": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}}
+  }
+}

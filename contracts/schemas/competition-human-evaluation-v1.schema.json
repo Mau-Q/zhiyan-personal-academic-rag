@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/competition-human-evaluation-v1.schema.json",
+  "title": "Competition Human Evaluation Row V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "scenario_id", "question_task", "reviewer_id", "reviewer_role",
+    "human_reference_judgment", "rag_answer", "answer_correctness",
+    "citation_correctness", "evidence_support_correctness",
+    "unsupported_claim_count", "should_refuse", "actual_refusal",
+    "human_correction_amount", "manual_verification_time_seconds",
+    "rag_assisted_verification_time_seconds", "critical_error_types",
+    "reviewer_notes", "adjudication"
+  ],
+  "properties": {
+    "scenario_id": {"type": "string"},
+    "question_task": {"type": "string"},
+    "reviewer_id": {"type": "string"},
+    "reviewer_role": {"enum": ["REVIEWER_A", "REVIEWER_B", "ADJUDICATOR"]},
+    "human_reference_judgment": {"type": "string"},
+    "rag_answer": {"type": "string"},
+    "answer_correctness": {"enum": ["CORRECT", "PARTIALLY_CORRECT", "INCORRECT", "NOT_APPLICABLE"]},
+    "citation_correctness": {"enum": ["CORRECT", "PARTIALLY_CORRECT", "INCORRECT", "NOT_APPLICABLE"]},
+    "evidence_support_correctness": {"enum": ["SUPPORTED", "PARTIALLY_SUPPORTED", "UNSUPPORTED", "CONFLICTING", "NOT_APPLICABLE"]},
+    "unsupported_claim_count": {"type": "integer", "minimum": 0},
+    "should_refuse": {"enum": ["YES", "NO"]},
+    "actual_refusal": {"enum": ["YES", "NO"]},
+    "human_correction_amount": {"enum": ["NONE", "MINOR", "MAJOR", "FULL_REWRITE"]},
+    "manual_verification_time_seconds": {"type": "integer", "minimum": 0},
+    "rag_assisted_verification_time_seconds": {"type": "integer", "minimum": 0},
+    "critical_error_types": {
+      "type": "array", "uniqueItems": true,
+      "items": {"enum": ["ANSWER_CORRECT_CITATION_WRONG", "SHOULD_REFUSE_BUT_GENERATED", "CLAIM_NOT_SUPPORTED_BY_EVIDENCE"]}
+    },
+    "reviewer_notes": {"type": "string"},
+    "adjudication": {"enum": ["NOT_ADJUDICATED", "AGREE", "OVERRIDE_REVIEWER_A", "OVERRIDE_REVIEWER_B", "NEW_FINAL_JUDGMENT"]}
+  }
+}

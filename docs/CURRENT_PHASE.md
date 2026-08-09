@@ -2,7 +2,7 @@
 
 ## Status
 
-`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_PARTIAL_WORKSTREAM_CLOSED_NO_PROMOTION_EXIT_CRITERIA_NOT_MET / PHASE3_CANDIDATE_LADDER_LOCALIZATION_COMPLETE / PHASE3_FIXED_RERANKER_TOP20_TOP50_SCREENING_WEAKENED / PHASE3_RETRIEVAL_RANKING_OPTIMIZATION_STOP_NEXT_EXPERIMENT_NONE / SOURCE_PHASE_4_IN_PROGRESS_DETERMINISTIC_MULTI_EVIDENCE_AUDIT_CORE_COMPLETE_ONLINE_HARD_JUDGMENT_DEFERRED / RAG_CORE_FINAL_FROZEN / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
+`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_PARTIAL_WORKSTREAM_CLOSED_NO_PROMOTION_EXIT_CRITERIA_NOT_MET / PHASE3_CANDIDATE_LADDER_LOCALIZATION_COMPLETE / PHASE3_FIXED_RERANKER_TOP20_TOP50_SCREENING_WEAKENED / PHASE3_RETRIEVAL_RANKING_OPTIMIZATION_STOP_NEXT_EXPERIMENT_NONE / SOURCE_PHASE_4_IN_PROGRESS_DETERMINISTIC_MULTI_EVIDENCE_AUDIT_CORE_COMPLETE_ONLINE_HARD_JUDGMENT_DEFERRED / RAG_CORE_FINAL_FROZEN / RAG_COMPETITION_PACK_READY_FOR_USER_REAL_REPRODUCTION_GATE / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
 Phase ID：`rag-core-final-freeze`
 
@@ -222,6 +222,7 @@ Phase ID：`rag-core-final-freeze`
 - Phase 3 retrieval/ranking optimization workstream 正式 `STOP`：只将现有 fixed reranker family 对冻结 comparison failures 记为 `WEAKENED`；Phase 3 保持 `PARTIAL / NO_PROMOTION`，`NEXT_EXPERIMENT=NONE`。coverage-aware ranking 与 deep candidate retrieval 转 `HOLD`，只按 `PD-071` 的代表性负载条件重开；本次不重开、不改变生产行为、不读取 `test/Acceptance`。
 - 阶段 3 / 阶段 4 统一收口完成：阶段 3 当前工作流已关闭，两个 V1 均不晋级且无需为形式新增第三变量；由于没有达到最高方案要求的稳定净增益，阶段 3 不记为 `COMPLETE`。确定性 Multi-Evidence Evidence Set 是当前正式审计能力，默认 `AUDIT_ONLY`、不自动删除 Claim，不等于语义 Judge 或在线硬裁决，也不把最高方案阶段 4 整体写成完成。
 - RAG 核心最终冻结完成：现有版本化证据已覆盖 PDF/Chunk 持久入库、PostgreSQL READY/owner、ES/Milvus、默认 RRF、真实 Qwen 生成、Citation 稳定映射、`NO_EVIDENCE`、ACL、删除后 403、三路清理和确定性 Multi-Evidence EvidenceSet；没有重跑历史远程 Gate 或实现新算法。
+- `RAG_COMPETITION_EVIDENCE_AND_HANDOFF_PACK_V1` 已完成 Codex-side 实现：单一 machine manifest、exact-HEAD runtime finalizer、恰好三个 Golden Scenario dossier、复用 Stage-1 真实 Core 的隔离入口、脱敏结果合同、确定性 cleanup/403 证明、双评审 worksheet/agreement 协议和 Windows PowerShell 5.1 runbook 均已版本化。本地结构与 Fake/Fixture 测试不冒充真实比赛结果；状态保持 `READY_FOR_USER_REAL_REPRODUCTION_GATE`，尚未冻结 Competition Baseline。
 
 ## 输入
 
@@ -276,12 +277,15 @@ Phase ID：`rag-core-final-freeze`
 
 fixed reranker Top-20 与 Top-50 screening 均为 `SCREENING_WEAKENED / 0/3`；扩大 exposure 没有恢复 bilateral Top-3，因此只将现有 fixed reranker family 对冻结 3 条排序失败记为 `WEAKENED`。Phase 3 retrieval/ranking optimization 为 `STOP`，`NEXT_EXPERIMENT=NONE`。cross-document / coverage-aware ranking 与 deep candidate retrieval 保持 `HOLD`，分别只按 `PD-071` 的“候选集已有 Evidence 但 Top-k 系统性单侧坍缩并造成实质 QA 失败”以及“当前候选边界反复缺失实质相关 Evidence 并成为 QA 失败源”条件重开；两者均还须服务当前 Primary Objective。
 
+Competition Pack V1 已具备本地可冻结的交付结构，但真实 reproduction 尚未由用户在精确提交和许可语料上执行。当前只能声明 `READY_FOR_USER_REAL_REPRODUCTION_GATE`；历史 3 文档 9 题、Fixture/Fake 结构测试与本地 schema PASS 均不能替代本次真实运行，也不能提前声明 `RAG_COMPETITION_BASELINE_V1_FROZEN`。
+
 ## Next gate
 
 1. **RAG 核心已最终冻结：** 不重复实现或重跑已通过的 PDF/Chunk、READY、检索、生成、引用、拒答、ACL、删除清理和 EvidenceSet Gate；
 2. **阶段 3 retrieval/ranking optimization 已停止：** fixed reranker Top-20/Top-50 均 `WEAKENED`，Phase 3 保持 `PARTIAL / NO_PROMOTION`，`NEXT_EXPERIMENT=NONE`；coverage-aware ranking 与 deep candidate retrieval 仅在 `PD-071` 重开条件被代表性负载满足后进入新的独立 Gate；
 3. **阶段 4语义能力后置：** 只有先具备严格 pair-level 人工正负金标时才重新评估 NLI/LLM Judge；在线硬裁决继续关闭；
 4. **默认与责任分离：** 默认 RRF、可选非默认 Reranker、EvidenceSet `AUDIT_ONLY`、NLI 拒绝和 300 ms 性能债保持不变；知识库接入、前端、演示、Agent API、阶段 5 复杂问答及 `test/Acceptance` 由未来独立 Gate 或其他责任方处理。
+5. **Competition Pack 用户 Gate：** 用户在 pack implementation commit 可用于 Windows 后，以 `deploy/remote/competition-v1/run_competition_pack_v1.ps1` 运行唯一真实 reproduction；必须取得三个场景全部 PASS、三路 cleanup/403 PASS 和合规脱敏结果，之后另开 closeout 才能讨论 baseline freeze。本任务不自动开始下一比赛工作。
 
 ## Prohibited shortcuts
 

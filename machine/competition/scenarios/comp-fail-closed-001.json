@@ -1,0 +1,40 @@
+{
+  "schema_version": "competition_scenario_v1",
+  "scenario_id": "COMP-FAIL-CLOSED-001",
+  "scenario_type": "FAIL_CLOSED_INACTIVE",
+  "input_identity": {
+    "lifecycle_source": "same_isolated_run_as_COMP-QA-001_and_COMP-EVIDENCESET-001",
+    "failure_question_sha256": "fce0fe75775a8469715c847759afc3e73713545a1a8278a7e8449a7dbd1bce3b",
+    "inactivation_reason": "DELETE"
+  },
+  "question": {
+    "tracked_text": true,
+    "text": "This deleted document must remain unavailable."
+  },
+  "acceptable_answer_points": [
+    "No answer is generated from an inactive or deleted version.",
+    "The Answer API returns 403 RAG_FORBIDDEN_SCOPE after inactivation."
+  ],
+  "must_not_claim": [
+    "Do not reuse stale Evidence, Citation, Answer, or runtime snapshot content from the earlier successful scenarios.",
+    "Do not report cleanup PASS unless all three cleanup jobs and the inactive visibility checks pass."
+  ],
+  "expected_evidence": {
+    "returned_evidence_count": 0,
+    "cleanup_jobs_succeeded": 3,
+    "runtime_snapshot_cleanup_proven": true,
+    "inactive_visibility_proven": true,
+    "inactive_answer_http_status": 403,
+    "inactive_answer_error_code": "RAG_FORBIDDEN_SCOPE"
+  },
+  "expected_status": "FAIL_CLOSED_403_AFTER_THREE_WAY_CLEANUP",
+  "reproduction": {
+    "entrypoint": "deploy/remote/competition-v1/run_competition_pack_v1.ps1",
+    "execution_order": 3
+  },
+  "actual_redacted_result_location": "runtime/competition/v1/<run-id>/redacted-results.json",
+  "human_judgment_slot": "evaluation/templates/competition-human-evaluation-v1.csv",
+  "known_limitations": [
+    "This scenario proves the existing inactive/deleted lifecycle contract, not every possible failure workflow."
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/competition-scenario-v1.schema.json",
+  "title": "Competition Scenario V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "scenario_id",
+    "scenario_type",
+    "input_identity",
+    "question",
+    "acceptable_answer_points",
+    "must_not_claim",
+    "expected_evidence",
+    "expected_status",
+    "reproduction",
+    "actual_redacted_result_location",
+    "human_judgment_slot",
+    "known_limitations"
+  ],
+  "properties": {
+    "schema_version": {"const": "competition_scenario_v1"},
+    "scenario_id": {"pattern": "^COMP-[A-Z-]+-[0-9]{3}$"},
+    "scenario_type": {
+      "enum": ["EVIDENCE_GROUNDED_QA", "MULTI_EVIDENCE_CLAIM_AUDIT", "FAIL_CLOSED_INACTIVE"]
+    },
+    "input_identity": {"type": "object", "minProperties": 1},
+    "question": {"type": "object", "minProperties": 1},
+    "acceptable_answer_points": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "must_not_claim": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "expected_evidence": {"type": "object", "minProperties": 1},
+    "expected_status": {"type": "string", "minLength": 1},
+    "reproduction": {"type": "object", "minProperties": 1},
+    "actual_redacted_result_location": {"type": "string", "pattern": "^runtime/"},
+    "human_judgment_slot": {"type": "string", "minLength": 1},
+    "known_limitations": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+  }
+}

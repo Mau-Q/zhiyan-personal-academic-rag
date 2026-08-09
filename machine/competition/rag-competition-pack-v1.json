@@ -1,0 +1,133 @@
+{
+  "schema_version": "rag_competition_pack_v1",
+  "pack_version": "v1",
+  "pack_id": "RAG_COMPETITION_EVIDENCE_AND_HANDOFF_PACK_V1",
+  "status": "READY_FOR_USER_REAL_REPRODUCTION_GATE",
+  "source_commit": {
+    "binding_mode": "RESOLVE_EXACT_HEAD_AT_USER_GATE",
+    "value": null,
+    "finalizer": "scripts/validate_competition_pack.py",
+    "requires_clean_worktree": true
+  },
+  "repository_identity": {
+    "project_id": "zhiyan-personal-academic-rag",
+    "repository": "Mau-Q/zhiyan-personal-academic-rag",
+    "default_branch": "main"
+  },
+  "generation": {
+    "provider": "ollama",
+    "model": "qwen3:14b",
+    "model_digest": "bdbd181c33f2ed1b31c972991882db3cf4d192569092138a7d29e973cd9debe8",
+    "prompt_identity": "academic-evidence-answer-v1",
+    "prompt_sha256": "796bf2fad94a92584d604479fb921bd98e72e4b97ecc09d6e49eaa2c0c71df71",
+    "thinking": false,
+    "temperature": 0.0,
+    "seed": 42,
+    "num_predict": 384,
+    "num_ctx": 8192
+  },
+  "embedding": {
+    "provider": "ollama",
+    "model": "bge-m3:latest",
+    "model_digest": "7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab",
+    "dimension": 1024
+  },
+  "tested_services": {
+    "postgresql": "18.4",
+    "elasticsearch": "9.4.3",
+    "milvus": "2.6.18",
+    "ollama": "0.30.10"
+  },
+  "retrieval": {
+    "backend": "POSTGRES_READY_ES_MILVUS_RANK_ONLY_RRF",
+    "candidate_k": 20,
+    "rrf_k": 60,
+    "top_k": 3
+  },
+  "reranker": {
+    "default": "OFF",
+    "optional_identity": "BAAI/bge-reranker-v2-m3@953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e",
+    "optional_snapshot_sha256": "f9dd638f0b27b57667d99b01f83ca4dbb3c82983911a1ef31a4601c7b890eaec",
+    "known_limitation": "Top-20 and Top-50 frozen Phase-3 screening recovered 0/3 bilateral Top-3 cases; optional component remains non-default."
+  },
+  "evidence_set": {
+    "mode": "AUDIT_ONLY",
+    "automatic_claim_deletion": false,
+    "human_semantic_gold": false,
+    "new_judge": false
+  },
+  "required_external_services": [
+    "loopback PostgreSQL",
+    "loopback Elasticsearch",
+    "loopback Milvus",
+    "loopback Ollama with pinned BGE-M3 and Qwen3 models"
+  ],
+  "historical_real_gates": [
+    {
+      "id": "phase2-academic-qa-acceptance-v2",
+      "reference": "docs/PHASE_2_ACADEMIC_QA_ACCEPTANCE.md",
+      "final_report_sha256": "3c106423ab3575b11b3b0142a66f19a2c949b8baed3457f1bca101a9931302fa",
+      "boundary": "HISTORICAL_3_DOCUMENT_9_QUESTION_REAL_QWEN_GATE_NOT_CURRENT_REPRODUCTION"
+    },
+    {
+      "id": "phase4-multi-evidence-set",
+      "reference": "machine/phase4_multi_evidence_set_gate.json",
+      "reference_sha256": "3a30be94e1e52b8f5a2c78f63fbb65732045f2a6ae44cbfc16315656430967d7",
+      "boundary": "LOCAL_DETERMINISTIC_AUDIT_CORE_NOT_HUMAN_SEMANTIC_GOLD"
+    }
+  ],
+  "known_limitations": [
+    "Phase 3 remains PARTIAL / NO_PROMOTION and retrieval/ranking optimization is STOP with NEXT_EXPERIMENT=NONE.",
+    "Combined 300 ms performance target remains unaccepted.",
+    "EvidenceSet is AUDIT_ONLY; pair-level human Gold and online hard judgment are deferred.",
+    "A successful structural or Fixture validation does not freeze the competition baseline.",
+    "The tracked manifest is finalized to exact HEAD only in ignored runtime after the implementation commit exists."
+  ],
+  "privacy_redaction": {
+    "contract": "contracts/schemas/competition-redacted-result-v1.schema.json",
+    "answers": "runtime_only_display_copy_with_hash",
+    "evidence": "maximum_240_character_excerpt_per_returned_evidence_plus_hash",
+    "never_persist": [
+      "secrets", "DATABASE_URL", "passwords_or_tokens", "private_hosts_or_ips",
+      "complete_pdf", "private_corpus_dump", "raw_database_or_index_contents",
+      "private_runtime_traces", "model_private_reasoning"
+    ]
+  },
+  "scenario_ids": ["COMP-QA-001", "COMP-EVIDENCESET-001", "COMP-FAIL-CLOSED-001"],
+  "scenario_manifests": [
+    "machine/competition/scenarios/comp-qa-001.json",
+    "machine/competition/scenarios/comp-evidenceset-001.json",
+    "machine/competition/scenarios/comp-fail-closed-001.json"
+  ],
+  "human_evaluation_protocol": {
+    "worksheet_schema": "contracts/schemas/competition-human-evaluation-v1.schema.json",
+    "worksheet_template": "evaluation/templates/competition-human-evaluation-v1.csv",
+    "agreement_protocol": "docs/competition/COMPETITION_HUMAN_EVALUATION_V1.md"
+  },
+  "runtime_artifacts": {
+    "finalized_manifest": "runtime/competition/v1/finalized-baseline-manifest.json",
+    "prepared_input": "runtime/competition/v1/input/input-manifest.json",
+    "redacted_results": "runtime/competition/v1/<run-id>/redacted-results.json",
+    "stage1_private_report": "runtime/competition/v1/<run-id>/stage1-report.json"
+  },
+  "tracked_pack_artifacts": [
+    "machine/competition/rag-competition-pack-v1.json",
+    "machine/competition/scenarios/comp-qa-001.json",
+    "machine/competition/scenarios/comp-evidenceset-001.json",
+    "machine/competition/scenarios/comp-fail-closed-001.json",
+    "contracts/schemas/competition-pack-v1.schema.json",
+    "contracts/schemas/competition-scenario-v1.schema.json",
+    "contracts/schemas/competition-redacted-result-v1.schema.json",
+    "contracts/schemas/competition-human-evaluation-v1.schema.json",
+    "evaluation/templates/competition-human-evaluation-v1.csv",
+    "scripts/validate_competition_pack.py",
+    "scripts/prepare_competition_input.py",
+    "scripts/run_competition_real_core.py",
+    "backend/validation/competition.py",
+    "scripts/run_stage1_remote_canary.py",
+    "deploy/remote/competition-v1/run_competition_pack_v1.ps1",
+    "docs/competition/RAG_COMPETITION_HANDOFF_V1.md",
+    "docs/competition/COMPETITION_HUMAN_EVALUATION_V1.md",
+    "tests/validation/test_competition_pack.py"
+  ]
+}
