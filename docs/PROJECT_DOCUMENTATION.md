@@ -626,8 +626,9 @@ RRF、Reranker、比较拆分、路由覆盖和 NLI 都有独立 Gate。组件�
 
 - 优化 Query Embedding 与 READY 路由解析，独立偿还 300 ms 性能债；
 - 在不放宽事实源与 ACL 的前提下接入正式 MinIO 和 OCR；
-- 先定位比较失败在 ES/Milvus Top-50、RRF Top-50、最终 Top-3、Chunk/邻块或
-  标签指标中的丢失层，再选择新的阶段 3 变量；
+- 已激活一次只读定位：观察当前正式 `candidate_k=20` 的 ES/Milvus fusion 输入、
+  完整 RRF 序与最终 Top-3，20 之外保持未知；在线用户 Run 返回前不选择新的
+  阶段 3 变量；
 - 建立 pair-level 人工正负样本后，重新比较 NLI 或离线 LLM Judge；
 - 建设完整内容安全策略、Trace/反馈闭环和生产运维 Gate；
 - 在明确授权后进入阶段 5 的复杂问答与复用能力。

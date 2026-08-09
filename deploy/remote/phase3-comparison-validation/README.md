@@ -3,6 +3,62 @@
 > 目标平台：用户维护的 Windows 主机，Windows PowerShell 5.1。
 > 本页保留已完成 Gate 的版本化证据与历史命令；旧 Run ID 已关闭。
 
+## 当前单次 candidate-ladder localization
+
+当前唯一开放的远程入口不是第三个 treatment，而是只读 Control 诊断：
+
+```text
+phase3_candidate_ladder_20260809_01
+```
+
+它固定四条 `dev`，保持查询拆分、Route Coverage、Reranker 全部关闭，使用当前
+`candidate_k=20 / RRF k=60 / Top-3`。每路 ES/Milvus 返回给 fusion 的候选、完整
+RRF 顺序和最终 Top-3 写入被忽略的 runtime 报告；20 之外不观察、不推断。报告
+必须通过独立 RRF 算术、身份、holdout、9/9 cleanup、READY 关闭与删除后 403
+裁决。只允许这个 Run ID 一次；失败后不得另起 Run ID。
+
+本地提交默认不推送。只有用户明确授权并在 Mac 执行下列完整核对、最后两个 SHA
+一致，才可进入 Windows：
+
+```text
+git status -sb
+git log -1 --oneline
+git push origin main
+git fetch origin main
+git rev-parse HEAD
+git rev-parse origin/main
+```
+
+推送成功后，在用户维护的 Windows 主机运行：
+
+```powershell
+Set-Location 'C:\Users\Administrator\zhiyan-personal-academic-rag'
+
+git status -sb
+git fetch origin main
+git pull --ff-only origin main
+if ($LASTEXITCODE -ne 0) {
+    throw 'Windows checkout could not fast-forward to origin/main.'
+}
+
+$PackagePath = (
+    'C:\Users\Administrator\zhiyan-personal-academic-rag\' +
+    'runtime\handoffs\phase3-comparison-paired-dev-input-v1.zip'
+)
+& '.\deploy\remote\phase3-comparison-validation\run_phase3_candidate_ladder_localization.ps1' `
+    -RepositoryRoot 'C:\Users\Administrator\zhiyan-personal-academic-rag' `
+    -InputPackagePath $PackagePath `
+    -ExpectedPackageSha256 '89EA5829EFD7C299E3FF51FDC5048E2D78D172BCDE1D320322813B95C1DFDADB' `
+    -ExpectedManifestSha256 '05C36A393A51A8AA705E17D1AC3895DF074B9273F8AF6BFAD06C9904C458C63F'
+if ($LASTEXITCODE -ne 0) {
+    throw 'Phase 3 candidate-ladder localization failed or was rejected.'
+}
+```
+
+返回脚本打印的完整脱敏 summary，并保留其列出的 report/adjudication JSON；不要发送
+密码、`DATABASE_URL`、PDF、问题或 Evidence 正文。结果无论完成、无结论或阻塞，
+策略交接都保持：`NO_NEXT_ALGORITHM_SELECTED`。
+
 本 Gate 只判定默认关闭的
 `BILATERAL_COMPARISON_ROUTE_COVERAGE_TOP3_V1`。首个查询拆分变量的 `_01`～
 `_07` 已历史关闭；本页的路由覆盖 Run ID 也已完成并关闭，均不得复跑或复用。

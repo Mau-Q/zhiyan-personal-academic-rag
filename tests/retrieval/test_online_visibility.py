@@ -8,6 +8,7 @@ from unittest.mock import patch
 from backend.retrieval.comparison_decomposition import RouteQueryPlan
 from backend.retrieval.comparison_route_coverage import RouteCoveragePlan
 from backend.retrieval.online import (
+    OnlineCandidateLadderObservation,
     OnlineRetrievalLatencyBreakdown,
     OnlineScopeForbiddenError,
     OnlineVersionRoute,
@@ -241,6 +242,91 @@ class FakeChunkSnapshots:
 
 
 class OnlineVersionRrfRetrieverTests(unittest.TestCase):
+    def test_candidate_ladder_observer_is_read_only_and_preserves_output(self):
+        route = OnlineVersionRoute(
+            owner_id=OWNER_ID,
+            document_id="document_001",
+            document_version_id="version_001",
+            elasticsearch_index="es_version_001",
+            milvus_collection="milvus_version_001",
+        )
+        first = chunk("document_001", "version_001", 1)
+        second = chunk("document_001", "version_001", 2)
+
+        def build_retriever(observer=None):
+            elasticsearch = RankingTransport(
+                {
+                    "es_version_001": [
+                        RankedChunk("es", 1, 4.0, first),
+                        RankedChunk("es", 2, 3.0, second),
+                    ]
+                }
+            )
+            milvus = RankingTransport(
+                {
+                    "milvus_version_001": [
+                        RankedChunk("milvus", 1, 0.9, second),
+                        RankedChunk("milvus", 2, 0.8, first),
+                    ]
+                }
+            )
+            return OnlineVersionRrfRetriever(
+                resolver=StaticResolver([route]),
+                elasticsearch_transport=elasticsearch,
+                milvus_transport=milvus,
+                embedding_provider=FakeEmbeddingProvider(),
+                chunk_snapshots=FakeChunkSnapshots([first, second]),
+                candidate_k=20,
+                rrf_k=60,
+                candidate_ladder_observer=observer,
+            )
+
+        observations: list[OnlineCandidateLadderObservation] = []
+        control = build_retriever()
+        diagnostic = build_retriever(observations.append)
+        scope = {"user_id": OWNER_ID, "tenant_id": OWNER_ID}
+        with patch(
+            "backend.retrieval.online.ElasticsearchBm25Index",
+            FakeElasticsearchIndex,
+        ), patch("backend.retrieval.online.MilvusVectorIndex", FakeMilvusIndex):
+            control_result = control.search(
+                "identity matched question",
+                scope,
+                owner_id=OWNER_ID,
+                document_ids=["document_001"],
+                top_k=2,
+            )
+            diagnostic_result = diagnostic.search(
+                "identity matched question",
+                scope,
+                owner_id=OWNER_ID,
+                document_ids=["document_001"],
+                top_k=2,
+            )
+
+        self.assertEqual(control_result, diagnostic_result)
+        self.assertEqual(len(observations), 1)
+        observation = observations[0]
+        self.assertEqual(observation.candidate_k, 20)
+        self.assertEqual(observation.rrf_k, 60)
+        self.assertEqual(observation.final_top_k, 2)
+        self.assertFalse(observation.pre_cutoff_ranking_observed)
+        self.assertEqual(len(observation.route_rankings), 2)
+        self.assertEqual(
+            [item.candidates for item in observation.route_rankings],
+            [
+                (
+                    RankedChunk("es", 1, 4.0, first),
+                    RankedChunk("es", 2, 3.0, second),
+                ),
+                (
+                    RankedChunk("milvus", 1, 0.9, second),
+                    RankedChunk("milvus", 2, 0.8, first),
+                ),
+            ],
+        )
+        self.assertEqual(tuple(control_result), observation.final_candidates)
+
     def test_applied_final_selector_reorders_only_existing_rrf_candidates(self):
         alpha_route = OnlineVersionRoute(
             owner_id=OWNER_ID,

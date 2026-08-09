@@ -624,9 +624,17 @@
     },
     {
       "id": "phase3_future_comparison_failure_localization",
-      "status": "PENDING",
+      "status": "PARTIAL",
       "owner": "SHARED",
+      "gate_records": ["machine/phase3_candidate_ladder_localization_gate.json"],
       "evidence": [
+        "backend/retrieval/online.py",
+        "scripts/run_phase3_candidate_ladder_localization.py",
+        "scripts/adjudicate_phase3_candidate_ladder_report.py",
+        "deploy/remote/phase3-comparison-validation/run_phase3_candidate_ladder_localization.ps1",
+        "tests/retrieval/test_online_visibility.py",
+        "tests/validation/test_phase3_candidate_ladder_localization.py",
+        "machine/phase3_candidate_ladder_localization_gate.json",
         "docs/PHASE_3_FUTURE_COMPARISON_FAILURE_LOCALIZATION.md",
         "docs/PRODUCT_DECISIONS.md",
         "docs/REQUIREMENTS_TRACEABILITY.md",

@@ -1,0 +1,93 @@
+{
+  "schema_version": "phase3_candidate_ladder_localization_gate_v1",
+  "decision_id": "PD-070",
+  "status": "LOCAL_INSTRUMENTATION_PASS_REMOTE_USER_RUN_PENDING",
+  "source_phase": {
+    "id": "phase-3",
+    "status": "PARTIAL"
+  },
+  "goal": "LOCALIZE_EARLIEST_LOSS_LAYER_FOR_FROZEN_4_DEV_WITH_IDENTITY_MATCHED_ONLINE_CONTROL_CANDIDATES",
+  "frozen_identity": {
+    "run_id": "phase3_candidate_ladder_20260809_01",
+    "cohort": [
+      "local3.assisted.0033",
+      "local3.assisted.0304",
+      "local3.assisted.0383",
+      "local3.assisted.0387"
+    ],
+    "cohort_sha256": "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8",
+    "input_package_sha256": "89ea5829efd7c299e3ff51fdc5048e2d78d172bcde1d320322813b95c1dfdadb",
+    "input_manifest_sha256": "05c36a393a51a8aa705e17d1ac3895df074b9273f8af6bfad06c9904c458c63f",
+    "source_commit": "CALLER_PINNED_TO_EXACT_RUNNER_HEAD",
+    "owner_and_version_identity": "CREATED_ISOLATED_AND_RECORDED_AT_RUNTIME",
+    "backend_and_model_identity": "VERIFIED_AND_RECORDED_AT_RUNTIME"
+  },
+  "behavior_freeze": {
+    "question_text": "UNCHANGED",
+    "query_decomposition_enabled": false,
+    "route_coverage_enabled": false,
+    "candidate_k": 20,
+    "rrf_k": 60,
+    "final_top_k": 3,
+    "reranker_enabled": false,
+    "retrieval_requests_added": 0,
+    "candidate_expansion": false,
+    "scoring_change": false,
+    "public_answer_api_schema_change": false,
+    "generation_or_judge_calls": 0
+  },
+  "observability": {
+    "internal_observer": "backend/retrieval/online.py",
+    "captures": [
+      "READY_ROUTE_INDEX_COLLECTION_AND_MODEL_IDENTITY",
+      "ES_CANDIDATES_RETURNED_TO_FUSION_WITH_RANK_SCORE_AND_CHUNK_IDENTITY",
+      "MILVUS_CANDIDATES_RETURNED_TO_FUSION_WITH_RANK_SCORE_AND_CHUNK_IDENTITY",
+      "RRF_FULL_ORDER_RECOMPUTABLE_FROM_ACTUAL_INPUTS",
+      "FINAL_TOP3_IDENTITY",
+      "FROZEN_TARGET_MATCH_AND_EARLIEST_CLASSIFICATION"
+    ],
+    "backend_request_boundary": 20,
+    "pre_cutoff_ranking_observed": false,
+    "below_backend_request_boundary": "UNOBSERVED_NOT_INFERRED",
+    "old_top50_description_used": false
+  },
+  "remote_gate": {
+    "status": "USER_RUN_REQUIRED_NOT_EXECUTED_BY_CODEX",
+    "runner": "scripts/run_phase3_candidate_ladder_localization.py",
+    "adjudicator": "scripts/adjudicate_phase3_candidate_ladder_report.py",
+    "windows_entry": "deploy/remote/phase3-comparison-validation/run_phase3_candidate_ladder_localization.ps1",
+    "report_schema_version": "phase3_candidate_ladder_localization_report_v1",
+    "adjudication_schema_version": "phase3_candidate_ladder_localization_adjudication_v1",
+    "cleanup_jobs_expected": 9,
+    "deleted_answer_api_status_expected": 403,
+    "rerun_on_failure": false
+  },
+  "split_isolation": {
+    "dev": "FROZEN_4_ONLY",
+    "test": "NOT_READ_NOT_RUN",
+    "acceptance": "NOT_READ_NOT_RUN"
+  },
+  "decision_boundary": {
+    "allowed": [
+      "LOCALIZATION_COMPLETE",
+      "LOCALIZATION_INCONCLUSIVE",
+      "BLOCKED"
+    ],
+    "next_algorithm_selected": false,
+    "third_treatment_created": false,
+    "phase4_advanced": false,
+    "performance_gate_run": false
+  },
+  "local_validation": {
+    "focused_observer_and_adjudication_tests": "PASS",
+    "behavior_parity": "PASS_IDENTICAL_RANKED_CHUNK_OUTPUT_WITH_AND_WITHOUT_OBSERVER",
+    "rrf_arithmetic_tamper_detection": "PASS",
+    "public_contract_drift": "NONE",
+    "full_repository_tests": "PASS",
+    "repository_harness": "PASS_9_CHECKS",
+    "powershell_static": "PASS_30_DEFINITIONS",
+    "diff_check": "PASS"
+  },
+  "current_experiment_decision": "BLOCKED_REMOTE_USER_OPERATED_SERVICES_AND_CREDENTIALS_REQUIRED",
+  "strategy_handoff": "NO_NEXT_ALGORITHM_SELECTED"
+}

@@ -12,6 +12,7 @@ from typing import Any, Protocol
 from backend.retrieval.comparison_decomposition import RouteQueryPlan
 from backend.retrieval.comparison_route_coverage import RouteCoveragePlan
 from backend.retrieval.elasticsearch import (
+    RETRIEVAL_BACKEND as ELASTICSEARCH_RETRIEVAL_BACKEND,
     ElasticsearchBm25Index,
     ElasticsearchSearchLatencyBreakdown,
     ElasticsearchTransport,
@@ -19,6 +20,7 @@ from backend.retrieval.elasticsearch import (
 from backend.retrieval.embedding import EmbeddingProvider
 from backend.retrieval.milvus import (
     DEFAULT_VECTOR_MIN_SCORE,
+    RETRIEVAL_BACKEND as MILVUS_RETRIEVAL_BACKEND,
     MilvusSearchLatencyBreakdown,
     MilvusTransport,
     MilvusVectorIndex,
@@ -115,6 +117,30 @@ class OnlineRetrievalLatencyBreakdown:
     ready_revalidation_latency_ms: float
     rrf_fusion_latency_ms: float
     total_latency_ms: float
+
+
+@dataclass(frozen=True)
+class OnlineRouteCandidateRanking:
+    """One backend ranking returned to fusion for one READY version route."""
+
+    route: OnlineVersionRoute
+    backend: str
+    candidates: tuple[RankedChunk, ...]
+
+
+@dataclass(frozen=True)
+class OnlineCandidateLadderObservation:
+    """Read-only internal snapshot of the candidates used by one search."""
+
+    routes: tuple[OnlineVersionRoute, ...]
+    route_rankings: tuple[OnlineRouteCandidateRanking, ...]
+    fused_candidates: tuple[RankedChunk, ...]
+    final_candidates: tuple[RankedChunk, ...]
+    candidate_k: int
+    rrf_k: int
+    final_top_k: int
+    vector_min_score: float
+    pre_cutoff_ranking_observed: bool = False
 
 
 class PostgresReadyRouteResolver:
@@ -252,6 +278,9 @@ class OnlineVersionRrfRetriever:
         latency_observer: (
             Callable[[OnlineRetrievalLatencyBreakdown], None] | None
         ) = None,
+        candidate_ladder_observer: (
+            Callable[[OnlineCandidateLadderObservation], None] | None
+        ) = None,
     ) -> None:
         if candidate_k < 1 or rrf_k < 1:
             raise ValueError("online candidate_k and rrf_k must be positive")
@@ -268,6 +297,7 @@ class OnlineVersionRrfRetriever:
         self.route_query_planner = route_query_planner
         self.final_candidate_selector = final_candidate_selector
         self.latency_observer = latency_observer
+        self.candidate_ladder_observer = candidate_ladder_observer
 
     def search(
         self,
@@ -311,6 +341,7 @@ class OnlineVersionRrfRetriever:
                 # The frozen failure policy keeps the authorized original-query path.
                 route_queries = {route.document_id: question for route in routes}
         rankings: list[list[RankedChunk]] = []
+        route_rankings: list[OnlineRouteCandidateRanking] = []
         elasticsearch_timings: list[ElasticsearchSearchLatencyBreakdown] = []
         milvus_timings: list[MilvusSearchLatencyBreakdown] = []
         try:
@@ -393,6 +424,20 @@ class OnlineVersionRrfRetriever:
                     self._validate_route_ranking(route, lexical)
                     self._validate_route_ranking(route, vector)
                     rankings.extend((lexical, vector))
+                    route_rankings.extend(
+                        (
+                            OnlineRouteCandidateRanking(
+                                route=route,
+                                backend=ELASTICSEARCH_RETRIEVAL_BACKEND,
+                                candidates=tuple(lexical),
+                            ),
+                            OnlineRouteCandidateRanking(
+                                route=route,
+                                backend=MILVUS_RETRIEVAL_BACKEND,
+                                candidates=tuple(vector),
+                            ),
+                        )
+                    )
             backend_parallel_wall_latency_ms = (
                 time.perf_counter() - backend_parallel_wall_started
             ) * 1000
@@ -414,7 +459,12 @@ class OnlineVersionRrfRetriever:
         rrf_fusion_started = time.perf_counter()
         fused_candidates = self._fuse(
             rankings,
-            top_k=None if self.final_candidate_selector is not None else top_k,
+            top_k=(
+                None
+                if self.final_candidate_selector is not None
+                or self.candidate_ladder_observer is not None
+                else top_k
+            ),
         )
         fused = fused_candidates[:top_k]
         if self.final_candidate_selector is not None:
@@ -435,6 +485,24 @@ class OnlineVersionRrfRetriever:
                 # Optional quality selection may only fall back to original RRF.
                 fused = fused_candidates[:top_k]
         rrf_fusion_latency_ms = (time.perf_counter() - rrf_fusion_started) * 1000
+        if self.candidate_ladder_observer is not None:
+            try:
+                self.candidate_ladder_observer(
+                    OnlineCandidateLadderObservation(
+                        routes=tuple(routes),
+                        route_rankings=tuple(route_rankings),
+                        fused_candidates=tuple(fused_candidates),
+                        final_candidates=tuple(fused),
+                        candidate_k=self.candidate_k,
+                        rrf_k=self.rrf_k,
+                        final_top_k=top_k,
+                        vector_min_score=self.vector_min_score,
+                    )
+                )
+            except Exception as exc:
+                raise OnlineVisibilityUnavailableError(
+                    "online candidate ladder diagnostic capture failed closed"
+                ) from exc
         if self.latency_observer is not None:
             if len(elasticsearch_timings) != len(routes) or len(
                 milvus_timings
