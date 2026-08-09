@@ -126,7 +126,9 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
             ),
             CONFIG_SHA256,
         )
-        with tempfile.TemporaryDirectory(dir="runtime") as temporary:
+        runtime_root = ROOT / "runtime"
+        runtime_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=runtime_root) as temporary:
             root = Path(temporary)
             crlf = root / "config-crlf.json"
             crlf.write_bytes(source.replace(b"\n", b"\r\n"))
@@ -381,12 +383,17 @@ class Phase3ComparisonPairedDevGateTests(unittest.TestCase):
                 _validate_output(path)
 
     def test_manifest_validation_fails_closed_before_private_rows_are_read(self):
-        with tempfile.TemporaryDirectory(dir="runtime") as temporary:
+        runtime_root = ROOT / "runtime"
+        runtime_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=runtime_root) as temporary:
             root = Path(temporary)
             manifest = root / "manifest.json"
             manifest.write_text(json.dumps({"schema_version": "wrong"}), encoding="utf-8")
             with self.assertRaisesRegex(GateError, "INPUT_MANIFEST_IDENTITY_MISMATCH"):
-                load_input_package(root.relative_to(Path.cwd()), expected_manifest_sha256="0" * 64)
+                load_input_package(
+                    root.relative_to(ROOT),
+                    expected_manifest_sha256="0" * 64,
+                )
 
     def test_runtime_chunk_remap_requires_exact_stable_identity(self):
         frozen = [

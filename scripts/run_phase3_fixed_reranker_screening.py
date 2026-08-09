@@ -329,31 +329,24 @@ def _require_top20_authority() -> None:
         raise ValueError("formal Top-20 screening authority drifted")
 
 
-def build_identity(
+def _build_identity_from_validated_inputs(
     *,
     expected_screening_source_commit: str,
-    config_path: Path = TOP20_CONFIG_PATH,
+    config_path: Path,
+    report: Mapping[str, Any],
+    chunks: Sequence[Mapping[str, Any]],
+    dev_rows: Sequence[Mapping[str, Any]],
+    titles: Mapping[str, str],
+    candidate_ladder_report_sha256: str,
+    chunk_snapshot_sha256: str,
+    dev_review_sha256: str,
+    title_catalog_sha256: str,
+    model_snapshot_sha256: str,
+    tokenizer_files: Mapping[str, str],
 ) -> JsonObject:
-    if _head_commit() != expected_screening_source_commit:
-        raise ValueError("screening source commit identity drifted")
-    report_path = ROOT / "runtime/phase3-candidate-ladder-local-intake/report.json"
-    chunks_path = (
-        ROOT / "runtime/evaluation/mvp-175-remote-baseline-input-v1/chunks-v1.json"
-    )
-    dev_review_path = (
-        ROOT
-        / "runtime/handoffs/member-b-phase2-4-dev-review-input-v1/"
-        "dev-claim-evidence-review-input-v1.jsonl"
-    )
     config_path = config_path.resolve()
     if config_path not in {TOP20_CONFIG_PATH.resolve(), TOP50_CONFIG_PATH.resolve()}:
         raise ValueError("screening config path is not frozen")
-    title_catalog_path = ROOT / "fixtures/sample-corpus-v1.json"
-    _require_sha(report_path, DIAGNOSTIC_REPORT_SHA256, "candidate-ladder report")
-    _require_sha(chunks_path, CHUNK_SNAPSHOT_SHA256, "retained Chunk snapshot")
-    _require_sha(dev_review_path, DEV_REVIEW_SHA256, "dev review input")
-
-    report = json.loads(report_path.read_text(encoding="utf-8"))
     identity = report.get("identity")
     if (
         report.get("status") != "PASS"
@@ -365,14 +358,12 @@ def build_identity(
     ):
         raise ValueError("candidate-ladder report formal identity drifted")
 
-    chunks = json.loads(chunks_path.read_text(encoding="utf-8"))
     if not isinstance(chunks, list) or len(chunks) != 316:
         raise ValueError("retained Chunk snapshot shape drifted")
     chunks_by_id = {str(chunk.get("chunk_id", "")): chunk for chunk in chunks}
     if len(chunks_by_id) != len(chunks):
         raise ValueError("retained Chunk snapshot identity is duplicated")
 
-    dev_rows = _jsonl(dev_review_path)
     if len(dev_rows) != 105 or {row.get("split") for row in dev_rows} != {"dev"}:
         raise ValueError("dev-only split boundary drifted")
     rows_by_id = {
@@ -393,17 +384,8 @@ def build_identity(
         or dict(config.model) != EXPECTED_MODEL
     ):
         raise ValueError("existing fixed reranker configuration drifted")
-    titles = load_document_titles(title_catalog_path)
     if not set(DOCUMENT_SOURCE_SHA256).issubset(titles):
         raise ValueError("fixed reranker document titles are incomplete")
-
-    snapshot_path = (
-        ROOT
-        / "runtime/models/huggingface/models--BAAI--bge-reranker-v2-m3/snapshots"
-        / EXPECTED_MODEL["revision"]
-    )
-    if directory_sha256(snapshot_path) != MODEL_SNAPSHOT_SHA256:
-        raise ValueError("existing fixed reranker model snapshot drifted")
 
     cases = report.get("cases")
     if not isinstance(cases, list):
@@ -426,25 +408,16 @@ def build_identity(
     ):
         raise ValueError("Top-50 does not expose both target documents in every case")
 
-    tokenizer_files = {}
-    for name in (
-        "config.json",
-        "tokenizer.json",
-        "tokenizer_config.json",
-        "sentencepiece.bpe.model",
-        "special_tokens_map.json",
-    ):
-        tokenizer_files[name] = _sha256(snapshot_path / name)
     frozen = {
         "schema_version": IDENTITY_SCHEMA,
         "screening_source_commit": expected_screening_source_commit,
         "diagnostic_source_commit": DIAGNOSTIC_SOURCE_COMMIT,
-        "candidate_ladder_report_sha256": DIAGNOSTIC_REPORT_SHA256,
+        "candidate_ladder_report_sha256": candidate_ladder_report_sha256,
         "candidate_ladder_adjudication_sha256": DIAGNOSTIC_ADJUDICATION_SHA256,
         "input_manifest_sha256": INPUT_MANIFEST_SHA256,
-        "chunk_snapshot_sha256": CHUNK_SNAPSHOT_SHA256,
-        "dev_review_sha256": DEV_REVIEW_SHA256,
-        "title_catalog_sha256": _sha256(title_catalog_path),
+        "chunk_snapshot_sha256": chunk_snapshot_sha256,
+        "dev_review_sha256": dev_review_sha256,
+        "title_catalog_sha256": title_catalog_sha256,
         "cohort": list(COHORT),
         "excluded_cases": [EXCLUDED_CASE],
         "candidate_selection_contract": (
@@ -454,8 +427,8 @@ def build_identity(
         "reranker": {
             "config_sha256": _sha256(config_path),
             "model": dict(config.model),
-            "snapshot_sha256": MODEL_SNAPSHOT_SHA256,
-            "tokenizer_and_config_sha256": tokenizer_files,
+            "snapshot_sha256": model_snapshot_sha256,
+            "tokenizer_and_config_sha256": dict(tokenizer_files),
             "scoring_semantics": (
                 "DESCENDING_CROSS_ENCODER_LOGIT_TIE_BREAK_ORIGINAL_RRF_RANK"
             ),
@@ -487,6 +460,64 @@ def build_identity(
         }
     frozen["identity_sha256"] = _canonical_sha256(frozen)
     return frozen
+
+
+def build_identity(
+    *,
+    expected_screening_source_commit: str,
+    config_path: Path = TOP20_CONFIG_PATH,
+) -> JsonObject:
+    if _head_commit() != expected_screening_source_commit:
+        raise ValueError("screening source commit identity drifted")
+    report_path = ROOT / "runtime/phase3-candidate-ladder-local-intake/report.json"
+    chunks_path = (
+        ROOT / "runtime/evaluation/mvp-175-remote-baseline-input-v1/chunks-v1.json"
+    )
+    dev_review_path = (
+        ROOT
+        / "runtime/handoffs/member-b-phase2-4-dev-review-input-v1/"
+        "dev-claim-evidence-review-input-v1.jsonl"
+    )
+    title_catalog_path = ROOT / "fixtures/sample-corpus-v1.json"
+    _require_sha(report_path, DIAGNOSTIC_REPORT_SHA256, "candidate-ladder report")
+    _require_sha(chunks_path, CHUNK_SNAPSHOT_SHA256, "retained Chunk snapshot")
+    _require_sha(dev_review_path, DEV_REVIEW_SHA256, "dev review input")
+
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    chunks = json.loads(chunks_path.read_text(encoding="utf-8"))
+    dev_rows = _jsonl(dev_review_path)
+    titles = load_document_titles(title_catalog_path)
+    snapshot_path = (
+        ROOT
+        / "runtime/models/huggingface/models--BAAI--bge-reranker-v2-m3/snapshots"
+        / EXPECTED_MODEL["revision"]
+    )
+    if directory_sha256(snapshot_path) != MODEL_SNAPSHOT_SHA256:
+        raise ValueError("existing fixed reranker model snapshot drifted")
+    tokenizer_files = {
+        name: _sha256(snapshot_path / name)
+        for name in (
+            "config.json",
+            "tokenizer.json",
+            "tokenizer_config.json",
+            "sentencepiece.bpe.model",
+            "special_tokens_map.json",
+        )
+    }
+    return _build_identity_from_validated_inputs(
+        expected_screening_source_commit=expected_screening_source_commit,
+        config_path=config_path,
+        report=report,
+        chunks=chunks,
+        dev_rows=dev_rows,
+        titles=titles,
+        candidate_ladder_report_sha256=DIAGNOSTIC_REPORT_SHA256,
+        chunk_snapshot_sha256=CHUNK_SNAPSHOT_SHA256,
+        dev_review_sha256=DEV_REVIEW_SHA256,
+        title_catalog_sha256=_sha256(title_catalog_path),
+        model_snapshot_sha256=MODEL_SNAPSHOT_SHA256,
+        tokenizer_files=tokenizer_files,
+    )
 
 
 def _ordered_indices(scores: Sequence[float]) -> list[int]:

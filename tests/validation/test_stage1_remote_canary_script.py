@@ -62,7 +62,9 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
         self.assertEqual(args.online_reranker_latency_repetitions, 0)
 
     def test_academic_question_suite_pins_digest_pdf_and_target_pages(self):
-        with tempfile.TemporaryDirectory(dir="runtime") as temporary:
+        runtime_root = REPOSITORY_ROOT / "runtime"
+        runtime_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=runtime_root) as temporary:
             path = Path(temporary) / "suite.json"
             payload = {
                 "schema_version": "phase2_academic_qa_suite_v1",
@@ -80,7 +82,7 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
             digest = hashlib.sha256(path.read_bytes()).hexdigest()
 
             suite = _load_academic_question_suite(
-                path.relative_to(Path.cwd()),
+                path.relative_to(REPOSITORY_ROOT),
                 expected_sha256=digest,
                 expected_pdf_sha256="a" * 64,
             )

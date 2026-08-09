@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import unittest
@@ -7,12 +8,16 @@ from pathlib import Path
 
 from scripts.run_phase3_fixed_reranker_screening import (
     COHORT,
+    DIAGNOSTIC_SOURCE_COMMIT,
+    DOCUMENT_SOURCE_SHA256,
     EXCLUDED_CASE,
+    FULL_DIAGNOSTIC_COHORT,
+    INPUT_MANIFEST_SHA256,
     _bilateral_top3,
+    _build_identity_from_validated_inputs,
     _ordered_indices,
     _screening_decision,
     _sorted_optional_ranks,
-    build_identity,
     TOP20_CONFIG_PATH,
     TOP50_CONFIG_PATH,
     TOP20_SCREENING_IDENTITY_SHA256,
@@ -25,7 +30,163 @@ TOP50_GATE_PATH = (
 )
 
 
+def _fixture_sha256(label: str) -> str:
+    return hashlib.sha256(label.encode("utf-8")).hexdigest()
+
+
+def _synthetic_screening_inputs() -> dict:
+    """Build contract-only screening inputs; these are not historical evidence."""
+    documents = tuple(DOCUMENT_SOURCE_SHA256)
+    chunks = []
+    rows = []
+    cases = []
+    case_contracts = (
+        (COHORT[0], documents[0], documents[2], 5, 25, 50),
+        (COHORT[1], documents[0], documents[1], 10, 30, 50),
+        (COHORT[2], documents[1], documents[2], 8, 16, 40),
+    )
+    for case_index, (
+        case_id,
+        first_document,
+        second_document,
+        first_rank,
+        second_rank,
+        count,
+    ) in enumerate(case_contracts):
+        candidates = []
+        judgments = []
+        required_chunk_ids = []
+        for rank in range(1, count + 1):
+            document_id = first_document if rank % 2 else second_document
+            relevance = 0
+            if rank == first_rank:
+                document_id = first_document
+                relevance = 3
+            elif rank == second_rank:
+                document_id = second_document
+                relevance = 2
+            chunk_id = f"fixture_{case_index}_{rank:03d}"
+            section_path = f"Synthetic section {case_index}.{rank}"
+            chunk = {
+                "chunk_id": chunk_id,
+                "document_id": document_id,
+                "version_id": f"version_{DOCUMENT_SOURCE_SHA256[document_id][:24]}",
+                "page_start": rank,
+                "page_end": rank,
+                "section_path": section_path,
+                "text": f"Synthetic contract text for {chunk_id}.",
+            }
+            candidate = {
+                "rank": rank,
+                "runtime_chunk_id": f"runtime_{chunk_id}",
+                "source_chunk_id": chunk_id,
+                "source_document_id": document_id,
+                "page_start": rank,
+                "page_end": rank,
+                "section_path": section_path,
+                "target_relevance": relevance,
+            }
+            chunks.append(chunk)
+            candidates.append(candidate)
+            if relevance:
+                required_chunk_ids.append(chunk_id)
+                judgments.append(
+                    {
+                        "chunk_id": chunk_id,
+                        "document_id": document_id,
+                        "relevance": relevance,
+                    }
+                )
+        cases.append(
+            {
+                "case_id": case_id,
+                "required_source_chunk_ids": required_chunk_ids,
+                "required_source_documents": [first_document, second_document],
+                "ladder": {
+                    "rrf_ladder": candidates,
+                    "final_top3": candidates[:3],
+                },
+            }
+        )
+        rows.append(
+            {
+                "question_id": case_id,
+                "split": "dev",
+                "question": f"Synthetic screening question {case_index}?",
+                "final_labels": {"chunk_judgments": judgments},
+            }
+        )
+
+    while len(chunks) < 316:
+        index = len(chunks)
+        document_id = documents[index % len(documents)]
+        chunks.append(
+            {
+                "chunk_id": f"unused_fixture_{index:03d}",
+                "document_id": document_id,
+                "version_id": f"version_{DOCUMENT_SOURCE_SHA256[document_id][:24]}",
+                "page_start": index + 1,
+                "page_end": index + 1,
+                "section_path": f"Unused synthetic section {index}",
+                "text": f"Unused synthetic contract text {index}.",
+            }
+        )
+    while len(rows) < 105:
+        index = len(rows)
+        rows.append(
+            {
+                "question_id": f"unused.dev.{index:03d}",
+                "split": "dev",
+                "question": f"Unused synthetic question {index}?",
+                "final_labels": {"chunk_judgments": []},
+            }
+        )
+
+    report = {
+        "status": "PASS",
+        "run_id": "phase3_candidate_ladder_20260809_01",
+        "identity": {
+            "source_commit": DIAGNOSTIC_SOURCE_COMMIT,
+            "input_manifest_sha256": INPUT_MANIFEST_SHA256,
+            "cohort": list(FULL_DIAGNOSTIC_COHORT),
+        },
+        "cases": cases,
+    }
+    tokenizer_files = {
+        name: _fixture_sha256(f"synthetic-{name}")
+        for name in (
+            "config.json",
+            "tokenizer.json",
+            "tokenizer_config.json",
+            "sentencepiece.bpe.model",
+            "special_tokens_map.json",
+        )
+    }
+    return {
+        "report": report,
+        "chunks": chunks,
+        "dev_rows": rows,
+        "titles": {
+            document_id: f"Synthetic title {index}"
+            for index, document_id in enumerate(documents)
+        },
+        "candidate_ladder_report_sha256": _fixture_sha256("synthetic-report"),
+        "chunk_snapshot_sha256": _fixture_sha256("synthetic-chunks"),
+        "dev_review_sha256": _fixture_sha256("synthetic-dev-review"),
+        "title_catalog_sha256": _fixture_sha256("synthetic-titles"),
+        "model_snapshot_sha256": _fixture_sha256("synthetic-model-snapshot"),
+        "tokenizer_files": tokenizer_files,
+    }
+
+
 class Phase3FixedRerankerScreeningTests(unittest.TestCase):
+    def _build_test_identity(self, *, head: str, config_path: Path) -> dict:
+        return _build_identity_from_validated_inputs(
+            expected_screening_source_commit=head,
+            config_path=config_path,
+            **_synthetic_screening_inputs(),
+        )
+
     def test_top20_result_is_formalized_without_full_candidate_table(self) -> None:
         gate = json.loads(GATE_PATH.read_text(encoding="utf-8"))
         self.assertEqual(gate["experiment_decision"], "SCREENING_WEAKENED")
@@ -111,7 +272,10 @@ class Phase3FixedRerankerScreeningTests(unittest.TestCase):
             capture_output=True,
             text=True,
         ).stdout.strip()
-        identity = build_identity(expected_screening_source_commit=head)
+        identity = self._build_test_identity(
+            head=head,
+            config_path=TOP20_CONFIG_PATH,
+        )
         self.assertEqual(tuple(identity["cohort"]), COHORT)
         self.assertEqual(identity["excluded_cases"], [EXCLUDED_CASE])
         self.assertEqual(len(identity["cases"]), 3)
@@ -124,7 +288,10 @@ class Phase3FixedRerankerScreeningTests(unittest.TestCase):
             capture_output=True,
             text=True,
         ).stdout.strip()
-        identity = build_identity(expected_screening_source_commit=head)
+        identity = self._build_test_identity(
+            head=head,
+            config_path=TOP20_CONFIG_PATH,
+        )
         possible = {
             value["case_id"]: value[
                 "bilateral_recovery_possible_with_fixed_candidate_top_k"
@@ -147,16 +314,16 @@ class Phase3FixedRerankerScreeningTests(unittest.TestCase):
             capture_output=True,
             text=True,
         ).stdout.strip()
-        identity = build_identity(
-            expected_screening_source_commit=head,
+        identity = self._build_test_identity(
+            head=head,
             config_path=TOP50_CONFIG_PATH,
         )
         self.assertEqual(identity["reranker"]["candidate_top_k"], 50)
         self.assertEqual(identity["reranker"]["output_top_k"], 20)
         self.assertNotEqual(
             identity["reranker"]["config_sha256"],
-            build_identity(
-                expected_screening_source_commit=head,
+            self._build_test_identity(
+                head=head,
                 config_path=TOP20_CONFIG_PATH,
             )["reranker"]["config_sha256"],
         )

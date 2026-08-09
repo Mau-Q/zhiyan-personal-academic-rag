@@ -20,6 +20,7 @@ CONFIG_SHA256 = "87b969a1b0f006c3406ab01a24837c5ff129d08bedd0b2460a57122f9d0b0f2
 TARGET_IDS_SHA256 = (
     "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8"
 )
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _pass_report() -> dict:
@@ -157,7 +158,9 @@ class Phase3ComparisonReportAdjudicationTests(unittest.TestCase):
         *,
         variable_id: str | None = None,
     ) -> dict:
-        with tempfile.TemporaryDirectory(dir="runtime") as temporary:
+        runtime_root = ROOT / "runtime"
+        runtime_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=runtime_root) as temporary:
             path = Path(temporary) / "report.json"
             path.write_text(
                 json.dumps(report, ensure_ascii=False),
@@ -168,7 +171,7 @@ class Phase3ComparisonReportAdjudicationTests(unittest.TestCase):
             if variable_id is not None:
                 kwargs["variable_id"] = variable_id
             return adjudicate_report(
-                path.relative_to(Path.cwd()),
+                path.relative_to(ROOT),
                 expected_report_sha256=digest,
                 expected_head_commit=HEAD,
                 expected_run_id=RUN_ID,
