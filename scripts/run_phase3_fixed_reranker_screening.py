@@ -446,6 +446,10 @@ def _screening_decision(recovered: int) -> str:
     raise ValueError("recovered case count is invalid")
 
 
+def _sorted_optional_ranks(values: Sequence[int | None]) -> list[int | None]:
+    return sorted(values, key=lambda value: (value is None, value or 0))
+
+
 def run_screening(*, frozen_identity: Mapping[str, Any]) -> JsonObject:
     expected_commit = str(frozen_identity.get("screening_source_commit", ""))
     recomputed = build_identity(expected_screening_source_commit=expected_commit)
@@ -608,8 +612,8 @@ def run_screening(*, frozen_identity: Mapping[str, Any]) -> JsonObject:
         case_results.append(
             {
                 "case_id": case_id,
-                "original_target_ranks": sorted(
-                    value["original_rrf_rank"] for value in target_evidence
+                "original_target_ranks": _sorted_optional_ranks(
+                    [value["original_rrf_rank"] for value in target_evidence]
                 ),
                 "original_bilateral_top3": original_bilateral,
                 "reranked_target_ranks": sorted(

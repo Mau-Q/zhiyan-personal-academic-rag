@@ -9,6 +9,7 @@ from scripts.run_phase3_fixed_reranker_screening import (
     _bilateral_top3,
     _ordered_indices,
     _screening_decision,
+    _sorted_optional_ranks,
     build_identity,
 )
 
@@ -66,6 +67,9 @@ class Phase3FixedRerankerScreeningTests(unittest.TestCase):
         self.assertEqual(_screening_decision(2), "SCREENING_PARTIAL_SUPPORT")
         self.assertEqual(_screening_decision(1), "SCREENING_WEAKENED")
         self.assertEqual(_screening_decision(0), "SCREENING_WEAKENED")
+
+    def test_target_rank_output_preserves_unobserved_target(self) -> None:
+        self.assertEqual(_sorted_optional_ranks([16, None, 10]), [10, 16, None])
 
 
 if __name__ == "__main__":
