@@ -779,16 +779,22 @@
     },
     {
       "id": "competition_delivery_pack_v1",
-      "status": "READY",
+      "status": "COMPLETE",
       "owner": "A",
       "evidence": [
+        "machine/competition/rag_competition_baseline.json",
+        "contracts/schemas/competition-baseline-v1.schema.json",
         "docs/competition/RAG_COMPETITION_HANDOFF_V1.md",
         "docs/competition/COMPETITION_HUMAN_EVALUATION_V1.md",
         "scripts/validate_competition_pack.py",
         "scripts/prepare_competition_input.py",
         "scripts/run_competition_real_core.py",
         "deploy/remote/competition-v1/run_competition_pack_v1.ps1",
+        "tests/validation/test_competition_baseline.py",
         "tests/validation/test_competition_pack.py"
+      ],
+      "gate_records": [
+        "machine/competition/rag_competition_baseline.json"
       ]
     }
   ]

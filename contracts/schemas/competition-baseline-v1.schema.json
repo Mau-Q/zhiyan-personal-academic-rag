@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/competition-baseline-v1.schema.json",
+  "title": "RAG Competition Baseline V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "decision_id",
+    "baseline_id",
+    "status",
+    "owner_scope_status",
+    "provenance",
+    "run_id",
+    "artifacts",
+    "competition_scenarios",
+    "cleanup",
+    "github_clean_checkout",
+    "privacy",
+    "preserved_boundaries",
+    "execution_boundaries",
+    "strategy_handoff"
+  ],
+  "properties": {
+    "schema_version": {"const": "rag_competition_baseline_v1"},
+    "decision_id": {"const": "PD-077"},
+    "baseline_id": {"const": "RAG_COMPETITION_BASELINE_V1"},
+    "status": {"const": "FROZEN"},
+    "owner_scope_status": {"const": "DONE_ENOUGH"},
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository_head",
+        "real_reproduction_source",
+        "runtime_equivalence",
+        "reviewed_commits",
+        "changed_file_count",
+        "semantic_surfaces_unchanged"
+      ],
+      "properties": {
+        "repository_head": {"const": "fd5a517b56ba619ca461e262a5ea1a8ac8b9ac7b"},
+        "real_reproduction_source": {"const": "d775dab706c2a05d5b838f644b77b257961a4549"},
+        "runtime_equivalence": {"const": "PASS"},
+        "reviewed_commits": {
+          "const": [
+            "736f2e45e026c62ddea9a2b7cd56361bc5d3ee0c",
+            "fd5a517b56ba619ca461e262a5ea1a8ac8b9ac7b"
+          ]
+        },
+        "changed_file_count": {"const": 10},
+        "semantic_surfaces_unchanged": {
+          "type": "array",
+          "minItems": 12,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "RETRIEVAL",
+              "EMBEDDING",
+              "RRF",
+              "GENERATION",
+              "QWEN_MODEL_IDENTITY",
+              "PROMPT",
+              "CITATION",
+              "EVIDENCE",
+              "READY_LIFECYCLE",
+              "ACL",
+              "CLEANUP",
+              "COMPETITION_SCENARIO_AND_EVIDENCESET_DECISIONS"
+            ]
+          }
+        }
+      }
+    },
+    "run_id": {"const": "competition_v1_20260809_01"},
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "redacted_results_sha256",
+        "stage1_private_report_sha256",
+        "redacted_artifact_intake"
+      ],
+      "properties": {
+        "redacted_results_sha256": {"const": "3e309bed036f4a5ad3f1d45cbd9d5abad256ce0db217c2ae3afa3c71fb9bc4fb"},
+        "stage1_private_report_sha256": {"const": "40dbc613e32f97bc6100cbe476798af60f7734de264980c7bcbcc83d2eba2f98"},
+        "redacted_artifact_intake": {"const": "INDEPENDENT_RAW_SHA256_SCHEMA_IDENTITY_AND_CONTENT_PASS"}
+      }
+    },
+    "competition_scenarios": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "results", "evidence_set_mode", "multi_evidence_record"],
+      "properties": {
+        "status": {"const": "3_OF_3_PASS"},
+        "results": {
+          "const": {
+            "COMP-QA-001": "PASS",
+            "COMP-EVIDENCESET-001": "PASS",
+            "COMP-FAIL-CLOSED-001": "PASS"
+          }
+        },
+        "evidence_set_mode": {"const": "AUDIT_ONLY"},
+        "multi_evidence_record": {"const": "PASS"}
+      }
+    },
+    "cleanup": {
+      "const": {
+        "status": "PASS",
+        "cleanup_jobs_succeeded": 3,
+        "inactive_visibility_proven": true,
+        "runtime_snapshot_cleanup_proven": true,
+        "inactive_answer_api_status": 403,
+        "stale_evidence_reused": false
+      }
+    },
+    "github_clean_checkout": {
+      "const": {
+        "status": "PASS",
+        "commit": "fd5a517b56ba619ca461e262a5ea1a8ac8b9ac7b",
+        "workflow": "Core tests",
+        "run_id": 31309664087,
+        "environment": "Ubuntu 24.04 / CPython 3.11.15",
+        "make_test": "PASS",
+        "historical_errors": 14,
+        "remaining_errors": 0
+      }
+    },
+    "privacy": {
+      "const": {
+        "declared_contract": "PASS",
+        "serialized_content_scan": "PASS",
+        "maximum_evidence_excerpt_characters": 240,
+        "artifact_tracked": false
+      }
+    },
+    "preserved_boundaries": {
+      "const": {
+        "phase_3": "PARTIAL_NO_PROMOTION",
+        "phase_3_optimization": "STOP",
+        "phase_4": "PARTIAL_AUDIT_ONLY",
+        "performance_300_ms": "KNOWN_DEFERRED_DEBT"
+      }
+    },
+    "execution_boundaries": {
+      "const": {
+        "windows_rerun": false,
+        "real_model_or_retrieval_calls": false,
+        "rag_runtime_changed": false,
+        "phase_3_or_4_reopened": false,
+        "tag_release_or_push": false
+      }
+    },
+    "strategy_handoff": {
+      "const": ["NO_NEW_RAG_ENGINEERING_WORK", "NO_AUTOMATIC_NEXT_TASK"]
+    }
+  }
+}

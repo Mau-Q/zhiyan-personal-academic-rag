@@ -269,6 +269,11 @@ Windows 打印的 finalized/redacted/private-report SHA-256 分别为
 `bec756c802a588a4517f18ca0280cc584a0803bbae29d0a2ac497c2f3083a340`、
 `3e309bed036f4a5ad3f1d45cbd9d5abad256ce0db217c2ae3afa3c71fb9bc4fb`、
 `40dbc613e32f97bc6100cbe476798af60f7734de264980c7bcbcc83d2eba2f98`。
-当前证据为用户返回的 wrapper PASS 截图与打印哈希，不冒充 Mac 已重算
-Windows runtime 产物。该结果完成 `USER_REAL_REPRODUCTION_GATE`，baseline freeze
-仍待未来显式授权的独立 closeout。
+随后独立 closeout 对用户提供的 `redacted-results.json` 重算 raw SHA-256，
+并通过 Schema、run/source 身份、恰好三场景、Multi-Evidence `AUDIT_ONLY`、
+cleanup/403 与实际序列化内容隐私核验。`d775dab...a4549 → fd5a517...ac7b`
+的后续差异只包含复现权威记录和不改变生产行为的 CI/测试可测性调整；
+GitHub Core tests run `31309664087` 在精确 `fd5a517...ac7b` 上 PASS。因此
+`RAG_COMPETITION_BASELINE_V1` 已冻结，Competition RAG owner scope 为 `DONE_ENOUGH`。
+正确谱系是 Windows 复现 `d775dab`、submission repository head 为 `fd5a517`、
+runtime equivalence 为 `PASS`；不表示 Phase 3/4、300 ms 或正式 Acceptance 完成。

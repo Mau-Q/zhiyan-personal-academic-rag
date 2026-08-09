@@ -6,8 +6,8 @@
 和 Run ID `competition_v1_20260809_01` 上取得用户操作的 Windows 真实复现
 Gate PASS。它组装已经验证的 RAG Core，不修改检索成员、RRF、Prompt、
 模型、Citation、`NO_EVIDENCE`、ACL、READY 或 EvidenceSet 决策语义。
-当前状态为 `USER_REAL_REPRODUCTION_GATE_PASS / BASELINE_FREEZE_PENDING_INDEPENDENT_CLOSEOUT`；
-该 PASS 不自动冻结 `RAG_COMPETITION_BASELINE_V1`。
+独立 closeout 已对实际脱敏产物、后续运行时等价性与精确提交 CI 完成复核。
+当前状态为 `RAG_COMPETITION_BASELINE_V1_FROZEN / RAG_OWNER_SCOPE_DONE_ENOUGH`。
 
 Fixture/Fake 只用于本包结构测试，不能成为三个场景的真实结果。
 
@@ -101,10 +101,46 @@ Windows 入口返回的 SHA-256 为：
 - redacted result: `3e309bed036f4a5ad3f1d45cbd9d5abad256ce0db217c2ae3afa3c71fb9bc4fb`；
 - private Stage-1 report: `40dbc613e32f97bc6100cbe476798af60f7734de264980c7bcbcc83d2eba2f98`。
 
-本次收录证据为用户返回的版本化 wrapper PASS 截图及其打印哈希；
-`redacted-results.json` 文件本体仍位于用户 Windows `runtime/` 且未提交。
-因此可记录用户真实复现 Gate PASS，但不声称 Codex 已在 Mac 上重算
-Windows 产物哈希，也不自动完成 baseline freeze。
+该时点收录证据为用户返回的版本化 wrapper PASS 截图及其打印哈希，
+因此只记录用户真实复现 Gate PASS。随后独立 closeout 取得实际
+`redacted-results.json`，在 Mac 上重算 raw SHA-256 并完成内容核验；
+脱敏产物仍不提交到仓库。
+
+## Independent baseline closeout
+
+独立 closeout 的冻结身份为：
+
+| Field | Frozen value |
+| --- | --- |
+| Baseline | `RAG_COMPETITION_BASELINE_V1 / FROZEN` |
+| Submission repository head | `fd5a517b56ba619ca461e262a5ea1a8ac8b9ac7b` |
+| Windows real reproduction source | `d775dab706c2a05d5b838f644b77b257961a4549` |
+| Runtime equivalence | `d775dab → fd5a517 = PASS` |
+| Run ID | `competition_v1_20260809_01` |
+| Redacted result SHA-256 | `3e309bed036f4a5ad3f1d45cbd9d5abad256ce0db217c2ae3afa3c71fb9bc4fb` |
+| Private Stage-1 report SHA-256 | `40dbc613e32f97bc6100cbe476798af60f7734de264980c7bcbcc83d2eba2f98` |
+| GitHub clean checkout | `Core tests / 31309664087 / PASS` |
+| Competition RAG owner scope | `DONE_ENOUGH` |
+
+实际产物通过 Schema、run/source identity、恰好三场景 PASS、Scenario A
+Citation→Evidence 身份解析、Scenario B 多 Evidence/Chunk 审计记录、
+`AUDIT_ONLY`、Scenario C `403 RAG_FORBIDDEN_SCOPE`、cleanup `3/3`、无 stale
+Evidence 与实际序列化内容隐私核验。
+
+`d775dab → fd5a517` 只有两个后续提交、共 10 个变更文件：
+`736f2e4` 只记录真实复现权威；`fd5a517` 只将 Phase 3 离线
+screening 身份组装拆分为已验证输入并以合成夹具使 clean-checkout CI
+不依赖 ignored `runtime/`。Competition 真实入口、Stage-1、retrieval、Embedding、
+RRF、Qwen/Prompt、Citation/Evidence、READY/ACL、cleanup、场景和 EvidenceSet 决策
+均未改变。GitHub run `31309664087` 在 Ubuntu 24.04 / CPython 3.11.15 上
+`make test = PASS`；前一 clean-checkout 运行的 14 个 runtime/path 错误降为 0。
+
+正确表述是“Windows 复现 `d775dab`，submission repository head 是 `fd5a517`，
+runtime equivalence 为 PASS”；不写成“Windows 复现 `fd5a517`”。
+
+该冻结只收口 Competition RAG owner scope。Phase 3 仍为 `PARTIAL / NO_PROMOTION`
+且 optimization `STOP`，Phase 4 仍为 `PARTIAL / AUDIT_ONLY`，300 ms 债务仍为
+known/deferred；不表示 production ready 或正式 Acceptance 完成。
 
 ## Windows PowerShell 5.1 runbook
 
