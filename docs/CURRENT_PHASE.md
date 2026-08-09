@@ -2,7 +2,7 @@
 
 ## Status
 
-`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_PARTIAL_WORKSTREAM_CLOSED_NO_PROMOTION_EXIT_CRITERIA_NOT_MET / PHASE3_CANDIDATE_LADDER_LOCALIZATION_COMPLETE / PHASE3_FIXED_RERANKER_TOP20_TOP50_SCREENING_WEAKENED / PHASE3_RETRIEVAL_RANKING_OPTIMIZATION_STOP_NEXT_EXPERIMENT_NONE / SOURCE_PHASE_4_IN_PROGRESS_DETERMINISTIC_MULTI_EVIDENCE_AUDIT_CORE_COMPLETE_ONLINE_HARD_JUDGMENT_DEFERRED / RAG_CORE_FINAL_FROZEN / RAG_COMPETITION_PACK_READY_FOR_USER_REAL_REPRODUCTION_GATE / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
+`SOURCE_PHASE_0_COMPLETE / SOURCE_PHASE_1_COMPLETE / SOURCE_PHASE_2_COMPLETE_RRF_DEFAULT_RERANKER_OPTIONAL_PERFORMANCE_DEFERRED / SOURCE_PHASE_3_PARTIAL_WORKSTREAM_CLOSED_NO_PROMOTION_EXIT_CRITERIA_NOT_MET / PHASE3_CANDIDATE_LADDER_LOCALIZATION_COMPLETE / PHASE3_FIXED_RERANKER_TOP20_TOP50_SCREENING_WEAKENED / PHASE3_RETRIEVAL_RANKING_OPTIMIZATION_STOP_NEXT_EXPERIMENT_NONE / SOURCE_PHASE_4_IN_PROGRESS_DETERMINISTIC_MULTI_EVIDENCE_AUDIT_CORE_COMPLETE_ONLINE_HARD_JUDGMENT_DEFERRED / RAG_CORE_FINAL_FROZEN / RAG_COMPETITION_USER_REAL_REPRODUCTION_GATE_PASS_BASELINE_FREEZE_PENDING / REPOSITORY_HARNESS_READY / REPO_M0_COMPLETE / M1_LOCAL_RRF_BASELINE_READY / MVP_INITIAL_175_HUMAN_VALIDATED / MVP_175_REMOTE_SINGLE_BACKEND_BASELINES_COMPLETE / REMOTE_RETRIEVAL_BASELINE_READY / REMOTE_RRF_CANARY_COMPLETE_NO_GAIN / LOCAL_REAL_GENERATION_GATE_READY`
 
 Phase ID：`rag-core-final-freeze`
 
@@ -225,6 +225,7 @@ Phase ID：`rag-core-final-freeze`
 - `RAG_COMPETITION_EVIDENCE_AND_HANDOFF_PACK_V1` 已完成 Codex-side 实现：单一 machine manifest、exact-HEAD runtime finalizer、恰好三个 Golden Scenario dossier、复用 Stage-1 真实 Core 的隔离入口、脱敏结果合同、确定性 cleanup/403 证明、双评审 worksheet/agreement 协议和 Windows PowerShell 5.1 runbook 均已版本化。本地结构与 Fake/Fixture 测试不冒充真实比赛结果；状态保持 `READY_FOR_USER_REAL_REPRODUCTION_GATE`，尚未冻结 Competition Baseline。
 - 第二次 Windows `_01` 在 `df9d35f...dbff` 上证明 finalizer 与私有输入 manifest 均已跨平台通过，迁移为 `UNCHANGED`；随后真实 runner 的二次 artifact 复核仍使用原始字节，对 CRLF 工作树误报漂移。共享 LF 规范 UTF-8 哈希现覆盖 finalizer 与 runner；该次未开始真实检索、Qwen 或三场景执行。
 - 第三次 Windows `_01` 在 `9d514da...b735e` 上首次进入真实 Stage-1；Answer API 已返回 `COMPLETED` 和非空 Evidence，但旧 Stage-1 门禁把当前合法的扩展 citation-validated warning 误判为 `REAL_GENERATION_INITIAL_CITATION_GATE_FAILED`。定位为 harness 协议假阴性，非 Citation 身份或 RAG 质量失败。该次在 replay/inactivation/cleanup 前停止，cleanup 仍为 `UNKNOWN`；修复候选只精确接受已定义的 citation-validated 后缀，未知后缀仍失败关闭。
+- Windows 真实复现在 `d775dab...a4549` 与同一 Run ID `_01` 上最终 PASS：`resumed_from_ready=true`，两个真实问题均 `COMPLETED`、每题 3 Evidence，Citation/Evidence/页码身份、generation replay 和 byte-stable replay 均通过；DELETE 后 cleanup `3/3`、runtime snapshot cleanup、不可见性和 403 均通过，脱敏结果恰好三场景 PASS。Windows 打印的 finalized/redacted/private-report SHA 分别为 `bec756c8...3a340`、`3e309bed...bc4fb`、`40dbc613...a2f98`。该证据完成用户真实复现 Gate，但 baseline freeze 仍待独立 closeout。
 
 ## 输入
 
@@ -279,7 +280,7 @@ Phase ID：`rag-core-final-freeze`
 
 fixed reranker Top-20 与 Top-50 screening 均为 `SCREENING_WEAKENED / 0/3`；扩大 exposure 没有恢复 bilateral Top-3，因此只将现有 fixed reranker family 对冻结 3 条排序失败记为 `WEAKENED`。Phase 3 retrieval/ranking optimization 为 `STOP`，`NEXT_EXPERIMENT=NONE`。cross-document / coverage-aware ranking 与 deep candidate retrieval 保持 `HOLD`，分别只按 `PD-071` 的“候选集已有 Evidence 但 Top-k 系统性单侧坍缩并造成实质 QA 失败”以及“当前候选边界反复缺失实质相关 Evidence 并成为 QA 失败源”条件重开；两者均还须服务当前 Primary Objective。
 
-Competition Pack V1 的三次 Windows 用户运行均保留 Run ID `competition_v1_20260809_01`。前两次分别暴露 finalizer 与 runner 的 CRLF 身份分叉，均已修复为共享 LF 规范 UTF-8 哈希。第三次在 `9d514da...b735e` 上已进入真实 Stage-1，但旧门禁用结尾匹配拒绝了生成层当前合法的扩展 citation-validated warning；这是 harness 假阴性，不是 RAG 质量结果。当前可能保留同 Run READY 版本，cleanup 未证明；新候选必须以同一私有输入和 Run ID 恢复并完成 inactivation/cleanup。当前仍只能声明 `READY_FOR_USER_REAL_REPRODUCTION_GATE`，不能提前声明 `RAG_COMPETITION_BASELINE_V1_FROZEN`。
+Competition Pack V1 的 Windows 用户复现已在候选 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS。它证明同 Run READY 恢复、真实 PostgreSQL/ES/Milvus/RRF/Qwen、Citation/Evidence/页码身份、两题稳定 replay、恰好三场景脱敏结果、DELETE 后 3/3 cleanup 与 403 闭环。当前记为 `USER_REAL_REPRODUCTION_GATE_PASS / BASELINE_FREEZE_PENDING_INDEPENDENT_CLOSEOUT`；由于返回证据是 wrapper PASS 截图与打印哈希，不冒充 Mac 已重算 Windows runtime 产物。本任务不自动声明 `RAG_COMPETITION_BASELINE_V1_FROZEN`。
 
 ## Next gate
 
@@ -287,7 +288,7 @@ Competition Pack V1 的三次 Windows 用户运行均保留 Run ID `competition_
 2. **阶段 3 retrieval/ranking optimization 已停止：** fixed reranker Top-20/Top-50 均 `WEAKENED`，Phase 3 保持 `PARTIAL / NO_PROMOTION`，`NEXT_EXPERIMENT=NONE`；coverage-aware ranking 与 deep candidate retrieval 仅在 `PD-071` 重开条件被代表性负载满足后进入新的独立 Gate；
 3. **阶段 4语义能力后置：** 只有先具备严格 pair-level 人工正负金标时才重新评估 NLI/LLM Judge；在线硬裁决继续关闭；
 4. **默认与责任分离：** 默认 RRF、可选非默认 Reranker、EvidenceSet `AUDIT_ONLY`、NLI 拒绝和 300 ms 性能债保持不变；知识库接入、前端、演示、Agent API、阶段 5 复杂问答及 `test/Acceptance` 由未来独立 Gate 或其他责任方处理。
-5. **Competition Pack 用户 Gate：** 生产者—消费者共享跨平台身份修复候选发布后，用户以新的 exact HEAD、原 Run ID `competition_v1_20260809_01` 和同一私有输入运行 `deploy/remote/competition-v1/run_competition_pack_v1.ps1`；必须取得三个场景全部 PASS、三路 cleanup/403 PASS 和合规脱敏结果，之后另开 closeout 才能讨论 baseline freeze。本任务不自动开始下一比赛工作。
+5. **Competition Pack 独立 closeout：** Windows 用户复现 Gate 已 PASS，不再复用 `_01`。如果未来显式授权 baseline closeout，只能对 `d775dab...a4549`、本次返回哈希和合规脱敏产物做独立核验，再判断是否冻结 `RAG_COMPETITION_BASELINE_V1`。本任务不自动冻结 baseline 或开始下一比赛工作。
 
 ## Prohibited shortcuts
 

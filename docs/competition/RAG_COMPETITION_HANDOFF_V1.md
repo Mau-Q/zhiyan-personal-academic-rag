@@ -2,10 +2,12 @@
 
 ## Status and boundary
 
-本包状态固定为 `READY_FOR_USER_REAL_REPRODUCTION_GATE`。它组装已经验证的 RAG
-Core，不修改检索成员、RRF、Prompt、模型、Citation、`NO_EVIDENCE`、ACL、READY
-或 EvidenceSet 决策语义。只有用户在精确提交上完成真实复现并返回合规证据后，未来
-独立 closeout 才能判断是否冻结 `RAG_COMPETITION_BASELINE_V1`。
+本包已在精确提交 `d775dab706c2a05d5b838f644b77b257961a4549`
+和 Run ID `competition_v1_20260809_01` 上取得用户操作的 Windows 真实复现
+Gate PASS。它组装已经验证的 RAG Core，不修改检索成员、RRF、Prompt、
+模型、Citation、`NO_EVIDENCE`、ACL、READY 或 EvidenceSet 决策语义。
+当前状态为 `USER_REAL_REPRODUCTION_GATE_PASS / BASELINE_FREEZE_PENDING_INDEPENDENT_CLOSEOUT`；
+该 PASS 不自动冻结 `RAG_COMPETITION_BASELINE_V1`。
 
 Fixture/Fake 只用于本包结构测试，不能成为三个场景的真实结果。
 
@@ -76,6 +78,33 @@ Stage-1 门禁仅接受以 `_CITATION_IDS_VALIDATED` 结尾的旧 warning，
 停止，因此 cleanup 仍为 `UNKNOWN_REQUIRES_SAME_RUN_RESUME_OR_OPERATOR_AUDIT`；
 修复候选必须以同一私有输入和同一 Run ID 恢复现有 READY 生命周期，不创建
 `_02`。
+
+## Successful Windows real reproduction
+
+用户在 Windows PowerShell 5.1 上以提交
+`d775dab706c2a05d5b838f644b77b257961a4549`、同一私有输入和同一
+Run ID `competition_v1_20260809_01` 完成 READY 恢复，版本化入口输出
+`COMPETITION_REAL_REPRODUCTION_PASS`。脱敏证据表明：
+
+- `resumed_from_ready=true`，READY reconciliation `PASS`；
+- 两个真实学术问题均为 `COMPLETED`，每题返回 3 条 Evidence；
+- 两题的 Citation ID、Evidence 身份和页码定位均通过；
+- generation replay 与 byte-stable replay 两题均为 `true`；
+- Reranker 为 `null`，保持默认 RRF 边界；
+- DELETE 后 cleanup job `3/3`、runtime snapshot cleanup、不可见性证明与
+  Answer API `403` 均通过；
+- `redacted-results.json` 为 `PASS`，恰好 3 个场景，cleanup 为 `PASS`。
+
+Windows 入口返回的 SHA-256 为：
+
+- finalized manifest: `bec756c802a588a4517f18ca0280cc584a0803bbae29d0a2ac497c2f3083a340`；
+- redacted result: `3e309bed036f4a5ad3f1d45cbd9d5abad256ce0db217c2ae3afa3c71fb9bc4fb`；
+- private Stage-1 report: `40dbc613e32f97bc6100cbe476798af60f7734de264980c7bcbcc83d2eba2f98`。
+
+本次收录证据为用户返回的版本化 wrapper PASS 截图及其打印哈希；
+`redacted-results.json` 文件本体仍位于用户 Windows `runtime/` 且未提交。
+因此可记录用户真实复现 Gate PASS，但不声称 Codex 已在 Mac 上重算
+Windows 产物哈希，也不自动完成 baseline freeze。
 
 ## Windows PowerShell 5.1 runbook
 

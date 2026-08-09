@@ -258,3 +258,17 @@ Claim–Evidence `AUDIT_ONLY` 状态，而旧门禁只接受 marker 位于字符
 未知后缀、空 Evidence 或非 `COMPLETED` 仍失败关闭。该次在 replay、
 inactivation 与 cleanup 前停止，因此 cleanup 未证明；新 exact HEAD 仍用同一
 私有输入和 Run ID `_01` 恢复 READY 生命周期，baseline 仍未冻结。
+
+最终 Windows 恢复运行在 `d775dab706c2a05d5b838f644b77b257961a4549`
+与 Run ID `competition_v1_20260809_01` 上由版本化 wrapper 输出
+`COMPETITION_REAL_REPRODUCTION_PASS`。`resumed_from_ready=true`，两个真实问题均
+`COMPLETED`且每题 3 Evidence，Citation/Evidence/页码身份、generation replay
+和 byte-stable replay 均通过；DELETE 后 cleanup `3/3`、runtime snapshot cleanup、
+不可见性和 Answer API `403` 均通过，脱敏结果恰好三场景 PASS。
+Windows 打印的 finalized/redacted/private-report SHA-256 分别为
+`bec756c802a588a4517f18ca0280cc584a0803bbae29d0a2ac497c2f3083a340`、
+`3e309bed036f4a5ad3f1d45cbd9d5abad256ce0db217c2ae3afa3c71fb9bc4fb`、
+`40dbc613e32f97bc6100cbe476798af60f7734de264980c7bcbcc83d2eba2f98`。
+当前证据为用户返回的 wrapper PASS 截图与打印哈希，不冒充 Mac 已重算
+Windows runtime 产物。该结果完成 `USER_REAL_REPRODUCTION_GATE`，baseline freeze
+仍待未来显式授权的独立 closeout。
