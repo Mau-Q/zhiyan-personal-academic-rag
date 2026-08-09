@@ -1,0 +1,76 @@
+{
+  "schema_version": "phase3_fixed_reranker_screening_gate_v1",
+  "status": "PASS_SCREENING_WEAKENED",
+  "source_phase": {
+    "id": "phase-3",
+    "status": "PARTIAL"
+  },
+  "goal": "SCREEN_EXISTING_FIXED_RERANKER_ON_FROZEN_PHASE3_RANKING_FAILURE_DEV_CASES",
+  "frozen_identity": {
+    "screening_source_commit": "1366f9428729d77a1d393d45c4cd566f14f33398",
+    "identity_sha256": "e26dc22a488611fa080d521382e6d35dd7c9f133dbc2c614ef3fd22c1e47956b",
+    "candidate_ladder_report_sha256": "f110daba4bc5d26c952b682502f812a156f6e3fde8ecd04b716db73b99e45186",
+    "retained_chunk_snapshot_sha256": "f7eb7e4a6c7820abde5523dca906df1d1a052e2e3b2174887781531295c7a282",
+    "cohort": [
+      "local3.assisted.0033",
+      "local3.assisted.0304",
+      "local3.assisted.0383"
+    ],
+    "excluded_cases": [
+      "local3.assisted.0387"
+    ],
+    "model_id": "BAAI/bge-reranker-v2-m3",
+    "model_revision": "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e",
+    "model_snapshot_sha256": "f9dd638f0b27b57667d99b01f83ca4dbb3c82983911a1ef31a4601c7b890eaec",
+    "config_sha256": "3df1a0f75739f63eadaea483eeeb096d764e5fee4d8926f62ad6c7b20b561be1",
+    "input_template": "question_title_section_text_v1",
+    "max_length": 512,
+    "candidate_top_k": 20,
+    "scoring_semantics": "DESCENDING_CROSS_ENCODER_LOGIT_TIE_BREAK_ORIGINAL_RRF_RANK",
+    "output_metric": "BILATERAL_TOP3"
+  },
+  "formal_evidence": {
+    "report_status": "PASS",
+    "report_sha256": "f66d76c89308757b29482331304e44fafa9a52de070bb1bbd86535449272a8b1",
+    "bilateral_recovery": {
+      "recovered_cases": 0,
+      "case_count": 3
+    },
+    "case_outcomes": [
+      {
+        "case_id": "local3.assisted.0033",
+        "bilateral_recovery": false,
+        "missing_side_target_rrf_ranks": [
+          42,
+          58
+        ]
+      },
+      {
+        "case_id": "local3.assisted.0304",
+        "bilateral_recovery": false,
+        "missing_side_target_rrf_ranks": [
+          27,
+          48
+        ]
+      },
+      {
+        "case_id": "local3.assisted.0383",
+        "bilateral_recovery": false,
+        "bilateral_target_documents_exposed_in_top20": true
+      }
+    ]
+  },
+  "boundaries": {
+    "new_elasticsearch_calls": 0,
+    "new_milvus_calls": 0,
+    "new_embedding_calls": 0,
+    "candidate_membership_changed": false,
+    "test_or_acceptance_read": false,
+    "performance_gate_run": false,
+    "formal_adoption": false,
+    "phase3_completed": false,
+    "next_algorithm_selected": false
+  },
+  "experiment_decision": "SCREENING_WEAKENED",
+  "strategy_handoff": "NO_AUTOMATIC_NEXT_EXPERIMENT"
+}

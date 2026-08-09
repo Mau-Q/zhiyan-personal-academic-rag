@@ -643,6 +643,17 @@
       ]
     },
     {
+      "id": "phase3_fixed_reranker_top20_screening",
+      "status": "COMPLETE",
+      "owner": "A",
+      "gate_records": ["machine/phase3_fixed_reranker_screening_gate.json"],
+      "evidence": [
+        "scripts/run_phase3_fixed_reranker_screening.py",
+        "tests/validation/test_phase3_fixed_reranker_screening.py",
+        "machine/phase3_fixed_reranker_screening_gate.json"
+      ]
+    },
+    {
       "id": "phase4_claim_evidence_core",
       "status": "PARTIAL",
       "owner": "A",

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 import subprocess
 import unittest
+from pathlib import Path
 
 from scripts.run_phase3_fixed_reranker_screening import (
     COHORT,
@@ -13,8 +15,24 @@ from scripts.run_phase3_fixed_reranker_screening import (
     build_identity,
 )
 
+ROOT = Path(__file__).resolve().parents[2]
+GATE_PATH = ROOT / "machine/phase3_fixed_reranker_screening_gate.json"
+
 
 class Phase3FixedRerankerScreeningTests(unittest.TestCase):
+    def test_top20_result_is_formalized_without_full_candidate_table(self) -> None:
+        gate = json.loads(GATE_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(gate["experiment_decision"], "SCREENING_WEAKENED")
+        self.assertEqual(
+            gate["formal_evidence"]["bilateral_recovery"],
+            {"recovered_cases": 0, "case_count": 3},
+        )
+        self.assertEqual(
+            [value["case_id"] for value in gate["formal_evidence"]["case_outcomes"]],
+            list(COHORT),
+        )
+        self.assertNotIn("complete_reranked_order", GATE_PATH.read_text(encoding="utf-8"))
+
     def test_current_frozen_inputs_form_exact_three_case_identity(self) -> None:
         head = subprocess.run(
             ["git", "rev-parse", "HEAD"],
