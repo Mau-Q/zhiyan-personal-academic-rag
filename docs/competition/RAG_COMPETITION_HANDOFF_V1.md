@@ -35,6 +35,23 @@ Fixture/Fake 只用于本包结构测试，不能成为三个场景的真实结�
 问题正文继续从私有 Phase-2 suite 读取；tracked dossier 只保存 Case ID、问题哈希、
 允许答案点、不得声称项和页码，不公开私有题集正文。
 
+## First Windows attempt and cross-platform repair
+
+首次用户运行在提交 `c46e82e3a006a61f2b9ca9e99e6bc3a0bdd7e0a8`、Run ID
+`competition_v1_20260809_01` 上于静态 pack 验证阶段停止。Windows Git
+`core.autocrlf=true` 将 `machine/phase4_multi_evidence_set_gate.json` 从索引 LF
+检出为等价 CRLF；LF SHA-256 为
+`3a30be94e1e52b8f5a2c78f63fbb65732045f2a6ae44cbfc16315656430967d7`，
+CRLF 工作树 SHA-256 为
+`78317b3539a7900d5ef304c05c955c819cf08499636c535959238633ae077911`。
+该次尝试没有运行迁移、PostgreSQL/ES/Milvus 写入、真实检索或 Qwen，不是质量证据。
+
+Competition tracked pack 文本身份现统一使用 LF 规范化 UTF-8 字节：纯 LF 与等价
+CRLF 接受；UTF-8 BOM、孤立 CR、无效 UTF-8 和内容漂移继续失败关闭。私有
+Phase-2 包、PDF、suite 和运行结果仍使用其既有原始字节身份，不因本修复放宽。
+修复后的用户 Gate 保留原 Run ID `competition_v1_20260809_01`，不自动创建 `_02`；
+新的 exact HEAD 由新候选发布 handoff 冻结。
+
 ## Windows PowerShell 5.1 runbook
 
 目标环境为用户操作的 Windows PowerShell 5.1。先使 Windows `main` 精确包含待验证

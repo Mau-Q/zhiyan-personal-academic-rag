@@ -18,7 +18,11 @@ from backend.validation.competition import (
 )
 from scripts import prepare_competition_input
 from scripts.run_stage1_remote_canary import _ObservedGenerationProvider
-from scripts.validate_competition_pack import EXPECTED_SCENARIO_IDS, validate_static
+from scripts.validate_competition_pack import (
+    EXPECTED_SCENARIO_IDS,
+    _lf_canonical_text_sha256,
+    validate_static,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -36,6 +40,73 @@ class StaticCompetitionPackTests(unittest.TestCase):
             EXPECTED_SCENARIO_IDS,
         )
         self.assertEqual(len(validated["manifest"]["scenario_manifests"]), 3)
+
+    def test_tracked_pack_text_identity_accepts_equivalent_crlf(self):
+        manifest = json.loads(
+            (ROOT / "machine/competition/rag-competition-pack-v1.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        runtime = ROOT / "runtime"
+        runtime.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=runtime) as temporary:
+            temp_root = Path(temporary)
+            phase4_reference = next(
+                gate["reference"]
+                for gate in manifest["historical_real_gates"]
+                if gate["id"] == "phase4-multi-evidence-set"
+            )
+            tracked_paths = [*manifest["tracked_pack_artifacts"], phase4_reference]
+            crlf_paths = {}
+            expected_hashes = {}
+            for index, relative in enumerate(tracked_paths):
+                source = ROOT / relative
+                expected = _lf_canonical_text_sha256(source)
+                crlf = temp_root / f"artifact-{index}"
+                crlf.write_bytes(source.read_bytes().replace(b"\n", b"\r\n"))
+                crlf_paths[relative] = crlf
+                expected_hashes[relative] = expected
+                self.assertEqual(
+                    _lf_canonical_text_sha256(crlf),
+                    expected,
+                    msg=relative,
+                )
+            with patch(
+                "scripts.validate_competition_pack._repository_path",
+                side_effect=lambda relative: crlf_paths[relative],
+            ):
+                validated = validate_static()
+            self.assertEqual(
+                validated["artifact_hashes"],
+                {
+                    relative: expected_hashes[relative]
+                    for relative in manifest["tracked_pack_artifacts"]
+                },
+            )
+
+    def test_tracked_text_identity_rejects_bom_lone_cr_and_content_drift(self):
+        runtime = ROOT / "runtime"
+        runtime.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=runtime) as temporary:
+            temp_root = Path(temporary)
+            lf = temp_root / "lf.json"
+            crlf = temp_root / "crlf.json"
+            bom = temp_root / "bom.json"
+            lone_cr = temp_root / "lone-cr.json"
+            drift = temp_root / "drift.json"
+            lf.write_bytes(b'{"status":"READY"}\n')
+            crlf.write_bytes(b'{"status":"READY"}\r\n')
+            bom.write_bytes(b'\xef\xbb\xbf{"status":"READY"}\n')
+            lone_cr.write_bytes(b'{"status":"READY"}\r')
+            drift.write_bytes(b'{"status":"CHANGED"}\n')
+
+            expected = _lf_canonical_text_sha256(lf)
+            self.assertEqual(_lf_canonical_text_sha256(crlf), expected)
+            self.assertNotEqual(_lf_canonical_text_sha256(drift), expected)
+            with self.assertRaisesRegex(ValueError, "UTF-8 BOM"):
+                _lf_canonical_text_sha256(bom)
+            with self.assertRaisesRegex(ValueError, "lone carriage return"):
+                _lf_canonical_text_sha256(lone_cr)
 
     def test_redaction_removes_connections_secrets_hosts_and_paths(self):
         value = (

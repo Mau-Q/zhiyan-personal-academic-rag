@@ -229,3 +229,15 @@ RAG 核心最终冻结复核确认既有版本化证据链连续：阶段 1远�
 真实 Qwen 生成、Citation 稳定映射、`NO_EVIDENCE`、ACL、版本和定位；阶段 4
 覆盖确定性 Multi-Evidence EvidenceSet。该冻结不重跑历史远程 Gate，也不把
 知识库接入、前端、演示、Agent API、阶段 5复杂问答或 300 ms 性能债写成完成。
+
+Competition Pack V1 首次 Windows 用户 Gate 在提交 `c46e82e3a006a61f2b9ca9e99e6bc3a0bdd7e0a8`
+与 Run ID `competition_v1_20260809_01` 上于静态身份验证停止。Windows
+`core.autocrlf=true` 产生语义等价 CRLF tracked JSON；LF SHA-256
+`3a30be94e1e52b8f5a2c78f63fbb65732045f2a6ae44cbfc16315656430967d7`
+与 CRLF SHA-256
+`78317b3539a7900d5ef304c05c955c819cf08499636c535959238633ae077911`
+的差异被原始字节校验误报为历史 EvidenceSet 漂移。该次没有迁移、基础设施写入、
+真实检索或模型调用。Competition tracked pack 文本现以 LF 规范化 UTF-8 字节绑定，
+接受纯 LF/等价 CRLF，拒绝 BOM、孤立 CR、无效 UTF-8 和内容漂移；私有输入仍保持
+原始字节身份。修复不改变三个场景、RRF、Prompt、模型、EvidenceSet `AUDIT_ONLY`
+或 baseline 未冻结边界，并保留原 Run ID `_01` 进入新的 exact-HEAD 用户 Gate。

@@ -10,7 +10,7 @@
     "retrieval", "reranker", "evidence_set", "required_external_services",
     "historical_real_gates", "known_limitations", "privacy_redaction",
     "scenario_ids", "scenario_manifests", "human_evaluation_protocol",
-    "runtime_artifacts", "tracked_pack_artifacts"
+    "runtime_artifacts", "tracked_text_identity", "tracked_pack_artifacts"
   ],
   "properties": {
     "schema_version": {"const": "rag_competition_pack_v1"},
@@ -49,6 +49,20 @@
     },
     "human_evaluation_protocol": {"type": "object", "minProperties": 1},
     "runtime_artifacts": {"type": "object", "minProperties": 1},
+    "tracked_text_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "accepted_line_endings", "rejected"],
+      "properties": {
+        "mode": {"const": "LF_CANONICAL_UTF8_TEXT"},
+        "accepted_line_endings": {
+          "const": ["LF", "CRLF_EQUIVALENT"]
+        },
+        "rejected": {
+          "const": ["UTF8_BOM", "LONE_CARRIAGE_RETURN", "INVALID_UTF8", "CONTENT_DRIFT"]
+        }
+      }
+    },
     "tracked_pack_artifacts": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}}
   }
 }

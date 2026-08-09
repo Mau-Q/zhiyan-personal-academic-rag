@@ -32,8 +32,17 @@ def _read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+def _lf_canonical_text_sha256(path: Path) -> str:
+    payload = path.read_bytes()
+    if payload.startswith(b"\xef\xbb\xbf"):
+        raise ValueError("competition tracked text must not contain a UTF-8 BOM")
+    if b"\r" in payload.replace(b"\r\n", b""):
+        raise ValueError("competition tracked text contains an invalid lone carriage return")
+    try:
+        payload.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("competition tracked text must be valid UTF-8") from exc
+    return hashlib.sha256(payload.replace(b"\r\n", b"\n")).hexdigest()
 
 
 def _git(*args: str) -> str:
@@ -79,7 +88,7 @@ def validate_static() -> dict[str, Any]:
     if tuple(observed_ids) != EXPECTED_SCENARIO_IDS:
         raise ValueError("competition scenario manifest order or identity drifted")
     artifact_hashes = {
-        relative: _sha256(_repository_path(relative))
+        relative: _lf_canonical_text_sha256(_repository_path(relative))
         for relative in manifest["tracked_pack_artifacts"]
     }
     if manifest["retrieval"] != {
@@ -93,6 +102,17 @@ def validate_static() -> dict[str, Any]:
         raise ValueError("competition default Reranker must remain OFF")
     if manifest["evidence_set"]["mode"] != "AUDIT_ONLY":
         raise ValueError("competition EvidenceSet mode must remain AUDIT_ONLY")
+    if manifest["tracked_text_identity"] != {
+        "mode": "LF_CANONICAL_UTF8_TEXT",
+        "accepted_line_endings": ["LF", "CRLF_EQUIVALENT"],
+        "rejected": [
+            "UTF8_BOM",
+            "LONE_CARRIAGE_RETURN",
+            "INVALID_UTF8",
+            "CONTENT_DRIFT",
+        ],
+    }:
+        raise ValueError("competition tracked text identity contract drifted")
     if manifest["source_commit"]["value"] is not None:
         raise ValueError("tracked competition manifest must not fabricate a source commit")
     if (
@@ -107,7 +127,10 @@ def validate_static() -> dict[str, Any]:
             raise ValueError("historical competition question text must remain runtime-only")
     historical = {value["id"]: value for value in manifest["historical_real_gates"]}
     phase4 = historical["phase4-multi-evidence-set"]
-    if _sha256(_repository_path(phase4["reference"])) != phase4["reference_sha256"]:
+    if (
+        _lf_canonical_text_sha256(_repository_path(phase4["reference"]))
+        != phase4["reference_sha256"]
+    ):
         raise ValueError("historical EvidenceSet gate reference drifted")
     return {"manifest": manifest, "artifact_hashes": artifact_hashes}
 

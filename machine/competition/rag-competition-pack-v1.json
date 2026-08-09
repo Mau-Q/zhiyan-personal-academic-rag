@@ -110,6 +110,11 @@
     "redacted_results": "runtime/competition/v1/<run-id>/redacted-results.json",
     "stage1_private_report": "runtime/competition/v1/<run-id>/stage1-report.json"
   },
+  "tracked_text_identity": {
+    "mode": "LF_CANONICAL_UTF8_TEXT",
+    "accepted_line_endings": ["LF", "CRLF_EQUIVALENT"],
+    "rejected": ["UTF8_BOM", "LONE_CARRIAGE_RETURN", "INVALID_UTF8", "CONTENT_DRIFT"]
+  },
   "tracked_pack_artifacts": [
     "machine/competition/rag-competition-pack-v1.json",
     "machine/competition/scenarios/comp-qa-001.json",
