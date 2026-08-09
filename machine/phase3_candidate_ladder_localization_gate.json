@@ -1,7 +1,7 @@
 {
   "schema_version": "phase3_candidate_ladder_localization_gate_v1",
   "decision_id": "PD-070",
-  "status": "LOCAL_INSTRUMENTATION_PASS_REMOTE_USER_RUN_PENDING",
+  "status": "LOCALIZATION_COMPLETE",
   "source_phase": {
     "id": "phase-3",
     "status": "PARTIAL"
@@ -18,7 +18,7 @@
     "cohort_sha256": "3f6e132954a721dea34bed26d75d4c2df84f589f2aab0c0323005b0cdfebccb8",
     "input_package_sha256": "89ea5829efd7c299e3ff51fdc5048e2d78d172bcde1d320322813b95c1dfdadb",
     "input_manifest_sha256": "05c36a393a51a8aa705e17d1ac3895df074b9273f8af6bfad06c9904c458c63f",
-    "source_commit": "CALLER_PINNED_TO_EXACT_RUNNER_HEAD",
+    "source_commit": "4a908f1fa8a4d87cdb351c0bb3e5f5df1aab63fc",
     "owner_and_version_identity": "CREATED_ISOLATED_AND_RECORDED_AT_RUNTIME",
     "backend_and_model_identity": "VERIFIED_AND_RECORDED_AT_RUNTIME"
   },
@@ -48,11 +48,11 @@
     ],
     "backend_request_boundary": 20,
     "pre_cutoff_ranking_observed": false,
-    "below_backend_request_boundary": "UNOBSERVED_NOT_INFERRED",
+    "below_backend_request_boundary": "UNAVAILABLE_PRE_CUTOFF_NOT_OBSERVED",
     "old_top50_description_used": false
   },
   "remote_gate": {
-    "status": "USER_RUN_REQUIRED_NOT_EXECUTED_BY_CODEX",
+    "status": "USER_RUN_COMPLETE_ADJUDICATION_PASS",
     "runner": "scripts/run_phase3_candidate_ladder_localization.py",
     "adjudicator": "scripts/adjudicate_phase3_candidate_ladder_report.py",
     "windows_entry": "deploy/remote/phase3-comparison-validation/run_phase3_candidate_ladder_localization.ps1",
@@ -61,6 +61,57 @@
     "cleanup_jobs_expected": 9,
     "deleted_answer_api_status_expected": 403,
     "rerun_on_failure": false
+  },
+  "formal_evidence": {
+    "report_status": "PASS",
+    "experiment_decision": "LOCALIZATION_COMPLETE",
+    "adjudication_status": "PASS",
+    "case_count": 4,
+    "report_sha256": "f110daba4bc5d26c952b682502f812a156f6e3fde8ecd04b716db73b99e45186",
+    "adjudication_sha256": "4fba0e27d44abfd009e496a0430b5da2eabfdc009a57f0c5b8cb8d7e297fed8f",
+    "canonical_local_re_adjudication": "PASS_JSON_EQUIVALENT",
+    "case_outcomes": [
+      {
+        "case_id": "local3.assisted.0033",
+        "primary_classification": "RRF_FUSION_OR_RANKING"
+      },
+      {
+        "case_id": "local3.assisted.0304",
+        "primary_classification": "RRF_FUSION_OR_RANKING"
+      },
+      {
+        "case_id": "local3.assisted.0383",
+        "primary_classification": "RRF_FUSION_OR_RANKING"
+      },
+      {
+        "case_id": "local3.assisted.0387",
+        "primary_classification": "ES_CANDIDATE_RETRIEVAL",
+        "co_primary_classification": "MILVUS_CANDIDATE_RETRIEVAL"
+      }
+    ],
+    "aggregate_classification": {
+      "RRF_FUSION_OR_RANKING": 3,
+      "ES_CANDIDATE_RETRIEVAL": 1,
+      "MILVUS_CANDIDATE_RETRIEVAL_CO_PRIMARY": 1
+    },
+    "candidate_cutoff_observation": {
+      "case_id": "local3.assisted.0387",
+      "candidate_k": 20,
+      "target_documents_observed_in_es": 0,
+      "target_documents_observed_in_milvus": 0,
+      "outside_observed_cutoff": "UNAVAILABLE_PRE_CUTOFF_NOT_OBSERVED",
+      "target_absent_from_index_proven": false,
+      "embedding_failure_proven": false
+    },
+    "cleanup": {
+      "status": "PASS",
+      "scheduled_versions": 3,
+      "jobs_succeeded": 9,
+      "jobs_observed": 9,
+      "jobs_expected": 9,
+      "ready_reconciliation_failed_closed": true,
+      "deleted_answer_api_status": 403
+    }
   },
   "split_isolation": {
     "dev": "FROZEN_4_ONLY",
@@ -88,6 +139,6 @@
     "powershell_static": "PASS_30_DEFINITIONS",
     "diff_check": "PASS"
   },
-  "current_experiment_decision": "BLOCKED_REMOTE_USER_OPERATED_SERVICES_AND_CREDENTIALS_REQUIRED",
+  "current_experiment_decision": "LOCALIZATION_COMPLETE",
   "strategy_handoff": "NO_NEXT_ALGORITHM_SELECTED"
 }

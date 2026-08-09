@@ -624,7 +624,7 @@
     },
     {
       "id": "phase3_future_comparison_failure_localization",
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "owner": "SHARED",
       "gate_records": ["machine/phase3_candidate_ladder_localization_gate.json"],
       "evidence": [

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import unittest
 from pathlib import Path
 
@@ -30,6 +31,7 @@ POWERSHELL_PATH = (
     / "phase3-comparison-validation"
     / "run_phase3_candidate_ladder_localization.ps1"
 )
+GATE_PATH = ROOT / "machine" / "phase3_candidate_ladder_localization_gate.json"
 
 
 def candidate(
@@ -355,6 +357,79 @@ class Phase3CandidateLadderLocalizationTests(unittest.TestCase):
         self.assertIn("-AsSecureString", script)
         self.assertNotIn("qwen", script.casefold())
         self.assertNotIn("judge", script.casefold())
+
+    def test_machine_gate_records_formal_localization_closeout(self):
+        gate = json.loads(GATE_PATH.read_text(encoding="utf-8"))
+        evidence = gate["formal_evidence"]
+        self.assertEqual(gate["status"], "LOCALIZATION_COMPLETE")
+        self.assertEqual(gate["source_phase"]["status"], "PARTIAL")
+        self.assertEqual(
+            gate["frozen_identity"]["source_commit"],
+            "4a908f1fa8a4d87cdb351c0bb3e5f5df1aab63fc",
+        )
+        self.assertEqual(gate["frozen_identity"]["run_id"], DIAGNOSTIC_RUN_ID)
+        self.assertEqual(
+            gate["frozen_identity"]["cohort_sha256"], TARGET_IDS_SHA256
+        )
+        self.assertEqual(
+            gate["frozen_identity"]["input_manifest_sha256"],
+            "05c36a393a51a8aa705e17d1ac3895df074b9273f8af6bfad06c9904c458c63f",
+        )
+        self.assertEqual(evidence["experiment_decision"], "LOCALIZATION_COMPLETE")
+        self.assertEqual(evidence["case_count"], 4)
+        self.assertEqual(
+            evidence["report_sha256"],
+            "f110daba4bc5d26c952b682502f812a156f6e3fde8ecd04b716db73b99e45186",
+        )
+        self.assertEqual(
+            evidence["adjudication_sha256"],
+            "4fba0e27d44abfd009e496a0430b5da2eabfdc009a57f0c5b8cb8d7e297fed8f",
+        )
+        self.assertEqual(
+            evidence["case_outcomes"],
+            [
+                {
+                    "case_id": "local3.assisted.0033",
+                    "primary_classification": "RRF_FUSION_OR_RANKING",
+                },
+                {
+                    "case_id": "local3.assisted.0304",
+                    "primary_classification": "RRF_FUSION_OR_RANKING",
+                },
+                {
+                    "case_id": "local3.assisted.0383",
+                    "primary_classification": "RRF_FUSION_OR_RANKING",
+                },
+                {
+                    "case_id": "local3.assisted.0387",
+                    "primary_classification": "ES_CANDIDATE_RETRIEVAL",
+                    "co_primary_classification": "MILVUS_CANDIDATE_RETRIEVAL",
+                },
+            ],
+        )
+        self.assertEqual(
+            evidence["aggregate_classification"],
+            {
+                "RRF_FUSION_OR_RANKING": 3,
+                "ES_CANDIDATE_RETRIEVAL": 1,
+                "MILVUS_CANDIDATE_RETRIEVAL_CO_PRIMARY": 1,
+            },
+        )
+        self.assertEqual(
+            evidence["candidate_cutoff_observation"]["outside_observed_cutoff"],
+            "UNAVAILABLE_PRE_CUTOFF_NOT_OBSERVED",
+        )
+        self.assertFalse(
+            evidence["candidate_cutoff_observation"][
+                "target_absent_from_index_proven"
+            ]
+        )
+        self.assertEqual(evidence["cleanup"]["jobs_succeeded"], 9)
+        self.assertEqual(evidence["cleanup"]["deleted_answer_api_status"], 403)
+        self.assertEqual(gate["split_isolation"]["test"], "NOT_READ_NOT_RUN")
+        self.assertEqual(gate["split_isolation"]["acceptance"], "NOT_READ_NOT_RUN")
+        self.assertFalse(gate["decision_boundary"]["next_algorithm_selected"])
+        self.assertEqual(gate["strategy_handoff"], "NO_NEXT_ALGORITHM_SELECTED")
 
     def test_adjudicator_recomputes_rrf_and_accepts_inconclusive_report(self):
         result = adjudicate(
