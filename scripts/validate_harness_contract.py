@@ -611,6 +611,33 @@ def check_harness_content_safety() -> None:
             raise ValueError(f"forbidden path or secret-shaped text in {path.relative_to(ROOT)}")
 
 
+def check_remote_configuration_safety() -> None:
+    """Require remote service credentials to come from the process environment."""
+
+    compose_path = ROOT / "deploy/remote/compose.milvus.yml"
+    tracked = _tracked_paths()
+    _repository_file(
+        "deploy/remote/compose.milvus.yml",
+        context="remote Milvus Compose file",
+        tracked=tracked,
+    )
+    lines = compose_path.read_text(encoding="utf-8").splitlines()
+    expected = {
+        "MINIO_ACCESS_KEY": 'MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:?set MINIO_ACCESS_KEY}"',
+        "MINIO_SECRET_KEY": 'MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:?set MINIO_SECRET_KEY}"',
+    }
+    for name, expected_line in expected.items():
+        matches = [
+            line.strip()
+            for line in lines
+            if re.match(rf"^\s*{re.escape(name)}\s*:", line)
+        ]
+        if matches != [expected_line]:
+            raise ValueError(
+                f"remote Compose {name} must use a required process environment value"
+            )
+
+
 def check_tracked_artifact_boundary() -> None:
     tracked = _git("ls-files").splitlines()
     forbidden = [
@@ -649,6 +676,7 @@ def main() -> int:
         ("current_product_scope", check_current_product_scope),
         ("harness_links", check_harness_links),
         ("content_safety", check_harness_content_safety),
+        ("remote_configuration_safety", check_remote_configuration_safety),
         ("tracked_artifact_boundary", check_tracked_artifact_boundary),
     ]
     if args.phase_result is not None:

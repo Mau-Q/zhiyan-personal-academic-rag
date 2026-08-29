@@ -25,12 +25,12 @@
 | 01-E02 | 可信来源、版本和 owner 事实源 | `获准 PDF → Chunk → PostgreSQL owner / 版本 / 快照` | `docs/REQUIREMENTS_TRACEABILITY.md` | lines 37–38, 56–57 | ARCHITECTURE_CONTRACT | YES_WITH_BOUNDARY：OCR 未完成 |
 | 01-E03 | READY 条件 | `解析、Chunk、ES、Milvus 全部就绪后进入 READY` | `contracts/schemas/document-version-lifecycle-v1.schema.json` | lines 41–43, 49–56, 65–84 | ARCHITECTURE_CONTRACT | YES |
 | 01-E04 | owner / ACL | `owner ACL / 授权范围` | `contracts/schemas/authorized-scope-v1.schema.json` | lines 7–23 | ARCHITECTURE_CONTRACT | YES |
-| 01-E05 | 在线 READY 路由 | `PostgreSQL READY 版本解析与重验` | `backend/retrieval/online.py` | lines 302–320, 444–458 | ARCHITECTURE_CONTRACT | YES |
-| 01-E06 | Elasticsearch 通道 | `Elasticsearch · BM25 词项检索` | `machine/competition/rag-competition-pack-v1.json`; `backend/retrieval/online.py` | lines 35–45; lines 385–414 | FROZEN_BASELINE / ARCHITECTURE_CONTRACT | YES |
-| 01-E07 | Milvus 通道 | `Milvus · BGE-M3 向量检索` | `machine/competition/rag-competition-pack-v1.json`; `backend/retrieval/online.py` | lines 29–45; lines 389–423 | FROZEN_BASELINE / ARCHITECTURE_CONTRACT | YES |
-| 01-E08 | 并行检索 | `ES 与 Milvus 并行召回` | `backend/retrieval/online.py` | lines 371–423 | ARCHITECTURE_CONTRACT | YES |
+| 01-E05 | 在线 READY 路由 | `PostgreSQL READY 版本解析与重验` | `backend/retrieval/online.py` | lines 199–264, 266–299, 505–519 | ARCHITECTURE_CONTRACT | YES |
+| 01-E06 | Elasticsearch 通道 | `Elasticsearch · BM25 词项检索` | `machine/competition/rag-competition-pack-v1.json`; `backend/retrieval/online.py` | lines 35–45; lines 438–468 | FROZEN_BASELINE / ARCHITECTURE_CONTRACT | YES |
+| 01-E07 | Milvus 通道 | `Milvus · BGE-M3 向量检索` | `machine/competition/rag-competition-pack-v1.json`; `backend/retrieval/online.py` | lines 29–45; lines 442–477, 637–657 | FROZEN_BASELINE / ARCHITECTURE_CONTRACT | YES |
+| 01-E08 | 并行检索 | `ES 与 Milvus 并行召回` | `backend/retrieval/online.py` | lines 411–502 | ARCHITECTURE_CONTRACT | YES |
 | 01-E09 | 冻结检索参数 | `每路候选 Top-20 · RRF k=60 · 生成证据 Top-3` | `machine/competition/rag-competition-pack-v1.json` | lines 41–45 | FROZEN_BASELINE | YES |
-| 01-E10 | RRF 融合 | `按名次做 RRF 融合` | `backend/retrieval/online.py` | lines 609–649 | ARCHITECTURE_CONTRACT | YES |
+| 01-E10 | RRF 融合 | `按名次做 RRF 融合` | `backend/retrieval/online.py` | lines 713–753 | ARCHITECTURE_CONTRACT | YES |
 | 01-E11 | 默认策略 | `默认 RRF；Reranker OFF` | `machine/competition/rag-competition-pack-v1.json` | lines 41–51 | FROZEN_BASELINE | YES_WITH_BOUNDARY：Reranker 仅可选非默认 |
 | 01-E12 | 生成模型与 Prompt | `Qwen3 14B · academic-evidence-answer-v1 · think=false` | `machine/competition/rag-competition-pack-v1.json` | lines 17–27 | FROZEN_BASELINE | YES |
 | 01-E13 | 证据约束生成 | `问题 + 已授权 Evidence → 结构化 Claim → Answer` | `backend/rag/generation.py` | lines 23–30, 39–63, 251–294 | ARCHITECTURE_CONTRACT | YES |
@@ -46,11 +46,11 @@
 |---|---|---|---|---|---|---|
 | 03-E01 | 问题与服务端 owner scope | `用户问题 → owner / scope 校验` | `backend/api/app.py` | lines 285–316 | ARCHITECTURE_CONTRACT | YES |
 | 03-E02 | 未授权或未就绪 | `未授权 / 未就绪 / 无法验证 → 403 RAG_FORBIDDEN_SCOPE` | `backend/api/app.py` | lines 317–341 | ARCHITECTURE_CONTRACT | YES |
-| 03-E03 | READY 解析 | `只解析 PostgreSQL READY 版本` | `backend/retrieval/online.py` | lines 302–320 | ARCHITECTURE_CONTRACT | YES |
-| 03-E04 | 快照和版本一致性 | `加载 READY Chunk 快照并校验版本与 Chunk 唯一性` | `backend/retrieval/online.py` | lines 348–370 | ARCHITECTURE_CONTRACT | YES |
-| 03-E05 | 双路并行 | `Elasticsearch BM25 ∥ Milvus / BGE-M3` | `backend/retrieval/online.py` | lines 371–423 | ARCHITECTURE_CONTRACT | YES |
-| 03-E06 | 候选身份重验 | `候选必须匹配 owner / document / version / active` | `backend/retrieval/online.py` | lines 591–607 | ARCHITECTURE_CONTRACT | YES |
-| 03-E07 | 融合与 Top-3 | `候选 Top-20 → RRF k=60 → Evidence Top-3` | `machine/competition/rag-competition-pack-v1.json`; `backend/retrieval/online.py` | lines 41–45; lines 459–469 | FROZEN_BASELINE / ARCHITECTURE_CONTRACT | YES |
+| 03-E03 | READY 解析 | `只解析 PostgreSQL READY 版本` | `backend/retrieval/online.py` | lines 199–264 | ARCHITECTURE_CONTRACT | YES |
+| 03-E04 | 快照和版本一致性 | `加载 READY Chunk 快照并校验版本与 Chunk 唯一性` | `backend/retrieval/online.py` | lines 388–410 | ARCHITECTURE_CONTRACT | YES |
+| 03-E05 | 双路并行 | `Elasticsearch BM25 ∥ Milvus / BGE-M3` | `backend/retrieval/online.py` | lines 411–502 | ARCHITECTURE_CONTRACT | YES |
+| 03-E06 | 候选身份重验 | `候选必须匹配 owner / document / version / active` | `backend/retrieval/online.py` | lines 695–711 | ARCHITECTURE_CONTRACT | YES |
+| 03-E07 | 融合与 Top-3 | `候选 Top-20 → RRF k=60 → Evidence Top-3` | `machine/competition/rag-competition-pack-v1.json`; `backend/retrieval/online.py` | lines 41–45; lines 713–753 | FROZEN_BASELINE / ARCHITECTURE_CONTRACT | YES |
 | 03-E08 | 无证据拒答 | `无有效 Evidence → NO_EVIDENCE / 当前授权范围内证据不足` | `backend/rag/answer_builder.py` | lines 34–44 | ARCHITECTURE_CONTRACT | YES |
 | 03-E09 | 无证据不调用模型 | `NO_EVIDENCE 时不调用真实生成模型` | `backend/rag/generation.py` | lines 425–447 | ARCHITECTURE_CONTRACT | YES |
 | 03-E10 | Qwen 生成 | `Qwen3 14B 基于 Evidence 生成结构化 Claim` | `machine/competition/rag-competition-pack-v1.json`; `backend/rag/generation.py` | lines 17–27; lines 275–334 | FROZEN_BASELINE / ARCHITECTURE_CONTRACT | YES |

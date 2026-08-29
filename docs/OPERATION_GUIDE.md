@@ -817,20 +817,17 @@ git ls-files | rg '(^|/)\.env$|\.pdf$|^runtime/|^data/|^logs/'
 
 
 
+## 17. Windows 验证主机说明
 
+Windows 验证主机上的 PostgreSQL 仅用于本机回环验证，不是可从公网访问的数据库。
+主机、数据库、用户和密码必须由用户在目标进程或本地凭据存储中提供；不得把真实值、
+默认值或完整连接串写入本指南、命令历史或 Git。
 
-
-
-这是 Windows 验证主机上的本地 PostgreSQL，不是可直接从公网访问的数据库：
-
-| 项目       | 值                       |
-| ---------- | ------------------------ |
-| 数据库类型 | PostgreSQL 18.4          |
-| 主机       | 127.0.0.1                |
-| 端口       | 5432                     |
-| 数据库名   | zhiyan_stage1_canary     |
-| 用户名     | zhiyan_stage1_canary_app |
-| 密码       | admin                    |
-| 连接范围   | Windows 验证主机本机回环 |
-| 管理员名   | postgres                 |
-| 管理员密码 | admin                    |
+| 项目 | 公开说明 |
+| --- | --- |
+| 数据库类型 | PostgreSQL |
+| 主机 | `127.0.0.1`（仅回环） |
+| 端口 | `<POSTGRES_PORT>` |
+| 数据库名 | `<ISOLATED_DATABASE>` |
+| 应用用户 | `<APP_USER>` |
+| 密码 | 通过进程环境或本地凭据存储注入 |

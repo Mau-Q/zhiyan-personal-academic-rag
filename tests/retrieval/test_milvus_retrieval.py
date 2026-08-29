@@ -71,6 +71,22 @@ class MilvusVectorRetrievalTests(unittest.TestCase):
         self.assertGreaterEqual(timings[0].ann_search_latency_ms, 0)
         self.assertGreaterEqual(timings[0].total_latency_ms, 0)
 
+    def test_search_accepts_precomputed_query_vector_without_reembedding(self):
+        class FailingEmbeddingProvider(FakeEmbeddingProvider):
+            def embed(self, texts):
+                del texts
+                raise AssertionError("precomputed query vector must bypass embedding")
+
+        ranking = self.index.search(
+            "How are candidates combined?",
+            self.scope,
+            FailingEmbeddingProvider(),
+            expected_chunks=self.chunks,
+            query_vector=[1.0, 0.0, 0.0, 0.0],
+        )
+
+        self.assertEqual(ranking[0].chunk["chunk_id"], "chunk_fixture_001")
+
     def test_search_failures_expose_only_stable_stage_identity(self):
         cases = []
 

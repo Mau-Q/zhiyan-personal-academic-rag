@@ -157,6 +157,58 @@ class ReadyRouteResolverTests(unittest.TestCase):
         with self.assertRaises(OnlineVisibilityUnavailableError):
             route_failure.resolve(owner_id=OWNER_ID, document_ids=[])
 
+    def test_physical_route_verification_runs_es_and_milvus_concurrently(self):
+        rendezvous = threading.Barrier(2, timeout=2.0)
+
+        class ConcurrentRouteInspector(FakeRouteInspector):
+            def verify_online_version(self, **kwargs):
+                rendezvous.wait()
+                return super().verify_online_version(**kwargs)
+
+        resolver = PostgresReadyRouteResolver(
+            repository=FakeReadyRepository([ready_version(version_id="version_001")]),
+            elasticsearch=ConcurrentRouteInspector("es"),
+            milvus=ConcurrentRouteInspector("milvus"),
+        )
+
+        routes = resolver.resolve(owner_id=OWNER_ID, document_ids=[])
+
+        self.assertEqual(len(routes), 1)
+        self.assertEqual(routes[0].elasticsearch_index, "es_version_001")
+        self.assertEqual(routes[0].milvus_collection, "milvus_version_001")
+
+    def test_physical_route_verification_runs_all_ready_routes_concurrently(self):
+        rendezvous = threading.Barrier(4, timeout=2.0)
+
+        class ConcurrentRouteInspector(FakeRouteInspector):
+            def verify_online_version(self, **kwargs):
+                rendezvous.wait()
+                return super().verify_online_version(**kwargs)
+
+        resolver = PostgresReadyRouteResolver(
+            repository=FakeReadyRepository(
+                [
+                    ready_version("document_002", "version_002"),
+                    ready_version("document_001", "version_001"),
+                ]
+            ),
+            elasticsearch=ConcurrentRouteInspector("es"),
+            milvus=ConcurrentRouteInspector("milvus"),
+        )
+
+        routes = resolver.resolve(owner_id=OWNER_ID, document_ids=[])
+
+        self.assertEqual(
+            [
+                (route.document_id, route.elasticsearch_index, route.milvus_collection)
+                for route in routes
+            ],
+            [
+                ("document_001", "es_version_001", "milvus_version_001"),
+                ("document_002", "es_version_002", "milvus_version_002"),
+            ],
+        )
+
 
 class StaticResolver:
     def __init__(self, routes):
@@ -205,17 +257,19 @@ class FakeMilvusIndex:
     def search(self, question, scope, provider, **kwargs):
         del scope, provider
         timing_sink = kwargs.pop("timing_sink", None)
+        query_vector = kwargs.pop("query_vector", None)
         self.transport.questions[self.collection_name] = question
         self.transport.expected[self.collection_name] = kwargs["expected_chunks"]
         self.transport.source_fingerprints[self.collection_name] = kwargs[
             "source_fingerprint_chunks"
         ]
+        self.transport.query_vectors[self.collection_name] = query_vector
         ranking = self.transport.rankings[self.collection_name]
         if timing_sink is not None:
             timing_sink(
                 MilvusSearchLatencyBreakdown(
                     validation_latency_ms=0.4,
-                    query_embedding_latency_ms=0.5,
+                    query_embedding_latency_ms=0.0 if query_vector is not None else 0.5,
                     ann_search_latency_ms=0.6,
                     total_latency_ms=1.5,
                 )
@@ -229,6 +283,17 @@ class RankingTransport:
         self.expected = {}
         self.source_fingerprints = {}
         self.questions = {}
+        self.query_vectors = {}
+
+
+class CountingEmbeddingProvider(FakeEmbeddingProvider):
+    def __init__(self):
+        super().__init__()
+        self.calls = []
+
+    def embed(self, texts):
+        self.calls.append(tuple(texts))
+        return super().embed(texts)
 
 
 class FakeChunkSnapshots:
@@ -627,11 +692,12 @@ class OnlineVersionRrfRetrieverTests(unittest.TestCase):
                 "milvus_version_002": [],
             }
         )
+        embedding = CountingEmbeddingProvider()
         retriever = OnlineVersionRrfRetriever(
             resolver=StaticResolver([first_route, second_route]),
             elasticsearch_transport=elasticsearch,
             milvus_transport=milvus,
-            embedding_provider=FakeEmbeddingProvider(),
+            embedding_provider=embedding,
             chunk_snapshots=FakeChunkSnapshots([first, second]),
         )
         scope = {
@@ -675,6 +741,79 @@ class OnlineVersionRrfRetrieverTests(unittest.TestCase):
                 item["is_active"] is False
                 for item in milvus.source_fingerprints["milvus_version_001"]
             )
+        )
+        self.assertEqual(embedding.calls, [("question",)])
+        self.assertEqual(
+            set(milvus.query_vectors),
+            {"milvus_version_001", "milvus_version_002"},
+        )
+
+    def test_multiple_ready_routes_submit_all_backend_searches_concurrently(self):
+        first_route = OnlineVersionRoute(
+            owner_id=OWNER_ID,
+            document_id="document_001",
+            document_version_id="version_001",
+            elasticsearch_index="es_version_001",
+            milvus_collection="milvus_version_001",
+        )
+        second_route = OnlineVersionRoute(
+            owner_id=OWNER_ID,
+            document_id="document_002",
+            document_version_id="version_002",
+            elasticsearch_index="es_version_002",
+            milvus_collection="milvus_version_002",
+        )
+        first = chunk("document_001", "version_001", 1)
+        second = chunk("document_002", "version_002", 1)
+        elasticsearch = RankingTransport(
+            {
+                "es_version_001": [RankedChunk("es", 1, 1.0, first)],
+                "es_version_002": [RankedChunk("es", 1, 1.0, second)],
+            }
+        )
+        milvus = RankingTransport(
+            {
+                "milvus_version_001": [RankedChunk("milvus", 1, 0.9, first)],
+                "milvus_version_002": [RankedChunk("milvus", 1, 0.9, second)],
+            }
+        )
+        rendezvous = threading.Barrier(4, timeout=2.0)
+
+        class ConcurrentElasticsearchIndex(FakeElasticsearchIndex):
+            def search(self, question, scope, **kwargs):
+                rendezvous.wait()
+                return super().search(question, scope, **kwargs)
+
+        class ConcurrentMilvusIndex(FakeMilvusIndex):
+            def search(self, question, scope, provider, **kwargs):
+                rendezvous.wait()
+                return super().search(question, scope, provider, **kwargs)
+
+        retriever = OnlineVersionRrfRetriever(
+            resolver=StaticResolver([first_route, second_route]),
+            elasticsearch_transport=elasticsearch,
+            milvus_transport=milvus,
+            embedding_provider=FakeEmbeddingProvider(),
+            chunk_snapshots=FakeChunkSnapshots([first, second]),
+        )
+
+        with patch(
+            "backend.retrieval.online.ElasticsearchBm25Index",
+            ConcurrentElasticsearchIndex,
+        ), patch(
+            "backend.retrieval.online.MilvusVectorIndex", ConcurrentMilvusIndex
+        ):
+            results = retriever.retrieve(
+                "question",
+                {"user_id": OWNER_ID, "tenant_id": OWNER_ID},
+                owner_id=OWNER_ID,
+                document_ids=[],
+                top_k=2,
+            )
+
+        self.assertEqual(
+            [item["chunk_id"] for item in results],
+            [first["chunk_id"], second["chunk_id"]],
         )
 
     def test_elasticsearch_and_milvus_searches_overlap_per_ready_route(self):
@@ -766,7 +905,7 @@ class OnlineVersionRrfRetrieverTests(unittest.TestCase):
         observation = observations[0]
         self.assertEqual(observation.route_count, 1)
         self.assertEqual(observation.elasticsearch_total_work_latency_ms, 0.3)
-        self.assertEqual(observation.query_embedding_work_latency_ms, 0.5)
+        self.assertGreaterEqual(observation.query_embedding_work_latency_ms, 0)
         self.assertEqual(observation.milvus_ann_search_work_latency_ms, 0.6)
         self.assertGreaterEqual(observation.backend_parallel_wall_latency_ms, 0)
         self.assertGreaterEqual(observation.total_latency_ms, 0)

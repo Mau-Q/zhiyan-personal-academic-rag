@@ -5,8 +5,9 @@ from __future__ import annotations
 import re
 import time
 from collections.abc import Callable, Mapping, Sequence
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
+from threading import Lock
 from typing import Any, Protocol
 
 from backend.retrieval.comparison_decomposition import RouteQueryPlan
@@ -17,7 +18,7 @@ from backend.retrieval.elasticsearch import (
     ElasticsearchSearchLatencyBreakdown,
     ElasticsearchTransport,
 )
-from backend.retrieval.embedding import EmbeddingProvider
+from backend.retrieval.embedding import EmbeddingModelIdentity, EmbeddingProvider
 from backend.retrieval.milvus import (
     DEFAULT_VECTOR_MIN_SCORE,
     RETRIEVAL_BACKEND as MILVUS_RETRIEVAL_BACKEND,
@@ -90,6 +91,44 @@ class OnlineFinalCandidateSelector(Protocol):
         document_ids: Sequence[str],
         top_k: int,
     ) -> RouteCoveragePlan: ...
+
+
+@dataclass(frozen=True)
+class _SharedQueryEmbeddings:
+    vectors_by_query: Mapping[str, Sequence[float]]
+    latency_ms: float
+
+
+class _RequestEmbeddingProvider:
+    """Share model identity and query vectors only within one online request."""
+
+    def __init__(self, provider: EmbeddingProvider) -> None:
+        self._provider = provider
+        self._lock = Lock()
+        self._identity: EmbeddingModelIdentity | None = None
+        self._vectors: dict[str, tuple[float, ...]] = {}
+
+    def identity(self) -> EmbeddingModelIdentity:
+        with self._lock:
+            if self._identity is None:
+                self._identity = self._provider.identity()
+            return self._identity
+
+    def embed(self, texts: Sequence[str]) -> list[list[float]]:
+        if len(texts) != 1:
+            return self._provider.embed(texts)
+        text = texts[0]
+        with self._lock:
+            cached = self._vectors.get(text)
+            if cached is None:
+                vectors = self._provider.embed(texts)
+                if len(vectors) != 1:
+                    raise ValueError(
+                        "embedding provider must return exactly one query vector"
+                    )
+                cached = tuple(float(value) for value in vectors[0])
+                self._vectors[text] = cached
+            return [list(cached)]
 
 
 @dataclass(frozen=True)
@@ -195,33 +234,56 @@ class PostgresReadyRouteResolver:
                 "one or more requested documents are not online for this owner"
             )
 
+        ordered_document_ids = tuple(sorted(by_document))
+        if not ordered_document_ids:
+            return ()
+
         routes: list[OnlineVersionRoute] = []
-        for document_id in sorted(by_document):
-            version = by_document[document_id]
-            try:
-                elasticsearch_index = self.elasticsearch.verify_online_version(
-                    owner_id=owner_id,
-                    document_id=document_id,
-                    document_version_id=version.document_version_id,
-                )
-                milvus_collection = self.milvus.verify_online_version(
-                    owner_id=owner_id,
-                    document_id=document_id,
-                    document_version_id=version.document_version_id,
-                )
-            except Exception as exc:
-                raise OnlineVisibilityUnavailableError(
-                    "READY version physical index route could not be verified"
-                ) from exc
-            routes.append(
-                OnlineVersionRoute(
-                    owner_id=owner_id,
-                    document_id=document_id,
-                    document_version_id=version.document_version_id,
-                    elasticsearch_index=elasticsearch_index,
-                    milvus_collection=milvus_collection,
-                )
-            )
+        try:
+            max_workers = min(max(2, len(ordered_document_ids) * 2), 32)
+            with ThreadPoolExecutor(
+                max_workers=max_workers,
+                thread_name_prefix="online-ready-route-verification",
+            ) as executor:
+                verification_futures: dict[
+                    str, tuple[Future[str], Future[str]]
+                ] = {}
+                for document_id in ordered_document_ids:
+                    version = by_document[document_id]
+                    route_kwargs = {
+                        "owner_id": owner_id,
+                        "document_id": document_id,
+                        "document_version_id": version.document_version_id,
+                    }
+                    verification_futures[document_id] = (
+                        executor.submit(
+                            self.elasticsearch.verify_online_version,
+                            **route_kwargs,
+                        ),
+                        executor.submit(
+                            self.milvus.verify_online_version,
+                            **route_kwargs,
+                        ),
+                    )
+
+                for document_id in ordered_document_ids:
+                    version = by_document[document_id]
+                    elasticsearch_future, milvus_future = verification_futures[
+                        document_id
+                    ]
+                    routes.append(
+                        OnlineVersionRoute(
+                            owner_id=owner_id,
+                            document_id=document_id,
+                            document_version_id=version.document_version_id,
+                            elasticsearch_index=elasticsearch_future.result(),
+                            milvus_collection=milvus_future.result(),
+                        )
+                    )
+        except Exception as exc:
+            raise OnlineVisibilityUnavailableError(
+                "READY version physical index route could not be verified"
+            ) from exc
         return tuple(routes)
 
     def revalidate(
@@ -344,6 +406,7 @@ class OnlineVersionRrfRetriever:
         route_rankings: list[OnlineRouteCandidateRanking] = []
         elasticsearch_timings: list[ElasticsearchSearchLatencyBreakdown] = []
         milvus_timings: list[MilvusSearchLatencyBreakdown] = []
+        query_embedding_latency_ms = 0.0
         try:
             chunk_snapshot_started = time.perf_counter()
             chunks = [
@@ -369,75 +432,96 @@ class OnlineVersionRrfRetriever:
                     "persisted Chunk snapshot does not match READY routes"
                 )
             backend_parallel_wall_started = time.perf_counter()
-            with ThreadPoolExecutor(
-                max_workers=2,
-                thread_name_prefix="online-ready-retrieval",
-            ) as executor:
-                for route in routes:
-                    expected_chunks = self._route_chunks(route=route, chunks=chunks)
-                    staged_source_chunks = [
-                        {**chunk, "is_active": False} for chunk in expected_chunks
-                    ]
-                    route_scope = dict(scope)
-                    route_scope["document_ids"] = [route.document_id]
-                    route_scope["library_ids"] = []
-                    route_scope["folder_ids"] = []
-                    elasticsearch_index = ElasticsearchBm25Index(
-                        route.elasticsearch_index,
-                        self.elasticsearch_transport,
-                    )
-                    milvus_index = MilvusVectorIndex(
-                        route.milvus_collection,
-                        self.milvus_transport,
-                    )
-                    lexical_kwargs: dict[str, Any] = {
-                        "top_k": self.candidate_k,
-                        "expected_chunks": expected_chunks,
-                        "source_fingerprint_chunks": staged_source_chunks,
-                    }
-                    vector_kwargs: dict[str, Any] = {
-                        "top_k": self.candidate_k,
-                        "min_score": self.vector_min_score,
-                        "expected_chunks": expected_chunks,
-                        "source_fingerprint_chunks": staged_source_chunks,
-                    }
-                    if self.latency_observer is not None:
-                        lexical_kwargs["timing_sink"] = (
-                            elasticsearch_timings.append
-                        )
-                        vector_kwargs["timing_sink"] = milvus_timings.append
-                    lexical_future = executor.submit(
-                        elasticsearch_index.search,
-                        route_queries[route.document_id],
-                        dict(route_scope),
-                        **lexical_kwargs,
-                    )
-                    vector_future = executor.submit(
-                        milvus_index.search,
-                        route_queries[route.document_id],
-                        dict(route_scope),
-                        self.embedding_provider,
-                        **vector_kwargs,
-                    )
-                    lexical = lexical_future.result()
-                    vector = vector_future.result()
-                    self._validate_route_ranking(route, lexical)
-                    self._validate_route_ranking(route, vector)
-                    rankings.extend((lexical, vector))
-                    route_rankings.extend(
-                        (
-                            OnlineRouteCandidateRanking(
-                                route=route,
-                                backend=ELASTICSEARCH_RETRIEVAL_BACKEND,
-                                candidates=tuple(lexical),
-                            ),
-                            OnlineRouteCandidateRanking(
-                                route=route,
-                                backend=MILVUS_RETRIEVAL_BACKEND,
-                                candidates=tuple(vector),
-                            ),
+            if routes:
+                request_embedding_provider = _RequestEmbeddingProvider(
+                    self.embedding_provider
+                )
+                max_workers = min(max(3, len(routes) * 2 + 1), 32)
+                with ThreadPoolExecutor(
+                    max_workers=max_workers,
+                    thread_name_prefix="online-ready-retrieval",
+                ) as executor:
+                    query_embedding_future: Future[_SharedQueryEmbeddings] = (
+                        executor.submit(
+                            self._embed_route_queries,
+                            request_embedding_provider,
+                            route_queries,
                         )
                     )
+                    route_jobs = []
+                    for route in routes:
+                        expected_chunks = self._route_chunks(route=route, chunks=chunks)
+                        staged_source_chunks = [
+                            {**chunk, "is_active": False} for chunk in expected_chunks
+                        ]
+                        route_scope = dict(scope)
+                        route_scope["document_ids"] = [route.document_id]
+                        route_scope["library_ids"] = []
+                        route_scope["folder_ids"] = []
+                        elasticsearch_index = ElasticsearchBm25Index(
+                            route.elasticsearch_index,
+                            self.elasticsearch_transport,
+                        )
+                        milvus_index = MilvusVectorIndex(
+                            route.milvus_collection,
+                            self.milvus_transport,
+                        )
+                        lexical_kwargs: dict[str, Any] = {
+                            "top_k": self.candidate_k,
+                            "expected_chunks": expected_chunks,
+                            "source_fingerprint_chunks": staged_source_chunks,
+                        }
+                        vector_kwargs: dict[str, Any] = {
+                            "top_k": self.candidate_k,
+                            "min_score": self.vector_min_score,
+                            "expected_chunks": expected_chunks,
+                            "source_fingerprint_chunks": staged_source_chunks,
+                        }
+                        if self.latency_observer is not None:
+                            lexical_kwargs["timing_sink"] = (
+                                elasticsearch_timings.append
+                            )
+                            vector_kwargs["timing_sink"] = milvus_timings.append
+                        route_question = route_queries[route.document_id]
+                        lexical_future = executor.submit(
+                            elasticsearch_index.search,
+                            route_question,
+                            dict(route_scope),
+                            **lexical_kwargs,
+                        )
+                        vector_future = executor.submit(
+                            self._search_vector_route,
+                            milvus_index,
+                            route_question,
+                            dict(route_scope),
+                            request_embedding_provider,
+                            query_embedding_future,
+                            vector_kwargs,
+                        )
+                        route_jobs.append((route, lexical_future, vector_future))
+
+                    shared_embeddings = query_embedding_future.result()
+                    query_embedding_latency_ms = shared_embeddings.latency_ms
+                    for route, lexical_future, vector_future in route_jobs:
+                        lexical = lexical_future.result()
+                        vector = vector_future.result()
+                        self._validate_route_ranking(route, lexical)
+                        self._validate_route_ranking(route, vector)
+                        rankings.extend((lexical, vector))
+                        route_rankings.extend(
+                            (
+                                OnlineRouteCandidateRanking(
+                                    route=route,
+                                    backend=ELASTICSEARCH_RETRIEVAL_BACKEND,
+                                    candidates=tuple(lexical),
+                                ),
+                                OnlineRouteCandidateRanking(
+                                    route=route,
+                                    backend=MILVUS_RETRIEVAL_BACKEND,
+                                    candidates=tuple(vector),
+                                ),
+                            )
+                        )
             backend_parallel_wall_latency_ms = (
                 time.perf_counter() - backend_parallel_wall_started
             ) * 1000
@@ -530,9 +614,12 @@ class OnlineVersionRrfRetriever:
                     milvus_validation_work_latency_ms=sum(
                         timing.validation_latency_ms for timing in milvus_timings
                     ),
-                    query_embedding_work_latency_ms=sum(
-                        timing.query_embedding_latency_ms
-                        for timing in milvus_timings
+                    query_embedding_work_latency_ms=(
+                        query_embedding_latency_ms
+                        + sum(
+                            timing.query_embedding_latency_ms
+                            for timing in milvus_timings
+                        )
                     ),
                     milvus_ann_search_work_latency_ms=sum(
                         timing.ann_search_latency_ms for timing in milvus_timings
@@ -551,6 +638,46 @@ class OnlineVersionRrfRetriever:
                 )
             )
         return fused
+
+    @staticmethod
+    def _embed_route_queries(
+        provider: EmbeddingProvider,
+        route_queries: Mapping[str, str],
+    ) -> _SharedQueryEmbeddings:
+        unique_queries = tuple(dict.fromkeys(route_queries.values()))
+        started = time.perf_counter()
+        vectors = provider.embed(unique_queries)
+        if len(vectors) != len(unique_queries):
+            raise ValueError("embedding count does not match online route queries")
+        return _SharedQueryEmbeddings(
+            vectors_by_query={
+                question: vector
+                for question, vector in zip(unique_queries, vectors, strict=True)
+            },
+            latency_ms=(time.perf_counter() - started) * 1000,
+        )
+
+    @staticmethod
+    def _search_vector_route(
+        index: MilvusVectorIndex,
+        question: str,
+        scope: Mapping[str, Any],
+        provider: EmbeddingProvider,
+        query_embedding_future: Future[_SharedQueryEmbeddings],
+        vector_kwargs: Mapping[str, Any],
+    ) -> list[RankedChunk]:
+        shared_embeddings = query_embedding_future.result()
+        try:
+            query_vector = shared_embeddings.vectors_by_query[question]
+        except KeyError as exc:
+            raise ValueError("online route query embedding is missing") from exc
+        return index.search(
+            question,
+            scope,
+            provider,
+            query_vector=query_vector,
+            **dict(vector_kwargs),
+        )
 
     def retrieve(
         self,

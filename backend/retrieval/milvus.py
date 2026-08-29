@@ -567,6 +567,7 @@ class MilvusVectorIndex:
         expected_chunks: Sequence[Mapping[str, Any]] | None = None,
         source_fingerprint_chunks: Sequence[Mapping[str, Any]] | None = None,
         timing_sink: Callable[[MilvusSearchLatencyBreakdown], None] | None = None,
+        query_vector: Sequence[float] | None = None,
     ) -> list[RankedChunk]:
         if not question.strip():
             raise ValueError("question must not be blank")
@@ -591,7 +592,11 @@ class MilvusVectorIndex:
         validation_latency_ms = (time.perf_counter() - validation_started) * 1000
         embedding_started = time.perf_counter()
         try:
-            vector = _normalize(provider.embed([question])[0])
+            vector = _normalize(
+                provider.embed([question])[0]
+                if query_vector is None
+                else query_vector
+            )
         except Exception as exc:
             raise MilvusSearchStageError("QUERY_EMBEDDING") from exc
         query_embedding_latency_ms = (

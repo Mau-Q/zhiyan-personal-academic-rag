@@ -624,7 +624,9 @@ RRF、Reranker、比较拆分、路由覆盖和 NLI 都有独立 Gate。组件�
 
 以下方向只能在新 Gate 中评估，不能视为当前承诺：
 
-- 优化 Query Embedding 与 READY 路由解析，独立偿还 300 ms 性能债；
+- 优化 Query Embedding 与 READY 路由解析，独立偿还 300 ms 性能债；当前已落地本地
+  执行层硬化，但远程 300 ms Gate 尚未重跑，详见
+  [`在线检索性能硬化记录`](ONLINE_RETRIEVAL_PERFORMANCE_HARDENING.md)；
 - 在不放宽事实源与 ACL 的前提下接入正式 MinIO 和 OCR；
 - 已激活一次只读定位：观察当前正式 `candidate_k=20` 的 ES/Milvus fusion 输入、
   完整 RRF 序与最终 Top-3，20 之外保持未知；在线用户 Run 返回前不选择新的

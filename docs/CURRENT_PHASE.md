@@ -281,6 +281,15 @@ Phase ID：`rag-core-final-freeze`
 
 fixed reranker Top-20 与 Top-50 screening 均为 `SCREENING_WEAKENED / 0/3`；扩大 exposure 没有恢复 bilateral Top-3，因此只将现有 fixed reranker family 对冻结 3 条排序失败记为 `WEAKENED`。Phase 3 retrieval/ranking optimization 为 `STOP`，`NEXT_EXPERIMENT=NONE`。cross-document / coverage-aware ranking 与 deep candidate retrieval 保持 `HOLD`，分别只按 `PD-071` 的“候选集已有 Evidence 但 Top-k 系统性单侧坍缩并造成实质 QA 失败”以及“当前候选边界反复缺失实质相关 Evidence 并成为 QA 失败源”条件重开；两者均还须服务当前 Primary Objective。
 
+## Owner-authorized technical hardening
+
+本轮用户明确授权只推进仓库内部可完成的性能硬化：READY route 的 ES/Milvus 只读
+校验并行、单请求共享 Query Embedding，以及多 route 后端任务并行提交。该变更不
+重开 Phase 3 排序优化，不改变默认 RRF、候选边界、ACL、READY 或检索后重验，也
+不改变 Competition Pack 的冻结身份。代码合同和本地回归可以在仓库内完成；历史
+`504.71613 ms` 与 `300 ms` 的远程性能结论保持不变，新的 300 ms 结果必须由独立
+目标硬件 Gate 重新测量后才能更新。
+
 Competition Pack V1 的 Windows 用户复现已在 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS；独立 closeout 又对实际脱敏产物、`d775dab → fd5a517` 运行时等价性与精确提交 GitHub clean-checkout 证据完成复核。因此当前记为 `RAG_COMPETITION_BASELINE_V1_FROZEN / RAG_OWNER_SCOPE_DONE_ENOUGH`。这不改写 Phase 3 `PARTIAL / NO_PROMOTION / STOP`、Phase 4 `PARTIAL / AUDIT_ONLY`、300 ms known/deferred 债务或正式 Acceptance 边界。
 
 ## Next gate

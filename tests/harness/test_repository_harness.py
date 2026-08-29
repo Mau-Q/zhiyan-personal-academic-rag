@@ -248,6 +248,33 @@ class RepositoryHarnessTests(unittest.TestCase):
         for heading in ("## 输入", "## 验收", "## Git"):
             self.assertIn(heading, text)
 
+    def test_remote_compose_requires_process_credentials(self):
+        harness.check_remote_configuration_safety()
+        compose = (ROOT / "deploy" / "remote" / "compose.milvus.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            'MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:?set MINIO_ACCESS_KEY}"',
+            compose,
+        )
+        self.assertIn(
+            'MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:?set MINIO_SECRET_KEY}"',
+            compose,
+        )
+
+    def test_remote_compose_hardcoded_credentials_fail_closed(self):
+        with isolated_tracked_repository() as repository:
+            compose_path = repository / "deploy" / "remote" / "compose.milvus.yml"
+            compose = compose_path.read_text(encoding="utf-8")
+            compose = compose.replace(
+                'MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:?set MINIO_ACCESS_KEY}"',
+                'MINIO_ACCESS_KEY: "literal-value"',
+            )
+            compose_path.write_text(compose, encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "MINIO_ACCESS_KEY"):
+                harness.check_remote_configuration_safety()
+
     def test_source_authority_identity_resolves_from_machine_state(self):
         state = _read_json(ROOT / "machine" / "project_state.json")
         authority = state["source_authority"]
