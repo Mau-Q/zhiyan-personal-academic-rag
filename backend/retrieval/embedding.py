@@ -11,6 +11,9 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 
+_LEGACY_SINGLE_INPUT_MAX_CHARS = 2048
+
+
 class EmbeddingServiceError(ValueError):
     """Raised when the configured embedding service cannot prove a usable model."""
 
@@ -103,24 +106,49 @@ class OllamaEmbeddingProvider:
             return []
         if any(not isinstance(text, str) or not text.strip() for text in texts):
             raise ValueError("embedding input texts must be non-blank strings")
+        if len(texts) == 1 and len(texts[0]) <= _LEGACY_SINGLE_INPUT_MAX_CHARS:
+            return self._embed_single_legacy(texts[0])
         vectors: list[list[float]] = []
         for start in range(0, len(texts), self.batch_size):
             batch = list(texts[start : start + self.batch_size])
             payload = self._request(
                 "/api/embed",
-                {"model": self.model, "input": batch, "truncate": True},
+                {
+                    "model": self.model,
+                    "input": batch,
+                    "truncate": True,
+                },
             )
             embeddings = payload.get("embeddings")
             if not isinstance(embeddings, list) or len(embeddings) != len(batch):
                 raise EmbeddingServiceError("Ollama returned an invalid embeddings batch")
             for vector in embeddings:
-                if not isinstance(vector, list) or not vector:
-                    raise EmbeddingServiceError("Ollama returned an empty embedding vector")
-                converted = [float(value) for value in vector]
-                if not all(math.isfinite(value) for value in converted):
-                    raise EmbeddingServiceError("Ollama returned a non-finite embedding value")
-                vectors.append(converted)
+                vectors.append(self._convert_vector(vector))
         dimensions = {len(vector) for vector in vectors}
         if len(dimensions) != 1:
             raise EmbeddingServiceError("Ollama returned inconsistent embedding dimensions")
         return vectors
+
+    def _embed_single_legacy(self, text: str) -> list[list[float]]:
+        """Use Ollama's single-input path after the caller's safe length guard."""
+
+        payload = self._request(
+            "/api/embeddings",
+            {
+                "model": self.model,
+                "prompt": text,
+            },
+        )
+        return [self._convert_vector(payload.get("embedding"))]
+
+    @staticmethod
+    def _convert_vector(vector: Any) -> list[float]:
+        if not isinstance(vector, list) or not vector:
+            raise EmbeddingServiceError("Ollama returned an empty embedding vector")
+        try:
+            converted = [float(value) for value in vector]
+        except (TypeError, ValueError) as exc:
+            raise EmbeddingServiceError("Ollama returned an invalid embedding vector") from exc
+        if not all(math.isfinite(value) for value in converted):
+            raise EmbeddingServiceError("Ollama returned a non-finite embedding value")
+        return converted
