@@ -56,6 +56,14 @@ Milvus 路由校验现在并行取得 Collection 描述、Embedding 模型身份
 快照，再按原顺序执行相同的字段、向量指纹、数量和 active 状态校验。并行只改变
 只读校验的等待方式，不改变任何写入、生命周期、身份或失败关闭语义。
 
+### 2.7 同请求复用已验证路由证明
+
+READY 物理校验完成后，会把本次请求内已经验证的 ES/Milvus identity metadata
+传给后端搜索。后端仍对 PostgreSQL Chunk snapshot 做本地 source fingerprint 和
+数量核对，但不重复发起同一物理路由的 identity/model/逻辑行验证请求；如果证明
+缺失则自动回退完整后端校验。证明不跨请求缓存，检索后 PostgreSQL revalidation
+和候选身份检查保持不变。
+
 ## 3. 细分观测与验证边界
 
 本轮还把 READY 路由解析的总耗时拆成可脱敏的子阶段：PostgreSQL READY 查询、
@@ -95,7 +103,14 @@ PostgreSQL 或 RRF。该结果是新的远程失败证据，不是 300 ms 达标
 Reranker P95 为 `132.377305 ms`，因此仍以同一组合 P95 门禁失败。READY 物理校验
 墙钟 P95 为 `134.69246 ms`，Milvus 物理校验工作仍为 `133.720935 ms`；后端并行
 墙钟降至 `98.26941 ms`。这证明前一轮的预热与 ES 请求合并有效，但下一瓶颈仍是
-Milvus 路由校验和组合 Reranker 预算。
+Milvus 路由校验、Embedding 尾部等待和组合 Reranker 预算。
+
+随后用户在提交 `b2cff12b502b82d1c6a7636c647d7cb96bfc9c26`、Run ID
+`online_retrieval_hardening_04` 上完成 30/30 `APPLIED` 观测。阶段合同仍为 `PASS`，
+`base retrieval P95=211.641675 ms`、`combined P95=341.631065 ms`、Reranker
+P95 为 `132.96753 ms`；READY 物理校验墙钟 P95 降至 `118.789225 ms`，Milvus
+物理校验工作降至 `117.81636 ms`，后端并行墙钟为 `101.249855 ms`。清理 3/3、
+删除后 403、无 fallback/扩张/候选越界均通过；300 ms 仍未达标。
 
 ## 5. 明确未处理的事项
 

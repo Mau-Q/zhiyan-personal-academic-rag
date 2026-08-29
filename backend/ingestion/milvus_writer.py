@@ -6,7 +6,7 @@ import json
 import math
 import re
 import struct
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from hashlib import sha256
 from typing import Any
@@ -208,6 +208,7 @@ class MilvusVersionIndexWriter:
         owner_id: str,
         document_id: str,
         document_version_id: str,
+        metadata_sink: Callable[[Mapping[str, str]], None] | None = None,
     ) -> str:
         """Return the collection route only when identity and active rows match."""
 
@@ -242,6 +243,8 @@ class MilvusVersionIndexWriter:
                 allow_incomplete=False,
                 expected_active=True,
             )
+            if metadata_sink is not None:
+                metadata_sink(metadata)
         except MilvusIndexNotReadyError:
             raise
         except Exception as exc:

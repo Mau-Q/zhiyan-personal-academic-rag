@@ -116,6 +116,26 @@ class ElasticsearchRetrievalTests(unittest.TestCase):
         with self.assertRaisesRegex(ElasticsearchIndexNotReadyError, "query_mode"):
             self.index.inspect()
 
+    def test_verified_route_metadata_skips_duplicate_validation_requests(self):
+        self.transport.search_hits = [
+            {"_score": 1.0, "_source": self.chunks[0]},
+        ]
+        self.transport.calls.clear()
+
+        ranking = self.index.search(
+            "hybrid retrieval",
+            self.scope,
+            expected_chunks=self.chunks,
+            source_fingerprint_chunks=self.chunks,
+            verified_metadata=self.transport.metadata,
+        )
+
+        self.assertEqual(ranking[0].chunk["chunk_id"], self.chunks[0]["chunk_id"])
+        self.assertEqual(
+            [path for _, path, _, _ in self.transport.calls],
+            ["/fixture-chunks-v1/_search"],
+        )
+
     def test_online_payload_can_verify_the_staged_source_fingerprint(self):
         staged = [{**chunk, "is_active": False} for chunk in self.chunks]
         online = [{**chunk, "is_active": True} for chunk in self.chunks]

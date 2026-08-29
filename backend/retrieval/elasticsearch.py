@@ -345,16 +345,22 @@ class ElasticsearchBm25Index:
 
     def verify_source(self, chunks: Sequence[Mapping[str, Any]]) -> dict[str, str]:
         metadata = self.inspect()
+        self._verify_source_metadata(metadata, chunks)
+        return metadata
+
+    @staticmethod
+    def _verify_source_metadata(
+        metadata: Mapping[str, str],
+        chunks: Sequence[Mapping[str, Any]],
+    ) -> None:
         if metadata.get("source_chunks_sha256") != chunks_fingerprint(chunks):
             raise ElasticsearchIndexNotReadyError(
                 "Elasticsearch index source fingerprint does not match chunks"
             )
-        count = self.transport.request("GET", f"{self.path}/_count").get("count")
-        if count != len(chunks) or metadata.get("chunk_count") != str(len(chunks)):
+        if metadata.get("chunk_count") != str(len(chunks)):
             raise ElasticsearchIndexNotReadyError(
                 "Elasticsearch index chunk count does not match chunks"
             )
-        return metadata
 
     def search(
         self,
@@ -367,6 +373,7 @@ class ElasticsearchBm25Index:
         timing_sink: (
             Callable[[ElasticsearchSearchLatencyBreakdown], None] | None
         ) = None,
+        verified_metadata: Mapping[str, str] | None = None,
     ) -> list[RankedChunk]:
         if not question.strip():
             raise ValueError("question must not be blank")
@@ -380,7 +387,10 @@ class ElasticsearchBm25Index:
         )
         validation_started = time.perf_counter()
         if fingerprint_chunks is not None:
-            self.verify_source(fingerprint_chunks)
+            if verified_metadata is None:
+                self.verify_source(fingerprint_chunks)
+            else:
+                self._verify_source_metadata(verified_metadata, fingerprint_chunks)
         validation_latency_ms = (time.perf_counter() - validation_started) * 1000
         payload = {
             "size": top_k,

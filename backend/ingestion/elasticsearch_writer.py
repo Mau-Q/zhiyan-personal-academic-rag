@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 import urllib.parse
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from hashlib import sha256
 from typing import Any, Protocol
 
@@ -172,6 +172,7 @@ class ElasticsearchVersionIndexWriter:
         owner_id: str,
         document_id: str,
         document_version_id: str,
+        metadata_sink: Callable[[Mapping[str, str]], None] | None = None,
     ) -> str:
         """Return the physical route only when every owned Chunk is active."""
 
@@ -201,6 +202,8 @@ class ElasticsearchVersionIndexWriter:
             raise ElasticsearchIndexNotReadyError(
                 "Elasticsearch online version is not fully active"
             )
+        if metadata_sink is not None:
+            metadata_sink(metadata)
         return index_name
 
     def deactivate_version(self, *, owner_id: str, document_version_id: str) -> None:

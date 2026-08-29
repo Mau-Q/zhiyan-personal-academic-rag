@@ -61,6 +61,7 @@ class VersionRouteInspector(Protocol):
         owner_id: str,
         document_id: str,
         document_version_id: str,
+        metadata_sink: Callable[[Mapping[str, str]], None] | None = None,
     ) -> str: ...
 
 
@@ -162,6 +163,8 @@ class OnlineVersionRoute:
     document_version_id: str
     elasticsearch_index: str
     milvus_collection: str
+    elasticsearch_verification_metadata: tuple[tuple[str, str], ...] = ()
+    milvus_verification_metadata: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -228,10 +231,21 @@ class PostgresReadyRouteResolver:
     def _verify_physical_route(
         inspector: VersionRouteInspector,
         route_kwargs: Mapping[str, Any],
-    ) -> tuple[str, float]:
+        metadata_holder: list[Mapping[str, str]],
+    ) -> tuple[str, float, tuple[tuple[str, str], ...]]:
         started = time.perf_counter()
-        route = inspector.verify_online_version(**dict(route_kwargs))
-        return route, (time.perf_counter() - started) * 1000
+        route = inspector.verify_online_version(
+            **dict(route_kwargs),
+            metadata_sink=metadata_holder.append,
+        )
+        if len(metadata_holder) > 1:
+            raise ValueError("online physical route verification metadata is duplicated")
+        metadata = (
+            tuple(sorted((str(key), str(value)) for key, value in metadata_holder[0].items()))
+            if metadata_holder
+            else ()
+        )
+        return route, (time.perf_counter() - started) * 1000, metadata
 
     def resolve(
         self,
@@ -319,8 +333,8 @@ class PostgresReadyRouteResolver:
                 verification_futures: dict[
                     str,
                     tuple[
-                        Future[tuple[str, float]],
-                        Future[tuple[str, float]],
+                        Future[tuple[str, float, tuple[tuple[str, str], ...]]],
+                        Future[tuple[str, float, tuple[tuple[str, str], ...]]],
                     ],
                 ] = {}
                 for document_id in ordered_document_ids:
@@ -335,11 +349,13 @@ class PostgresReadyRouteResolver:
                             self._verify_physical_route,
                             self.elasticsearch,
                             route_kwargs,
+                            [],
                         ),
                         executor.submit(
                             self._verify_physical_route,
                             self.milvus,
                             route_kwargs,
+                            [],
                         ),
                     )
 
@@ -348,10 +364,14 @@ class PostgresReadyRouteResolver:
                     elasticsearch_future, milvus_future = verification_futures[
                         document_id
                     ]
-                    elasticsearch_index, elasticsearch_latency_ms = (
-                        elasticsearch_future.result()
+                    (
+                        elasticsearch_index,
+                        elasticsearch_latency_ms,
+                        elasticsearch_metadata,
+                    ) = elasticsearch_future.result()
+                    milvus_collection, milvus_latency_ms, milvus_metadata = (
+                        milvus_future.result()
                     )
-                    milvus_collection, milvus_latency_ms = milvus_future.result()
                     elasticsearch_verification_work_latency_ms += (
                         elasticsearch_latency_ms
                     )
@@ -363,6 +383,8 @@ class PostgresReadyRouteResolver:
                             document_version_id=version.document_version_id,
                             elasticsearch_index=elasticsearch_index,
                             milvus_collection=milvus_collection,
+                            elasticsearch_verification_metadata=elasticsearch_metadata,
+                            milvus_verification_metadata=milvus_metadata,
                         )
                     )
         except Exception as exc:
@@ -626,6 +648,14 @@ class OnlineVersionRrfRetriever:
                             "expected_chunks": expected_chunks,
                             "source_fingerprint_chunks": staged_source_chunks,
                         }
+                        if route.elasticsearch_verification_metadata:
+                            lexical_kwargs["verified_metadata"] = dict(
+                                route.elasticsearch_verification_metadata
+                            )
+                        if route.milvus_verification_metadata:
+                            vector_kwargs["verified_metadata"] = dict(
+                                route.milvus_verification_metadata
+                            )
                         if self.latency_observer is not None:
                             lexical_kwargs["timing_sink"] = (
                                 elasticsearch_timings.append

@@ -568,6 +568,7 @@ class MilvusVectorIndex:
         source_fingerprint_chunks: Sequence[Mapping[str, Any]] | None = None,
         timing_sink: Callable[[MilvusSearchLatencyBreakdown], None] | None = None,
         query_vector: Sequence[float] | None = None,
+        verified_metadata: Mapping[str, str] | None = None,
     ) -> list[RankedChunk]:
         if not question.strip():
             raise ValueError("question must not be blank")
@@ -576,7 +577,23 @@ class MilvusVectorIndex:
         total_started = time.perf_counter()
         validation_started = time.perf_counter()
         try:
-            metadata = self.verify_provider(provider)
+            if verified_metadata is None:
+                metadata = self.verify_provider(provider)
+            else:
+                metadata = {
+                    str(key): str(value) for key, value in verified_metadata.items()
+                }
+                if not all(
+                    metadata.get(key)
+                    for key in (
+                        "source_chunks_sha256",
+                        "chunk_count",
+                        "embedding_dimension",
+                    )
+                ):
+                    raise MilvusIndexNotReadyError(
+                        "verified Milvus route metadata is incomplete"
+                    )
             fingerprint_chunks = (
                 source_fingerprint_chunks
                 if source_fingerprint_chunks is not None

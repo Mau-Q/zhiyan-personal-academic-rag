@@ -210,6 +210,35 @@ class ReadyRouteResolverTests(unittest.TestCase):
             ],
         )
 
+    def test_ready_route_verification_metadata_is_attached_to_route(self):
+        class MetadataRouteInspector(FakeRouteInspector):
+            def verify_online_version(self, **kwargs):
+                metadata_sink = kwargs.pop("metadata_sink")
+                metadata_sink(
+                    {
+                        "source_chunks_sha256": "a" * 64,
+                        "chunk_count": "1",
+                    }
+                )
+                return super().verify_online_version(**kwargs)
+
+        resolver = PostgresReadyRouteResolver(
+            repository=FakeReadyRepository([ready_version()]),
+            elasticsearch=MetadataRouteInspector("es"),
+            milvus=MetadataRouteInspector("milvus"),
+        )
+
+        routes = resolver.resolve(owner_id=OWNER_ID, document_ids=[])
+
+        self.assertEqual(
+            routes[0].elasticsearch_verification_metadata,
+            (("chunk_count", "1"), ("source_chunks_sha256", "a" * 64)),
+        )
+        self.assertEqual(
+            routes[0].milvus_verification_metadata,
+            (("chunk_count", "1"), ("source_chunks_sha256", "a" * 64)),
+        )
+
     def test_ready_route_timing_sink_reports_postgres_and_physical_components(self):
         observations: list[OnlineReadyRouteLatencyBreakdown] = []
         resolver = PostgresReadyRouteResolver(

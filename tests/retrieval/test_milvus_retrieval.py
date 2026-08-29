@@ -158,6 +158,24 @@ class MilvusVectorRetrievalTests(unittest.TestCase):
         with self.assertRaisesRegex(MilvusIndexNotReadyError, "model identity"):
             self.index.verify_provider(FakeEmbeddingProvider(digest="sha256:changed"))
 
+    def test_verified_route_metadata_skips_duplicate_validation_requests(self):
+        class FailingIdentityProvider(FakeEmbeddingProvider):
+            def identity(self):
+                raise AssertionError("verified route must bypass duplicate identity lookup")
+
+        ranking = self.index.search(
+            "How are candidates combined?",
+            self.scope,
+            FailingIdentityProvider(),
+            expected_chunks=self.chunks,
+            source_fingerprint_chunks=self.chunks,
+            query_vector=[1.0, 0.0, 0.0, 0.0],
+            verified_metadata=self.metadata,
+        )
+
+        self.assertEqual(ranking[0].chunk["chunk_id"], "chunk_fixture_001")
+        self.assertEqual(self.transport.last_filter.startswith("is_active == true"), True)
+
     def test_online_payload_can_verify_the_staged_source_fingerprint(self):
         staged = [{**chunk, "is_active": False} for chunk in self.chunks]
         online = [{**chunk, "is_active": True} for chunk in self.chunks]

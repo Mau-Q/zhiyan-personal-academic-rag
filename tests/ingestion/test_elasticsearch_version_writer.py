@@ -348,12 +348,16 @@ class ElasticsearchVersionIndexWriterTests(unittest.TestCase):
         )
         calls_before = len(self.transport.calls)
 
+        metadata: list[Mapping[str, str]] = []
         self.writer.verify_online_version(
             owner_id=OWNER_ID,
             document_id=DOCUMENT_ID,
             document_version_id=VERSION_ID,
+            metadata_sink=metadata.append,
         )
 
+        self.assertEqual(len(metadata), 1)
+        self.assertEqual(metadata[0]["chunk_count"], "2")
         online_calls = self.transport.calls[calls_before:]
         self.assertEqual(
             [(method, path) for method, path, _, _ in online_calls],

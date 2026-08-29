@@ -233,13 +233,17 @@ class MilvusVersionIndexWriterTests(unittest.TestCase):
             document_version_id=VERSION_ID,
         )
 
+        metadata: list[Mapping[str, str]] = []
         route = self.writer.verify_online_version(
             owner_id=OWNER_ID,
             document_id=DOCUMENT_ID,
             document_version_id=VERSION_ID,
+            metadata_sink=metadata.append,
         )
 
         self.assertEqual(route, name)
+        self.assertEqual(len(metadata), 1)
+        self.assertEqual(metadata[0]["chunk_count"], "2")
         row = self.transport.collections[name]["rows"]["chunk_001"]
         row["is_active"] = False
         row["payload"]["is_active"] = False
