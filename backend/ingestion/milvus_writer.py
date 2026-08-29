@@ -7,11 +7,12 @@ import math
 import re
 import struct
 from collections.abc import Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from hashlib import sha256
 from typing import Any
 
 from backend.ingestion.index_lifecycle import IndexBackend, IndexWriteReceipt
-from backend.retrieval.embedding import EmbeddingProvider
+from backend.retrieval.embedding import EmbeddingModelIdentity, EmbeddingProvider
 from backend.retrieval.milvus import (
     COLLECTION_SCHEMA_VERSION,
     EXPECTED_FIELDS,
@@ -215,12 +216,31 @@ class MilvusVersionIndexWriter:
             document_version_id=document_version_id,
         )
         try:
-            metadata = self._inspect_identity(
-                collection_name=collection_name,
-                owner_id=owner_id,
-                document_id=document_id,
-                document_version_id=document_version_id,
-                verify_provider=True,
+            with ThreadPoolExecutor(
+                max_workers=3,
+                thread_name_prefix="milvus-online-route-verification",
+            ) as executor:
+                description_future = executor.submit(
+                    self.transport.describe_collection,
+                    collection_name,
+                )
+                provider_identity_future = executor.submit(self.provider.identity)
+                rows_future = executor.submit(self._query_rows, collection_name)
+                metadata = self._inspect_identity(
+                    collection_name=collection_name,
+                    owner_id=owner_id,
+                    document_id=document_id,
+                    document_version_id=document_version_id,
+                    verify_provider=True,
+                    description=description_future.result(),
+                    provider_identity=provider_identity_future.result(),
+                )
+                rows = rows_future.result()
+            self._verify_lifecycle_rows(
+                rows=rows,
+                metadata=metadata,
+                allow_incomplete=False,
+                expected_active=True,
             )
         except MilvusIndexNotReadyError:
             raise
@@ -228,12 +248,6 @@ class MilvusVersionIndexWriter:
             raise MilvusIndexNotReadyError(
                 "Milvus online version collection does not exist or is unavailable"
             ) from exc
-        self._verify_lifecycle_rows(
-            rows=self._query_rows(collection_name),
-            metadata=metadata,
-            allow_incomplete=False,
-            expected_active=True,
-        )
         return collection_name
 
     def deactivate_version(self, *, owner_id: str, document_version_id: str) -> None:
@@ -327,8 +341,11 @@ class MilvusVersionIndexWriter:
         source_sha256: str | None = None,
         expected_count: int | None = None,
         verify_provider: bool = False,
+        description: Mapping[str, Any] | None = None,
+        provider_identity: EmbeddingModelIdentity | None = None,
     ) -> dict[str, str]:
-        description = self.transport.describe_collection(collection_name)
+        if description is None:
+            description = self.transport.describe_collection(collection_name)
         metadata = _parse_description(description.get("description"))
         expected = {
             "schema_version": COLLECTION_SCHEMA_VERSION,
@@ -354,7 +371,11 @@ class MilvusVersionIndexWriter:
         if expected_count is not None:
             expected["chunk_count"] = str(expected_count)
         if verify_provider:
-            identity = self.provider.identity()
+            identity = (
+                provider_identity
+                if provider_identity is not None
+                else self.provider.identity()
+            )
             expected.update(
                 {
                     "embedding_provider": identity.provider,

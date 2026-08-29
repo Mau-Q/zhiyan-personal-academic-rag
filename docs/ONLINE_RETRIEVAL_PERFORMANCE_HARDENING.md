@@ -50,6 +50,12 @@ Elasticsearch 版本路由校验将 index identity/settings 与总量、owner/ve
 移除可由 `describe_collection` 覆盖的重复存在性探针。校验的身份字段、行/文档
 数量、active 状态、模型身份和失败关闭边界没有放宽。
 
+### 2.6 Milvus 路由校验内部并行
+
+Milvus 路由校验现在并行取得 Collection 描述、Embedding 模型身份和完整逻辑行
+快照，再按原顺序执行相同的字段、向量指纹、数量和 active 状态校验。并行只改变
+只读校验的等待方式，不改变任何写入、生命周期、身份或失败关闭语义。
+
 ## 3. 细分观测与验证边界
 
 本轮还把 READY 路由解析的总耗时拆成可脱敏的子阶段：PostgreSQL READY 查询、
@@ -82,6 +88,14 @@ ES 物理路由校验工作、Milvus 物理路由校验工作，以及两者并�
 Query Embedding P95 为 `155.4337 ms`，后端并行墙钟 P95 为 `189.226644 ms`。
 因此当前主要剩余成本在物理路由校验、Query Embedding 与重复的后端验证工作，而非
 PostgreSQL 或 RRF。该结果是新的远程失败证据，不是 300 ms 达标证据。
+
+随后用户在提交 `e8b095f67081755a0062cd6c689132a7b2ac9616`、Run ID
+`online_retrieval_hardening_03` 上完成 30/30 `APPLIED` 观测。阶段合同仍为 `PASS`，
+但 `combined P95=339.26415 ms`，base retrieval P95 已降至 `208.942905 ms`，
+Reranker P95 为 `132.377305 ms`，因此仍以同一组合 P95 门禁失败。READY 物理校验
+墙钟 P95 为 `134.69246 ms`，Milvus 物理校验工作仍为 `133.720935 ms`；后端并行
+墙钟降至 `98.26941 ms`。这证明前一轮的预热与 ES 请求合并有效，但下一瓶颈仍是
+Milvus 路由校验和组合 Reranker 预算。
 
 ## 5. 明确未处理的事项
 

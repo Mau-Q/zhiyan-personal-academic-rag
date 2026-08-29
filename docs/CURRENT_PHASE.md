@@ -292,9 +292,13 @@ fixed reranker Top-20 与 Top-50 screening 均为 `SCREENING_WEAKENED / 0/3`；�
 Run ID `online_retrieval_hardening_02` 上完成 30/30 `APPLIED` 的新远程观测，
 base retrieval P95 为 `321.346145 ms`、combined P95 为 `451.664035 ms`，
 阶段合同、三路清理和删除后 403 通过，但 300 ms 仍失败。细分结果将 READY
-物理校验、Query Embedding 和后端并行工作确认为当前性能瓶颈；下一次本地硬化已
-增加 READY 后 Query Embedding 与物理校验重叠、ES 聚合计数和 Milvus 重复探针移除，
-尚待新提交和新 Run ID 的 Windows Gate 验证。
+物理校验、Query Embedding 和后端并行工作确认为当前性能瓶颈；随后用户在提交
+`e8b095f67081755a0062cd6c689132a7b2ac9616`、Run ID `online_retrieval_hardening_03`
+上完成 30/30 `APPLIED`，base retrieval P95 降至 `208.942905 ms`、combined P95
+降至 `339.26415 ms`，阶段合同、三路清理和删除后 403 通过，但 300 ms 仍未通过。
+READY 物理校验墙钟 P95 为 `134.69246 ms`，其中 Milvus 工作为 `133.720935 ms`；
+下一次本地硬化已增加 Milvus 描述、模型身份和逻辑行快照的内部并行，尚待新提交
+和新 Run ID 的 Windows Gate 验证。
 
 Competition Pack V1 的 Windows 用户复现已在 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS；独立 closeout 又对实际脱敏产物、`d775dab → fd5a517` 运行时等价性与精确提交 GitHub clean-checkout 证据完成复核。因此当前记为 `RAG_COMPETITION_BASELINE_V1_FROZEN / RAG_OWNER_SCOPE_DONE_ENOUGH`。这不改写 Phase 3 `PARTIAL / NO_PROMOTION / STOP`、Phase 4 `PARTIAL / AUDIT_ONLY`、300 ms known/deferred 债务或正式 Acceptance 边界。
 
