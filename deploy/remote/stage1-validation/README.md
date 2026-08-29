@@ -142,9 +142,10 @@ Because base retrieval alone exceeded the full 300 ms budget, the profiling run
 above did not change retrieval behavior. It recorded P50/P95 for READY route
 resolution, Chunk snapshot loading, Elasticsearch validation/query, Milvus
 validation, query embedding, Milvus ANN search, backend parallel wall time,
-READY revalidation, RRF fusion, and retriever total. Return all stage P95 fields
-in the final sanitized summary. The 300 ms limit and default route remain
-unchanged.
+READY revalidation, RRF fusion, and retriever total. Return all stage P95 fields,
+including the PostgreSQL READY lookup and physical ES/Milvus verification work and
+wall-clock fields, in the final sanitized summary. The 300 ms limit and default route
+remain unchanged.
 
 The profiling run `online_retrieval_profile_20260723_01` subsequently completed
 30/30 `APPLIED` observations with the stage breakdown marked `PASS`, no fallback,

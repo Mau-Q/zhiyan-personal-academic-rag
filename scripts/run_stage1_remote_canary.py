@@ -435,6 +435,18 @@ def _summarize_online_retrieval_latency_breakdowns(
         "ready_route_resolution_latency_ms": (
             "ready_route_resolution_latency_ms"
         ),
+        "ready_postgres_lookup_latency_ms": (
+            "ready_postgres_lookup_latency_ms"
+        ),
+        "ready_physical_verification_wall_latency_ms": (
+            "ready_physical_verification_wall_latency_ms"
+        ),
+        "ready_elasticsearch_verification_work_latency_ms": (
+            "ready_elasticsearch_verification_work_latency_ms"
+        ),
+        "ready_milvus_verification_work_latency_ms": (
+            "ready_milvus_verification_work_latency_ms"
+        ),
         "chunk_snapshot_latency_ms": "chunk_snapshot_latency_ms",
         "elasticsearch_validation_work_latency_ms": (
             "elasticsearch_validation_work_latency_ms"

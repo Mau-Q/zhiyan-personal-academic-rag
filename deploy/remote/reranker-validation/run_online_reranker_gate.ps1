@@ -216,6 +216,10 @@ try {
             base_retrieval_stage_status = $report.online_reranker.base_retrieval_stages.status
             base_retrieval_stage_sample_count = $report.online_reranker.base_retrieval_stages.sample_count
             ready_route_resolution_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.ready_route_resolution_latency_ms_p95
+            ready_postgres_lookup_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.ready_postgres_lookup_latency_ms_p95
+            ready_physical_verification_wall_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.ready_physical_verification_wall_latency_ms_p95
+            ready_elasticsearch_verification_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.ready_elasticsearch_verification_work_latency_ms_p95
+            ready_milvus_verification_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.ready_milvus_verification_work_latency_ms_p95
             chunk_snapshot_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.chunk_snapshot_latency_ms_p95
             elasticsearch_validation_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.elasticsearch_validation_work_latency_ms_p95
             elasticsearch_query_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.elasticsearch_query_work_latency_ms_p95
@@ -293,6 +297,10 @@ try {
         base_retrieval_stage_status = $report.online_reranker.base_retrieval_stages.status
         base_retrieval_stage_sample_count = $report.online_reranker.base_retrieval_stages.sample_count
         ready_route_resolution_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.ready_route_resolution_latency_ms_p95
+        ready_postgres_lookup_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.ready_postgres_lookup_latency_ms_p95
+        ready_physical_verification_wall_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.ready_physical_verification_wall_latency_ms_p95
+        ready_elasticsearch_verification_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.ready_elasticsearch_verification_work_latency_ms_p95
+        ready_milvus_verification_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.ready_milvus_verification_work_latency_ms_p95
         chunk_snapshot_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.chunk_snapshot_latency_ms_p95
         elasticsearch_validation_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.elasticsearch_validation_work_latency_ms_p95
         elasticsearch_query_work_latency_ms_p95 = $report.online_reranker.base_retrieval_stages.elasticsearch_query_work_latency_ms_p95

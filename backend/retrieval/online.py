@@ -99,6 +99,18 @@ class _SharedQueryEmbeddings:
     latency_ms: float
 
 
+@dataclass(frozen=True)
+class OnlineReadyRouteLatencyBreakdown:
+    """Sanitized timings for one PostgreSQL READY route-resolution stage."""
+
+    route_count: int
+    postgres_ready_lookup_latency_ms: float
+    physical_route_verification_wall_latency_ms: float
+    elasticsearch_route_verification_work_latency_ms: float
+    milvus_route_verification_work_latency_ms: float
+    total_latency_ms: float
+
+
 class _RequestEmbeddingProvider:
     """Share model identity and query vectors only within one online request."""
 
@@ -156,6 +168,10 @@ class OnlineRetrievalLatencyBreakdown:
     ready_revalidation_latency_ms: float
     rrf_fusion_latency_ms: float
     total_latency_ms: float
+    ready_postgres_lookup_latency_ms: float = 0.0
+    ready_physical_verification_wall_latency_ms: float = 0.0
+    ready_elasticsearch_verification_work_latency_ms: float = 0.0
+    ready_milvus_verification_work_latency_ms: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -196,9 +212,23 @@ class PostgresReadyRouteResolver:
         self.elasticsearch = elasticsearch
         self.milvus = milvus
 
+    @staticmethod
+    def _verify_physical_route(
+        inspector: VersionRouteInspector,
+        route_kwargs: Mapping[str, Any],
+    ) -> tuple[str, float]:
+        started = time.perf_counter()
+        route = inspector.verify_online_version(**dict(route_kwargs))
+        return route, (time.perf_counter() - started) * 1000
+
     def resolve(
-        self, *, owner_id: str, document_ids: Sequence[str]
+        self,
+        *,
+        owner_id: str,
+        document_ids: Sequence[str],
+        timing_sink: Callable[[OnlineReadyRouteLatencyBreakdown], None] | None = None,
     ) -> tuple[OnlineVersionRoute, ...]:
+        total_started = time.perf_counter()
         requested = tuple(document_ids)
         if not _CONTRACT_ID_PATTERN.fullmatch(owner_id):
             raise OnlineScopeForbiddenError("authenticated owner identity is invalid")
@@ -207,6 +237,7 @@ class PostgresReadyRouteResolver:
             for document_id in requested
         ):
             raise OnlineScopeForbiddenError("requested document scope is invalid")
+        postgres_started = time.perf_counter()
         try:
             versions = self.repository.resolve_online_versions(
                 owner_id=owner_id,
@@ -216,6 +247,9 @@ class PostgresReadyRouteResolver:
             raise OnlineVisibilityUnavailableError(
                 "PostgreSQL READY visibility could not be resolved"
             ) from exc
+        postgres_ready_lookup_latency_ms = (
+            time.perf_counter() - postgres_started
+        ) * 1000
 
         by_document: dict[str, DocumentVersionLifecycleV1] = {}
         for version in versions:
@@ -236,9 +270,25 @@ class PostgresReadyRouteResolver:
 
         ordered_document_ids = tuple(sorted(by_document))
         if not ordered_document_ids:
+            if timing_sink is not None:
+                timing_sink(
+                    OnlineReadyRouteLatencyBreakdown(
+                        route_count=0,
+                        postgres_ready_lookup_latency_ms=(
+                            postgres_ready_lookup_latency_ms
+                        ),
+                        physical_route_verification_wall_latency_ms=0.0,
+                        elasticsearch_route_verification_work_latency_ms=0.0,
+                        milvus_route_verification_work_latency_ms=0.0,
+                        total_latency_ms=(time.perf_counter() - total_started) * 1000,
+                    )
+                )
             return ()
 
         routes: list[OnlineVersionRoute] = []
+        elasticsearch_verification_work_latency_ms = 0.0
+        milvus_verification_work_latency_ms = 0.0
+        physical_verification_started = time.perf_counter()
         try:
             max_workers = min(max(2, len(ordered_document_ids) * 2), 32)
             with ThreadPoolExecutor(
@@ -246,7 +296,11 @@ class PostgresReadyRouteResolver:
                 thread_name_prefix="online-ready-route-verification",
             ) as executor:
                 verification_futures: dict[
-                    str, tuple[Future[str], Future[str]]
+                    str,
+                    tuple[
+                        Future[tuple[str, float]],
+                        Future[tuple[str, float]],
+                    ],
                 ] = {}
                 for document_id in ordered_document_ids:
                     version = by_document[document_id]
@@ -257,12 +311,14 @@ class PostgresReadyRouteResolver:
                     }
                     verification_futures[document_id] = (
                         executor.submit(
-                            self.elasticsearch.verify_online_version,
-                            **route_kwargs,
+                            self._verify_physical_route,
+                            self.elasticsearch,
+                            route_kwargs,
                         ),
                         executor.submit(
-                            self.milvus.verify_online_version,
-                            **route_kwargs,
+                            self._verify_physical_route,
+                            self.milvus,
+                            route_kwargs,
                         ),
                     )
 
@@ -271,19 +327,47 @@ class PostgresReadyRouteResolver:
                     elasticsearch_future, milvus_future = verification_futures[
                         document_id
                     ]
+                    elasticsearch_index, elasticsearch_latency_ms = (
+                        elasticsearch_future.result()
+                    )
+                    milvus_collection, milvus_latency_ms = milvus_future.result()
+                    elasticsearch_verification_work_latency_ms += (
+                        elasticsearch_latency_ms
+                    )
+                    milvus_verification_work_latency_ms += milvus_latency_ms
                     routes.append(
                         OnlineVersionRoute(
                             owner_id=owner_id,
                             document_id=document_id,
                             document_version_id=version.document_version_id,
-                            elasticsearch_index=elasticsearch_future.result(),
-                            milvus_collection=milvus_future.result(),
+                            elasticsearch_index=elasticsearch_index,
+                            milvus_collection=milvus_collection,
                         )
                     )
         except Exception as exc:
             raise OnlineVisibilityUnavailableError(
                 "READY version physical index route could not be verified"
             ) from exc
+        physical_verification_wall_latency_ms = (
+            time.perf_counter() - physical_verification_started
+        ) * 1000
+        if timing_sink is not None:
+            timing_sink(
+                OnlineReadyRouteLatencyBreakdown(
+                    route_count=len(ordered_document_ids),
+                    postgres_ready_lookup_latency_ms=postgres_ready_lookup_latency_ms,
+                    physical_route_verification_wall_latency_ms=(
+                        physical_verification_wall_latency_ms
+                    ),
+                    elasticsearch_route_verification_work_latency_ms=(
+                        elasticsearch_verification_work_latency_ms
+                    ),
+                    milvus_route_verification_work_latency_ms=(
+                        milvus_verification_work_latency_ms
+                    ),
+                    total_latency_ms=(time.perf_counter() - total_started) * 1000,
+                )
+            )
         return tuple(routes)
 
     def revalidate(
@@ -378,7 +462,18 @@ class OnlineVersionRrfRetriever:
             )
         total_started = time.perf_counter()
         ready_route_resolution_started = time.perf_counter()
-        routes = self.resolver.resolve(owner_id=owner_id, document_ids=document_ids)
+        ready_route_latency_breakdowns: list[
+            OnlineReadyRouteLatencyBreakdown
+        ] = []
+        routes = self.resolver.resolve(
+            owner_id=owner_id,
+            document_ids=document_ids,
+            timing_sink=(
+                ready_route_latency_breakdowns.append
+                if self.latency_observer is not None
+                else None
+            ),
+        )
         ready_route_resolution_latency_ms = (
             time.perf_counter() - ready_route_resolution_started
         ) * 1000
@@ -594,6 +689,15 @@ class OnlineVersionRrfRetriever:
                 raise OnlineVisibilityUnavailableError(
                     "online retrieval latency breakdown is incomplete"
                 )
+            if len(ready_route_latency_breakdowns) > 1:
+                raise OnlineVisibilityUnavailableError(
+                    "online READY route latency breakdown is duplicated"
+                )
+            ready_route_breakdown = (
+                ready_route_latency_breakdowns[0]
+                if ready_route_latency_breakdowns
+                else None
+            )
             self.latency_observer(
                 OnlineRetrievalLatencyBreakdown(
                     route_count=len(routes),
@@ -635,6 +739,26 @@ class OnlineVersionRrfRetriever:
                     ),
                     rrf_fusion_latency_ms=rrf_fusion_latency_ms,
                     total_latency_ms=(time.perf_counter() - total_started) * 1000,
+                    ready_postgres_lookup_latency_ms=(
+                        ready_route_breakdown.postgres_ready_lookup_latency_ms
+                        if ready_route_breakdown is not None
+                        else 0.0
+                    ),
+                    ready_physical_verification_wall_latency_ms=(
+                        ready_route_breakdown.physical_route_verification_wall_latency_ms
+                        if ready_route_breakdown is not None
+                        else 0.0
+                    ),
+                    ready_elasticsearch_verification_work_latency_ms=(
+                        ready_route_breakdown.elasticsearch_route_verification_work_latency_ms
+                        if ready_route_breakdown is not None
+                        else 0.0
+                    ),
+                    ready_milvus_verification_work_latency_ms=(
+                        ready_route_breakdown.milvus_route_verification_work_latency_ms
+                        if ready_route_breakdown is not None
+                        else 0.0
+                    ),
                 )
             )
         return fused

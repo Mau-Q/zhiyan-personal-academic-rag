@@ -286,9 +286,10 @@ fixed reranker Top-20 与 Top-50 screening 均为 `SCREENING_WEAKENED / 0/3`；�
 本轮用户明确授权只推进仓库内部可完成的性能硬化：READY route 的 ES/Milvus 只读
 校验并行、单请求共享 Query Embedding，以及多 route 后端任务并行提交。该变更不
 重开 Phase 3 排序优化，不改变默认 RRF、候选边界、ACL、READY 或检索后重验，也
-不改变 Competition Pack 的冻结身份。代码合同和本地回归可以在仓库内完成；历史
-`504.71613 ms` 与 `300 ms` 的远程性能结论保持不变，新的 300 ms 结果必须由独立
-目标硬件 Gate 重新测量后才能更新。
+不改变 Competition Pack 的冻结身份。代码合同和本地回归可以在仓库内完成；READY 路由解析现额外输出 PostgreSQL
+查询、ES/Milvus 物理校验工作和并行墙钟的脱敏分段观测。历史 `504.71613 ms` 与
+`300 ms` 的远程性能结论保持不变，新的 300 ms 结果必须由独立目标硬件 Gate 重新
+测量后才能更新。
 
 Competition Pack V1 的 Windows 用户复现已在 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS；独立 closeout 又对实际脱敏产物、`d775dab → fd5a517` 运行时等价性与精确提交 GitHub clean-checkout 证据完成复核。因此当前记为 `RAG_COMPETITION_BASELINE_V1_FROZEN / RAG_OWNER_SCOPE_DONE_ENOUGH`。这不改写 Phase 3 `PARTIAL / NO_PROMOTION / STOP`、Phase 4 `PARTIAL / AUDIT_ONLY`、300 ms known/deferred 债务或正式 Acceptance 边界。
 

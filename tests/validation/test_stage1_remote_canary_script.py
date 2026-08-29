@@ -343,6 +343,10 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
             OnlineRetrievalLatencyBreakdown(
                 route_count=1,
                 ready_route_resolution_latency_ms=10.0 + position,
+                ready_postgres_lookup_latency_ms=2.0,
+                ready_physical_verification_wall_latency_ms=3.0,
+                ready_elasticsearch_verification_work_latency_ms=4.0,
+                ready_milvus_verification_work_latency_ms=5.0,
                 chunk_snapshot_latency_ms=5.0,
                 elasticsearch_validation_work_latency_ms=15.0,
                 elasticsearch_query_work_latency_ms=20.0,
@@ -373,6 +377,19 @@ class Stage1RemoteCanaryScriptTests(unittest.TestCase):
         self.assertEqual(stages["route_count_min"], 1)
         self.assertEqual(stages["route_count_max"], 1)
         self.assertEqual(stages["query_embedding_work_latency_ms_p95"], 70)
+        self.assertEqual(stages["ready_postgres_lookup_latency_ms_p95"], 2)
+        self.assertEqual(
+            stages["ready_physical_verification_wall_latency_ms_p95"],
+            3,
+        )
+        self.assertEqual(
+            stages["ready_elasticsearch_verification_work_latency_ms_p95"],
+            4,
+        )
+        self.assertEqual(
+            stages["ready_milvus_verification_work_latency_ms_p95"],
+            5,
+        )
         self.assertGreater(stages["retriever_total_latency_ms_p95"], 176)
 
         mismatch = _summarize_online_reranker_observations(

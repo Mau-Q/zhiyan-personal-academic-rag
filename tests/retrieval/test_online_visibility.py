@@ -9,6 +9,7 @@ from backend.retrieval.comparison_decomposition import RouteQueryPlan
 from backend.retrieval.comparison_route_coverage import RouteCoveragePlan
 from backend.retrieval.online import (
     OnlineCandidateLadderObservation,
+    OnlineReadyRouteLatencyBreakdown,
     OnlineRetrievalLatencyBreakdown,
     OnlineScopeForbiddenError,
     OnlineVersionRoute,
@@ -208,6 +209,38 @@ class ReadyRouteResolverTests(unittest.TestCase):
                 ("document_002", "es_version_002", "milvus_version_002"),
             ],
         )
+
+    def test_ready_route_timing_sink_reports_postgres_and_physical_components(self):
+        observations: list[OnlineReadyRouteLatencyBreakdown] = []
+        resolver = PostgresReadyRouteResolver(
+            repository=FakeReadyRepository([ready_version()]),
+            elasticsearch=FakeRouteInspector("es"),
+            milvus=FakeRouteInspector("milvus"),
+        )
+
+        resolver.resolve(
+            owner_id=OWNER_ID,
+            document_ids=[],
+            timing_sink=observations.append,
+        )
+
+        self.assertEqual(len(observations), 1)
+        observation = observations[0]
+        self.assertEqual(observation.route_count, 1)
+        self.assertGreaterEqual(observation.postgres_ready_lookup_latency_ms, 0)
+        self.assertGreaterEqual(
+            observation.physical_route_verification_wall_latency_ms,
+            0,
+        )
+        self.assertGreaterEqual(
+            observation.elasticsearch_route_verification_work_latency_ms,
+            0,
+        )
+        self.assertGreaterEqual(
+            observation.milvus_route_verification_work_latency_ms,
+            0,
+        )
+        self.assertGreaterEqual(observation.total_latency_ms, 0)
 
 
 class StaticResolver:
@@ -876,9 +909,26 @@ class OnlineVersionRrfRetrieverTests(unittest.TestCase):
             milvus_collection="milvus_version_001",
         )
         expected = chunk("document_001", "version_001", 1)
+
+        class TimedResolver(StaticResolver):
+            def resolve(self, **kwargs):
+                timing_sink = kwargs.get("timing_sink")
+                if timing_sink is not None:
+                    timing_sink(
+                        OnlineReadyRouteLatencyBreakdown(
+                            route_count=1,
+                            postgres_ready_lookup_latency_ms=2.0,
+                            physical_route_verification_wall_latency_ms=3.0,
+                            elasticsearch_route_verification_work_latency_ms=4.0,
+                            milvus_route_verification_work_latency_ms=5.0,
+                            total_latency_ms=6.0,
+                        )
+                    )
+                return super().resolve(**kwargs)
+
         observations: list[OnlineRetrievalLatencyBreakdown] = []
         retriever = OnlineVersionRrfRetriever(
-            resolver=StaticResolver([route]),
+            resolver=TimedResolver([route]),
             elasticsearch_transport=RankingTransport(
                 {"es_version_001": [RankedChunk("es", 1, 1.0, expected)]}
             ),
@@ -905,6 +955,19 @@ class OnlineVersionRrfRetrieverTests(unittest.TestCase):
         observation = observations[0]
         self.assertEqual(observation.route_count, 1)
         self.assertEqual(observation.elasticsearch_total_work_latency_ms, 0.3)
+        self.assertEqual(observation.ready_postgres_lookup_latency_ms, 2.0)
+        self.assertEqual(
+            observation.ready_physical_verification_wall_latency_ms,
+            3.0,
+        )
+        self.assertEqual(
+            observation.ready_elasticsearch_verification_work_latency_ms,
+            4.0,
+        )
+        self.assertEqual(
+            observation.ready_milvus_verification_work_latency_ms,
+            5.0,
+        )
         self.assertGreaterEqual(observation.query_embedding_work_latency_ms, 0)
         self.assertEqual(observation.milvus_ann_search_work_latency_ms, 0.6)
         self.assertGreaterEqual(observation.backend_parallel_wall_latency_ms, 0)
