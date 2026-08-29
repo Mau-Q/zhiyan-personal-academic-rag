@@ -73,6 +73,12 @@ class OnlineRerankerRemoteScriptTests(unittest.TestCase):
             "online-fixed-cross-encoder-windows-rtx4090-v1.json",
             self.script,
         )
+        self.assertIn(
+            "online-fixed-cross-encoder-windows-rtx4090-v2-batch20.json",
+            self.script,
+        )
+        self.assertIn("[string]$RerankerConfig =", self.script)
+        self.assertIn("$AllowedRerankerConfigs -notcontains $RerankerConfig", self.script)
         self.assertIn("'--online-reranker-latency-repetitions'", self.script)
         self.assertNotIn("'--generation-model'", self.script)
         self.assertIn("sample_count -lt 30", self.script)
@@ -83,6 +89,7 @@ class OnlineRerankerRemoteScriptTests(unittest.TestCase):
     def test_summary_is_sanitized_and_lifecycle_closed(self) -> None:
         for field in (
             "head_commit",
+            "reranker_config",
             "model_revision",
             "model_snapshot_sha256",
             "sample_count",

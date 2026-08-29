@@ -26,6 +26,12 @@ QUALITY_CONFIG_PATH = (
     / "reranker"
     / "fixed-cross-encoder-windows-rtx4090-v1.json"
 )
+PERFORMANCE_V2_CONFIG_PATH = (
+    ROOT
+    / "evaluation"
+    / "reranker"
+    / "online-fixed-cross-encoder-windows-rtx4090-v2-batch20.json"
+)
 OWNER_ID = "owner_001"
 
 
@@ -81,6 +87,20 @@ class OnlineFixedCrossEncoderRerankerTests(unittest.TestCase):
             self.config.failure_policy,
             "FALLBACK_TO_AUTHORIZED_RRF",
         )
+
+    def test_online_batch20_variant_keeps_model_and_candidate_identity(self) -> None:
+        config = load_online_reranker_config(PERFORMANCE_V2_CONFIG_PATH)
+
+        self.assertEqual(config.candidate_top_k, 20)
+        self.assertEqual(config.model["model_id"], self.config.model["model_id"])
+        self.assertEqual(config.model["revision"], self.config.model["revision"])
+        self.assertEqual(
+            config.model["snapshot_sha256"],
+            self.config.model["snapshot_sha256"],
+        )
+        self.assertEqual(config.model["max_length"], 512)
+        self.assertEqual(config.model["batch_size"], 20)
+        self.assertEqual(config.model["input_template"], "question_title_section_text_v1")
 
     def test_reranks_only_authorized_candidates_with_frozen_template(self) -> None:
         scorer = RecordingScorer([0.1, 0.9, 0.4])

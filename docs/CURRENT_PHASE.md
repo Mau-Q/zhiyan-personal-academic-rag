@@ -301,9 +301,14 @@ READY 物理校验墙钟 P95 为 `134.69246 ms`，其中 Milvus 工作为 `133.7
 `online_retrieval_hardening_04` 上完成 30/30 `APPLIED`，base retrieval P95 为
 `211.641675 ms`、combined P95 为 `341.631065 ms`，阶段合同、三路清理和删除后
 403 通过，但 300 ms 仍未通过。READY 物理校验墙钟降至 `118.789225 ms`、Milvus
-工作降至 `117.81636 ms`；下一次本地硬化已增加同请求路由证明复用，跳过重复的
-ES/Milvus 后端身份校验但保留本地 source fingerprint 核对，尚待新提交和新 Run ID
-的 Windows Gate 验证。
+工作降至 `117.81636 ms`；随后用户在提交 `30fc0c27ba64a8cd1f1b40be1b759c3afb3d5754`、
+Run ID `online_retrieval_hardening_05` 上完成 30/30 `APPLIED`，base retrieval
+P50/P95 为 `177.5275/187.45609 ms`、combined P50/P95 为
+`307.26725/317.61022 ms`，阶段合同、清理 3/3、删除后 403、无 fallback/候选扩张/越界
+均通过，但 300 ms 仍未通过。Query Embedding P95 为 `179.00355 ms`。当前本地新增
+保持 V1 冻结的可选 V2 Batch-20 Reranker 配置：模型、snapshot、输入模板、候选边界、
+RRF、ACL 和失败回退不变，仅让固定 20 候选进入一个 forward batch，尚待新的 Run ID
+在 Windows Gate 上验证。
 
 Competition Pack V1 的 Windows 用户复现已在 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS；独立 closeout 又对实际脱敏产物、`d775dab → fd5a517` 运行时等价性与精确提交 GitHub clean-checkout 证据完成复核。因此当前记为 `RAG_COMPETITION_BASELINE_V1_FROZEN / RAG_OWNER_SCOPE_DONE_ENOUGH`。这不改写 Phase 3 `PARTIAL / NO_PROMOTION / STOP`、Phase 4 `PARTIAL / AUDIT_ONLY`、300 ms known/deferred 债务或正式 Acceptance 边界。
 

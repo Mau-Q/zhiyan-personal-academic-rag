@@ -7,6 +7,7 @@ param(
     [string]$ExpectedQuestionSuiteSha256,
     [string]$DocumentTitle,
     [string]$RunId,
+    [string]$RerankerConfig = 'evaluation/reranker/online-fixed-cross-encoder-windows-rtx4090-v1.json',
     [string]$DatabaseHost = '127.0.0.1',
     [ValidateRange(1, 65535)]
     [int]$DatabasePort = 5432,
@@ -21,10 +22,20 @@ if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
 }
 $RepositoryRoot = (Resolve-Path -LiteralPath $RepositoryRoot).Path
 $PythonPath = Join-Path $RepositoryRoot '.venv\Scripts\python.exe'
-$RerankerConfig = 'evaluation/reranker/online-fixed-cross-encoder-windows-rtx4090-v1.json'
+$RerankerConfig = $RerankerConfig.Replace('\', '/')
+$AllowedRerankerConfigs = @(
+    'evaluation/reranker/online-fixed-cross-encoder-windows-rtx4090-v1.json',
+    'evaluation/reranker/online-fixed-cross-encoder-windows-rtx4090-v2-batch20.json'
+)
 
 if (-not (Test-Path -LiteralPath $PythonPath -PathType Leaf)) {
     throw "Project Python is missing at $PythonPath"
+}
+if (
+    [IO.Path]::IsPathRooted($RerankerConfig) -or
+    $AllowedRerankerConfigs -notcontains $RerankerConfig
+) {
+    throw 'Online Reranker config is not an approved tracked variant.'
 }
 if (-not (Test-Path -LiteralPath (Join-Path $RepositoryRoot $RerankerConfig) -PathType Leaf)) {
     throw 'Online Reranker config is missing.'
@@ -198,6 +209,7 @@ try {
         [ordered]@{
             schema_version = 'online_reranker_remote_summary_v1'
             head_commit = $headCommit
+            reranker_config = $RerankerConfig
             status = $report.status
             model_id = $report.online_reranker.model.model_id
             model_revision = $report.online_reranker.model.revision
@@ -279,6 +291,7 @@ try {
     [ordered]@{
         schema_version = 'online_reranker_remote_summary_v1'
         head_commit = $headCommit
+        reranker_config = $RerankerConfig
         status = $report.status
         model_id = $report.online_reranker.model.model_id
         model_revision = $report.online_reranker.model.revision

@@ -42,6 +42,10 @@ _MODEL_KEYS = {
     "trust_remote_code",
     "input_template",
 }
+_ONLINE_CONFIG_BATCH_SIZES = {
+    "online_fixed_cross_encoder_config_v1": 16,
+    "online_fixed_cross_encoder_config_v2": 20,
+}
 
 
 class OnlineCrossEncoderScorer(Protocol):
@@ -110,7 +114,11 @@ def load_online_reranker_config(path: Path) -> OnlineRerankerConfig:
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict) or set(value) != _CONFIG_KEYS:
         raise ValueError("online Reranker config fields are invalid")
-    if value["schema_version"] != "online_fixed_cross_encoder_config_v1":
+    schema_version = value["schema_version"]
+    if (
+        not isinstance(schema_version, str)
+        or schema_version not in _ONLINE_CONFIG_BATCH_SIZES
+    ):
         raise ValueError("unsupported online Reranker config")
     if value["failure_policy"] != "FALLBACK_TO_AUTHORIZED_RRF":
         raise ValueError("online Reranker failure policy is invalid")
@@ -142,7 +150,10 @@ def load_online_reranker_config(path: Path) -> OnlineRerankerConfig:
         raise ValueError("online Reranker snapshot_sha256 is invalid")
     if not isinstance(model["max_length"], int) or model["max_length"] != 512:
         raise ValueError("online Reranker max_length is invalid")
-    if not isinstance(model["batch_size"], int) or model["batch_size"] != 16:
+    if (
+        not isinstance(model["batch_size"], int)
+        or model["batch_size"] != _ONLINE_CONFIG_BATCH_SIZES[schema_version]
+    ):
         raise ValueError("online Reranker batch_size is invalid")
     return OnlineRerankerConfig(
         candidate_top_k=value["candidate_top_k"],
