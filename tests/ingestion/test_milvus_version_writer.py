@@ -214,6 +214,17 @@ class MilvusVersionIndexWriterTests(unittest.TestCase):
         self.assertEqual(self.provider.embed_calls, embed_calls)
         self.assertEqual(len(self.transport.upsert_batches), upsert_calls)
 
+    def test_online_route_missing_collection_fails_closed(self):
+        with self.assertRaisesRegex(
+            MilvusIndexNotReadyError,
+            "does not exist or is unavailable",
+        ):
+            self.writer.verify_online_version(
+                owner_id=OWNER_ID,
+                document_id=DOCUMENT_ID,
+                document_version_id=VERSION_ID,
+            )
+
     def test_online_route_requires_identity_model_and_active_rows(self):
         self.stage()
         name = self.collection_name()

@@ -900,6 +900,56 @@ class OnlineVersionRrfRetrieverTests(unittest.TestCase):
 
         self.assertEqual([item["chunk_id"] for item in results], [expected["chunk_id"]])
 
+    def test_query_embedding_prewarm_uses_postgres_ready_hook(self):
+        route = OnlineVersionRoute(
+            owner_id=OWNER_ID,
+            document_id="document_001",
+            document_version_id="version_001",
+            elasticsearch_index="es_version_001",
+            milvus_collection="milvus_version_001",
+        )
+        expected = chunk("document_001", "version_001", 1)
+        embedding_started = threading.Event()
+
+        class TrackingEmbeddingProvider(FakeEmbeddingProvider):
+            def embed(self, texts):
+                embedding_started.set()
+                return super().embed(texts)
+
+        class HookResolver(StaticResolver):
+            def resolve(self, **kwargs):
+                kwargs.pop("postgresql_ready_hook")()
+                if not embedding_started.wait(1):
+                    raise AssertionError("query embedding prewarm did not start")
+                return super().resolve(**kwargs)
+
+        elasticsearch = RankingTransport(
+            {"es_version_001": [RankedChunk("es", 1, 1.0, expected)]}
+        )
+        milvus = RankingTransport(
+            {"milvus_version_001": [RankedChunk("milvus", 1, 0.9, expected)]}
+        )
+        retriever = OnlineVersionRrfRetriever(
+            resolver=HookResolver([route]),
+            elasticsearch_transport=elasticsearch,
+            milvus_transport=milvus,
+            embedding_provider=TrackingEmbeddingProvider(),
+            chunk_snapshots=FakeChunkSnapshots([expected]),
+        )
+
+        with patch(
+            "backend.retrieval.online.ElasticsearchBm25Index",
+            FakeElasticsearchIndex,
+        ), patch("backend.retrieval.online.MilvusVectorIndex", FakeMilvusIndex):
+            results = retriever.retrieve(
+                "question",
+                {"user_id": OWNER_ID, "tenant_id": OWNER_ID},
+                owner_id=OWNER_ID,
+                document_ids=["document_001"],
+            )
+
+        self.assertEqual([item["chunk_id"] for item in results], [expected["chunk_id"]])
+
     def test_latency_observer_receives_sanitized_stage_breakdown(self):
         route = OnlineVersionRoute(
             owner_id=OWNER_ID,

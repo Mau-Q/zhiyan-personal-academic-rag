@@ -76,11 +76,65 @@ class FakeElasticsearchVersionTransport:
 
         name = path.split("/", 2)[1]
         index = self.indexes[name]
+        if method == "GET" and path == f"/{name}":
+            hidden = index["mapping"]["settings"].get("index.hidden")
+            return {
+                name: {
+                    "mappings": index["mapping"]["mappings"],
+                    "settings": {"index": {"hidden": str(hidden).lower()}},
+                }
+            }
         if method == "GET" and path.endswith("/_mapping"):
             return {name: {"mappings": index["mapping"]["mappings"]}}
         if method == "GET" and path.endswith("/_settings/index.hidden"):
             hidden = index["mapping"]["settings"].get("index.hidden")
             return {name: {"settings": {"index": {"hidden": str(hidden).lower()}}}}
+        if method == "POST" and path.endswith("/_search"):
+            payload = json.loads(body.decode("utf-8"))
+            query = payload["query"]
+            owned = {
+                "bool": {
+                    "filter": [
+                        {"term": {"tenant_id": OWNER_ID}},
+                        {"term": {"document_id": DOCUMENT_ID}},
+                        {"term": {"version_id": VERSION_ID}},
+                    ]
+                }
+            }
+            active = {
+                "bool": {
+                    "filter": [
+                        *owned["bool"]["filter"],
+                        {"term": {"is_active": True}},
+                    ]
+                }
+            }
+            return {
+                "hits": {
+                    "total": {
+                        "value": sum(
+                            self._matches(document, query)
+                            for document in index["docs"].values()
+                        ),
+                        "relation": "eq",
+                    },
+                    "hits": [],
+                },
+                "aggregations": {
+                    "owned": {
+                        "doc_count": sum(
+                            self._matches(document, owned)
+                            for document in index["docs"].values()
+                        )
+                    },
+                    "active": {
+                        "doc_count": sum(
+                            self._matches(document, active)
+                            for document in index["docs"].values()
+                        )
+                    },
+                },
+            }
         if path.endswith("/_count"):
             query = None if body is None else json.loads(body.decode("utf-8"))["query"]
             return {
@@ -118,7 +172,7 @@ class FakeElasticsearchVersionTransport:
         raise AssertionError(f"unexpected request: {method} {path}")
 
     def _matches(self, document: Mapping[str, Any], query: Any) -> bool:
-        if query is None:
+        if query is None or "match_all" in query:
             return True
         if "term" in query:
             field, value = next(iter(query["term"].items()))
@@ -280,6 +334,30 @@ class ElasticsearchVersionIndexWriterTests(unittest.TestCase):
                 owner_id=OWNER_ID,
                 document_version_id=VERSION_ID,
             )
+        )
+
+    def test_online_route_uses_one_identity_and_one_aggregate_probe(self):
+        self.stage()
+        name = self.writer.physical_index_name(
+            owner_id=OWNER_ID,
+            document_version_id=VERSION_ID,
+        )
+        self.writer.activate_version(
+            owner_id=OWNER_ID,
+            document_version_id=VERSION_ID,
+        )
+        calls_before = len(self.transport.calls)
+
+        self.writer.verify_online_version(
+            owner_id=OWNER_ID,
+            document_id=DOCUMENT_ID,
+            document_version_id=VERSION_ID,
+        )
+
+        online_calls = self.transport.calls[calls_before:]
+        self.assertEqual(
+            [(method, path) for method, path, _, _ in online_calls],
+            [("GET", f"/{name}"), ("POST", f"/{name}/_search")],
         )
 
     def test_online_route_requires_every_owned_chunk_to_be_active(self):

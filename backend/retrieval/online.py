@@ -100,6 +100,13 @@ class _SharedQueryEmbeddings:
 
 
 @dataclass(frozen=True)
+class _PrewarmedQueryEmbedding:
+    question: str
+    vector: tuple[float, ...]
+    latency_ms: float
+
+
+@dataclass(frozen=True)
 class OnlineReadyRouteLatencyBreakdown:
     """Sanitized timings for one PostgreSQL READY route-resolution stage."""
 
@@ -127,20 +134,25 @@ class _RequestEmbeddingProvider:
             return self._identity
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:
-        if len(texts) != 1:
-            return self._provider.embed(texts)
-        text = texts[0]
+        requested = tuple(texts)
+        if not requested:
+            return []
         with self._lock:
-            cached = self._vectors.get(text)
-            if cached is None:
-                vectors = self._provider.embed(texts)
-                if len(vectors) != 1:
+            unique_missing = tuple(
+                text for text in dict.fromkeys(requested) if text not in self._vectors
+            )
+            if unique_missing:
+                vectors = self._provider.embed(unique_missing)
+                if len(vectors) != len(unique_missing):
                     raise ValueError(
-                        "embedding provider must return exactly one query vector"
+                        "embedding provider must return one vector per query"
                     )
-                cached = tuple(float(value) for value in vectors[0])
-                self._vectors[text] = cached
-            return [list(cached)]
+                for text, vector in zip(unique_missing, vectors, strict=True):
+                    cached = tuple(float(value) for value in vector)
+                    if not cached:
+                        raise ValueError("embedding provider returned an empty query vector")
+                    self._vectors[text] = cached
+            return [list(self._vectors[text]) for text in requested]
 
 
 @dataclass(frozen=True)
@@ -227,6 +239,7 @@ class PostgresReadyRouteResolver:
         owner_id: str,
         document_ids: Sequence[str],
         timing_sink: Callable[[OnlineReadyRouteLatencyBreakdown], None] | None = None,
+        postgresql_ready_hook: Callable[[], None] | None = None,
     ) -> tuple[OnlineVersionRoute, ...]:
         total_started = time.perf_counter()
         requested = tuple(document_ids)
@@ -284,6 +297,14 @@ class PostgresReadyRouteResolver:
                     )
                 )
             return ()
+
+        if postgresql_ready_hook is not None:
+            try:
+                postgresql_ready_hook()
+            except Exception as exc:
+                raise OnlineVisibilityUnavailableError(
+                    "online query prewarm could not be scheduled"
+                ) from exc
 
         routes: list[OnlineVersionRoute] = []
         elasticsearch_verification_work_latency_ms = 0.0
@@ -461,22 +482,48 @@ class OnlineVersionRrfRetriever:
                 "server authorization scope does not match authenticated owner"
             )
         total_started = time.perf_counter()
+        request_embedding_provider = _RequestEmbeddingProvider(self.embedding_provider)
+        prewarm_executor = ThreadPoolExecutor(
+            max_workers=1,
+            thread_name_prefix="online-query-embedding-prewarm",
+        )
+        prewarm_future: Future[_PrewarmedQueryEmbedding] | None = None
+
+        def start_query_embedding_prewarm() -> None:
+            nonlocal prewarm_future
+            if self.route_query_planner is not None or prewarm_future is not None:
+                return
+            prewarm_future = prewarm_executor.submit(
+                self._embed_single_query,
+                request_embedding_provider,
+                question,
+            )
+
         ready_route_resolution_started = time.perf_counter()
         ready_route_latency_breakdowns: list[
             OnlineReadyRouteLatencyBreakdown
         ] = []
-        routes = self.resolver.resolve(
-            owner_id=owner_id,
-            document_ids=document_ids,
-            timing_sink=(
-                ready_route_latency_breakdowns.append
-                if self.latency_observer is not None
-                else None
-            ),
-        )
-        ready_route_resolution_latency_ms = (
-            time.perf_counter() - ready_route_resolution_started
-        ) * 1000
+        try:
+            routes = self.resolver.resolve(
+                owner_id=owner_id,
+                document_ids=document_ids,
+                timing_sink=(
+                    ready_route_latency_breakdowns.append
+                    if self.latency_observer is not None
+                    else None
+                ),
+                postgresql_ready_hook=start_query_embedding_prewarm,
+            )
+            ready_route_resolution_latency_ms = (
+                time.perf_counter() - ready_route_resolution_started
+            ) * 1000
+            if routes and self.route_query_planner is None and prewarm_future is None:
+                # Keep custom resolver implementations compatible with the overlap
+                # optimization when they do not invoke the optional hook.
+                start_query_embedding_prewarm()
+        except BaseException:
+            prewarm_executor.shutdown(wait=True, cancel_futures=True)
+            raise
         route_queries = {route.document_id: question for route in routes}
         if self.route_query_planner is not None:
             try:
@@ -528,21 +575,28 @@ class OnlineVersionRrfRetriever:
                 )
             backend_parallel_wall_started = time.perf_counter()
             if routes:
-                request_embedding_provider = _RequestEmbeddingProvider(
-                    self.embedding_provider
-                )
                 max_workers = min(max(3, len(routes) * 2 + 1), 32)
                 with ThreadPoolExecutor(
                     max_workers=max_workers,
                     thread_name_prefix="online-ready-retrieval",
                 ) as executor:
-                    query_embedding_future: Future[_SharedQueryEmbeddings] = (
-                        executor.submit(
+                    if prewarm_future is not None and all(
+                        route_question == question
+                        for route_question in route_queries.values()
+                    ):
+                        query_embedding_future: Future[_SharedQueryEmbeddings] = (
+                            executor.submit(
+                                self._shared_embeddings_from_prewarm,
+                                prewarm_future,
+                                question,
+                            )
+                        )
+                    else:
+                        query_embedding_future = executor.submit(
                             self._embed_route_queries,
                             request_embedding_provider,
                             route_queries,
                         )
-                    )
                     route_jobs = []
                     for route in routes:
                         expected_chunks = self._route_chunks(route=route, chunks=chunks)
@@ -635,6 +689,8 @@ class OnlineVersionRrfRetriever:
             raise OnlineVisibilityUnavailableError(
                 "online version retrieval route failed closed"
             ) from exc
+        finally:
+            prewarm_executor.shutdown(wait=True, cancel_futures=True)
         rrf_fusion_started = time.perf_counter()
         fused_candidates = self._fuse(
             rankings,
@@ -762,6 +818,34 @@ class OnlineVersionRrfRetriever:
                 )
             )
         return fused
+
+    @staticmethod
+    def _embed_single_query(
+        provider: EmbeddingProvider,
+        question: str,
+    ) -> _PrewarmedQueryEmbedding:
+        started = time.perf_counter()
+        vectors = provider.embed([question])
+        if len(vectors) != 1:
+            raise ValueError("embedding provider must return exactly one query vector")
+        return _PrewarmedQueryEmbedding(
+            question=question,
+            vector=tuple(float(value) for value in vectors[0]),
+            latency_ms=(time.perf_counter() - started) * 1000,
+        )
+
+    @staticmethod
+    def _shared_embeddings_from_prewarm(
+        future: Future[_PrewarmedQueryEmbedding],
+        question: str,
+    ) -> _SharedQueryEmbeddings:
+        prewarmed = future.result()
+        if prewarmed.question != question:
+            raise ValueError("prewarmed query embedding question does not match")
+        return _SharedQueryEmbeddings(
+            vectors_by_query={question: prewarmed.vector},
+            latency_ms=prewarmed.latency_ms,
+        )
 
     @staticmethod
     def _embed_route_queries(

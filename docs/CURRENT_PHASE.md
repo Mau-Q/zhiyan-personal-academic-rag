@@ -288,8 +288,13 @@ fixed reranker Top-20 与 Top-50 screening 均为 `SCREENING_WEAKENED / 0/3`；�
 重开 Phase 3 排序优化，不改变默认 RRF、候选边界、ACL、READY 或检索后重验，也
 不改变 Competition Pack 的冻结身份。代码合同和本地回归可以在仓库内完成；READY 路由解析现额外输出 PostgreSQL
 查询、ES/Milvus 物理校验工作和并行墙钟的脱敏分段观测。历史 `504.71613 ms` 与
-`300 ms` 的远程性能结论保持不变，新的 300 ms 结果必须由独立目标硬件 Gate 重新
-测量后才能更新。
+`300 ms` 的远程性能结论保持不变；用户随后在提交 `4bd20b300f4cf1fbbe29f5a613a34915753959ce`、
+Run ID `online_retrieval_hardening_02` 上完成 30/30 `APPLIED` 的新远程观测，
+base retrieval P95 为 `321.346145 ms`、combined P95 为 `451.664035 ms`，
+阶段合同、三路清理和删除后 403 通过，但 300 ms 仍失败。细分结果将 READY
+物理校验、Query Embedding 和后端并行工作确认为当前性能瓶颈；下一次本地硬化已
+增加 READY 后 Query Embedding 与物理校验重叠、ES 聚合计数和 Milvus 重复探针移除，
+尚待新提交和新 Run ID 的 Windows Gate 验证。
 
 Competition Pack V1 的 Windows 用户复现已在 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS；独立 closeout 又对实际脱敏产物、`d775dab → fd5a517` 运行时等价性与精确提交 GitHub clean-checkout 证据完成复核。因此当前记为 `RAG_COMPETITION_BASELINE_V1_FROZEN / RAG_OWNER_SCOPE_DONE_ENOUGH`。这不改写 Phase 3 `PARTIAL / NO_PROMOTION / STOP`、Phase 4 `PARTIAL / AUDIT_ONLY`、300 ms known/deferred 债务或正式 Acceptance 边界。
 

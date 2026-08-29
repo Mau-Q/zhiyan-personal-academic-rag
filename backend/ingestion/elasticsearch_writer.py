@@ -179,10 +179,6 @@ class ElasticsearchVersionIndexWriter:
             owner_id=owner_id,
             document_version_id=document_version_id,
         )
-        if not self.transport.index_exists(index_name):
-            raise ElasticsearchIndexNotReadyError(
-                "Elasticsearch online version index does not exist"
-            )
         metadata = self._inspect_identity(
             index_name=index_name,
             owner_id=owner_id,
@@ -190,28 +186,17 @@ class ElasticsearchVersionIndexWriter:
             document_version_id=document_version_id,
         )
         expected_count = int(metadata["chunk_count"])
-        self._verify_owned_count(
+        total_count, owned_count, active_count = self._verify_online_counts(
             index_name=index_name,
             owner_id=owner_id,
             document_id=document_id,
             document_version_id=document_version_id,
             expected_count=expected_count,
-            allow_incomplete=False,
         )
-        active_count = self._count(
-            index_name=index_name,
-            query={
-                "bool": {
-                    "filter": [
-                        *self._identity_query(
-                            owner_id=owner_id,
-                            document_version_id=document_version_id,
-                        )["bool"]["filter"],
-                        {"term": {"is_active": True}},
-                    ]
-                }
-            },
-        )
+        if total_count != owned_count or total_count != expected_count:
+            raise ElasticsearchIndexNotReadyError(
+                "Elasticsearch version index contains foreign or excess chunks"
+            )
         if active_count != expected_count:
             raise ElasticsearchIndexNotReadyError(
                 "Elasticsearch online version is not fully active"
@@ -324,24 +309,15 @@ class ElasticsearchVersionIndexWriter:
         source_sha256: str | None = None,
         expected_count: int | None = None,
     ) -> dict[str, str]:
-        mapping = self.transport.request("GET", f"{self._path(index_name)}/_mapping")
-        payload = mapping.get(index_name)
+        index_response = self.transport.request("GET", self._path(index_name))
+        payload = index_response.get(index_name)
         mappings = payload.get("mappings") if isinstance(payload, dict) else None
         metadata = mappings.get("_meta") if isinstance(mappings, dict) else None
         if not isinstance(metadata, dict):
             raise ElasticsearchIndexNotReadyError(
                 "Elasticsearch version index metadata is missing"
             )
-        settings_response = self.transport.request(
-            "GET",
-            f"{self._path(index_name)}/_settings/index.hidden",
-        )
-        settings_payload = settings_response.get(index_name)
-        settings = (
-            settings_payload.get("settings")
-            if isinstance(settings_payload, dict)
-            else None
-        )
+        settings = payload.get("settings") if isinstance(payload, dict) else None
         index_settings = settings.get("index") if isinstance(settings, dict) else None
         hidden = index_settings.get("hidden") if isinstance(index_settings, dict) else None
         if hidden not in (True, "true"):
@@ -390,6 +366,76 @@ class ElasticsearchVersionIndexWriter:
                 "Elasticsearch version index source identity is invalid"
             )
         return normalized
+
+    def _verify_online_counts(
+        self,
+        *,
+        index_name: str,
+        owner_id: str,
+        document_id: str,
+        document_version_id: str,
+        expected_count: int,
+    ) -> tuple[int, int, int]:
+        owned_query = {
+            "bool": {
+                "filter": [
+                    {"term": {"tenant_id": owner_id}},
+                    {"term": {"document_id": document_id}},
+                    {"term": {"version_id": document_version_id}},
+                ]
+            }
+        }
+        active_query = {
+            "bool": {
+                "filter": [
+                    *owned_query["bool"]["filter"],
+                    {"term": {"is_active": True}},
+                ]
+            }
+        }
+        response = self.transport.request(
+            "POST",
+            f"{self._path(index_name)}/_search",
+            body=_json_body(
+                {
+                    "size": 0,
+                    "track_total_hits": True,
+                    "query": {"match_all": {}},
+                    "aggs": {
+                        "owned": {"filter": owned_query},
+                        "active": {"filter": active_query},
+                    },
+                }
+            ),
+        )
+        hits = response.get("hits")
+        total = hits.get("total") if isinstance(hits, dict) else None
+        if isinstance(total, dict):
+            total_count = total.get("value")
+            relation = total.get("relation")
+            if relation != "eq":
+                raise ElasticsearchIndexNotReadyError(
+                    "Elasticsearch version index total count is not exact"
+                )
+        else:
+            total_count = total
+        aggregations = response.get("aggregations")
+        owned = aggregations.get("owned") if isinstance(aggregations, dict) else None
+        active = aggregations.get("active") if isinstance(aggregations, dict) else None
+        owned_count = owned.get("doc_count") if isinstance(owned, dict) else None
+        active_count = active.get("doc_count") if isinstance(active, dict) else None
+        if not all(
+            isinstance(value, int) and value >= 0
+            for value in (total_count, owned_count, active_count)
+        ):
+            raise ElasticsearchIndexNotReadyError(
+                "Elasticsearch version index online counts are invalid"
+            )
+        if total_count > expected_count or owned_count > expected_count:
+            raise ElasticsearchIndexNotReadyError(
+                "Elasticsearch version index online counts exceed metadata"
+            )
+        return total_count, owned_count, active_count
 
     def _verify_owned_count(
         self,

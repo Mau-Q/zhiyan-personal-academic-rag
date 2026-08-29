@@ -214,17 +214,20 @@ class MilvusVersionIndexWriter:
             owner_id=owner_id,
             document_version_id=document_version_id,
         )
-        if not self.transport.has_collection(collection_name):
-            raise MilvusIndexNotReadyError(
-                "Milvus online version collection does not exist"
+        try:
+            metadata = self._inspect_identity(
+                collection_name=collection_name,
+                owner_id=owner_id,
+                document_id=document_id,
+                document_version_id=document_version_id,
+                verify_provider=True,
             )
-        metadata = self._inspect_identity(
-            collection_name=collection_name,
-            owner_id=owner_id,
-            document_id=document_id,
-            document_version_id=document_version_id,
-            verify_provider=True,
-        )
+        except MilvusIndexNotReadyError:
+            raise
+        except Exception as exc:
+            raise MilvusIndexNotReadyError(
+                "Milvus online version collection does not exist or is unavailable"
+            ) from exc
         self._verify_lifecycle_rows(
             rows=self._query_rows(collection_name),
             metadata=metadata,

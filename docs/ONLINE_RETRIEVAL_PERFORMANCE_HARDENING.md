@@ -35,6 +35,21 @@ P95 数值。
 有上限，避免请求范围扩大时无限创建线程。RRF 排名、`candidate_k=20`、`k=60`、
 `top_k=3`、ACL、候选身份重验和检索后 PostgreSQL 重验均未改变。
 
+### 2.4 READY 阶段与 Query Embedding 重叠
+
+在 PostgreSQL 已确认 owner、READY 和请求范围合法后，在线检索会预热原始问题的
+Query Embedding，并与 ES/Milvus 物理路由校验并行。该预热不在 PostgreSQL 事实确认
+之前启动；启用查询拆分规划器时不预热原始问题，避免为已被替换的 route query
+额外计算向量。预热耗时仍计入 Query Embedding 观测，失败仍按原有 fail-closed
+路径处理。
+
+### 2.5 物理校验请求合并
+
+Elasticsearch 版本路由校验将 index identity/settings 与总量、owner/version
+数量、active 数量分别收敛为一个身份读取和一个聚合计数请求；Milvus 路由校验
+移除可由 `describe_collection` 覆盖的重复存在性探针。校验的身份字段、行/文档
+数量、active 状态、模型身份和失败关闭边界没有放宽。
+
 ## 3. 细分观测与验证边界
 
 本轮还把 READY 路由解析的总耗时拆成可脱敏的子阶段：PostgreSQL READY 查询、
@@ -54,9 +69,24 @@ ES 物理路由校验工作、Milvus 物理路由校验工作，以及两者并�
 `300 ms` 的差距，仍需在原目标硬件、冻结模型/输入/候选边界和独立性能 Gate 下
 重新运行并记录新的分段 P50/P95。
 
-## 4. 明确未处理的事项
+## 4. 最新远程观测
+
+用户在提交 `4bd20b300f4cf1fbbe29f5a613a34915753959ce`、Run ID
+`online_retrieval_hardening_02` 上完成了 30/30 `APPLIED` 观测。阶段合同为 `PASS`，
+无 fallback、候选扩张或候选边界违规，三路清理成功且删除后 Answer API 为 403；但
+`combined P95=451.664035 ms`，仍因 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败。
+其中 base retrieval P95 为 `321.346145 ms`，Reranker P95 为 `132.19982 ms`。
+
+新的细分结果显示：PostgreSQL READY 查询 P95 仅 `0.733275 ms`，READY 物理校验
+墙钟 P95 为 `135.59779 ms`，ES/Milvus 物理校验工作分别为 `121.245905/134.50391 ms`；
+Query Embedding P95 为 `155.4337 ms`，后端并行墙钟 P95 为 `189.226644 ms`。
+因此当前主要剩余成本在物理路由校验、Query Embedding 与重复的后端验证工作，而非
+PostgreSQL 或 RRF。该结果是新的远程失败证据，不是 300 ms 达标证据。
+
+## 5. 明确未处理的事项
 
 - 正式 Acceptance、真实用户评价和生产运维仍需要相应外部参与或独立工作流；
 - 本轮没有更换模型、放宽阈值、减少候选、引入重复问题缓存或修改默认 RRF；
 - 本轮没有重开 Phase 3 排序优化、查询拆分、路由覆盖、NLI 或阶段 5；
-- 本轮没有运行真实生成、远程服务、Windows 性能 Gate 或正式 Acceptance。
+- 本轮没有运行真实生成或正式 Acceptance；远程性能 Gate 由用户在 Windows 目标
+  硬件上执行，Mac 只根据其脱敏摘要判断。
