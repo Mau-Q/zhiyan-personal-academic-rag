@@ -1,10 +1,11 @@
-"""Fixture-only FastAPI adapter for the non-streaming RagAnswerV1 contract."""
+"""FastAPI adapter for the non-streaming RagAnswerV1 contract."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal
+from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -64,7 +65,7 @@ RetrievalBackend = Literal[
 
 def _error_response(*, status_code: int, code: str, message: str, retryable: bool) -> JSONResponse:
     error = ErrorV1(
-        request_id=f"request_http_{status_code}",
+        request_id=f"request_http_{status_code}_{uuid4().hex}",
         code=code,
         message=message,
         retryable=retryable,

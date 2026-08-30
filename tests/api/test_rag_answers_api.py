@@ -87,6 +87,40 @@ class RagAnswersApiTests(unittest.TestCase):
         document_ids = {item["document_id"] for item in response.json()["evidence"]}
         self.assertEqual(document_ids, {"doc_fixture_001"})
 
+    def test_successful_replay_keeps_deterministic_business_identity(self):
+        payload = {
+            "question": "How are candidates combined before reranking?",
+            "document_ids": ["doc_fixture_001"],
+            "stream": False,
+        }
+        first = self.post_answer(payload)
+        second = self.post_answer(payload)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(first.json()["request_id"], second.json()["request_id"])
+        self.assertEqual(first.json()["trace_id"], second.json()["trace_id"])
+
+    def test_error_request_ids_are_unique_without_changing_error_contract(self):
+        payload = {
+            "question": "quantum entanglement",
+            "document_ids": ["doc_fixture_private_other_tenant"],
+            "stream": False,
+        }
+        first = self.post_answer(payload)
+        second = self.post_answer(payload)
+
+        self.assertEqual(first.status_code, 403)
+        self.assertEqual(second.status_code, 403)
+        for response in (first, second):
+            error = response.json()
+            self.error_validator.validate(error)
+            self.assertRegex(
+                error["request_id"],
+                r"^request_http_403_[0-9a-f]{32}$",
+            )
+        self.assertNotEqual(first.json()["request_id"], second.json()["request_id"])
+
     def test_stream_true_returns_contract_valid_422(self):
         response = self.post_answer(
             {"question": "retrieval", "document_ids": [], "stream": True}

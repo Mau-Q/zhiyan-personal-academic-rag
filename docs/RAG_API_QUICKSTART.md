@@ -42,7 +42,7 @@ curl -sS http://127.0.0.1:8000/api/v1/rag/answers \
   }'
 ```
 
-无证据问题仍返回 HTTP 200，但 `status=NO_EVIDENCE`。请求越权文档返回 HTTP 403 和 `RAG_FORBIDDEN_SCOPE`；字段无效返回 HTTP 422 和 `RAG_INVALID_REQUEST`。
+无证据问题仍返回 HTTP 200，但 `status=NO_EVIDENCE`。请求越权文档返回 HTTP 403 和 `RAG_FORBIDDEN_SCOPE`；字段无效返回 HTTP 422 和 `RAG_INVALID_REQUEST`。正常回答的 `request_id/trace_id` 是请求内容与执行边界绑定的确定性业务身份，便于 replay；`ErrorV1.request_id` 则为每次 HTTP 错误单独生成，便于排查，二者不混用。
 
 ## 测试
 
