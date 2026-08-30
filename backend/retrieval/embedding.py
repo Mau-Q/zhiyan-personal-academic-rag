@@ -7,7 +7,7 @@ import json
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
-from threading import Lock
+from threading import Condition
 from typing import Any, Protocol
 from urllib.parse import urlsplit
 
@@ -27,8 +27,12 @@ class _OllamaHttpStatusError(OSError):
         super().__init__(f"HTTP {status}")
 
 
+_OllamaConnection = http.client.HTTPConnection | http.client.HTTPSConnection
+_OLLAMA_MAX_HTTP_CONNECTIONS = 2
+
+
 class _ReusableOllamaHttpClient:
-    """Thread-safe, lazy HTTP/1.1 connection reuse for one Ollama origin."""
+    """Bounded, thread-safe, lazy HTTP/1.1 connection reuse for one Ollama origin."""
 
     def __init__(self, *, base_url: str, timeout_seconds: float):
         parsed = urlsplit(base_url)
@@ -43,12 +47,12 @@ class _ReusableOllamaHttpClient:
         self._port = parsed.port
         self._base_path = parsed.path.rstrip("/")
         self._timeout_seconds = timeout_seconds
-        self._connection: http.client.HTTPConnection | http.client.HTTPSConnection | None = None
-        self._lock = Lock()
+        self._connections: list[_OllamaConnection] = []
+        self._available: list[_OllamaConnection] = []
+        self._condition = Condition()
+        self._closed = False
 
-    def _new_connection(
-        self,
-    ) -> http.client.HTTPConnection | http.client.HTTPSConnection:
+    def _new_connection(self) -> _OllamaConnection:
         connection_type = (
             http.client.HTTPSConnection
             if self._scheme == "https"
@@ -59,6 +63,43 @@ class _ReusableOllamaHttpClient:
             self._port,
             timeout=self._timeout_seconds,
         )
+
+    def _acquire(self) -> _OllamaConnection:
+        with self._condition:
+            while True:
+                if self._closed:
+                    raise OSError("Ollama HTTP client is closed")
+                if self._available:
+                    return self._available.pop()
+                if len(self._connections) < _OLLAMA_MAX_HTTP_CONNECTIONS:
+                    connection = self._new_connection()
+                    self._connections.append(connection)
+                    return connection
+                self._condition.wait()
+
+    def _release(self, connection: _OllamaConnection, *, discard: bool) -> None:
+        close_connection = False
+        with self._condition:
+            if discard or self._closed:
+                self._connections = [
+                    candidate
+                    for candidate in self._connections
+                    if candidate is not connection
+                ]
+                self._available = [
+                    candidate
+                    for candidate in self._available
+                    if candidate is not connection
+                ]
+                close_connection = True
+            elif not any(candidate is connection for candidate in self._available):
+                self._available.append(connection)
+            self._condition.notify()
+        if close_connection:
+            try:
+                connection.close()
+            except OSError:
+                pass
 
     def request(
         self,
@@ -71,41 +112,33 @@ class _ReusableOllamaHttpClient:
         target = f"{self._base_path}{path}"
         if not target.startswith("/"):
             target = f"/{target}"
-        with self._lock:
-            connection = self._connection
-            if connection is None:
-                connection = self._new_connection()
-                self._connection = connection
-            try:
-                connection.request(method, target, body=body, headers=headers)
-                response = connection.getresponse()
-                raw = response.read()
-                if response.will_close or (
-                    response.getheader("Connection", "").lower() == "close"
-                ):
-                    self._discard_locked(connection)
-                if not 200 <= response.status < 300:
-                    raise _OllamaHttpStatusError(response.status)
-                return raw
-            except (OSError, http.client.HTTPException):
-                self._discard_locked(connection)
-                raise
-
-    def _discard_locked(
-        self,
-        connection: http.client.HTTPConnection | http.client.HTTPSConnection,
-    ) -> None:
-        if self._connection is connection:
-            self._connection = None
+        connection = self._acquire()
         try:
-            connection.close()
-        except OSError:
-            pass
+            connection.request(method, target, body=body, headers=headers)
+            response = connection.getresponse()
+            raw = response.read()
+            connection_header = response.getheader("Connection") or ""
+            discard = bool(response.will_close) or connection_header.lower() == "close"
+            if not 200 <= response.status < 300:
+                raise _OllamaHttpStatusError(response.status)
+        except (OSError, http.client.HTTPException):
+            self._release(connection, discard=True)
+            raise
+        self._release(connection, discard=discard)
+        return raw
 
     def close(self) -> None:
-        with self._lock:
-            if self._connection is not None:
-                self._discard_locked(self._connection)
+        with self._condition:
+            self._closed = True
+            connections = list(self._connections)
+            self._connections.clear()
+            self._available.clear()
+            self._condition.notify_all()
+        for connection in connections:
+            try:
+                connection.close()
+            except OSError:
+                pass
 
 
 @dataclass(frozen=True)

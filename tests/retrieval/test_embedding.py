@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import unittest
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 from unittest.mock import patch
 
 from backend.retrieval.embedding import (
@@ -53,6 +55,16 @@ class FakeHttpConnection:
 
     def close(self):
         self.closed = True
+
+
+class ConcurrentFakeHttpConnection(FakeHttpConnection):
+    def __init__(self, responses, barrier):
+        super().__init__(responses)
+        self.barrier = barrier
+
+    def request(self, method, path, *, body, headers):
+        super().request(method, path, body=body, headers=headers)
+        self.barrier.wait(timeout=2)
 
 
 class OllamaEmbeddingProviderTests(unittest.TestCase):
@@ -137,6 +149,26 @@ class OllamaEmbeddingProviderTests(unittest.TestCase):
                 provider._request("/api/embed")
 
         self.assertTrue(connection.closed)
+
+    def test_two_concurrent_requests_do_not_serialize_on_one_connection(self) -> None:
+        barrier = Barrier(2)
+        first = ConcurrentFakeHttpConnection([FakeHttpResponse(b'{"ok": 1}')], barrier)
+        second = ConcurrentFakeHttpConnection([FakeHttpResponse(b'{"ok": 2}')], barrier)
+        with patch(
+            "backend.retrieval.embedding.http.client.HTTPConnection",
+            side_effect=[first, second],
+        ) as connection_factory:
+            provider = OllamaEmbeddingProvider()
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                futures = [
+                    executor.submit(provider._request, "/api/one"),
+                    executor.submit(provider._request, "/api/two"),
+                ]
+                results = [future.result(timeout=3) for future in futures]
+            provider.close()
+
+        self.assertEqual(results, [{"ok": 1}, {"ok": 2}])
+        self.assertEqual(connection_factory.call_count, 2)
 
 
 if __name__ == "__main__":

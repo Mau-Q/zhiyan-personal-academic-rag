@@ -348,11 +348,14 @@ fallback/候选扩张/越界和分段状态均通过，但仍因 `ONLINE_RERANKE
 失败。Run 13/14 均未稳定低于 300 ms；当前将 300 ms 记为已验证但未解决的性能债，保留
 有界 Milvus 读取这一语义不变的硬化。这里的“收口”只表示记录本轮证据、拒绝虚假宣称
 和停止无证据的同变量重跑，不表示性能不能继续优化；鉴于用户当前以质量优先且不赶进度，
-性能工作流重新保持开放。本地下一变量已落地为 Ollama provider 的惰性线程安全 HTTP/1.1
-连接复用：不缓存查询、向量或模型身份，服务端关闭/传输异常即丢弃连接；它只改变连接
-管理，不改变模型、端点、输入、候选、ACL 或失败关闭语义。下一步由新的 Run ID 验证该
-变量，再决定是否继续深入物理校验路径。报告 SHA-256 为
-`21155ADC74729F37150327D3AEA5F80F4664F7653183845F6A151A6A16064AB7`。Demo/界面/README
+性能工作流重新保持开放。Run 15 在 `a2d4f17a010afc2476f97aaae33dd7514313ffa0` 上
+完成 30/30 `APPLIED`，Query Embedding P95 降至 `133.034825 ms`，但 READY 物理验证
+墙钟 P95 升至 `218.600071 ms`，combined P95 升至 `364.802135 ms`，仍为失败；单共享
+Ollama 连接复用不晋级。该结果提示 prewarm 与 READY 路由身份请求可能被同一连接锁
+串行化，但不能仅凭一次远程运行完全归因。当前本地已改为最多两条惰性线程安全 HTTP/1.1
+连接，并增加并发合同测试；下一步用新的 Run ID 验证该修正，再决定是否深入 Milvus
+物理校验路径。Run 15 报告 SHA-256 为
+`06EAE42C3027D6DD1F3B3C1B667530EFF3BD1FE5912B0441667479274BEFC366`。Demo/界面/README
 可以并行准备，但不得用未通过的 `300 ms` 结果包装展示。
 
 Competition Pack V1 的 Windows 用户复现已在 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS；独立 closeout 又对实际脱敏产物、`d775dab → fd5a517` 运行时等价性与精确提交 GitHub clean-checkout 证据完成复核。因此当前记为 `RAG_COMPETITION_BASELINE_V1_FROZEN / RAG_OWNER_SCOPE_DONE_ENOUGH`。这不改写 Phase 3 `PARTIAL / NO_PROMOTION / STOP`、Phase 4 `PARTIAL / AUDIT_ONLY`、300 ms known/deferred 债务或正式 Acceptance 边界。
