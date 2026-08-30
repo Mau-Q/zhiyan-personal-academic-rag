@@ -313,10 +313,12 @@ retrieval P95 为 `195.881911 ms`、combined P95 为 `324.23998 ms`、Reranker P
 Run ID `online_retrieval_hardening_07` 与 `online_retrieval_hardening_08`：两次均 30/30
 `APPLIED`，Run 07 的 combined P95 为 `300.160535 ms`，Run 08 为 `305.54851 ms`；
 清理 3/3、删除后 403、无 fallback/候选扩张/越界和分段状态均通过，但严格 300 ms 门禁
-均未通过。首次重复 Run 07 只得到无指标的通用 `ValueError`，不计入性能结果。当前本地
-下一轮在同一 Ollama 模型的短单查询轻量端点之外，新增顶层 `keep_alive="10m"`；不改变
-模型、查询文本、向量维度、候选边界、RRF、ACL 或失败回退，超过 2048 字符仍使用原
-`/api/embed` 截断路径，尚待新的 Run ID 验证。
+均未通过。随后用户在提交 `9f77d9a6b6ce498b863ceaf58f4ae1c062070316` 的同一 V1 配置下完成
+Run 09 与 Run 10：两次均 30/30 `APPLIED`，combined P95 分别为 `301.03561 ms` 与
+`319.39854 ms`；清理 3/3、删除后 403、无 fallback/候选扩张/越界和分段状态均通过，
+但 `keep_alive="10m"` 未形成稳定性能收益。当前本地下一轮只把 PostgreSQL 已确认的 READY
+版本 ID 交给短生命周期只读任务，使 Chunk snapshot 与 ES/Milvus 物理路由校验重叠；不改变
+模型、查询文本、向量维度、候选边界、RRF、ACL 或失败回退，尚待新的 Run ID 验证。
 
 Competition Pack V1 的 Windows 用户复现已在 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS；独立 closeout 又对实际脱敏产物、`d775dab → fd5a517` 运行时等价性与精确提交 GitHub clean-checkout 证据完成复核。因此当前记为 `RAG_COMPETITION_BASELINE_V1_FROZEN / RAG_OWNER_SCOPE_DONE_ENOUGH`。这不改写 Phase 3 `PARTIAL / NO_PROMOTION / STOP`、Phase 4 `PARTIAL / AUDIT_ONLY`、300 ms known/deferred 债务或正式 Acceptance 边界。
 

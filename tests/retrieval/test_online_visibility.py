@@ -210,6 +210,37 @@ class ReadyRouteResolverTests(unittest.TestCase):
             ],
         )
 
+    def test_ready_versions_hook_runs_before_physical_route_verification(self):
+        events = []
+
+        class OrderedRouteInspector(FakeRouteInspector):
+            def verify_online_version(self, **kwargs):
+                events.append(self.prefix)
+                return super().verify_online_version(**kwargs)
+
+        def ready_versions_hook(versions):
+            events.append(
+                (
+                    "ready_versions",
+                    tuple(version.document_version_id for version in versions),
+                )
+            )
+
+        resolver = PostgresReadyRouteResolver(
+            repository=FakeReadyRepository([ready_version(version_id="version_001")]),
+            elasticsearch=OrderedRouteInspector("es"),
+            milvus=OrderedRouteInspector("milvus"),
+        )
+
+        resolver.resolve(
+            owner_id=OWNER_ID,
+            document_ids=[],
+            ready_versions_hook=ready_versions_hook,
+        )
+
+        self.assertEqual(events[0], ("ready_versions", ("version_001",)))
+        self.assertCountEqual(events[1:], ["es", "milvus"])
+
     def test_ready_route_verification_metadata_is_attached_to_route(self):
         class MetadataRouteInspector(FakeRouteInspector):
             def verify_online_version(self, **kwargs):
@@ -964,6 +995,57 @@ class OnlineVersionRrfRetrieverTests(unittest.TestCase):
             milvus_transport=milvus,
             embedding_provider=TrackingEmbeddingProvider(),
             chunk_snapshots=FakeChunkSnapshots([expected]),
+        )
+
+        with patch(
+            "backend.retrieval.online.ElasticsearchBm25Index",
+            FakeElasticsearchIndex,
+        ), patch("backend.retrieval.online.MilvusVectorIndex", FakeMilvusIndex):
+            results = retriever.retrieve(
+                "question",
+                {"user_id": OWNER_ID, "tenant_id": OWNER_ID},
+                owner_id=OWNER_ID,
+                document_ids=["document_001"],
+            )
+
+        self.assertEqual([item["chunk_id"] for item in results], [expected["chunk_id"]])
+
+    def test_chunk_snapshot_prewarm_uses_ready_versions_hook(self):
+        route = OnlineVersionRoute(
+            owner_id=OWNER_ID,
+            document_id="document_001",
+            document_version_id="version_001",
+            elasticsearch_index="es_version_001",
+            milvus_collection="milvus_version_001",
+        )
+        expected = chunk("document_001", "version_001", 1)
+        snapshot_started = threading.Event()
+
+        class TrackingChunkSnapshots(FakeChunkSnapshots):
+            def load_online_chunks(self, **kwargs):
+                snapshot_started.set()
+                return super().load_online_chunks(**kwargs)
+
+        class HookResolver(StaticResolver):
+            def resolve(self, **kwargs):
+                ready_versions_hook = kwargs.pop("ready_versions_hook")
+                ready_versions_hook([ready_version(version_id="version_001")])
+                if not snapshot_started.wait(1):
+                    raise AssertionError("Chunk snapshot prewarm did not start")
+                return super().resolve(**kwargs)
+
+        elasticsearch = RankingTransport(
+            {"es_version_001": [RankedChunk("es", 1, 1.0, expected)]}
+        )
+        milvus = RankingTransport(
+            {"milvus_version_001": [RankedChunk("milvus", 1, 0.9, expected)]}
+        )
+        retriever = OnlineVersionRrfRetriever(
+            resolver=HookResolver([route]),
+            elasticsearch_transport=elasticsearch,
+            milvus_transport=milvus,
+            embedding_provider=FakeEmbeddingProvider(),
+            chunk_snapshots=TrackingChunkSnapshots([expected]),
         )
 
         with patch(

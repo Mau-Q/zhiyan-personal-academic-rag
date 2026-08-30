@@ -5,8 +5,8 @@
 当前状态：`LOCAL_HARDENING_IMPLEMENTED_REMOTE_300MS_GATE_PENDING`。
 
 本轮继续只处理仓库内部可以独立完成的在线检索执行层优化。已知 Windows 远程
-Run 08 的 `combined P95=305.54851 ms` 仍高于目标 `300 ms`；因此不能把本地
-变更或 Run 08 写成 300 ms 已达标。
+Run 10 的 `combined P95=319.39854 ms` 仍高于目标 `300 ms`；因此不能把本地
+变更或 Run 10 写成 300 ms 已达标。
 
 ## 2. 已实现的边界内改动
 
@@ -80,6 +80,15 @@ READY 物理校验完成后，会把本次请求内已经验证的 ES/Milvus ide
 执行既有 L2 归一化；超长输入不走单输入快路径，避免改变既有截断语义。该变更
 尚待新的远程 Run 验证。
 
+### 2.10 READY 后 Chunk snapshot 预热
+
+PostgreSQL 已确认精确 owner、READY 和请求范围后，在线检索会把对应的
+`document_version_id` 交给一个短生命周期的只读预热任务，在 ES/Milvus 物理路由
+校验期间加载 Chunk snapshot。物理路由返回后仍按原逻辑核对版本集合、Chunk ID
+唯一性、ACL、来源指纹和后续 PostgreSQL revalidation；预热失败或结果不一致仍
+失败关闭。该变化只重叠等待时间，不建立跨请求缓存，也不改变 READY、候选边界、
+RRF 或证据语义，尚待新的远程 Run 验证。
+
 ## 3. 细分观测与验证边界
 
 本轮还把 READY 路由解析的总耗时拆成可脱敏的子阶段：PostgreSQL READY 查询、
@@ -95,10 +104,11 @@ ES 物理路由校验工作、Milvus 物理路由校验工作，以及两者并�
 - 预计算向量不再触发 Milvus provider 的重复 embedding；
 - 原有检索、API、Reranker 和阶段 Gate 合同回归；
 - V1 冻结配置与 V2 Batch-20 配置的模型/候选身份一致性；
-- Ollama 短单查询、长单查询和批量查询的端点选择与响应校验。
+- Ollama 短单查询、长单查询和批量查询的端点选择与响应校验；
+- READY 版本回调先于物理路由校验，以及 Chunk snapshot 预热结果的完整消费。
 
-这些是代码与合同证据，不是远程性能证据。要判断是否缩小 Run 08 的
-`305.54851 ms` 与 `300 ms` 的差距，仍需在原目标硬件、冻结模型/输入/候选边界
+这些是代码与合同证据，不是远程性能证据。要判断是否缩小 Run 10 的
+`319.39854 ms` 与 `300 ms` 的差距，仍需在原目标硬件、冻结模型/输入/候选边界
 和独立性能 Gate 下重新运行并记录新的分段 P50/P95。
 
 ## 4. 最新远程观测
@@ -159,14 +169,28 @@ P95 为 `133.28295 ms`，Query Embedding P95 为 `164.994689 ms`。清理 3/3、
 当前组合尾延迟仍有波动，不能以 Run 07 的近似值声称稳定达标。第一次误用已完成
 清理的 Run 07 重跑只得到无指标的通用 `ValueError`，不计入性能结果。
 
-本地下一轮已加入 Ollama 顶层 `keep_alive="10m"`，V2 Batch-20 不作为默认配置；
-该变体尚无远程结果，不能预先声称会降低 P95 或通过门禁。
+Run 09 在提交 `9f77d9a6b6ce498b863ceaf58f4ae1c062070316`、同一 V1 配置下完成
+30/30 `APPLIED`，`base P50/P95=156.46445/170.65502 ms`，
+`combined P50/P95=286.3625/301.03561 ms`，Reranker P95 为 `132.019835 ms`，
+Query Embedding P95 为 `162.108379 ms`。清理 3/3、删除后 403、无 fallback/扩张/
+候选越界和分段状态均通过；仍因 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败。
+
+Run 10 在同一提交、同一 V1 配置下完成 30/30 `APPLIED`，
+`base P50/P95=159.0704/180.381485 ms`，
+`combined P50/P95=288.27255/319.39854 ms`，Reranker P95 为 `134.309035 ms`，
+Query Embedding P95 为 `171.749935 ms`。清理 3/3、删除后 403、无 fallback/扩张/
+候选越界和分段状态均通过；仍因 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败。
+Run 09 与 Run 10 均未证明 `keep_alive="10m"` 的独立收益，当前只保留为待验证的
+驻留策略，不改变默认 RRF 或 V1 冻结配置。
+
+本地下一轮只加入 READY 后 Chunk snapshot 预热，V2 Batch-20 不作为默认配置；该
+变体尚无远程结果，不能预先声称会降低 P95 或通过门禁。
 
 ## 5. 明确未处理的事项
 
 - 正式 Acceptance、真实用户评价和生产运维仍需要相应外部参与或独立工作流；
 - 本轮没有更换模型、放宽阈值、减少候选、引入重复问题缓存、修改默认 RRF 或修改冻结 V1 配置；V2 Batch-20 仅作失败的隔离实验；
 - 本轮没有重开 Phase 3 排序优化、查询拆分、路由覆盖、NLI 或阶段 5；
-- Ollama 单查询轻量端点与显式模型驻留仍需用户在 Windows 目标硬件上独立执行；
-  本轮没有运行真实生成或正式 Acceptance，Mac 只根据用户提供的脱敏摘要判断远程
-  性能。
+- Ollama 单查询轻量端点、显式模型驻留与 READY 后 Chunk snapshot 预热仍需用户
+  在 Windows 目标硬件上独立执行；本轮没有运行真实生成或正式 Acceptance，Mac 只
+  根据用户提供的脱敏摘要判断远程性能。

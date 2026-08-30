@@ -254,6 +254,9 @@ class PostgresReadyRouteResolver:
         document_ids: Sequence[str],
         timing_sink: Callable[[OnlineReadyRouteLatencyBreakdown], None] | None = None,
         postgresql_ready_hook: Callable[[], None] | None = None,
+        ready_versions_hook: (
+            Callable[[Sequence[DocumentVersionLifecycleV1]], None] | None
+        ) = None,
     ) -> tuple[OnlineVersionRoute, ...]:
         total_started = time.perf_counter()
         requested = tuple(document_ids)
@@ -318,6 +321,18 @@ class PostgresReadyRouteResolver:
             except Exception as exc:
                 raise OnlineVisibilityUnavailableError(
                     "online query prewarm could not be scheduled"
+                ) from exc
+        if ready_versions_hook is not None:
+            try:
+                ready_versions_hook(
+                    tuple(
+                        by_document[document_id]
+                        for document_id in ordered_document_ids
+                    )
+                )
+            except Exception as exc:
+                raise OnlineVisibilityUnavailableError(
+                    "online READY snapshot prewarm could not be scheduled"
                 ) from exc
 
         routes: list[OnlineVersionRoute] = []
@@ -506,10 +521,12 @@ class OnlineVersionRrfRetriever:
         total_started = time.perf_counter()
         request_embedding_provider = _RequestEmbeddingProvider(self.embedding_provider)
         prewarm_executor = ThreadPoolExecutor(
-            max_workers=1,
-            thread_name_prefix="online-query-embedding-prewarm",
+            max_workers=2,
+            thread_name_prefix="online-request-prewarm",
         )
         prewarm_future: Future[_PrewarmedQueryEmbedding] | None = None
+        chunk_snapshot_future: Future[tuple[ChunkRecordV1, ...]] | None = None
+        chunk_snapshot_started_at: float | None = None
 
         def start_query_embedding_prewarm() -> None:
             nonlocal prewarm_future
@@ -519,6 +536,24 @@ class OnlineVersionRrfRetriever:
                 self._embed_single_query,
                 request_embedding_provider,
                 question,
+            )
+
+        def start_chunk_snapshot(version_ids: Sequence[str]) -> None:
+            nonlocal chunk_snapshot_future, chunk_snapshot_started_at
+            if chunk_snapshot_future is not None:
+                return
+            chunk_snapshot_started_at = time.perf_counter()
+            chunk_snapshot_future = prewarm_executor.submit(
+                self.chunk_snapshots.load_online_chunks,
+                owner_id=owner_id,
+                document_version_ids=list(version_ids),
+            )
+
+        def start_chunk_snapshot_for_versions(
+            versions: Sequence[DocumentVersionLifecycleV1],
+        ) -> None:
+            start_chunk_snapshot(
+                [version.document_version_id for version in versions]
             )
 
         ready_route_resolution_started = time.perf_counter()
@@ -535,6 +570,7 @@ class OnlineVersionRrfRetriever:
                     else None
                 ),
                 postgresql_ready_hook=start_query_embedding_prewarm,
+                ready_versions_hook=start_chunk_snapshot_for_versions,
             )
             ready_route_resolution_latency_ms = (
                 time.perf_counter() - ready_route_resolution_started
@@ -543,6 +579,12 @@ class OnlineVersionRrfRetriever:
                 # Keep custom resolver implementations compatible with the overlap
                 # optimization when they do not invoke the optional hook.
                 start_query_embedding_prewarm()
+            if routes and chunk_snapshot_future is None:
+                # Keep custom resolver implementations compatible with snapshot
+                # prewarming when they do not invoke the optional hook.
+                start_chunk_snapshot(
+                    [route.document_version_id for route in routes]
+                )
         except BaseException:
             prewarm_executor.shutdown(wait=True, cancel_futures=True)
             raise
@@ -572,16 +614,20 @@ class OnlineVersionRrfRetriever:
         milvus_timings: list[MilvusSearchLatencyBreakdown] = []
         query_embedding_latency_ms = 0.0
         try:
-            chunk_snapshot_started = time.perf_counter()
-            chunks = [
-                chunk.model_dump(mode="json")
-                for chunk in self.chunk_snapshots.load_online_chunks(
+            if chunk_snapshot_future is None:
+                chunk_snapshot_started = time.perf_counter()
+                loaded_chunks = self.chunk_snapshots.load_online_chunks(
                     owner_id=owner_id,
                     document_version_ids=[
                         route.document_version_id for route in routes
                     ],
                 )
-            ]
+            else:
+                chunk_snapshot_started = (
+                    chunk_snapshot_started_at or time.perf_counter()
+                )
+                loaded_chunks = chunk_snapshot_future.result()
+            chunks = [chunk.model_dump(mode="json") for chunk in loaded_chunks]
             chunk_snapshot_latency_ms = (
                 time.perf_counter() - chunk_snapshot_started
             ) * 1000
