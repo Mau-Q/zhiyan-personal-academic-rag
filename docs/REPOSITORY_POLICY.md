@@ -5,7 +5,9 @@
 - 仓库名称：`zhiyan-personal-academic-rag`
 - 仓库地址：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 - 初始可见性：Private
+- 当前可见性：Public（公开门禁已完成）
 - 默认分支：`main`
+- 当前公开基线：`v0.1.0`（MIT、engineering baseline，不代表 production-ready）
 
 GitHub 是本项目源码、合同、测试、Issue、Pull Request、Tag 和 Release 的唯一可信来源。即时通讯工具只用于通知，不传递“最终版源码”。
 
@@ -58,7 +60,8 @@ v1.0.0
 
 ## 6. 公开门禁
 
-仓库初始保持私有。切换为 Public 前必须全部通过：
+仓库初始保持私有；当前已切换为 Public。以下清单是公开切换时的门禁，也是后续
+版本继续沿用的发布卫生要求：
 
 1. 竞赛、学校和团队规则允许公开；
 2. 所有贡献者同意代码公开；

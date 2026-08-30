@@ -371,6 +371,8 @@ Competition Pack V1 的 Windows 用户复现已在 `d775dab...a4549` 和 Run ID 
 
 本地 Reliability/Security Hardening Gate 已完成一轮非破坏性收口：HTTP 错误 `ErrorV1.request_id` 每次唯一，正常回答的 replay `request_id/trace_id` 保持确定性；恶意问题/Evidence 保持在固定的 `system + user` 消息边界；应用自行创建的 Embedding Provider 在正常关闭和初始化失败时清理，注入的 Provider 仍由调用方负责。该 Gate 未改变公开 Schema、Prompt 身份、检索、ACL、READY、Citation 或失败关闭合同；真实模型安全行为仍需真实服务/人工评测，未由 Fixture 测试冒充。
 
+发布卫生随后已完成：项目代码采用 MIT License，仓库保持 `PUBLIC`，`v0.1.0` 已作为 engineering baseline Tag 推送到 `main`。该 Tag 不表示 production-ready；正式 Acceptance、生产容量和真实用户评价仍保持后置。后续文档修订必须保留 Competition 历史提交谱系，不得把 `d775dab`/`fd5a517` 改写成当前版本身份。
+
 ## Next gate
 
 1. **RAG 核心已最终冻结：** 不重复实现或重跑已通过的 PDF/Chunk、READY、检索、生成、引用、拒答、ACL、删除清理和 EvidenceSet Gate；

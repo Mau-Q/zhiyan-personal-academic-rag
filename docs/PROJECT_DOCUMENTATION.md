@@ -618,7 +618,7 @@ RRF、Reranker、比较拆分、路由覆盖和 NLI 都有独立 Gate。组件�
 - pair-level 人工正负金标、Precision、负例拒绝率和人工一致率未完成；
 - SSE 运行、Trace 持久化、反馈 API、看板、告警、灰度和回滚未完整验收；
 - 800～1500 题正式独立盲测尚未进入；
-- 仓库当前没有项目级开源许可证。
+- 项目代码已采用 MIT License，许可证正文见仓库根目录 `LICENSE`；第三方归属见 `THIRD_PARTY_NOTICES.md`。
 
 ### 14.2 未来可选增强
 

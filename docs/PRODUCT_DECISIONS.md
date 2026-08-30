@@ -5,7 +5,7 @@
 | PD-001 | ACCEPTED | 本地优先完成可审计 RAG 链路 | 远程基础设施不是本地 M0/M1 的前置条件 |
 | PD-002 | ACCEPTED | 合同优先，授权过滤失败关闭 | API、Schema、错误码和权限语义不得由实现临时扩宽 |
 | PD-003 | ACCEPTED | GitHub 是源码交付来源 | 不使用即时通讯压缩包作为最终版源码 |
-| PD-004 | ACCEPTED | 仓库保持 Private，公开需单独过门禁 | 当前无开源许可，不默认授予再分发权利 |
+| PD-004 | SUPERSEDED_BY_PD-078 | 仓库保持 Private，公开需单独过门禁 | 历史公开前决策；当前可见性和许可证由 PD-078 规定 |
 | PD-005 | SUPERSEDED_BY_PD-027_AND_PD-030 | 成员 A 负责本地核心，成员 B 负责远程准备 | 远程操作现由用户亲自执行；成员 B 改为通过独立 PR 准备离线评测候选标签 |
 | PD-006 | SUPERSEDED_BY_PD-011 | 成员 A 普通低风险任务通过本地门禁后直接推送 `main` | 直推决策保留，固定检查 CI 的部分由 PD-011 替代 |
 | PD-007 | ACCEPTED | Fixture/Fake 与真实索引、真实模型严格分离 | 评测和演示输出必须携带执行边界 |
@@ -79,5 +79,7 @@
 | PD-075 | ACCEPTED | Competition 第三次 Windows `_01` 在 `9d514da...b735e` 上已进入真实 Stage-1；Answer API 返回 `COMPLETED` 与非空 Evidence，但 Stage-1 旧门禁用结尾匹配拒绝了当前合法的 `CITATION_IDS_VALIDATED_CLAIM_EVIDENCE_AUDIT_<PASS|FAILED>_NOT_ENFORCED` warning，形成 `REAL_GENERATION_INITIAL_CITATION_GATE_FAILED` 协议假阴性。门禁现精确 allowlist 生成层已定义的 citation-validated 后缀 | 这不是 Citation 身份或 RAG 质量失败；任意包含、未知后缀和非 `COMPLETED`/空 Evidence 仍失败关闭。失败发生在 replay、inactivation 和 cleanup 之前，cleanup 仍为 `UNKNOWN`。修复不改 Prompt、Qwen、检索、Citation 映射、Claim–Evidence `AUDIT_ONLY`、场景或 baseline 边界；以新 exact HEAD、同一私有输入和 Run ID `competition_v1_20260809_01` 恢复 READY 生命周期，不创建 `_02` |
 | PD-076 | ACCEPTED | Competition Windows 真实复现 Gate 在 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS：同 Run READY 恢复与 reconciliation 通过，两个真实问题均 `COMPLETED`且每题 3 Evidence，Citation/Evidence/页码身份、generation replay 和 byte-stable replay 均通过；DELETE 后 3/3 cleanup、snapshot cleanup、不可见性与 403 均通过，脱敏结果恰好三场景 PASS | Windows 打印 finalized/redacted/private-report SHA 分别为 `bec756c8...3a340`、`3e309bed...bc4fb`、`40dbc613...a2f98`。本次证据为用户返回的版本化 wrapper PASS 截图，未在 Mac 重算 Windows runtime 产物哈希。该 PASS 只完成 `USER_REAL_REPRODUCTION_GATE`；`RAG_COMPETITION_BASELINE_V1` 仍待独立 closeout，不自动冻结或开始下一比赛工作 |
 | PD-077 | ACCEPTED | 独立 closeout 已对用户提供的 `redacted-results.json` 重算 raw SHA-256 `3e309bed...bc4fb`，并通过 Schema、身份、恰好三场景、Multi-Evidence `AUDIT_ONLY`、cleanup/403 和实际序列化内容隐私核验；`d775dab...a4549 → fd5a517...ac7b` 的 10 个变更文件经逐个分类为权威记录或不改变生产行为的 CI/测试可测性调整，Competition 真实路径语义不变；GitHub Core tests run `31309664087` 在精确 `fd5a517...ac7b`、Ubuntu 24.04 / CPython 3.11.15 上终态 PASS | 正式冻结 `RAG_COMPETITION_BASELINE_V1`：Windows 复现源是 `d775dab...a4549`，submission repository head 是 `fd5a517...ac7b`，runtime equivalence 为 `PASS`，不声称 Windows 复现了 `fd5a517`。Competition RAG owner scope 为 `DONE_ENOUGH`；Phase 3 保持 `PARTIAL / NO_PROMOTION / STOP`，Phase 4 保持 `PARTIAL / AUDIT_ONLY`，300 ms 保持 known/deferred；不启动新 RAG 工程或下一任务 |
+
+| PD-078 | ACCEPTED | 公开门禁完成后仓库当前保持 `PUBLIC`；项目代码采用 MIT License，并以 `v0.1.0` 作为公开的 engineering baseline Tag | MIT 只授予仓库代码及随附文档的许可证范围，不扩展私有论文、真实 Chunk、运行报告、凭据或其他受限资料的公开边界；`v0.1.0` 不表示 production-ready，后续版本仍须经过公开材料、测试和适用验收审查 |
 
 新增或改变已接受决策时，必须记录新 ID 或明确替代关系，不能只在聊天中覆盖本文件。
