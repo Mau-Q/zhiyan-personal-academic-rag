@@ -214,16 +214,29 @@ Chunk snapshot P95 为 `113.4019 ms`，后端并行墙钟 P95 为 `91.94626 ms`�
 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败。相比 Run 11，combined P95 上升约
 `15.97 ms`，因此现有预热收益不稳定，不能把该结果归因于某一项既有硬化。
 
-Run 12 后不直接重复完整 Gate；V2 Batch-20 不作为默认配置，V1 Batch-16、默认
-RRF 和 300 ms 性能债保持不变。本地下一步只验证有界 Milvus 在线逻辑行读取这一
-单变量，确认其是否能降低物理路由校验尾延迟。
+Run 13 在提交 `ca5a399e2fa6172ff7322a59b35e66ea98fbece7`、同一 V1 配置下完成
+30/30 `APPLIED`，`base P50/P95=154.2442/171.33452 ms`，
+`combined P50/P95=283.85435/302.983085 ms`，Reranker P95 为 `132.81631 ms`，
+Query Embedding P95 为 `162.41544 ms`。READY route resolution P95 为 `111.34351 ms`，
+READY PostgreSQL lookup P95 为 `0.747805 ms`，物理验证墙钟 P95 为 `110.057155 ms`，
+ES 物理校验工作 P95 为 `93.904575 ms`，Milvus 物理校验工作 P95 为 `108.48885 ms`，
+Chunk snapshot P95 为 `110.669265 ms`，ES total work P95 为 `8.759165 ms`，Milvus
+总工作 P95 为 `7.739835 ms`，后端并行墙钟 P95 为 `68.3716 ms`，READY revalidation
+P95 为 `1.06041 ms`，RRF P95 为 `0.099675 ms`。清理 3/3、删除后 403、无
+fallback/扩张/候选越界和分段状态均通过，但仍因
+`ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败。相比 Run 12，combined P95 下降
+`23.26917 ms`、base P95 下降 `24.513765 ms`，但仍超出 300 ms `2.983085 ms`；
+报告 SHA-256 为 `323D765FBEBE23C8CC1D3B509698E7D366A73CE3EEB34AC99F3F5D9AFA92E02F`。
+该结果支持有界 Milvus 逻辑行读取具有正向观测，但单次结果不足以证明稳定收益或晋级默认
+路径。V1 Batch-16、默认 RRF、ACL、READY、向量身份和失败关闭语义保持不变；下一步先
+使用同一提交和配置的新 Run ID 做确认性复测，不立即引入第二个性能变量。
 
 ## 5. 明确未处理的事项
 
 - 正式 Acceptance、真实用户评价和生产运维仍需要相应外部参与或独立工作流；
 - 本轮没有更换模型、放宽阈值、减少候选、引入重复问题缓存、修改默认 RRF 或修改冻结 V1 配置；V2 Batch-20 仅作失败的隔离实验；
 - 本轮没有重开 Phase 3 排序优化、查询拆分、路由覆盖、NLI 或阶段 5；
-- Ollama 单查询轻量端点、显式模型驻留与 READY 后 Chunk snapshot 预热已完成有限远程
-  观测，但尚未通过稳定 300 ms 性能门禁；Run 12 后新增的有界 Milvus 在线逻辑行读取
-  尚无远程性能结果。本轮没有运行真实生成或正式 Acceptance，Mac 只根据用户提供的
-  脱敏摘要判断远程性能。
+- Ollama 单查询轻量端点、显式模型驻留、READY 后 Chunk snapshot 预热与有界 Milvus
+  在线逻辑行读取均已获得有限远程观测，但尚未通过稳定 300 ms 性能门禁；Run 13 的
+  combined P95 为 `302.983085 ms`，仍需新 Run ID 确认方可判断单变量收益。本轮没有
+  运行真实生成或正式 Acceptance，Mac 只根据用户提供的脱敏摘要判断远程性能。

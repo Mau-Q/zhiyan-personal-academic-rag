@@ -326,9 +326,20 @@ READY 后 Chunk snapshot 预热已获得一次远程观测，combined P95 相比
 Query Embedding P95 为 `186.120074 ms`，READY route resolution P95 为 `114.18532 ms`，
 Milvus 物理校验工作 P95 为 `111.678 ms`，清理 3/3、删除后 403、无 fallback/候选扩张/越界
 和分段状态均通过，但严格 300 ms 门禁仍未通过。Run 12 与 Run 11 使用相同提交和配置，
-combined P95 上升约 `15.97 ms`，不能证明既有预热优化稳定收益。V1 Batch-16、默认 RRF 和
-300 ms 性能债保持不变；下一本地单变量只收紧 Milvus 在线逻辑行查询上界，不改变身份、
-向量、ACL 或失败关闭语义。
+combined P95 上升约 `15.97 ms`，不能证明既有预热优化稳定收益。随后用户在提交
+`ca5a399e2fa6172ff7322a59b35e66ea98fbece7`、同一 V1 配置下完成 Run 13：30/30
+`APPLIED`，`base P50/P95=154.2442/171.33452 ms`，
+`combined P50/P95=283.85435/302.983085 ms`，Reranker P95 为 `132.81631 ms`，
+Query Embedding P95 为 `162.41544 ms`；READY route resolution P95 为 `111.34351 ms`，
+READY physical verification wall P95 为 `110.057155 ms`，Milvus 物理校验工作 P95 为
+`108.48885 ms`，Chunk snapshot P95 为 `110.669265 ms`。清理 3/3、删除后 403、无
+fallback/候选扩张/越界和分段状态均通过，但仍因 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED`
+失败；相比 Run 12，combined P95 下降 `23.26917 ms`、base P95 下降 `24.513765 ms`，
+仍超出 300 ms `2.983085 ms`。报告 SHA-256 为
+`323D765FBEBE23C8CC1D3B509698E7D366A73CE3EEB34AC99F3F5D9AFA92E02F`。
+该结果支持有界 Milvus 逻辑行读取的正向观测，但仍不足以宣称稳定通过或晋级默认路径；
+V1 Batch-16、默认 RRF、ACL、READY、向量身份和失败关闭语义保持不变。下一步不再立刻
+修改变量，先用同一提交和配置的新 Run ID 做确认性复测，再决定是否继续代码优化。
 
 Competition Pack V1 的 Windows 用户复现已在 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS；独立 closeout 又对实际脱敏产物、`d775dab → fd5a517` 运行时等价性与精确提交 GitHub clean-checkout 证据完成复核。因此当前记为 `RAG_COMPETITION_BASELINE_V1_FROZEN / RAG_OWNER_SCOPE_DONE_ENOUGH`。这不改写 Phase 3 `PARTIAL / NO_PROMOTION / STOP`、Phase 4 `PARTIAL / AUDIT_ONLY`、300 ms known/deferred 债务或正式 Acceptance 边界。
 
