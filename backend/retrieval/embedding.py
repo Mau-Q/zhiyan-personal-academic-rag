@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import http.client
 import json
 import math
-import urllib.error
-import urllib.request
 from collections.abc import Sequence
 from dataclasses import dataclass
+from threading import Lock
 from typing import Any, Protocol
+from urllib.parse import urlsplit
 
 
 _LEGACY_SINGLE_INPUT_MAX_CHARS = 2048
@@ -17,6 +18,94 @@ _OLLAMA_KEEP_ALIVE = "10m"
 
 class EmbeddingServiceError(ValueError):
     """Raised when the configured embedding service cannot prove a usable model."""
+
+
+class _OllamaHttpStatusError(OSError):
+    """Keep non-success HTTP responses on the existing fail-closed path."""
+
+    def __init__(self, status: int):
+        super().__init__(f"HTTP {status}")
+
+
+class _ReusableOllamaHttpClient:
+    """Thread-safe, lazy HTTP/1.1 connection reuse for one Ollama origin."""
+
+    def __init__(self, *, base_url: str, timeout_seconds: float):
+        parsed = urlsplit(base_url)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise ValueError("embedding base_url must use http or https with a host")
+        if parsed.username is not None or parsed.password is not None:
+            raise ValueError("embedding base_url must not contain credentials")
+        if parsed.query or parsed.fragment:
+            raise ValueError("embedding base_url must not contain a query or fragment")
+        self._scheme = parsed.scheme
+        self._host = parsed.hostname
+        self._port = parsed.port
+        self._base_path = parsed.path.rstrip("/")
+        self._timeout_seconds = timeout_seconds
+        self._connection: http.client.HTTPConnection | http.client.HTTPSConnection | None = None
+        self._lock = Lock()
+
+    def _new_connection(
+        self,
+    ) -> http.client.HTTPConnection | http.client.HTTPSConnection:
+        connection_type = (
+            http.client.HTTPSConnection
+            if self._scheme == "https"
+            else http.client.HTTPConnection
+        )
+        return connection_type(
+            self._host,
+            self._port,
+            timeout=self._timeout_seconds,
+        )
+
+    def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        body: bytes | None,
+        headers: dict[str, str],
+    ) -> bytes:
+        target = f"{self._base_path}{path}"
+        if not target.startswith("/"):
+            target = f"/{target}"
+        with self._lock:
+            connection = self._connection
+            if connection is None:
+                connection = self._new_connection()
+                self._connection = connection
+            try:
+                connection.request(method, target, body=body, headers=headers)
+                response = connection.getresponse()
+                raw = response.read()
+                if response.will_close or (
+                    response.getheader("Connection", "").lower() == "close"
+                ):
+                    self._discard_locked(connection)
+                if not 200 <= response.status < 300:
+                    raise _OllamaHttpStatusError(response.status)
+                return raw
+            except (OSError, http.client.HTTPException):
+                self._discard_locked(connection)
+                raise
+
+    def _discard_locked(
+        self,
+        connection: http.client.HTTPConnection | http.client.HTTPSConnection,
+    ) -> None:
+        if self._connection is connection:
+            self._connection = None
+        try:
+            connection.close()
+        except OSError:
+            pass
+
+    def close(self) -> None:
+        with self._lock:
+            if self._connection is not None:
+                self._discard_locked(self._connection)
 
 
 @dataclass(frozen=True)
@@ -47,8 +136,6 @@ class OllamaEmbeddingProvider:
     ):
         if not model.strip():
             raise ValueError("embedding model must not be blank")
-        if not base_url.startswith(("http://", "https://")):
-            raise ValueError("embedding base_url must use http or https")
         if batch_size < 1:
             raise ValueError("embedding batch_size must be at least 1")
         if timeout_seconds <= 0:
@@ -57,6 +144,10 @@ class OllamaEmbeddingProvider:
         self.base_url = base_url.rstrip("/")
         self.batch_size = batch_size
         self.timeout_seconds = timeout_seconds
+        self._http_client = _ReusableOllamaHttpClient(
+            base_url=self.base_url,
+            timeout_seconds=timeout_seconds,
+        )
 
     def _request(self, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         data = None
@@ -66,17 +157,24 @@ class OllamaEmbeddingProvider:
             data = json.dumps(payload).encode("utf-8")
             method = "POST"
             headers["Content-Type"] = "application/json"
-        request = urllib.request.Request(
-            f"{self.base_url}{path}", data=data, headers=headers, method=method
-        )
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
-                decoded = json.loads(response.read().decode("utf-8"))
-        except (OSError, urllib.error.URLError, json.JSONDecodeError) as exc:
+            raw = self._http_client.request(
+                method,
+                path,
+                body=data,
+                headers=headers,
+            )
+            decoded = json.loads(raw.decode("utf-8"))
+        except (OSError, http.client.HTTPException, json.JSONDecodeError) as exc:
             raise EmbeddingServiceError(f"Ollama request failed for {path}: {exc}") from exc
         if not isinstance(decoded, dict):
             raise EmbeddingServiceError(f"Ollama returned a non-object response for {path}")
         return decoded
+
+    def close(self) -> None:
+        """Close the provider's reusable connection when the host shuts down."""
+
+        self._http_client.close()
 
     @staticmethod
     def _model_aliases(name: str) -> set[str]:
