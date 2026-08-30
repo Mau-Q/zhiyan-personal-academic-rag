@@ -132,6 +132,6 @@ Git 只保存源码、合同、测试、配置样例、公开 Fixture 和脱敏�
 
 ## 许可证
 
-仓库当前公开，但尚未添加项目级开源许可证。除适用法律默认允许的范围外，
-不要据此假定代码已获复制、修改或分发授权；第三方依赖说明见
-[`docs/THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md)。
+项目代码采用 [MIT License](LICENSE)。第三方代码和运行依赖的许可证与归属说明见
+[`docs/THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md)。许可证不改变项目对私有论文、
+真实 Chunk、运行报告、凭据或其他受限资料的仓库边界。

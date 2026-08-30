@@ -5,6 +5,10 @@
 
 ## Unreleased
 
+No changes yet.
+
+## 0.1.0 — 2026-08-30
+
 ### Reliability and security hardening
 
 - 让 HTTP `ErrorV1.request_id` 对每次 403/422 等错误响应唯一，同时保持正常回答的
@@ -31,6 +35,6 @@
 
 ## Release notes policy
 
-在项目所有者选择开源许可证、审核公开材料并明确版本范围前，本仓库不创建正式版本
-Tag，也不将 `Unreleased` 描述为 production release。许可证选择属于项目所有者的
-法律/发布决策，不由本文件代替。
+`v0.1.0` 是一个公开的工程基线 Tag，不是 production-ready 声明。后续变化先进入
+`Unreleased`，再经过本地门禁、公开材料审查和适用的远程/验收证据后发布。许可证见
+[`LICENSE`](LICENSE)；第三方归属见 [`docs/THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md)。
