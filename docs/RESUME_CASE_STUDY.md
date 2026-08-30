@@ -5,21 +5,21 @@
 
 ## 一句话项目描述
 
-面向个人论文库实现一条 owner-scoped、版本化、可引用、可拒答、可清理的 RAG 核心链路：
-PostgreSQL 负责 READY/ACL 事实，Elasticsearch 与 Milvus 并行召回，RRF 融合，真实模型
-只消费完成身份重验的 Evidence，并在删除后阻断旧证据继续可见。
+这个项目面向个人论文库，构建了一条 owner-scoped、版本化、可引用、可拒答、可清理的
+RAG 核心链路：PostgreSQL 维护 READY/ACL 事实，Elasticsearch 与 Milvus 并行召回，
+RRF 负责融合；真实模型只消费完成身份重验的 Evidence，文档删除后阻断旧证据继续可见。
 
 ## 可直接用于简历的中文表述
 
-- 设计并实现个人学术文献 RAG 核心，将 PostgreSQL owner/READY 事实源、Elasticsearch
-  BM25、Milvus/BGE-M3、rank-only RRF（candidate top-20、`k=60`、final top-3）和
-  Citation/Evidence 审计串成可重放、可失败关闭的在线链路。
-- 建立从 PDF/Chunk、不可变 document version 到双索引 READY 的身份合同；删除时先将
-  PostgreSQL 版本置为 `INACTIVE`，再完成 Elasticsearch、Milvus 和 runtime snapshot
-  三路清理，避免索引残留重新暴露已撤权证据。
-- 针对 Windows RTX 4090 固定 30 样本在线 Gate 定位延迟瓶颈：单共享 Ollama HTTP/1.1
-  连接导致 Query Embedding 与 READY 身份校验重叠受限；改为最多两条连接的线程安全有界池，
-  在不引入跨请求缓存、不改变检索参数的前提下使 combined P95 从 Run 15 的
+- 设计并实现个人学术文献 RAG 核心：以 PostgreSQL owner/READY 为事实源，接入
+  Elasticsearch BM25、Milvus/BGE-M3、rank-only RRF（candidate top-20、`k=60`、
+  final top-3）和 Citation/Evidence 审计，形成可重放、可失败关闭的在线链路。
+- 为 PDF/Chunk、不可变 document version 和双索引 READY 定义统一身份；删除时先将
+  PostgreSQL 版本置为 `INACTIVE`，再清理 Elasticsearch、Milvus 和 runtime snapshot，
+  防止索引残留重新暴露已撤权证据。
+- 在 Windows RTX 4090 固定 30 样本在线 Gate 中定位延迟瓶颈：单共享 Ollama HTTP/1.1
+  连接限制了 Query Embedding 与 READY 身份校验的重叠；改为最多两条连接的线程安全有界池，
+  在不引入跨请求缓存、不改变检索参数的前提下，将 combined P95 从 Run 15 的
   `364.802135 ms` 降至 Run 16/17 的 `287.73689/292.114209 ms`。
 - 加固服务可靠性：错误响应使用唯一 `request_id`，正常回答保留确定性 replay identity；
   恶意问题/Evidence 不会改变 Chat message role；应用自行创建的 Embedding Provider
@@ -60,11 +60,11 @@ PostgreSQL 负责 READY/ACL 事实，Elasticsearch 与 Milvus 并行召回，RRF
 
 ### 性能实验的工程判断
 
-Run 15 使用单共享连接，Query Embedding 本身较快，但 READY 物理验证墙钟上升，说明连接
-复用可能串行化原本可重叠的请求。随后只改变连接池并发上限为 2，保留端点、模型、输入、
-缓存边界和错误语义不变。Run 16/17 连续通过固定 `300 ms` combined P95 Gate，因此保留
-该实现；不把这两次固定样本结果写成生产容量或正式 SLO 证明，也不继续执行同一变量的
-无信息重跑。
+Run 15 使用单共享连接。Query Embedding 本身较快，但 READY 物理验证的墙钟时间上升，
+说明连接复用可能串行化了原本可以重叠的请求。后续只把连接池上限改为 2，端点、模型、
+输入、缓存边界和错误语义均保持不变。Run 16/17 连续通过固定 `300 ms` combined P95
+Gate，因此保留该实现；这两次结果仍不等于生产容量或正式 SLO 证明，也不值得继续做同
+一变量的无信息重跑。
 
 ## 证据边界
 

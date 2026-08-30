@@ -1,8 +1,8 @@
 # 智研个人学术空间 RAG
 
-面向个人论文库的证据约束型 RAG 核心服务。项目以 PostgreSQL 保存文档身份、
-授权范围和生命周期事实，以 Elasticsearch 与 Milvus 提供混合召回，并让生成、
-引用、拒答和证据审计都能回到具体论文版本、页码与 Chunk。
+这是一个面向个人论文库的证据约束型 RAG 核心服务。PostgreSQL 保存文档身份、
+授权范围和生命周期事实；Elasticsearch 与 Milvus 负责混合召回；生成、引用、拒答和
+证据审计都回到具体的论文版本、页码和 Chunk。
 
 仓库地址：<https://github.com/Mau-Q/zhiyan-personal-academic-rag>
 
@@ -20,8 +20,8 @@ PDF / Chunk
 → 删除失效与 ES / Milvus / runtime 清理
 ```
 
-这条链路已有版本化本地测试和用户执行的脱敏远程证据。它证明当前 RAG
-核心可以按身份和权限失败关闭，不代表所有计划中的产品能力或生产 SLO 已完成。
+本地测试和用户执行的脱敏远程报告已经覆盖这条链路。现有证据支持 RAG 核心在身份
+或权限不满足时失败关闭，但不支持“所有计划中的产品能力或生产 SLO 已完成”。
 
 ## 当前阶段
 
@@ -41,7 +41,7 @@ PDF / Chunk
 
 ## 默认决策
 
-- 默认检索路径是 PostgreSQL `READY`/owner 前置校验后的 ES + Milvus
+- 默认检索路径先经过 PostgreSQL `READY`/owner 校验，再由 ES + Milvus 执行
   rank-only RRF。
 - 固定 Cross-Encoder Reranker 已保留为可选组件，但不默认启用。
 - Multi-Evidence EvidenceSet 保持 `AUDIT_ONLY`，不自动删除 Claim，也不冒充
@@ -66,8 +66,8 @@ PDF / Chunk
 
 边界：
 
-- 公开 Fixture/Fake 路径只用于合同、权限和失败语义测试，不是当前真实能力的
-  替代证据；
+- 公开 Fixture/Fake 路径只用于合同、权限和失败语义测试，不能替代当前真实能力的
+  证据；
 - 远程结论来自冻结提交上的用户执行与脱敏报告，不表示远程服务此刻持续在线；
 - 确定性 EvidenceSet 不是人工裁决、NLI 金标或通用语义 Judge；
 - 正式 MinIO、OCR、目标规模容量/性能、完整运维告警和生产发布回滚仍未验收。
