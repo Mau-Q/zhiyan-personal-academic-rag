@@ -32,6 +32,7 @@ class OllamaEmbeddingProviderTests(unittest.TestCase):
         self.assertEqual(vectors, [[1.0, 2.0]])
         self.assertEqual(provider.requests[0][0], "/api/embeddings")
         self.assertEqual(provider.requests[0][1]["prompt"], "short query")
+        self.assertEqual(provider.requests[0][1]["keep_alive"], "10m")
 
     def test_long_single_input_keeps_truncating_batch_endpoint(self) -> None:
         provider = RecordingOllamaEmbeddingProvider()
@@ -42,6 +43,7 @@ class OllamaEmbeddingProviderTests(unittest.TestCase):
         self.assertEqual(provider.requests[0][0], "/api/embed")
         self.assertEqual(provider.requests[0][1]["input"], [text])
         self.assertEqual(provider.requests[0][1]["truncate"], True)
+        self.assertEqual(provider.requests[0][1]["keep_alive"], "10m")
 
     def test_batch_input_keeps_batch_embedding_endpoint(self) -> None:
         provider = RecordingOllamaEmbeddingProvider()
@@ -50,6 +52,7 @@ class OllamaEmbeddingProviderTests(unittest.TestCase):
 
         self.assertEqual(provider.requests[0][0], "/api/embed")
         self.assertEqual(provider.requests[0][1]["input"], ["first", "second"])
+        self.assertEqual(provider.requests[0][1]["keep_alive"], "10m")
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ from typing import Any, Protocol
 
 
 _LEGACY_SINGLE_INPUT_MAX_CHARS = 2048
+_OLLAMA_KEEP_ALIVE = "10m"
 
 
 class EmbeddingServiceError(ValueError):
@@ -117,6 +118,7 @@ class OllamaEmbeddingProvider:
                     "model": self.model,
                     "input": batch,
                     "truncate": True,
+                    "keep_alive": _OLLAMA_KEEP_ALIVE,
                 },
             )
             embeddings = payload.get("embeddings")
@@ -137,6 +139,7 @@ class OllamaEmbeddingProvider:
             {
                 "model": self.model,
                 "prompt": text,
+                "keep_alive": _OLLAMA_KEEP_ALIVE,
             },
         )
         return [self._convert_vector(payload.get("embedding"))]

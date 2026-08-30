@@ -309,9 +309,14 @@ P50/P95 为 `177.5275/187.45609 ms`、combined P50/P95 为
 Run ID `online_retrieval_hardening_06` 使用 V2 Batch-20 完成 30/30 `APPLIED`，base
 retrieval P95 为 `195.881911 ms`、combined P95 为 `324.23998 ms`、Reranker P95
 为 `135.93435 ms`；阶段合同、清理 3/3、删除后 403、无 fallback/候选扩张/越界均通过，
-但 combined P95 反而上升，V2 不晋级，V1 继续冻结。当前本地下一轮仅尝试同一 Ollama
-模型的短单查询轻量端点：不改变模型、查询文本、向量维度、候选边界、RRF、ACL 或失败
-回退，超过 2048 字符仍使用原 `/api/embed` 截断路径，尚待新的 Run ID 验证。
+但 combined P95 反而上升，V2 不晋级，V1 继续冻结。随后用户在同一提交、同一 V1 配置下完成
+Run ID `online_retrieval_hardening_07` 与 `online_retrieval_hardening_08`：两次均 30/30
+`APPLIED`，Run 07 的 combined P95 为 `300.160535 ms`，Run 08 为 `305.54851 ms`；
+清理 3/3、删除后 403、无 fallback/候选扩张/越界和分段状态均通过，但严格 300 ms 门禁
+均未通过。首次重复 Run 07 只得到无指标的通用 `ValueError`，不计入性能结果。当前本地
+下一轮在同一 Ollama 模型的短单查询轻量端点之外，新增顶层 `keep_alive="10m"`；不改变
+模型、查询文本、向量维度、候选边界、RRF、ACL 或失败回退，超过 2048 字符仍使用原
+`/api/embed` 截断路径，尚待新的 Run ID 验证。
 
 Competition Pack V1 的 Windows 用户复现已在 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS；独立 closeout 又对实际脱敏产物、`d775dab → fd5a517` 运行时等价性与精确提交 GitHub clean-checkout 证据完成复核。因此当前记为 `RAG_COMPETITION_BASELINE_V1_FROZEN / RAG_OWNER_SCOPE_DONE_ENOUGH`。这不改写 Phase 3 `PARTIAL / NO_PROMOTION / STOP`、Phase 4 `PARTIAL / AUDIT_ONLY`、300 ms known/deferred 债务或正式 Acceptance 边界。
 
