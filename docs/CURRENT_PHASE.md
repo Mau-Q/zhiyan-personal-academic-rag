@@ -346,9 +346,13 @@ READY physical verification wall P95 为 `111.88934 ms`，Milvus 物理校验工
 `109.545291 ms`，Chunk snapshot P95 为 `112.596415 ms`。清理 3/3、删除后 403、无
 fallback/候选扩张/越界和分段状态均通过，但仍因 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED`
 失败。Run 13/14 均未稳定低于 300 ms；当前将 300 ms 记为已验证但未解决的性能债，保留
-有界 Milvus 读取这一语义不变的硬化，不再在当前冻结边界内追加微优化。报告 SHA-256 为
-`21155ADC74729F37150327D3AEA5F80F4664F7653183845F6A151A6A16064AB7`。下一步转入
-真实 Demo/界面/README 的独立工作流，性能数字必须如实标注为 `P95 > 300 ms`。
+有界 Milvus 读取这一语义不变的硬化。这里的“收口”只表示记录本轮证据、拒绝虚假宣称
+和停止无证据的同变量重跑，不表示性能不能继续优化；鉴于用户当前以质量优先且不赶进度，
+性能工作流重新保持开放。下一步先做更细的本地/代码级 profiling，定位物理校验请求、
+Embedding 等结构性成本，再一次只选一个有证据的变量验证；不改变 V1 Batch-16、默认
+RRF、候选边界、ACL 或失败关闭语义。报告 SHA-256 为
+`21155ADC74729F37150327D3AEA5F80F4664F7653183845F6A151A6A16064AB7`。Demo/界面/README
+可以并行准备，但不得用未通过的 `300 ms` 结果包装展示。
 
 Competition Pack V1 的 Windows 用户复现已在 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS；独立 closeout 又对实际脱敏产物、`d775dab → fd5a517` 运行时等价性与精确提交 GitHub clean-checkout 证据完成复核。因此当前记为 `RAG_COMPETITION_BASELINE_V1_FROZEN / RAG_OWNER_SCOPE_DONE_ENOUGH`。这不改写 Phase 3 `PARTIAL / NO_PROMOTION / STOP`、Phase 4 `PARTIAL / AUDIT_ONLY`、300 ms known/deferred 债务或正式 Acceptance 边界。
 
