@@ -63,6 +63,7 @@ class FakeMilvusVersionTransport:
         self.collections: dict[str, dict[str, Any]] = {}
         self.upsert_batches: list[list[str]] = []
         self.calls: list[tuple[str, str]] = []
+        self.query_limits: list[int] = []
         self.physical_row_count = 0
         self.stats_calls = 0
 
@@ -131,6 +132,7 @@ class FakeMilvusVersionTransport:
         limit: int,
     ) -> list[Mapping[str, Any]]:
         del filter_expression, output_fields
+        self.query_limits.append(limit)
         rows = self.collections[collection_name]["rows"].values()
         return [copy.deepcopy(row) for row in list(rows)[:limit]]
 
@@ -244,6 +246,7 @@ class MilvusVersionIndexWriterTests(unittest.TestCase):
         self.assertEqual(route, name)
         self.assertEqual(len(metadata), 1)
         self.assertEqual(metadata[0]["chunk_count"], "2")
+        self.assertEqual(self.transport.query_limits[-1], 3)
         row = self.transport.collections[name]["rows"]["chunk_001"]
         row["is_active"] = False
         row["payload"]["is_active"] = False

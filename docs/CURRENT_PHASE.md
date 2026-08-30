@@ -321,8 +321,14 @@ Run 09 与 Run 10：两次均 30/30 `APPLIED`，combined P95 分别为 `301.0356
 `APPLIED`，base P95 为 `180.419535 ms`，combined P95 为 `310.283465 ms`；清理
 3/3、删除后 403、无 fallback/候选扩张/越界和分段状态均通过，但严格 300 ms 门禁仍未通过。
 READY 后 Chunk snapshot 预热已获得一次远程观测，combined P95 相比 Run 10 下降，但不足以
-证明独立稳定收益；因此不晋级默认路径。V1 Batch-16、默认 RRF 和 300 ms 性能债保持不变，
-下一步暂停盲目远程重跑，先做本地分段 profiling。
+证明独立稳定收益；因此不晋级默认路径。随后用户在同一提交、同一 V1 配置下完成 Run 12：
+30/30 `APPLIED`，base P95 为 `195.848285 ms`，combined P95 为 `326.252255 ms`，
+Query Embedding P95 为 `186.120074 ms`，READY route resolution P95 为 `114.18532 ms`，
+Milvus 物理校验工作 P95 为 `111.678 ms`，清理 3/3、删除后 403、无 fallback/候选扩张/越界
+和分段状态均通过，但严格 300 ms 门禁仍未通过。Run 12 与 Run 11 使用相同提交和配置，
+combined P95 上升约 `15.97 ms`，不能证明既有预热优化稳定收益。V1 Batch-16、默认 RRF 和
+300 ms 性能债保持不变；下一本地单变量只收紧 Milvus 在线逻辑行查询上界，不改变身份、
+向量、ACL 或失败关闭语义。
 
 Competition Pack V1 的 Windows 用户复现已在 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS；独立 closeout 又对实际脱敏产物、`d775dab → fd5a517` 运行时等价性与精确提交 GitHub clean-checkout 证据完成复核。因此当前记为 `RAG_COMPETITION_BASELINE_V1_FROZEN / RAG_OWNER_SCOPE_DONE_ENOUGH`。这不改写 Phase 3 `PARTIAL / NO_PROMOTION / STOP`、Phase 4 `PARTIAL / AUDIT_ONLY`、300 ms known/deferred 债务或正式 Acceptance 边界。
 

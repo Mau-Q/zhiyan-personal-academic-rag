@@ -226,15 +226,21 @@ class MilvusVersionIndexWriter:
                     collection_name,
                 )
                 provider_identity_future = executor.submit(self.provider.identity)
-                rows_future = executor.submit(self._query_rows, collection_name)
+                description = description_future.result()
+                provider_identity = provider_identity_future.result()
                 metadata = self._inspect_identity(
                     collection_name=collection_name,
                     owner_id=owner_id,
                     document_id=document_id,
                     document_version_id=document_version_id,
                     verify_provider=True,
-                    description=description_future.result(),
-                    provider_identity=provider_identity_future.result(),
+                    description=description,
+                    provider_identity=provider_identity,
+                )
+                rows_future = executor.submit(
+                    self._query_rows,
+                    collection_name,
+                    limit=int(metadata["chunk_count"]) + 1,
                 )
                 rows = rows_future.result()
             self._verify_lifecycle_rows(
@@ -456,12 +462,19 @@ class MilvusVersionIndexWriter:
             raise MilvusIndexNotReadyError("Milvus version upsert count is invalid")
         self._flush_and_load(collection_name)
 
-    def _query_rows(self, collection_name: str) -> list[dict[str, Any]]:
+    def _query_rows(
+        self,
+        collection_name: str,
+        *,
+        limit: int = MAX_VERSION_ROWS,
+    ) -> list[dict[str, Any]]:
+        if limit < 1 or limit > MAX_VERSION_ROWS + 1:
+            raise ValueError("Milvus version row query limit is invalid")
         rows = self.transport.query(
             collection_name,
             filter_expression="",
             output_fields=sorted(EXPECTED_FIELDS),
-            limit=MAX_VERSION_ROWS,
+            limit=limit,
         )
         if not isinstance(rows, list) or not all(isinstance(row, Mapping) for row in rows):
             raise MilvusIndexNotReadyError("Milvus version query response is invalid")

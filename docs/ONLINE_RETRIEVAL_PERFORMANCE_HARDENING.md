@@ -51,9 +51,11 @@ Elasticsearch 版本路由校验将 index identity/settings 与总量、owner/ve
 
 ### 2.6 Milvus 路由校验内部并行
 
-Milvus 路由校验现在并行取得 Collection 描述、Embedding 模型身份和完整逻辑行
-快照，再按原顺序执行相同的字段、向量指纹、数量和 active 状态校验。并行只改变
-只读校验的等待方式，不改变任何写入、生命周期、身份或失败关闭语义。
+Milvus 路由校验先并行取得 Collection 描述和 Embedding 模型身份；在描述确认
+`chunk_count` 后，以最多 `chunk_count + 1` 的上界读取完整逻辑行快照，再按原顺序
+执行相同的字段、向量指纹、数量和 active 状态校验。这个上界仍能识别多余行，且
+不会放宽任何写入、生命周期、身份或失败关闭语义；它只避免在线验证向 Milvus
+请求一个远大于实际版本大小的通用行数上限。
 
 ### 2.7 同请求复用已验证路由证明
 
@@ -87,7 +89,16 @@ PostgreSQL 已确认精确 owner、READY 和请求范围后，在线检索会把
 校验期间加载 Chunk snapshot。物理路由返回后仍按原逻辑核对版本集合、Chunk ID
 唯一性、ACL、来源指纹和后续 PostgreSQL revalidation；预热失败或结果不一致仍
 失败关闭。该变化只重叠等待时间，不建立跨请求缓存，也不改变 READY、候选边界、
-RRF 或证据语义，尚待新的远程 Run 验证。
+RRF 或证据语义，远程 Run 12 未证明其独立稳定收益。
+
+### 2.11 有界 Milvus 在线逻辑行读取
+
+Run 12 的 Milvus 物理校验工作仍接近 READY 物理校验墙钟，因此本轮只改变在线
+读取的请求上界：先取得并验证 Collection 元数据，再以 `chunk_count + 1` 作为
+逻辑行查询 `limit`。返回的仍是完整字段，仍执行 owner/document/version、Chunk
+唯一性、payload、向量、Embedding 指纹和 active 状态校验；`+1` 保留了发现多余
+实体的能力。该变更不使用跨请求缓存、不跳过模型身份或 PostgreSQL revalidation，
+等待目标 Windows 上的单变量复测。
 
 ## 3. 细分观测与验证边界
 
@@ -193,8 +204,19 @@ Query Embedding P95 为 `169.90922 ms`。READY route resolution P95 为 `112.600
 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败。相比 Run 10 的 combined P95 有下降，
 但单次结果不足以证明 READY 后预热的独立收益，不能晋级为默认优化。
 
-Run 11 后暂停盲目远程重跑；V2 Batch-20 不作为默认配置，V1 Batch-16、默认 RRF
-和 300 ms 性能债保持不变。
+Run 12 在同一提交、同一 V1 配置下完成 30/30 `APPLIED`，
+`base P50/P95=161.8413/195.848285 ms`，
+`combined P50/P95=291.86095/326.252255 ms`，Reranker P95 为 `132.92608 ms`，
+Query Embedding P95 为 `186.120074 ms`。READY route resolution P95 为 `114.18532 ms`，
+物理验证墙钟 P95 为 `112.69045 ms`，Milvus 物理校验工作 P95 为 `111.678 ms`，
+Chunk snapshot P95 为 `113.4019 ms`，后端并行墙钟 P95 为 `91.94626 ms`；清理
+3/3、删除后 403、无 fallback/扩张/候选越界和分段状态均通过，但仍因
+`ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败。相比 Run 11，combined P95 上升约
+`15.97 ms`，因此现有预热收益不稳定，不能把该结果归因于某一项既有硬化。
+
+Run 12 后不直接重复完整 Gate；V2 Batch-20 不作为默认配置，V1 Batch-16、默认
+RRF 和 300 ms 性能债保持不变。本地下一步只验证有界 Milvus 在线逻辑行读取这一
+单变量，确认其是否能降低物理路由校验尾延迟。
 
 ## 5. 明确未处理的事项
 
@@ -202,5 +224,6 @@ Run 11 后暂停盲目远程重跑；V2 Batch-20 不作为默认配置，V1 Batc
 - 本轮没有更换模型、放宽阈值、减少候选、引入重复问题缓存、修改默认 RRF 或修改冻结 V1 配置；V2 Batch-20 仅作失败的隔离实验；
 - 本轮没有重开 Phase 3 排序优化、查询拆分、路由覆盖、NLI 或阶段 5；
 - Ollama 单查询轻量端点、显式模型驻留与 READY 后 Chunk snapshot 预热已完成有限远程
-  观测，但尚未通过稳定 300 ms 性能门禁；本轮没有运行真实生成或正式 Acceptance，Mac
-  只根据用户提供的脱敏摘要判断远程性能。
+  观测，但尚未通过稳定 300 ms 性能门禁；Run 12 后新增的有界 Milvus 在线逻辑行读取
+  尚无远程性能结果。本轮没有运行真实生成或正式 Acceptance，Mac 只根据用户提供的
+  脱敏摘要判断远程性能。
