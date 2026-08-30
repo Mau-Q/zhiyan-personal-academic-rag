@@ -228,8 +228,23 @@ fallback/扩张/候选越界和分段状态均通过，但仍因
 `23.26917 ms`、base P95 下降 `24.513765 ms`，但仍超出 300 ms `2.983085 ms`；
 报告 SHA-256 为 `323D765FBEBE23C8CC1D3B509698E7D366A73CE3EEB34AC99F3F5D9AFA92E02F`。
 该结果支持有界 Milvus 逻辑行读取具有正向观测，但单次结果不足以证明稳定收益或晋级默认
-路径。V1 Batch-16、默认 RRF、ACL、READY、向量身份和失败关闭语义保持不变；下一步先
-使用同一提交和配置的新 Run ID 做确认性复测，不立即引入第二个性能变量。
+路径。V1 Batch-16、默认 RRF、ACL、READY、向量身份和失败关闭语义保持不变。随后在同一
+提交、同一 V1 配置下完成确认性 Run 14：30/30 `APPLIED`，
+`base P50/P95=150.7967/178.04327 ms`，
+`combined P50/P95=280.4708/309.49054 ms`，Reranker P95 为 `133.246075 ms`，
+Query Embedding P95 为 `168.735645 ms`。READY route resolution P95 为 `113.32768 ms`，
+READY PostgreSQL lookup P95 为 `0.734876 ms`，物理验证墙钟 P95 为 `111.88934 ms`，
+ES 物理校验工作 P95 为 `95.913135 ms`，Milvus 物理校验工作 P95 为 `109.545291 ms`，
+Chunk snapshot P95 为 `112.596415 ms`，ES validation/query/total work P95 为
+`1.457475/7.91732/9.28996 ms`，Milvus validation/query-embedding/ANN/total work P95
+为 `1.559585/168.735645/6.48632/8.083165 ms`，后端并行墙钟 P95 为 `82.487035 ms`，
+READY revalidation P95 为 `0.97465 ms`，RRF P95 为 `0.11742 ms`，retriever total P95
+为 `177.84161 ms`。清理 3/3、删除后 403、无 fallback/扩张/候选越界和分段状态均通过，
+但仍因 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败；报告 SHA-256 为
+`21155ADC74729F37150327D3AEA5F80F4664F7653183845F6A151A6A16064AB7`。
+Run 13 的 `302.983085 ms` 与 Run 14 的 `309.49054 ms` 均未稳定低于 300 ms，说明当前
+安全边界内的有界 Milvus 读取不足以收敛性能债。保留该语义不变的硬化，不再追加当前冻结
+边界内的微优化；后续转入真实 Demo/界面/README 工作流，所有展示必须明确标注该性能债。
 
 ## 5. 明确未处理的事项
 
@@ -237,6 +252,7 @@ fallback/扩张/候选越界和分段状态均通过，但仍因
 - 本轮没有更换模型、放宽阈值、减少候选、引入重复问题缓存、修改默认 RRF 或修改冻结 V1 配置；V2 Batch-20 仅作失败的隔离实验；
 - 本轮没有重开 Phase 3 排序优化、查询拆分、路由覆盖、NLI 或阶段 5；
 - Ollama 单查询轻量端点、显式模型驻留、READY 后 Chunk snapshot 预热与有界 Milvus
-  在线逻辑行读取均已获得有限远程观测，但尚未通过稳定 300 ms 性能门禁；Run 13 的
-  combined P95 为 `302.983085 ms`，仍需新 Run ID 确认方可判断单变量收益。本轮没有
-  运行真实生成或正式 Acceptance，Mac 只根据用户提供的脱敏摘要判断远程性能。
+  在线逻辑行读取均已获得有限远程观测，但 Run 13/14 的 combined P95 分别为
+  `302.983085/309.49054 ms`，未通过稳定 300 ms 性能门禁；当前性能债保持 deferred，
+  不再在冻结边界内追加微优化。本轮没有运行真实生成或正式 Acceptance，Mac 只根据用户
+  提供的脱敏摘要判断远程性能。

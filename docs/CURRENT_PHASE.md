@@ -338,8 +338,17 @@ fallback/候选扩张/越界和分段状态均通过，但仍因 `ONLINE_RERANKE
 仍超出 300 ms `2.983085 ms`。报告 SHA-256 为
 `323D765FBEBE23C8CC1D3B509698E7D366A73CE3EEB34AC99F3F5D9AFA92E02F`。
 该结果支持有界 Milvus 逻辑行读取的正向观测，但仍不足以宣称稳定通过或晋级默认路径；
-V1 Batch-16、默认 RRF、ACL、READY、向量身份和失败关闭语义保持不变。下一步不再立刻
-修改变量，先用同一提交和配置的新 Run ID 做确认性复测，再决定是否继续代码优化。
+V1 Batch-16、默认 RRF、ACL、READY、向量身份和失败关闭语义保持不变。随后用户在同一
+提交、同一 V1 配置下完成确认性 Run 14：30/30 `APPLIED`，`base P50/P95=150.7967/178.04327 ms`，
+`combined P50/P95=280.4708/309.49054 ms`，Reranker P95 为 `133.246075 ms`，Query
+Embedding P95 为 `168.735645 ms`；READY route resolution P95 为 `113.32768 ms`，
+READY physical verification wall P95 为 `111.88934 ms`，Milvus 物理校验工作 P95 为
+`109.545291 ms`，Chunk snapshot P95 为 `112.596415 ms`。清理 3/3、删除后 403、无
+fallback/候选扩张/越界和分段状态均通过，但仍因 `ONLINE_RERANKER_COMBINED_P95_EXCEEDED`
+失败。Run 13/14 均未稳定低于 300 ms；当前将 300 ms 记为已验证但未解决的性能债，保留
+有界 Milvus 读取这一语义不变的硬化，不再在当前冻结边界内追加微优化。报告 SHA-256 为
+`21155ADC74729F37150327D3AEA5F80F4664F7653183845F6A151A6A16064AB7`。下一步转入
+真实 Demo/界面/README 的独立工作流，性能数字必须如实标注为 `P95 > 300 ms`。
 
 Competition Pack V1 的 Windows 用户复现已在 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS；独立 closeout 又对实际脱敏产物、`d775dab → fd5a517` 运行时等价性与精确提交 GitHub clean-checkout 证据完成复核。因此当前记为 `RAG_COMPETITION_BASELINE_V1_FROZEN / RAG_OWNER_SCOPE_DONE_ENOUGH`。这不改写 Phase 3 `PARTIAL / NO_PROMOTION / STOP`、Phase 4 `PARTIAL / AUDIT_ONLY`、300 ms known/deferred 债务或正式 Acceptance 边界。
 
