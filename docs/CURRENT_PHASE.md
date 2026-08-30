@@ -316,9 +316,13 @@ Run ID `online_retrieval_hardening_07` 与 `online_retrieval_hardening_08`：两
 均未通过。随后用户在提交 `9f77d9a6b6ce498b863ceaf58f4ae1c062070316` 的同一 V1 配置下完成
 Run 09 与 Run 10：两次均 30/30 `APPLIED`，combined P95 分别为 `301.03561 ms` 与
 `319.39854 ms`；清理 3/3、删除后 403、无 fallback/候选扩张/越界和分段状态均通过，
-但 `keep_alive="10m"` 未形成稳定性能收益。当前本地下一轮只把 PostgreSQL 已确认的 READY
-版本 ID 交给短生命周期只读任务，使 Chunk snapshot 与 ES/Milvus 物理路由校验重叠；不改变
-模型、查询文本、向量维度、候选边界、RRF、ACL 或失败回退，尚待新的 Run ID 验证。
+但 `keep_alive="10m"` 未形成稳定性能收益。随后用户在提交
+`72e1e4ddc257a0f56d67ea726113642f44fc8004`、同一 V1 配置下完成 Run 11：30/30
+`APPLIED`，base P95 为 `180.419535 ms`，combined P95 为 `310.283465 ms`；清理
+3/3、删除后 403、无 fallback/候选扩张/越界和分段状态均通过，但严格 300 ms 门禁仍未通过。
+READY 后 Chunk snapshot 预热已获得一次远程观测，combined P95 相比 Run 10 下降，但不足以
+证明独立稳定收益；因此不晋级默认路径。V1 Batch-16、默认 RRF 和 300 ms 性能债保持不变，
+下一步暂停盲目远程重跑，先做本地分段 profiling。
 
 Competition Pack V1 的 Windows 用户复现已在 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS；独立 closeout 又对实际脱敏产物、`d775dab → fd5a517` 运行时等价性与精确提交 GitHub clean-checkout 证据完成复核。因此当前记为 `RAG_COMPETITION_BASELINE_V1_FROZEN / RAG_OWNER_SCOPE_DONE_ENOUGH`。这不改写 Phase 3 `PARTIAL / NO_PROMOTION / STOP`、Phase 4 `PARTIAL / AUDIT_ONLY`、300 ms known/deferred 债务或正式 Acceptance 边界。
 

@@ -5,8 +5,8 @@
 当前状态：`LOCAL_HARDENING_IMPLEMENTED_REMOTE_300MS_GATE_PENDING`。
 
 本轮继续只处理仓库内部可以独立完成的在线检索执行层优化。已知 Windows 远程
-Run 10 的 `combined P95=319.39854 ms` 仍高于目标 `300 ms`；因此不能把本地
-变更或 Run 10 写成 300 ms 已达标。
+Run 11 的 `combined P95=310.283465 ms` 仍高于目标 `300 ms`；因此不能把本地
+变更或 Run 11 写成 300 ms 已达标。
 
 ## 2. 已实现的边界内改动
 
@@ -107,9 +107,10 @@ ES 物理路由校验工作、Milvus 物理路由校验工作，以及两者并�
 - Ollama 短单查询、长单查询和批量查询的端点选择与响应校验；
 - READY 版本回调先于物理路由校验，以及 Chunk snapshot 预热结果的完整消费。
 
-这些是代码与合同证据，不是远程性能证据。要判断是否缩小 Run 10 的
-`319.39854 ms` 与 `300 ms` 的差距，仍需在原目标硬件、冻结模型/输入/候选边界
-和独立性能 Gate 下重新运行并记录新的分段 P50/P95。
+这些是代码与合同证据，不是远程性能证据。Run 11 已对 READY 后 Chunk snapshot
+预热进行了远程验证，但 `310.283465 ms` 仍高于 `300 ms`，且单次运行不能证明
+稳定收益；后续如继续优化，仍需先在本地对 Ollama、READY/Milvus 和 Query Embedding
+做分段 profiling，并一次只选择一个变量。
 
 ## 4. 最新远程观测
 
@@ -183,14 +184,23 @@ Query Embedding P95 为 `171.749935 ms`。清理 3/3、删除后 403、无 fallb
 Run 09 与 Run 10 均未证明 `keep_alive="10m"` 的独立收益，当前只保留为待验证的
 驻留策略，不改变默认 RRF 或 V1 冻结配置。
 
-本地下一轮只加入 READY 后 Chunk snapshot 预热，V2 Batch-20 不作为默认配置；该
-变体尚无远程结果，不能预先声称会降低 P95 或通过门禁。
+Run 11 在提交 `72e1e4ddc257a0f56d67ea726113642f44fc8004`、同一 V1 配置下完成
+30/30 `APPLIED`，`base P50/P95=151.086499/180.419535 ms`，
+`combined P50/P95=280.38975/310.283465 ms`，Reranker P95 为 `131.83538 ms`，
+Query Embedding P95 为 `169.90922 ms`。READY route resolution P95 为 `112.600355 ms`，
+物理验证墙钟 P95 为 `111.041285 ms`，Chunk snapshot P95 为 `111.744975 ms`；
+清理 3/3、删除后 403、无 fallback/扩张/候选越界和分段状态均通过，但仍因
+`ONLINE_RERANKER_COMBINED_P95_EXCEEDED` 失败。相比 Run 10 的 combined P95 有下降，
+但单次结果不足以证明 READY 后预热的独立收益，不能晋级为默认优化。
+
+Run 11 后暂停盲目远程重跑；V2 Batch-20 不作为默认配置，V1 Batch-16、默认 RRF
+和 300 ms 性能债保持不变。
 
 ## 5. 明确未处理的事项
 
 - 正式 Acceptance、真实用户评价和生产运维仍需要相应外部参与或独立工作流；
 - 本轮没有更换模型、放宽阈值、减少候选、引入重复问题缓存、修改默认 RRF 或修改冻结 V1 配置；V2 Batch-20 仅作失败的隔离实验；
 - 本轮没有重开 Phase 3 排序优化、查询拆分、路由覆盖、NLI 或阶段 5；
-- Ollama 单查询轻量端点、显式模型驻留与 READY 后 Chunk snapshot 预热仍需用户
-  在 Windows 目标硬件上独立执行；本轮没有运行真实生成或正式 Acceptance，Mac 只
-  根据用户提供的脱敏摘要判断远程性能。
+- Ollama 单查询轻量端点、显式模型驻留与 READY 后 Chunk snapshot 预热已完成有限远程
+  观测，但尚未通过稳定 300 ms 性能门禁；本轮没有运行真实生成或正式 Acceptance，Mac
+  只根据用户提供的脱敏摘要判断远程性能。
