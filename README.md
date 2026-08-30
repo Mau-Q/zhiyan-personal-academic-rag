@@ -60,7 +60,9 @@ PDF / Chunk
   `NO_EVIDENCE` 不调用模型；
 - 删除后不可召回、Answer API 返回 403，以及 ES、Milvus、runtime snapshot
   三路清理与恢复；
-- 单/多 Evidence 的确定性身份、数字、单位、比较、限定和冲突审计。
+- 单/多 Evidence 的确定性身份、数字、单位、比较、限定和冲突审计；
+- HTTP 错误唯一 `request_id`、正常回答 replay identity 保持确定性、恶意输入消息边界
+  回归，以及应用自行创建的 Embedding Provider 生命周期清理。
 
 边界：
 
@@ -106,6 +108,8 @@ git diff --check
 - 阶段 2 收口：[`docs/PHASE_2_CLOSEOUT.md`](docs/PHASE_2_CLOSEOUT.md)
 - Multi-Evidence Gate：[`docs/PHASE_4_MULTI_EVIDENCE_SET_GATE.md`](docs/PHASE_4_MULTI_EVIDENCE_SET_GATE.md)
 - 仓库 Harness 入口：[`AGENTS.md`](AGENTS.md)
+- 版本变更记录：[`CHANGELOG.md`](CHANGELOG.md)
+- 简历级技术案例：[`docs/RESUME_CASE_STUDY.md`](docs/RESUME_CASE_STUDY.md)
 
 ## 数据与仓库边界
 
