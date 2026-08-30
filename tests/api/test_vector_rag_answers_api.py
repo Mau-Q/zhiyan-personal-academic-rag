@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -12,6 +13,15 @@ from tests.retrieval.fake_embedding import FakeEmbeddingProvider
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+class ClosableFakeEmbeddingProvider(FakeEmbeddingProvider):
+    def __init__(self, *, digest="sha256:test-embedding-v1"):
+        super().__init__(digest=digest)
+        self.close_calls = 0
+
+    def close(self):
+        self.close_calls += 1
 
 
 class VectorRagAnswersApiTests(unittest.TestCase):
@@ -84,6 +94,39 @@ class VectorRagAnswersApiTests(unittest.TestCase):
                 vector_index_path=self.vector_path,
                 embedding_provider=FakeEmbeddingProvider(digest="sha256:changed"),
             )
+
+    def test_app_closes_only_embedding_provider_it_constructs(self):
+        owned = ClosableFakeEmbeddingProvider()
+        with patch("backend.api.app.OllamaEmbeddingProvider", return_value=owned):
+            owned_app = create_app(
+                chunks_path=self.chunks_path,
+                retrieval_backend="local_vector",
+                vector_index_path=self.vector_path,
+            )
+        with TestClient(owned_app):
+            pass
+        self.assertEqual(owned.close_calls, 1)
+
+        drifted = ClosableFakeEmbeddingProvider(digest="sha256:changed")
+        with patch("backend.api.app.OllamaEmbeddingProvider", return_value=drifted):
+            with self.assertRaises(VectorIndexNotReadyError):
+                create_app(
+                    chunks_path=self.chunks_path,
+                    retrieval_backend="local_vector",
+                    vector_index_path=self.vector_path,
+                )
+        self.assertEqual(drifted.close_calls, 1)
+
+        injected = ClosableFakeEmbeddingProvider()
+        injected_app = create_app(
+            chunks_path=self.chunks_path,
+            retrieval_backend="local_vector",
+            vector_index_path=self.vector_path,
+            embedding_provider=injected,
+        )
+        with TestClient(injected_app):
+            pass
+        self.assertEqual(injected.close_calls, 0)
 
 
 if __name__ == "__main__":

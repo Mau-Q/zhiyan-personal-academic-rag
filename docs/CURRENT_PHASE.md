@@ -369,6 +369,8 @@ READY 物理验证墙钟 P95 为 `92.9869 ms`，Query Embedding P95 为 `153.263
 
 Competition Pack V1 的 Windows 用户复现已在 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS；独立 closeout 又对实际脱敏产物、`d775dab → fd5a517` 运行时等价性与精确提交 GitHub clean-checkout 证据完成复核。因此当前记为 `RAG_COMPETITION_BASELINE_V1_FROZEN / RAG_OWNER_SCOPE_DONE_ENOUGH`。这不改写 Phase 3 `PARTIAL / NO_PROMOTION / STOP`、Phase 4 `PARTIAL / AUDIT_ONLY`、300 ms known/deferred 债务或正式 Acceptance 边界。
 
+本地 Reliability/Security Hardening Gate 已完成一轮非破坏性收口：HTTP 错误 `ErrorV1.request_id` 每次唯一，正常回答的 replay `request_id/trace_id` 保持确定性；恶意问题/Evidence 保持在固定的 `system + user` 消息边界；应用自行创建的 Embedding Provider 在正常关闭和初始化失败时清理，注入的 Provider 仍由调用方负责。该 Gate 未改变公开 Schema、Prompt 身份、检索、ACL、READY、Citation 或失败关闭合同；真实模型安全行为仍需真实服务/人工评测，未由 Fixture 测试冒充。
+
 ## Next gate
 
 1. **RAG 核心已最终冻结：** 不重复实现或重跑已通过的 PDF/Chunk、READY、检索、生成、引用、拒答、ACL、删除清理和 EvidenceSet Gate；

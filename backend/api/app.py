@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Literal
 from uuid import uuid4
@@ -46,6 +47,20 @@ from backend.retrieval.remote_config import RemoteRetrievalConfigV1
 from backend.retrieval.remote_hybrid import RemoteRrfHybridRetriever
 from backend.retrieval.sqlite_fts import SQLiteFtsIndex
 from backend.retrieval.vector import DEFAULT_VECTOR_MIN_SCORE, LocalVectorIndex
+
+
+def _close_embedding_provider(provider: EmbeddingProvider | None) -> None:
+    """Best-effort close for an app-owned optional provider resource."""
+
+    if provider is None:
+        return
+    close = getattr(provider, "close", None)
+    if callable(close):
+        try:
+            close()
+        except Exception:
+            # A shutdown or startup-failure cleanup must not hide the primary error.
+            pass
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -112,6 +127,7 @@ def create_app(
     sqlite_index: SQLiteFtsIndex | None = None
     vector_index: LocalVectorIndex | None = None
     hybrid_retriever: LocalRrfHybridRetriever | None = None
+    owned_embedding_provider: EmbeddingProvider | None = None
     elasticsearch_bm25_index: ElasticsearchBm25Index | None = None
     milvus_vector_index: MilvusVectorIndex | None = None
     remote_rrf_retriever: RemoteRrfHybridRetriever | None = None
@@ -135,21 +151,30 @@ def create_app(
                 model=embedding_model,
                 base_url=embedding_base_url,
             )
-        vector_index = LocalVectorIndex(vector_index_path)
-        vector_index.verify_source(chunks)
-        vector_index.verify_provider(embedding_provider)
+            owned_embedding_provider = embedding_provider
+        try:
+            vector_index = LocalVectorIndex(vector_index_path)
+            vector_index.verify_source(chunks)
+            vector_index.verify_provider(embedding_provider)
+        except Exception:
+            _close_embedding_provider(owned_embedding_provider)
+            raise
     if retrieval_backend == "local_rrf":
         assert sqlite_index is not None
         assert vector_index is not None
         assert embedding_provider is not None
-        hybrid_retriever = LocalRrfHybridRetriever(
-            sqlite_index,
-            vector_index,
-            embedding_provider,
-            candidate_k=candidate_k,
-            rrf_k=rrf_k,
-            vector_min_score=vector_min_score,
-        )
+        try:
+            hybrid_retriever = LocalRrfHybridRetriever(
+                sqlite_index,
+                vector_index,
+                embedding_provider,
+                candidate_k=candidate_k,
+                rrf_k=rrf_k,
+                vector_min_score=vector_min_score,
+            )
+        except Exception:
+            _close_embedding_provider(owned_embedding_provider)
+            raise
     elif retrieval_backend == "elasticsearch_bm25":
         if elasticsearch_index is None:
             raise ValueError("elasticsearch_index is required for elasticsearch_bm25 retrieval")
@@ -166,47 +191,57 @@ def create_app(
             embedding_provider = OllamaEmbeddingProvider(
                 model=embedding_model, base_url=embedding_base_url
             )
-        if milvus_transport is None:
-            milvus_transport = PymilvusTransport(uri=milvus_uri)
-        milvus_vector_index = MilvusVectorIndex(milvus_collection, milvus_transport)
-        milvus_vector_index.verify_source(chunks)
-        milvus_vector_index.verify_provider(embedding_provider)
+            owned_embedding_provider = embedding_provider
+        try:
+            if milvus_transport is None:
+                milvus_transport = PymilvusTransport(uri=milvus_uri)
+            milvus_vector_index = MilvusVectorIndex(milvus_collection, milvus_transport)
+            milvus_vector_index.verify_source(chunks)
+            milvus_vector_index.verify_provider(embedding_provider)
+        except Exception:
+            _close_embedding_provider(owned_embedding_provider)
+            raise
     elif retrieval_backend == "remote_rrf":
         if remote_retrieval_config is None:
             raise ValueError("remote_retrieval_config is required for remote_rrf retrieval")
         elasticsearch_config = remote_retrieval_config.elasticsearch
         milvus_config = remote_retrieval_config.milvus
         fusion_config = remote_retrieval_config.fusion
-        if elasticsearch_transport is None:
-            elasticsearch_transport = UrllibElasticsearchTransport(
-                base_url=elasticsearch_config.url,
-                timeout_seconds=elasticsearch_config.timeout_seconds,
+        try:
+            if elasticsearch_transport is None:
+                elasticsearch_transport = UrllibElasticsearchTransport(
+                    base_url=elasticsearch_config.url,
+                    timeout_seconds=elasticsearch_config.timeout_seconds,
+                )
+            elasticsearch_bm25_index = ElasticsearchBm25Index(
+                elasticsearch_config.index, elasticsearch_transport
             )
-        elasticsearch_bm25_index = ElasticsearchBm25Index(
-            elasticsearch_config.index, elasticsearch_transport
-        )
-        elasticsearch_bm25_index.verify_source(chunks)
-        if embedding_provider is None:
-            embedding_provider = OllamaEmbeddingProvider(
-                model=milvus_config.embedding_model,
-                base_url=milvus_config.embedding_base_url,
+            elasticsearch_bm25_index.verify_source(chunks)
+            if embedding_provider is None:
+                embedding_provider = OllamaEmbeddingProvider(
+                    model=milvus_config.embedding_model,
+                    base_url=milvus_config.embedding_base_url,
+                )
+                owned_embedding_provider = embedding_provider
+            if milvus_transport is None:
+                milvus_transport = PymilvusTransport(uri=milvus_config.uri)
+            milvus_vector_index = MilvusVectorIndex(
+                milvus_config.collection, milvus_transport
             )
-        if milvus_transport is None:
-            milvus_transport = PymilvusTransport(uri=milvus_config.uri)
-        milvus_vector_index = MilvusVectorIndex(
-            milvus_config.collection, milvus_transport
-        )
-        milvus_vector_index.verify_source(chunks)
-        milvus_vector_index.verify_provider(embedding_provider)
-        remote_rrf_retriever = RemoteRrfHybridRetriever(
-            elasticsearch_bm25_index,
-            milvus_vector_index,
-            embedding_provider,
-            candidate_k=fusion_config.candidate_k,
-            rrf_k=fusion_config.rrf_k,
-            vector_min_score=fusion_config.vector_min_score,
-        )
-        remote_top_k = fusion_config.top_k
+            milvus_vector_index.verify_source(chunks)
+            milvus_vector_index.verify_provider(embedding_provider)
+            remote_rrf_retriever = RemoteRrfHybridRetriever(
+                elasticsearch_bm25_index,
+                milvus_vector_index,
+                embedding_provider,
+                candidate_k=fusion_config.candidate_k,
+                rrf_k=fusion_config.rrf_k,
+                vector_min_score=fusion_config.vector_min_score,
+            )
+            remote_top_k = fusion_config.top_k
+        except Exception:
+            _close_embedding_provider(owned_embedding_provider)
+            raise
     elif retrieval_backend not in (
         "lexical_overlap",
         "sqlite_fts5",
@@ -239,10 +274,19 @@ def create_app(
             f"{boundary.removesuffix(' with Fake LLM')} with "
             f"{generation_provider.configured_identity().execution_boundary}"
         )
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        try:
+            yield
+        finally:
+            _close_embedding_provider(owned_embedding_provider)
+
     app = FastAPI(
         title="智研个人学术空间 RAG API",
         version="0.1.0",
         description=boundary,
+        lifespan=lifespan,
     )
     app.state.chunks_path = chunks_path
     app.state.scope_path = scope_path
