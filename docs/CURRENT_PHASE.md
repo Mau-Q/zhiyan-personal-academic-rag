@@ -360,10 +360,12 @@ Ollama 连接复用不晋级。该结果提示 prewarm 与 READY 路由身份请
 `29c87420c0b3d720c68f4e065874b87c9934a767`、同一 V1 配置下完成 Run 16：30/30
 `APPLIED`、`status=PASS`，`base P95=156.808445 ms`，`combined P95=287.73689 ms`，
 READY 物理验证墙钟 P95 为 `93.247355 ms`，Query Embedding P95 为 `147.96689 ms`，
-清理 3/3、删除后 403、候选和分段状态均通过。Run 16 是两连接池修正后的首次通过样本，
-但仍需同提交、同配置的确认性 Run 17 才能判断稳定性；在此之前不把 300 ms 性能债标记
-为解决。报告 SHA-256 为
-`1A325C4EBFBE045DBCAF8CBB372C652FFC899F225B97ED8DEE863E762CE0E219`。
+清理 3/3、删除后 403、候选和分段状态均通过。Run 17 在同一提交、同一 V1 配置下再次
+`status=PASS`、30/30 `APPLIED`，`base P95=162.213044 ms`，`combined P95=292.114209 ms`，
+READY 物理验证墙钟 P95 为 `92.9869 ms`，Query Embedding P95 为 `153.263471 ms`，
+清理 3/3、删除后 403、候选和分段状态均通过。两次连续通过支持保留两连接池实现；该
+结论只覆盖固定 Gate，不等同于生产容量或正式 Acceptance。Run 17 报告 SHA-256 为
+`C960799168E4813A6D02E8ACEEE203ECADE6177DF810EAC27004D2AED162D402`。
 
 Competition Pack V1 的 Windows 用户复现已在 `d775dab...a4549` 和 Run ID `competition_v1_20260809_01` 上 PASS；独立 closeout 又对实际脱敏产物、`d775dab → fd5a517` 运行时等价性与精确提交 GitHub clean-checkout 证据完成复核。因此当前记为 `RAG_COMPETITION_BASELINE_V1_FROZEN / RAG_OWNER_SCOPE_DONE_ENOUGH`。这不改写 Phase 3 `PARTIAL / NO_PROMOTION / STOP`、Phase 4 `PARTIAL / AUDIT_ONLY`、300 ms known/deferred 债务或正式 Acceptance 边界。
 
